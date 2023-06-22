@@ -32,7 +32,7 @@ class Schema(abc.ABC):
         response_body: Dict[str, Any]
     ) -> List[ValidationError]:
         validation_errors = []
-        if http_method in ["POST"]:
+        if http_method in ["POST", "GET"]:
             for attr_name, attr in self.attributes.items():
                 validation_errors.extend(
                     [

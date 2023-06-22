@@ -14,14 +14,14 @@ def validator():
     )
 
 
-def test_post__body_is_required(validator):
+def test_body_is_required(validator):
     errors = validator.validate_request(http_method="POST", body=None)
 
     assert len(errors) == 1
     assert errors[0].code == 15
 
 
-def test_post__correct_body_passes_validation(validator):
+def test_correct_body_passes_validation(validator):
     errors = validator.validate_request(
         http_method="POST",
         body={
@@ -39,7 +39,7 @@ def test_post__correct_body_passes_validation(validator):
     assert errors == []
 
 
-def test_post__missing_schemas_key_returns_error(validator):
+def test_missing_schemas_key_returns_error(validator):
     errors = validator.validate_request(
         http_method="POST",
         body={
@@ -58,7 +58,7 @@ def test_post__missing_schemas_key_returns_error(validator):
     assert errors[0].location == "request.body.schemas"
 
 
-def test_post__many_validation_errors_can_be_returned(validator):
+def test_many_validation_errors_can_be_returned(validator):
     errors = validator.validate_request(
         http_method="POST",
         body={
@@ -75,7 +75,7 @@ def test_post__many_validation_errors_can_be_returned(validator):
     assert errors[1].location == "request.body.name"
 
 
-def test_post__external_id_may_be_omitted(validator):
+def test_external_id_may_be_omitted(validator):
     errors = validator.validate_request(
         http_method="POST",
         body={

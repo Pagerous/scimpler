@@ -16,16 +16,7 @@ def validator():
 
 @pytest.fixture
 def request_body():
-    return {
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "userName": "bjensen",
-        "externalId": "bjensen",
-        "name": {
-            "formatted": "Ms. Barbara J Jensen III",
-            "familyName": "Jensen",
-            "givenName": "Barbara"
-        }
-    }
+    return None
 
 
 @pytest.fixture
@@ -36,18 +27,30 @@ def response_body():
         "externalId": "bjensen",
         "meta": {
             "resourceType": "User",
-            "created": "2011-08-01T21:32:44.882Z",
-            "lastModified": "2011-08-01T21:32:44.882Z",
+            "created": "2011-08-01T18:29:49.793Z",
+            "lastModified": "2011-08-01T18:29:49.793Z",
             "location":
             "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
-            "version": "W/\"e180ee84f0671b1\"",
+            "version": r"W\/\"f250dd84f0671c3\""
         },
         "name": {
             "formatted": "Ms. Barbara J Jensen III",
             "familyName": "Jensen",
-            "givenName": "Barbara",
+            "givenName": "Barbara"
         },
         "userName": "bjensen",
+        "phoneNumbers": [
+            {
+                "value": "555-555-8377",
+                "type": "work"
+            }
+        ],
+        "emails": [
+            {
+                "value": "bjensen@example.com",
+                "type": "work"
+            }
+        ]
     }
 
 
@@ -63,43 +66,45 @@ def response_error_body():
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
         "status": "400",
-        "scimType": "uniqueness",
+        "scimType": "tooMany",
         "detail": "you did wrong, bro",
     }
 
 
-def test_post__body_is_not_required(validator, request_body):
+def test_body_is_required(validator, request_body):
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=None,
-        status_code=201
+        status_code=200,
     )
 
-    assert errors == []
+    assert len(errors) == 1
+    assert errors[0].code == 15
+    assert errors[0].location == "response.body"
 
 
-def test_post__correct_body_passes_validation(validator, request_body, response_body, response_headers):
+def test_correct_body_passes_validation(validator, request_body, response_body, response_headers):
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
-        status_code=201,
+        status_code=200,
     )
 
     assert errors == []
 
 
-def test_post__missing_schemas_key_returns_error(validator, request_body, response_body, response_headers):
+def test_missing_schemas_key_returns_error(validator, request_body, response_body, response_headers):
     response_body.pop("schemas")
 
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
-        status_code=201,
+        status_code=200,
     )
 
     assert len(errors) == 1
@@ -107,16 +112,16 @@ def test_post__missing_schemas_key_returns_error(validator, request_body, respon
     assert errors[0].location == "response.body.schemas"
 
 
-def test_post__many_validation_errors_can_be_returned(validator, request_body, response_body, response_headers):
+def test_many_validation_errors_can_be_returned(validator, request_body, response_body, response_headers):
     response_body["meta"]["created"] = "123"
     response_body["name"] = 123  # noqa
 
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
-        status_code=201,
+        status_code=200,
     )
 
     assert len(errors) == 2
@@ -126,29 +131,27 @@ def test_post__many_validation_errors_can_be_returned(validator, request_body, r
     assert errors[1].location == "response.body.name"
 
 
-def test_post__location_header_is_required(validator, request_body, response_body):
+def test_location_header_is_not_required(validator, request_body, response_body):
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_body,
         response_headers=None,
-        status_code=201,
+        status_code=200,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 10
-    assert errors[0].location == "response.headers"
+    assert errors == []
 
 
-def test_post__location_header_must_match_meta_location(validator, request_body, response_body, response_headers):
+def test_location_header_if_passed_must_match_meta_location(validator, request_body, response_body, response_headers):
     response_body["meta"]["location"] = "https://example.com/v2/Users/different-id"
 
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
-        status_code=201,
+        status_code=200,
     )
 
     assert len(errors) == 2
@@ -158,13 +161,13 @@ def test_post__location_header_must_match_meta_location(validator, request_body,
     assert errors[1].location == "response.headers"
 
 
-def test_post__status_code_must_be_201(validator, request_body, response_body, response_headers):
+def test_status_code_must_be_200(validator, request_body, response_body, response_headers):
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
-        status_code=200,
+        status_code=201,
     )
 
     assert len(errors) == 1
@@ -172,9 +175,9 @@ def test_post__status_code_must_be_201(validator, request_body, response_body, r
     assert errors[0].location == "response.status"
 
 
-def test_post__correct_error_body_passes_validation(validator, request_body, response_error_body):
+def test_correct_error_body_passes_validation(validator, request_body, response_error_body):
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_error_body,
         status_code=400,
@@ -183,10 +186,10 @@ def test_post__correct_error_body_passes_validation(validator, request_body, res
     assert errors == []
 
 
-def test_post__error_status_should_be_equal_to_http_status(validator, request_body, response_error_body):
+def test_error_status_should_be_equal_to_http_status(validator, request_body, response_error_body):
     response_error_body["status"] = "401"
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_error_body,
         status_code=400,
@@ -199,10 +202,10 @@ def test_post__error_status_should_be_equal_to_http_status(validator, request_bo
     assert errors[1].location == "response.status"
 
 
-def test_post__error_status_must_be_in_valid_range(validator, request_body, response_error_body):
+def test_error_status_must_be_in_valid_range(validator, request_body, response_error_body):
     response_error_body["status"] = "600"
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_error_body,
         status_code=600,
@@ -215,14 +218,14 @@ def test_post__error_status_must_be_in_valid_range(validator, request_body, resp
     assert errors[1].location == "response.body.status"
 
 
-def test_post__resource_type_must_match(validator, request_body, response_body, response_headers):
+def test_resource_type_must_match(validator, request_body, response_body, response_headers):
     response_body["meta"]["resourceType"] = "BlaBla"
     errors = validator.validate_response(
-        http_method="POST",
+        http_method="GET",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
-        status_code=201,
+        status_code=200,
     )
 
     assert len(errors) == 1
