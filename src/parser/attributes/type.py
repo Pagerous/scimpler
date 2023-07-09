@@ -17,7 +17,7 @@ class AttributeType(abc.ABC):
     def validate(cls, value: Any) -> list[ValidationError]:
         if not isinstance(value, cls.TYPE):
             return [
-                ValidationError.bad_type(
+                ValidationError.bad_scim_type(
                     scim_type=cls.SCIM_NAME,
                     expected_type=cls.TYPE,
                     provided_type=type(value),
