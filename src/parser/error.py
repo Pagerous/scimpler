@@ -25,7 +25,9 @@ class ValidationError:
         14: "value must be one of: {expected_values}, but provided '{provided}'",
         15: "missing {missing}",
         16: "HTTP response status for method '{method}' must be '{expected}', but provided '{provided}'",
-        17: "meta.resourceType must match configured type `{resource_type}`, but provided '{provided}'"
+        17: "meta.resourceType must match configured type `{resource_type}`, but provided '{provided}'",
+        18: "expected type '{expected_type}', got '{provided_type}' instead",
+        19: "attribute '{attr_name}' should never be returned",
     }
 
     def __init__(self, code: int, **context):
@@ -39,7 +41,7 @@ class ValidationError:
         return cls(code=1, attr_name=attr_name)
 
     @classmethod
-    def bad_type(cls, scim_type: str, expected_type: Type, provided_type: Type):
+    def bad_scim_type(cls, scim_type: str, expected_type: Type, provided_type: Type):
         return cls(
             code=2,
             scim_type=scim_type,
@@ -93,7 +95,7 @@ class ValidationError:
         return cls(code=12, provided=provided)
 
     @classmethod
-    def error_status_mismatch(cls, response_status: int, body_status: int):
+    def error_status_mismatch(cls, response_status: str, body_status: str):
         return cls(code=13, response_status=response_status, body_status=body_status)
 
     @classmethod
@@ -111,6 +113,14 @@ class ValidationError:
     @classmethod
     def resource_type_mismatch(cls, resource_type: str, provided: str):
         return cls(code=17, resource_type=resource_type, provided=provided)
+
+    @classmethod
+    def bad_type(cls, expected_type: Type, provided_type: Type):
+        return cls(code=18, expected_type=expected_type.__name__, provided_type=provided_type.__name__)
+
+    @classmethod
+    def returned_restricted_attribute(cls, attr_name: str):
+        return cls(code=19, attr_name=attr_name)
 
     @property
     def context(self) -> Dict:

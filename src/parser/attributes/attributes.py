@@ -103,14 +103,21 @@ class Attribute:
         if value is None:
             if (
                 not self._required or (
-                    http_method in ["POST"] and
                     direction == "REQUEST" and
                     self.issuer == AttributeIssuer.SERVICE_PROVIDER
+                ) or (
+                    direction == "RESPONSE" and
+                    self._returned == AttributeReturn.NEVER
                 )
             ):
                 return []
             errors.append(ValidationError.missing_required_attribute(self._name).with_location(self._name))
             return errors
+        else:
+            if direction == "RESPONSE" and self._returned == AttributeReturn.NEVER:
+                errors.append(ValidationError.returned_restricted_attribute(self._name).with_location(self._name))
+                return errors
+
         if self._multi_valued:
             if not isinstance(value, (list, tuple)):
                 errors.append(ValidationError.bad_multivalued_attribute_type(type(value)).with_location(self._name))
