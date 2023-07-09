@@ -170,8 +170,6 @@ class ListResponseSchema(Schema):
         else:
             for i, resource in enumerate(response_body.get("resources", [])):
                 for attr_name, attr in self._resource_schema.attributes.items():
-                    if attr_name == "schemas":
-                        continue  # "schemas" is not required for response list item
                     validation_errors.extend(
                         [
                             error.with_location(i, "Resources", "body", "response")

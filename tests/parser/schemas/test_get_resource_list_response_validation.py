@@ -13,6 +13,7 @@ def response_body():
         "totalResults": 2,
         "Resources": [
             {
+                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
                 "id": "2819c223-7f76-453a-919d-413861904646",
                 "externalId": "bjensen",
                 "meta": {
@@ -31,6 +32,7 @@ def response_body():
                 "userName": "bjensen",
             },
             {
+                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
                 "id": "2819c223-7f76-453a-919d-413861904647",
                 "externalId": "hehe",
                 "meta": {
