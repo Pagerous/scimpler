@@ -1,4 +1,4 @@
-from src.parser.attributes.attributes import Attribute, AttributeIssuer, ComplexAttribute
+from src.parser.attributes.attributes import Attribute, AttributeIssuer, AttributeReturn, ComplexAttribute
 from src.parser.attributes import type as at
 
 
@@ -106,3 +106,29 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
     assert errors[1].location == "complex_attr.0.sub_attr_2"
     assert errors[2].code == 2
     assert errors[2].location == "complex_attr.1.sub_attr_1"
+
+
+def test_returning_attribute_that_should_never_be_returned_fails():
+    attr = Attribute(name="some_attr", type_=at.String, returned=AttributeReturn.NEVER)
+
+    errors = attr.validate(
+        value="value",
+        http_method="GET",
+        direction="RESPONSE",
+    )
+
+    assert len(errors) == 1
+    assert errors[0].code == 19
+    assert errors[0].location == "some_attr"
+
+
+def test_providing_no_value_for_required_attribute_if_should_not_be_returned_succeeds():
+    attr = Attribute(name="some_attr", type_=at.String, required=True, returned=AttributeReturn.NEVER)
+
+    errors = attr.validate(
+        value=None,
+        http_method="GET",
+        direction="RESPONSE",
+    )
+
+    assert errors == []
