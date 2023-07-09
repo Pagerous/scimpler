@@ -42,24 +42,28 @@ class SchemaValidator:
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
     ):
+        validation_errors = []
         body = self._preprocess_body(body)
-        if http_method == "POST":
+        if http_method in ["POST"]:
             if not body:
                 return [ValidationError.missing("body")]
-            validation_errors = self._validate_schemas_field(http_method, body, "REQUEST")
+            elif not isinstance(body, dict):
+                validation_errors.append(ValidationError.bad_type(dict, type(body)).with_location("body", "request"))
+            else:
+                validation_errors.extend(self._validate_schemas_field(http_method, body, "REQUEST"))
             if validation_errors:
                 return validation_errors
             schema = self._schemas_mapping.get(tuple(body["schemas"]))
             if schema is None:
                 # TODO: warn schema not recognized
                 return []
-            return self._validate_post_request(
-                schema=schema,
-                query_string=query_string,
+            return schema.validate_request(
+                http_method=http_method,
                 body=body,
-                headers=headers
+                headers=headers or {},
+                query_string=query_string or {},
             )
-        elif http_method == "GET":
+        elif http_method in ["GET"]:
             return []  # no validation for now
         return []
 
@@ -73,16 +77,20 @@ class SchemaValidator:
         response_body: Optional[Dict[str, Any]] = None,
         response_headers: Optional[Dict[str, Any]] = None,
     ):
+        validation_errors = []
         schema = None
         response_body = self._preprocess_body(response_body)
         request_body = self._preprocess_body(request_body)
-        validation_errors = []
         if response_body is None:
             if http_method in ["POST"]:
                 pass  # TODO: warn missing response body
             elif http_method in ["GET"]:
                 validation_errors.append(ValidationError.missing("body").with_location("body", "response"))
                 return validation_errors
+        elif not isinstance(response_body, dict):
+            validation_errors.append(
+                ValidationError.bad_type(dict, type(request_body)).with_location("body", "response")
+            )
         else:
             validation_errors.extend(self._validate_schemas_field(http_method, response_body, "RESPONSE"))
             if validation_errors:
@@ -144,83 +152,15 @@ class SchemaValidator:
     ):
         return schema.validate_request("POST", body)
 
-    def _validate_post_response(
-        self,
-        schema: Schema,
-        response_body: Dict[str, Any],
-        request_query_string: Optional[Dict[str, Any]],
-        request_body: Optional[Dict[str, Any]],
-        request_headers: Optional[Dict[str, Any]],
-
-        response_headers: Optional[Dict[str, Any]],
-        status_code: int
-    ):
-        validation_errors = schema.validate_response("POST", request_body, response_body)
         validation_errors.extend(
-            self._validate_location_header(
+            schema.validate_response(
+                http_method=http_method,
+                status_code=status_code,
+                request_body=request_body or {},
+                request_headers=request_headers or {},
+                request_query_string=request_query_string or {},
                 response_body=response_body,
                 response_headers=response_headers,
-                header_optional=False,
             )
         )
-        if status_code != 201:
-            validation_errors.append(
-                ValidationError.bad_status_code("POST", 201, status_code).with_location("status", "response")
-            )
         return validation_errors
-
-    def _validate_get_response(
-        self,
-        schema: Schema,
-        response_body: Dict[str, Any],
-        request_query_string: Optional[Dict[str, Any]],
-        request_body: Optional[Dict[str, Any]],
-        request_headers: Optional[Dict[str, Any]],
-
-        response_headers: Optional[Dict[str, Any]],
-        status_code: int
-    ):
-        validation_errors = schema.validate_response("GET", request_body, response_body)
-        validation_errors.extend(
-            self._validate_location_header(
-                response_body=response_body,
-                response_headers=response_headers,
-                header_optional=True,
-            )
-        )
-        if status_code != 200:
-            validation_errors.append(
-                ValidationError.bad_status_code("GET", 200, status_code).with_location("status", "response")
-            )
-        return validation_errors
-
-    @staticmethod
-    def _validate_location_header(
-        response_body: Dict[str, Any], response_headers: Optional[Dict[str, Any]], header_optional: bool
-    ) -> List[ValidationError]:
-        validation_errors = []
-        meta = response_body.get("meta")
-        if isinstance(meta, dict):
-            meta_location = meta.get("location")
-        else:
-            meta_location = None
-        if "Location" not in (response_headers or {}):
-            if not header_optional:
-                validation_errors.append(
-                    ValidationError.missing_required_header("Location").with_location("headers", "response")
-                )
-            else:
-                return validation_errors
-        elif meta_location != response_headers["Location"]:
-            validation_errors.append(
-                ValidationError.values_must_match(
-                    value_1="'Location' header", value_2="'meta.location' attribute"
-                ).with_location("location", "meta", "body", "response")
-            )
-            validation_errors.append(
-                ValidationError.values_must_match(
-                    value_1="'Location' header", value_2="'meta.location' attribute"
-                ).with_location("headers", "response")
-            )
-        return validation_errors
-
