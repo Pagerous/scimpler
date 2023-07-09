@@ -1,8 +1,9 @@
 import abc
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from src.parser.attributes import common as common_attrs
 from src.parser.attributes import error as error_attrs
+from src.parser.attributes import query_result as query_result_attrs
 from src.parser.attributes import user as user_attrs
 from src.parser.attributes.attributes import Attribute
 from src.parser.error import ValidationError
@@ -115,7 +116,80 @@ class ErrorSchema(Schema):
         return []
 
 
-class ResourceSchema(Schema):
+class ListResponseSchema(Schema):
+    def __init__(self):
+        self.schemas_attribute = common_attrs.schemas
+        self.core_attributes = {  # 'Resources' are special and not included here
+            query_result_attrs.total_results.name.lower(): query_result_attrs.total_results,
+            query_result_attrs.start_index.name.lower(): query_result_attrs.start_index,
+            query_result_attrs.items_per_page.name.lower(): query_result_attrs.items_per_page,
+        }
+        self._resource_schema: Optional[Schema] = None
+
+    def set_resource_schema(self, schema: Schema) -> None:
+        self._resource_schema = schema
+
+    @property
+    def attributes(self) -> Dict[str, Attribute]:
+        return {
+            "schemas": self.schemas_attribute,
+            **self.core_attributes
+        }
+
+    def validate_response(
+        self,
+        http_method: str,
+        status_code: int,
+        request_body: Dict[str, Any],
+        request_headers: Dict[str, Any],
+        request_query_string: Optional[Dict[str, Any]],
+        response_body: Dict[str, Any],
+        response_headers: Dict[str, Any],
+    ) -> List[ValidationError]:
+        if http_method != "GET":
+            return []
+        validation_errors = super().validate_response(
+            http_method=http_method,
+            status_code=status_code,
+            request_body=request_body,
+            request_headers=request_headers,
+            request_query_string=request_query_string,
+            response_body=response_body,
+            response_headers=response_headers,
+        )
+        if validation_errors:
+            return validation_errors
+        if self._resource_schema is None:
+            for i, resource in enumerate(response_body.get("resources", [])):
+                if "id" not in resource:
+                    validation_errors.append(
+                        ValidationError.missing_required_attribute(
+                            "id"
+                        ).with_location("id", i, "Resources", "body", "response")
+                    )
+        else:
+            for i, resource in enumerate(response_body.get("resources", [])):
+                for attr_name, attr in self._resource_schema.attributes.items():
+                    if attr_name == "schemas":
+                        continue  # "schemas" is not required for response list item
+                    validation_errors.extend(
+                        [
+                            error.with_location(i, "Resources", "body", "response")
+                            for error in attr.validate(resource.get(attr_name), http_method, "RESPONSE")
+                        ]
+                    )
+                    # TODO: validate according to "attributes" query param too
+        # TODO: validate remaining list parameters when pagination
+
+        if status_code != 200:
+            validation_errors.append(
+                ValidationError.bad_status_code("GET", 200, status_code).with_location("status", "response")
+            )
+
+        return validation_errors
+
+
+class ResourceSchema(Schema, abc.ABC):
     def __init__(self, *core_attributes: Attribute, resource_type: str):
         self._resource_type = resource_type
         self.schemas_attribute = common_attrs.schemas

@@ -1,22 +1,33 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TypeVar
 
 from src.parser.attributes.common import schemas
 from src.parser.error import ValidationError
-from src.parser.schemas.schemas import Schema, ErrorSchema
+from src.parser.schemas.schemas import ListResponseSchema, Schema
+
+
+T = TypeVar("T")
 
 
 class SchemaValidator:
-    def __init__(self, schemas_mapping: Dict[Tuple[str], Schema]):
+    def __init__(self, schemas_mapping: Dict[Tuple[str], Schema], resource_type_mapping: Dict[str, Schema]):
         self._schemas_mapping = schemas_mapping
+        self._resource_type_mapping = resource_type_mapping
 
     @staticmethod
-    def _preprocess_body(body: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        if body is None:
-            return None
-        body_processed = {k.lower(): v for k, v in body.items()}
-        if len(body_processed) < len(body):
-            ...  # TODO: warn here
-        return body_processed
+    def _preprocess_body(body: T) -> T:
+        if isinstance(body, dict):
+            body_processed = {}
+            for k, v in body.items():
+                if isinstance(v, list):
+                    body_processed[k.lower()] = [SchemaValidator._preprocess_body(i) for i in v]
+                elif isinstance(v, dict):
+                    body_processed[k.lower()] = SchemaValidator._preprocess_body(v)
+                else:
+                    body_processed[k.lower()] = v
+            if len(body_processed) < len(body):
+                ...  # TODO: warn here
+            body = body_processed
+        return body
 
     @staticmethod
     def _validate_schemas_field(http_method, body: Optional[Dict[str, Any]], direction: str):
@@ -41,6 +52,7 @@ class SchemaValidator:
         query_string: Optional[Dict[str, Any]] = None,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
+        resource_type: Optional[str] = None,
     ):
         validation_errors = []
         body = self._preprocess_body(body)
@@ -76,6 +88,7 @@ class SchemaValidator:
         request_headers: Optional[Dict[str, Any]] = None,
         response_body: Optional[Dict[str, Any]] = None,
         response_headers: Optional[Dict[str, Any]] = None,
+        resource_type: Optional[str] = None,
     ):
         validation_errors = []
         schema = None
@@ -101,56 +114,9 @@ class SchemaValidator:
             # TODO: warn schema not recognized
             return []
 
-        if isinstance(schema, ErrorSchema):
-            if not 200 <= status_code < 600:
-                validation_errors.append(
-                    ValidationError.bad_error_status(status_code).with_location("status", "response")
-                )
-
-            if status_code != int(response_body["status"]):
-                validation_errors.append(
-                    ValidationError.error_status_mismatch(
-                        status_code, int(response_body["status"])
-                    ).with_location("status", "body", "response")
-                )
-                validation_errors.append(
-                    ValidationError.error_status_mismatch(
-                        status_code, int(response_body["status"])
-                    ).with_location("status", "response")
-                )
-            validation_errors.extend(schema.validate_response(http_method, request_body, response_body))
-        else:
-            if http_method == "POST":
-                return self._validate_post_response(
-                    schema=schema,
-                    request_query_string=request_query_string,
-                    request_body=request_body,
-                    request_headers=request_headers,
-                    response_body=response_body,
-                    response_headers=response_headers,
-                    status_code=status_code,
-                )
-            elif http_method == "GET":
-                return self._validate_get_response(
-                    schema=schema,
-                    request_query_string=request_query_string,
-                    request_body=request_body,
-                    request_headers=request_headers,
-                    response_body=response_body,
-                    response_headers=response_headers,
-                    status_code=status_code,
-                )
-
-        return validation_errors
-
-    @staticmethod
-    def _validate_post_request(
-        schema: Schema,
-        query_string: Optional[Dict[str, Any]],
-        body: Optional[Dict[str, Any]],
-        headers: Optional[Dict[str, Any]],
-    ):
-        return schema.validate_request("POST", body)
+        if isinstance(schema, ListResponseSchema):
+            resource_schema = self._resource_type_mapping.get(resource_type)
+            schema.set_resource_schema(resource_schema)
 
         validation_errors.extend(
             schema.validate_response(
