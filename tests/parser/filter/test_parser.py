@@ -1718,3 +1718,21 @@ def test_no_expression_is_discovered(filter_exp, expected_error_codes):
     assert len(errors) == len(expected_error_codes)
     for error, expected_error_code in zip(errors, expected_error_codes):
         assert error.code == expected_error_code
+
+
+@pytest.mark.parametrize(
+    "filter_exp",
+    (
+        'userName EQ "John"',
+        'userName Eq "John"',
+        'userName eQ "John"',
+        'userName PR',
+        'userName pR',
+        'userName Pr'
+    )
+)
+def test_operators_are_case_insensitive(filter_exp):
+    filter_, errors = parse_filter(filter_exp)
+
+    assert not errors
+    assert filter_ is not None

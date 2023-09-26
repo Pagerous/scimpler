@@ -389,7 +389,7 @@ def _parse_filter_attr_exp(
 
     components = re.split(r'\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', attr_exp)
     if len(components) == 2:
-        op_ = _UNARY_ATTR_OPERATORS.get(components[1])
+        op_ = _UNARY_ATTR_OPERATORS.get(components[1].lower())
         if op_ is None:
             errors.append(
                 ValidationError.unknown_operator(
@@ -414,7 +414,7 @@ def _parse_filter_attr_exp(
             return None, errors
         return op_(components[0]), []
     elif len(components) == 3:
-        op_ = _BINARY_ATTR_OPERATORS.get(components[1])
+        op_ = _BINARY_ATTR_OPERATORS.get(components[1].lower())
         if op_ is None:
             errors.append(
                 ValidationError.unknown_operator(
