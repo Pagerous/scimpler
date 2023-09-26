@@ -433,9 +433,11 @@ def _parse_filter_attr_exp(
             )
         if not _ALLOWED_IDENTIFIERS.fullmatch(components[0]):
             errors.append(ValidationError.bad_attribute_name(components[0]))
+        value, errors_ = _parse_comparison_value(components[2])
+        errors.extend(errors_)
         if errors:
             return None, errors
-        return op_(components[0], components[2]), []
+        return op_(components[0], value), []
     return None, [
         ValidationError.unknown_expression(
             _encode_sub_or_complex_into_exp(
@@ -486,3 +488,29 @@ def _encode_sub_or_complex_into_exp(
         elif index in parsed_complex_filters:
             encoded = encoded.replace(match.group(0), parsed_complex_filters[index].expression)
     return encoded
+
+
+_AllowedOperandValues = Union[str, bool, int, float, None]
+
+
+def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, List[ValidationError]]:
+    errors = []
+    if value.startswith("\"") and value.endswith("\""):
+        value = value[1:-1]
+    elif value == "false":
+        value = False
+    elif value == "true":
+        value = True
+    elif value == "null":
+        value = None
+    else:
+        try:
+            parsed = float(value)
+            parsed_int = int(parsed)
+            if parsed == parsed_int:
+                value = parsed_int
+            else:
+                value = parsed
+        except ValueError:
+            errors.append(ValidationError.bad_comparison_value(value))
+    return value, errors

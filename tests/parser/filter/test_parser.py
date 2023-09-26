@@ -21,7 +21,7 @@ def test_parse_basic_binary_attribute_filter(attr_name, operator):
     expected = {
         "op": operator,
         "attr_name": attr_name,
-        "value": '"bjensen"'
+        "value": 'bjensen'
     }
     filter_exp = f'{attr_name} {operator} "bjensen"'
 
@@ -74,7 +74,7 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
     expected = {
         "op": "eq",
         "attr_name": attr_name,
-        "value": f'"bjen{sequence}sen"'
+        "value": f'bjen{sequence}sen'
     }
     filter_exp = f'{attr_name}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
 
@@ -91,17 +91,17 @@ def test_basic_filters_can_be_combined_with_and_operator():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjensen"'
+                "value": 'bjensen'
             },
             {
                 "op": "ne",
                 "attr_name": "name.formatted",
-                "value": '"Crazy"'
+                "value": 'Crazy'
             },
             {
                 "op": "co",
                 "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                "value": '"bj"'
+                "value": 'bj'
             }
         ]
     }
@@ -123,17 +123,17 @@ def test_basic_filters_can_be_combined_with_or_operator():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjensen"'
+                "value": 'bjensen'
             },
             {
                 "op": "ne",
                 "attr_name": "name.formatted",
-                "value": '"Crazy"'
+                "value": 'Crazy'
             },
             {
                 "op": "co",
                 "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                "value": '"bj"'
+                "value": 'bj'
             }
         ]
     }
@@ -154,7 +154,7 @@ def test_precedence_of_logical_operators_is_preserved():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjensen"'
+                "value": 'bjensen'
             },
             {
                 "op": "and",
@@ -162,14 +162,14 @@ def test_precedence_of_logical_operators_is_preserved():
                     {
                         "op": "ne",
                         "attr_name": "name.formatted",
-                        "value": '"Crazy"',
+                        "value": 'Crazy',
                     },
                     {
                         "op": "not",
                         "sub_op": {
                             "op": "co",
                             "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                            "value": '"bj"'
+                            "value": 'bj'
                         }
                     }
                 ]
@@ -194,7 +194,7 @@ def test_any_sequence_of_whitespaces_between_tokens_with_logical_operators_has_n
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjen\tsen"'
+                "value": 'bjen\tsen'
             },
             {
                 "op": "and",
@@ -202,14 +202,14 @@ def test_any_sequence_of_whitespaces_between_tokens_with_logical_operators_has_n
                     {
                         "op": "ne",
                         "attr_name": "name.formatted",
-                        "value": '"Craz\ny"',
+                        "value": 'Craz\ny',
                     },
                     {
                         "op": "not",
                         "sub_op": {
                             "op": "co",
                             "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                            "value": '"b j"'
+                            "value": 'b j'
                         }
                     }
                 ]
@@ -234,7 +234,7 @@ def test_filter_groups_are_parsed():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjensen"'
+                "value": 'bjensen'
             },
             {
                 "op": "or",
@@ -242,7 +242,7 @@ def test_filter_groups_are_parsed():
                     {
                         "op": "ne",
                         "attr_name": "name.formatted",
-                        "value": '"Crazy"',
+                        "value": 'Crazy',
                     },
                     {
                         "op": "and",
@@ -252,13 +252,13 @@ def test_filter_groups_are_parsed():
                                 "sub_op": {
                                     "op": "co",
                                     "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                                    "value": '"bj"'
+                                    "value": 'bj'
                                 },
                              },
                             {
                                 "op": "eq",
                                 "attr_name": "id",
-                                "value": "1"
+                                "value": 1
                             },
                         ]
                     }
@@ -287,7 +287,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjen  sen"'
+                "value": 'bjen  sen'
             },
             {
                 "op": "or",
@@ -295,7 +295,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                     {
                         "op": "ne",
                         "attr_name": "name.formatted",
-                        "value": '"Craz\ny"',
+                        "value": 'Craz\ny',
                     },
                     {
                         "op": "and",
@@ -305,13 +305,13 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                                 "sub_op": {
                                     "op": "co",
                                     "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                                    "value": '"b\t\tj"'
+                                    "value": 'b\t\tj'
                                 },
                              },
                             {
                                 "op": "eq",
                                 "attr_name": "id",
-                                "value": "1"
+                                "value": 1
                             },
                         ]
                     }
@@ -340,7 +340,7 @@ def test_basic_complex_attribute_filter_is_parsed():
         "sub_op": {
             "op": "eq",
             "attr_name": "type",
-            "value": '"work"',
+            "value": 'work',
         }
     }
 
@@ -360,12 +360,12 @@ def test_complex_attribute_filter_with_logical_operators_is_parsed():
                 {
                     "op": "eq",
                     "attr_name": "type",
-                    "value": '"work"',
+                    "value": 'work',
                 },
                 {
                     "op": "co",
                     "attr_name": "value",
-                    "value": '"@example.com"',
+                    "value": '@example.com',
                 },
             ]
         }
@@ -390,7 +390,7 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
                         {
                             "op": "eq",
                             "attr_name": "type",
-                            "value": '"work"',
+                            "value": 'work',
                         },
                         {
                             "op": "pr",
@@ -404,12 +404,12 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
                         {
                             "op": "co",
                             "attr_name": "value",
-                            "value": '"@example.com"',
+                            "value": '@example.com',
                         },
                         {
                             "op": "co",
                             "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails.display",
-                            "value": '"@example.com"',
+                            "value": '@example.com',
                         },
                     ]
                 }
@@ -441,7 +441,7 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
                         {
                             "op": "eq",
                             "attr_name": "type",
-                            "value": '"work"',
+                            "value": 'work',
                         },
                         {
                             "op": "pr",
@@ -455,12 +455,12 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
                         {
                             "op": "co",
                             "attr_name": "value",
-                            "value": '"@ex am\nple.com"',
+                            "value": '@ex am\nple.com',
                         },
                         {
                             "op": "co",
                             "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails.display",
-                            "value": '"@example\t.com"',
+                            "value": '@example\t.com',
                         },
                     ]
                 }
@@ -491,7 +491,7 @@ def test_gargantuan_filter():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjensen"'
+                "value": 'bjensen'
             },
             {
                 "op": "or",
@@ -499,7 +499,7 @@ def test_gargantuan_filter():
                     {
                         "op": "ne",
                         "attr_name": "name.formatted",
-                        "value": '"Crazy"',
+                        "value": 'Crazy',
                     },
                     {
                         "op": "and",
@@ -509,13 +509,13 @@ def test_gargantuan_filter():
                                 "sub_op": {
                                     "op": "co",
                                     "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                                    "value": '"bj"'
+                                    "value": 'bj'
                                 },
                              },
                             {
                                 "op": "eq",
                                 "attr_name": "id",
-                                "value": "1"
+                                "value": 1
                             },
                         ]
                     }
@@ -536,7 +536,7 @@ def test_gargantuan_filter():
                                         {
                                             "op": "eq",
                                             "attr_name": "type",
-                                            "value": '"work"',
+                                            "value": 'work',
                                         },
                                         {
                                             "op": "pr",
@@ -550,12 +550,12 @@ def test_gargantuan_filter():
                                         {
                                             "op": "co",
                                             "attr_name": "value",
-                                            "value": '"@example.com"',
+                                            "value": '@example.com',
                                         },
                                         {
                                             "op": "co",
                                             "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails.display",
-                                            "value": '"@example.com"',
+                                            "value": '@example.com',
                                         },
                                     ]
                                 }
@@ -574,7 +574,7 @@ def test_gargantuan_filter():
                                         {
                                             "op": "eq",
                                             "attr_name": "type",
-                                            "value": '"work"',
+                                            "value": 'work',
                                         },
                                         {
                                             "op": "pr",
@@ -588,12 +588,12 @@ def test_gargantuan_filter():
                                         {
                                             "op": "co",
                                             "attr_name": "value",
-                                            "value": '"@example.com"',
+                                            "value": '@example.com',
                                         },
                                         {
                                             "op": "co",
                                             "attr_name": "display",
-                                            "value": '"@example.com"',
+                                            "value": '@example.com',
                                         },
                                     ]
                                 }
@@ -635,7 +635,7 @@ def test_gargantuan_filter():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": '"bjensen"',
+                "value": 'bjensen',
             },
         ),
         (
@@ -643,7 +643,7 @@ def test_gargantuan_filter():
             {
                 "op": "co",
                 "attr_name": "name.familyName",
-                "value": '"O\'Malley"',
+                "value": 'O\'Malley',
             },
         ),
         (
@@ -651,7 +651,7 @@ def test_gargantuan_filter():
             {
                 "op": "sw",
                 "attr_name": "userName",
-                "value": '"J"',
+                "value": 'J',
             },
         ),
         (
@@ -659,7 +659,7 @@ def test_gargantuan_filter():
             {
                 "op": "sw",
                 "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-                "value": '"J"',
+                "value": 'J',
             },
         ),
         (
@@ -674,7 +674,7 @@ def test_gargantuan_filter():
             {
                 "op": "gt",
                 "attr_name": "meta.lastModified",
-                "value": '"2011-05-13T04:42:34Z"',
+                "value": '2011-05-13T04:42:34Z',
             },
         ),
         (
@@ -682,7 +682,7 @@ def test_gargantuan_filter():
             {
                 "op": "ge",
                 "attr_name": "meta.lastModified",
-                "value": '"2011-05-13T04:42:34Z"',
+                "value": '2011-05-13T04:42:34Z',
             },
         ),
         (
@@ -690,7 +690,7 @@ def test_gargantuan_filter():
             {
                 "op": "lt",
                 "attr_name": "meta.lastModified",
-                "value": '"2011-05-13T04:42:34Z"',
+                "value": '2011-05-13T04:42:34Z',
             },
         ),
         (
@@ -698,7 +698,7 @@ def test_gargantuan_filter():
             {
                 "op": "le",
                 "attr_name": "meta.lastModified",
-                "value": '"2011-05-13T04:42:34Z"',
+                "value": '2011-05-13T04:42:34Z',
             },
         ),
         (
@@ -713,7 +713,7 @@ def test_gargantuan_filter():
                     {
                         "op": "eq",
                         "attr_name": "userType",
-                        "value": '"Employee"',
+                        "value": 'Employee',
                     }
                 ]
             },
@@ -730,7 +730,7 @@ def test_gargantuan_filter():
                     {
                         "op": "eq",
                         "attr_name": "userType",
-                        "value": '"Intern"',
+                        "value": 'Intern',
                     }
                 ]
             },
@@ -740,7 +740,7 @@ def test_gargantuan_filter():
             {
                 "op": "eq",
                 "attr_name": "schemas",
-                "value": '"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"',
+                "value": 'urn:ietf:params:scim:schemas:extension:enterprise:2.0:User',
             },
         ),
         (
@@ -751,7 +751,7 @@ def test_gargantuan_filter():
                     {
                         "op": "eq",
                         "attr_name": "userType",
-                        "value": '"Employee"',
+                        "value": 'Employee',
                     },
                     {
                         "op": "or",
@@ -759,12 +759,12 @@ def test_gargantuan_filter():
                             {
                                 "op": "co",
                                 "attr_name": "emails",
-                                "value": '"example.com"',
+                                "value": 'example.com',
                             },
                             {
                                 "op": "co",
                                 "attr_name": "emails.value",
-                                "value": '"example.org"',
+                                "value": 'example.org',
                             },
                         ],
                     }
@@ -779,7 +779,7 @@ def test_gargantuan_filter():
                     {
                         "op": "ne",
                         "attr_name": "userType",
-                        "value": '"Employee"',
+                        "value": 'Employee',
                     },
                     {
                         "op": "not",
@@ -789,12 +789,12 @@ def test_gargantuan_filter():
                                 {
                                     "op": "co",
                                     "attr_name": "emails",
-                                    "value": '"example.com"',
+                                    "value": 'example.com',
                                 },
                                 {
                                     "op": "co",
                                     "attr_name": "emails.value",
-                                    "value": '"example.org"',
+                                    "value": 'example.org',
                                 },
                             ],
                         }
@@ -810,12 +810,12 @@ def test_gargantuan_filter():
                     {
                         "op": "eq",
                         "attr_name": "userType",
-                        "value": '"Employee"',
+                        "value": 'Employee',
                     },
                     {
                         "op": "eq",
                         "attr_name": "emails.type",
-                        "value": '"work"',
+                        "value": 'work',
                     },
                 ]
             },
@@ -828,7 +828,7 @@ def test_gargantuan_filter():
                     {
                         "op": "eq",
                         "attr_name": "userType",
-                        "value": '"Employee"',
+                        "value": 'Employee',
                     },
                     {
                         "op": "complex",
@@ -839,12 +839,12 @@ def test_gargantuan_filter():
                                 {
                                     "op": "eq",
                                     "attr_name": "type",
-                                    "value": '"work"',
+                                    "value": 'work',
                                 },
                                 {
                                     "op": "co",
                                     "attr_name": "value",
-                                    "value": '"@example.com"',
+                                    "value": '@example.com',
                                 },
                             ],
                         }
@@ -866,12 +866,12 @@ def test_gargantuan_filter():
                                 {
                                     "op": "eq",
                                     "attr_name": "type",
-                                    "value": '"work"',
+                                    "value": 'work',
                                 },
                                 {
                                     "op": "co",
                                     "attr_name": "value",
-                                    "value": '"@example.com"',
+                                    "value": '@example.com',
                                 },
                             ],
                         }
@@ -885,12 +885,12 @@ def test_gargantuan_filter():
                                 {
                                     "op": "eq",
                                     "attr_name": "type",
-                                    "value": '"xmpp"',
+                                    "value": 'xmpp',
                                 },
                                 {
                                     "op": "co",
                                     "attr_name": "value",
-                                    "value": '"@foo.com"',
+                                    "value": '@foo.com',
                                 },
                             ],
                         }
@@ -946,12 +946,12 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_error_codes):
                     {
                         "op": "eq",
                         "attr_name": "userName",
-                        "value": '"use(r123"'
+                        "value": 'use(r123'
                     },
                     {
                         "op": "co",
                         "attr_name": "display",
-                        "value": '"us)er"'
+                        "value": 'us)er'
                     }
                 ]
             }
@@ -964,12 +964,12 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_error_codes):
                     {
                         "op": "eq",
                         "attr_name": "userName",
-                        "value": '"use(r123"'
+                        "value": 'use(r123'
                     },
                     {
                         "op": "co",
                         "attr_name": "display",
-                        "value": '"user"'
+                        "value": 'user'
                     }
                 ]
             }
@@ -982,12 +982,12 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_error_codes):
                     {
                         "op": "eq",
                         "attr_name": "userName",
-                        "value": '"user123"'
+                        "value": 'user123'
                     },
                     {
                         "op": "co",
                         "attr_name": "display",
-                        "value": '"us)er"'
+                        "value": 'us)er'
                     }
                 ]
             }
@@ -1031,12 +1031,12 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_er
                     {
                         "op": "eq",
                         "attr_name": "userName",
-                        "value": '"use[r123"'
+                        "value": 'use[r123'
                     },
                     {
                         "op": "co",
                         "attr_name": "display",
-                        "value": '"us]er"'
+                        "value": 'us]er'
                     }
                 ]
             }
@@ -1049,12 +1049,12 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_er
                     {
                         "op": "eq",
                         "attr_name": "userName",
-                        "value": '"use[r123"'
+                        "value": 'use[r123'
                     },
                     {
                         "op": "co",
                         "attr_name": "display",
-                        "value": '"user"'
+                        "value": 'user'
                     }
                 ]
             }
@@ -1067,12 +1067,12 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_er
                     {
                         "op": "eq",
                         "attr_name": "userName",
-                        "value": '"user123"'
+                        "value": 'user123'
                     },
                     {
                         "op": "co",
                         "attr_name": "display",
-                        "value": '"us]er"'
+                        "value": 'us]er'
                     }
                 ]
             }
@@ -1393,32 +1393,32 @@ def test_missing_operand_for_operator_causes_parsing_errors(
             ]
         ),
         (
-            "apple banana pear",
+            'apple banana "pear"',
             [
                 {
                     "operator_type": "binary",
                     "operator": "banana",
-                    "expression": "apple banana pear",
+                    "expression": 'apple banana "pear"',
                 }
             ]
         ),
         (
-            "(a b c) or (c d e)",
+            '(a b "c") or (c d "e")',
             [
                 {
                     "operator_type": "binary",
                     "operator": "b",
-                    "expression": "a b c"
+                    "expression": 'a b "c"'
                 },
                 {
                     "operator_type": "binary",
                     "operator": "d",
-                    "expression": "c d e"
+                    "expression": 'c d "e"'
                 }
             ]
         ),
         (
-            "(a b) and emails[c d e or g h]",
+            '(a b) and emails[c d "e" or g h]',
             [
                 {
                     "operator_type": "unary",
@@ -1428,7 +1428,7 @@ def test_missing_operand_for_operator_causes_parsing_errors(
                 {
                     "operator_type": "binary",
                     "operator": "d",
-                    "expression": "c d e"
+                    "expression": 'c d "e"'
                 },
                 {
                     "operator_type": "unary",
@@ -1736,3 +1736,126 @@ def test_operators_are_case_insensitive(filter_exp):
 
     assert not errors
     assert filter_ is not None
+
+
+@pytest.mark.parametrize(
+    ("filter_exp", "expected_filter"),
+    (
+        (
+            'attr eq "John"',
+            {
+                "op": "eq",
+                "attr_name": "attr",
+                "value": "John",
+            }
+        ),
+        (
+            'attr eq 1',
+            {
+                "op": "eq",
+                "attr_name": "attr",
+                "value": 1,
+            }
+        ),
+        (
+            'attr eq 1.0',
+            {
+                "op": "eq",
+                "attr_name": "attr",
+                "value": 1,
+            }
+        ),
+        (
+            'attr eq 1.2',
+            {
+                "op": "eq",
+                "attr_name": "attr",
+                "value": 1.2,
+            }
+        ),
+        (
+            'attr eq false',
+            {
+                "op": "eq",
+                "attr_name": "attr",
+                "value": False,
+            }
+        ),
+        (
+            'attr eq true',
+            {
+                "op": "eq",
+                "attr_name": "attr",
+                "value": True,
+            }
+        ),
+        (
+            'attr eq null',
+            {
+                "op": "eq",
+                "attr_name": "attr",
+                "value": None,
+            }
+        ),
+    )
+)
+def test_operators_are_case_insensitive(filter_exp, expected_filter):
+    filter_, errors = parse_filter(filter_exp)
+
+    assert not errors
+    assert to_dict(filter_) == expected_filter
+
+
+@pytest.mark.parametrize(
+    ("filter_exp", "expected_error_contexts"),
+    (
+        (
+            "userName eq blabla",
+            [
+                {
+                    "value": "blabla",
+                }
+            ]
+        ),
+        (
+            "userName eq blabla and displayName eq not_true",
+            [
+                {
+                    "value": "blabla",
+                },
+                {
+                    "value": "not_true",
+                }
+            ]
+        ),
+        (
+            "emails[type eq blabla]",
+            [
+                {
+                    "value": "blabla",
+                },
+            ]
+        ),
+        (
+            "emails[type eq blabla] or ims[type eq omnomnom]",
+            [
+                {
+                    "value": "blabla",
+                },
+                {
+                    "value": "omnomnom",
+                },
+            ]
+        )
+    )
+)
+def test_bad_comparison_values_are_discovered(
+    filter_exp, expected_error_contexts
+):
+    filter_, errors = parse_filter(filter_exp)
+
+    assert filter_ is None
+    assert len(errors) == len(expected_error_contexts)
+    for error, context in zip(errors, expected_error_contexts):
+        assert error.code == 112
+        assert error.context == context

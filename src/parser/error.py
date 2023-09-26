@@ -39,7 +39,8 @@ class ValidationError:
         108: "complex attribute expression '{expression}' misses top-level attribute name",
         109: "complex attribute can not contain inner complex attributes or square brackets",
         110: "complex attribute {attribute!r} at position {expression_position} has no expression",
-        111: "attribute '{attribute}' does not conform the rules",
+        111: "attribute {attribute!r} does not conform the rules",
+        112: "bad comparison value {value!r}",
     }
 
     def __init__(self, code: int, **context):
@@ -181,6 +182,10 @@ class ValidationError:
     @classmethod
     def bad_attribute_name(cls, attribute: str):
         return cls(code=111, attribute=attribute)
+
+    @classmethod
+    def bad_comparison_value(cls, value: Any):
+        return cls(code=112, value=value)
 
     @property
     def context(self) -> Dict:
