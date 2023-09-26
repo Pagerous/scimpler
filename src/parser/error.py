@@ -28,6 +28,18 @@ class ValidationError:
         17: "meta.resourceType must match configured type `{resource_type}`, but provided '{provided}'",
         18: "expected type '{expected_type}', got '{provided_type}' instead",
         19: "attribute '{attr_name}' should never be returned",
+        100: "no closing bracket for the bracket at position {bracket_position}",
+        101: "no opening bracket for the bracket at position {bracket_position}",
+        102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
+        103: "no opening complex attribute bracket for the bracket at position {bracket_position}",
+        104: "missing operand for operator '{operator}' in expression '{expression}'",
+        105: "unknown {operator_type} operator '{operator}' in expression '{expression}'",
+        106: "unknown expression '{expression}'",
+        107: "no expression or empty expression inside precedence grouping operator",
+        108: "complex attribute expression '{expression}' misses top-level attribute name",
+        109: "complex attribute can not contain inner complex attributes or square brackets",
+        110: "complex attribute {attribute!r} at position {expression_position} has no expression",
+        111: "attribute '{attribute}' does not conform the rules",
     }
 
     def __init__(self, code: int, **context):
@@ -121,6 +133,54 @@ class ValidationError:
     @classmethod
     def returned_restricted_attribute(cls, attr_name: str):
         return cls(code=19, attr_name=attr_name)
+
+    @classmethod
+    def no_closing_bracket(cls, bracket_position: int):
+        return cls(code=100, bracket_position=bracket_position)
+
+    @classmethod
+    def no_opening_bracket(cls, bracket_position: int):
+        return cls(code=101, bracket_position=bracket_position)
+
+    @classmethod
+    def no_closing_complex_attribute_bracket(cls, bracket_position: int):
+        return cls(code=102, bracket_position=bracket_position)
+
+    @classmethod
+    def no_opening_complex_attribute_bracket(cls, bracket_position: int):
+        return cls(code=103, bracket_position=bracket_position)
+
+    @classmethod
+    def missing_operand_for_operator(cls, operator: str, expression: str):
+        return cls(code=104, operator=operator, expression=expression)
+
+    @classmethod
+    def unknown_operator(cls, operator_type: str, operator: str, expression: str):
+        return cls(code=105, operator_type=operator_type, operator=operator, expression=expression)
+
+    @classmethod
+    def unknown_expression(cls, expression: str):
+        return cls(code=106, expression=expression)
+
+    @classmethod
+    def empty_expression(cls):
+        return cls(code=107)
+
+    @classmethod
+    def complex_attribute_without_top_level_attribute(cls, expression: str):
+        return cls(code=108, expression=expression)
+
+    @classmethod
+    def inner_complex_attribute_or_square_bracket(cls):
+        return cls(code=109)
+
+    @classmethod
+    def empty_complex_attribute_expression(cls, attribute: str, expression_position: int):
+        return cls(code=110, attribute=attribute, expression_position=expression_position)
+
+    @classmethod
+    def bad_attribute_name(cls, attribute: str):
+        return cls(code=111, attribute=attribute)
 
     @property
     def context(self) -> Dict:
