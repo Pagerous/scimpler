@@ -1,5 +1,8 @@
 import pytest
 
+from src.parser.resource.schemas import UserSchema
+from src.parser.resource.validators.resource import ResourcePOST
+
 
 @pytest.fixture
 def request_body():
@@ -45,9 +48,13 @@ def response_headers():
     }
 
 
+@pytest.fixture
+def validator():
+    return ResourcePOST(UserSchema())
+
+
 def test_body_is_not_required(validator, request_body):
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=None,
         status_code=201
@@ -58,7 +65,6 @@ def test_body_is_not_required(validator, request_body):
 
 def test_correct_body_passes_validation(validator, request_body, response_body, response_headers):
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
@@ -72,7 +78,6 @@ def test_missing_schemas_key_returns_error(validator, request_body, response_bod
     response_body.pop("schemas")
 
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
@@ -89,7 +94,6 @@ def test_many_validation_errors_can_be_returned(validator, request_body, respons
     response_body["name"] = 123  # noqa
 
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
@@ -105,7 +109,6 @@ def test_many_validation_errors_can_be_returned(validator, request_body, respons
 
 def test_location_header_is_required(validator, request_body, response_body):
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=response_body,
         response_headers=None,
@@ -121,7 +124,6 @@ def test_location_header_must_match_meta_location(validator, request_body, respo
     response_body["meta"]["location"] = "https://example.com/v2/Users/different-id"
 
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
@@ -137,7 +139,6 @@ def test_location_header_must_match_meta_location(validator, request_body, respo
 
 def test_status_code_must_be_201(validator, request_body, response_body, response_headers):
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
@@ -152,7 +153,6 @@ def test_status_code_must_be_201(validator, request_body, response_body, respons
 def test_resource_type_must_match(validator, request_body, response_body, response_headers):
     response_body["meta"]["resourceType"] = "BlaBla"
     errors = validator.validate_response(
-        http_method="POST",
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,

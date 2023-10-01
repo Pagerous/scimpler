@@ -98,7 +98,7 @@ class Attribute:
     def uniqueness(self) -> AttributeUniqueness:
         return self._uniqueness
 
-    def validate(self, value: Any, http_method: str, direction: str) -> list[ValidationError]:
+    def validate(self, value: Any, direction: str) -> list[ValidationError]:
         errors = []
         if value is None:
             if (
@@ -168,8 +168,8 @@ class ComplexAttribute(Attribute):
             attr.name: attr for attr in sub_attributes
         }
 
-    def validate(self, value: Any, http_method: str, direction: str) -> list[ValidationError]:
-        errors = super().validate(value, http_method, direction)
+    def validate(self, value: Any,  direction: str) -> list[ValidationError]:
+        errors = super().validate(value, direction)
         if errors:
             return errors
         elif value is None:
@@ -180,7 +180,7 @@ class ComplexAttribute(Attribute):
                     errors.extend(
                         [
                             error.with_location(i, self._name)
-                            for error in attr.validate(item.get(attr_name), http_method, direction)
+                            for error in attr.validate(item.get(attr_name), direction)
                         ]
                     )
         else:
@@ -188,7 +188,7 @@ class ComplexAttribute(Attribute):
                 errors.extend(
                     [
                         error.with_location(self._name)
-                        for error in attr.validate(value.get(attr_name), http_method, direction)
+                        for error in attr.validate(value.get(attr_name), direction)
                     ]
                 )
         return errors

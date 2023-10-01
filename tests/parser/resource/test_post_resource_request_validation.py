@@ -1,6 +1,16 @@
+import pytest
+
+from src.parser.resource.schemas import UserSchema
+from src.parser.resource.validators.resource import ResourcePOST
+
+
+@pytest.fixture
+def validator():
+    return ResourcePOST(UserSchema())
+
 
 def test_body_is_required(validator):
-    errors = validator.validate_request(http_method="POST", body=None)
+    errors = validator.validate_request(body=None)
 
     assert len(errors) == 1
     assert errors[0].code == 15
@@ -8,7 +18,6 @@ def test_body_is_required(validator):
 
 def test_correct_body_passes_validation(validator):
     errors = validator.validate_request(
-        http_method="POST",
         body={
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
             "userName": "bjensen",
@@ -26,7 +35,6 @@ def test_correct_body_passes_validation(validator):
 
 def test_missing_schemas_key_returns_error(validator):
     errors = validator.validate_request(
-        http_method="POST",
         body={
             "userName": "bjensen",
             "externalId": "bjensen",
@@ -45,7 +53,6 @@ def test_missing_schemas_key_returns_error(validator):
 
 def test_many_validation_errors_can_be_returned(validator):
     errors = validator.validate_request(
-        http_method="POST",
         body={
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
             "externalId": "bjensen",
@@ -62,7 +69,6 @@ def test_many_validation_errors_can_be_returned(validator):
 
 def test_external_id_may_be_omitted(validator):
     errors = validator.validate_request(
-        http_method="POST",
         body={
              "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
              "userName": "bjensen",

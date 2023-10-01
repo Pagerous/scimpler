@@ -7,7 +7,6 @@ def test_validates_required_attribute():
 
     errors = attr.validate(
         value=None,
-        http_method="POST",
         direction="REQUEST",
     )
 
@@ -20,7 +19,6 @@ def test_passing_no_value_for_required_attribute_succeeds_if_post_request_and_se
 
     errors = attr.validate(
         value=None,
-        http_method="POST",
         direction="REQUEST",
     )
 
@@ -32,7 +30,6 @@ def test_multi_valued_attribute_validation_fails_if_not_provided_list_or_tuple()
 
     errors = attr.validate(
         value="non-list",
-        http_method="POST",
         direction="REQUEST",
     )
 
@@ -44,7 +41,6 @@ def test_multi_valued_attribute_validation_succeeds_if_provided_list_or_tuple():
 
     errors = attr.validate(
         value=["a", "b", "c"],
-        http_method="POST",
         direction="REQUEST",
     )
 
@@ -56,7 +52,6 @@ def test_multi_valued_attribute_values_are_validated_separately():
 
     errors = attr.validate(
         value=["a", 123],
-        http_method="POST",
         direction="REQUEST",
     )
 
@@ -74,7 +69,7 @@ def test_complex_attribute_sub_attributes_are_validated_separately():
         issuer=AttributeIssuer.BOTH,
     )
 
-    errors = attr.validate(value={"sub_attr_2": "123"}, http_method="POST", direction="REQUEST")
+    errors = attr.validate(value={"sub_attr_2": "123"}, direction="REQUEST")
 
     assert errors[0].code == 1
     assert errors[0].location == "complex_attr.sub_attr_1"
@@ -95,7 +90,6 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
 
     errors = attr.validate(
         value=[{"sub_attr_2": "123"}, {"sub_attr_1": 123, "sub_attr_2": 123}],
-        http_method="POST",
         direction="REQUEST",
     )
 
@@ -113,7 +107,6 @@ def test_returning_attribute_that_should_never_be_returned_fails():
 
     errors = attr.validate(
         value="value",
-        http_method="GET",
         direction="RESPONSE",
     )
 
@@ -127,7 +120,6 @@ def test_providing_no_value_for_required_attribute_if_should_not_be_returned_suc
 
     errors = attr.validate(
         value=None,
-        http_method="GET",
         direction="RESPONSE",
     )
 

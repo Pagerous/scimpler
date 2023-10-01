@@ -1,7 +1,4 @@
-from .attributes import (
-    Attribute,
-    AttributeIssuer,
-)
+from .attributes import Attribute, AttributeIssuer
 from ..attributes import type as at
 
 

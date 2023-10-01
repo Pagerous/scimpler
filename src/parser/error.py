@@ -28,6 +28,15 @@ class ValidationError:
         17: "meta.resourceType must match configured type `{resource_type}`, but provided '{provided}'",
         18: "expected type '{expected_type}', got '{provided_type}' instead",
         19: "attribute '{attr_name}' should never be returned",
+        20: "provided 'schemas' do not correspond to the resource {resource_type!r}",
+        21: "too many results",
+        22: "total results ({total_results}) do not match number of resources ({n_resources})",
+        23: "too little results",
+        24: (
+            "response value of {response_key!r} ({response_value}) "
+            "does not correspond to query parameter {query_param_name!r} ({query_param_value}): {reason}"
+        ),
+
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -134,6 +143,35 @@ class ValidationError:
     @classmethod
     def returned_restricted_attribute(cls, attr_name: str):
         return cls(code=19, attr_name=attr_name)
+
+    @classmethod
+    def schemas_mismatch(cls, resource_type: str):
+        return cls(code=20, resource_type=resource_type)
+
+    @classmethod
+    def too_many_results(cls):
+        return cls(code=21)
+
+    @classmethod
+    def total_results_mismatch(cls, total_results: int, n_resources: int):
+        return cls(code=22, total_results=total_results, n_resources=n_resources)
+
+    @classmethod
+    def too_little_results(cls):
+        return cls(code=23)
+
+    @classmethod
+    def response_value_does_not_correspond_to_parameter(
+        cls, response_key: str, response_value: Any, query_param_name: str, query_param_value: Any, reason: str
+    ):
+        return cls(
+            code=24,
+            response_key=response_key,
+            response_value=response_value,
+            query_param_name=query_param_name,
+            query_param_value=query_param_value,
+            reason=reason,
+        )
 
     @classmethod
     def no_closing_bracket(cls, bracket_position: int):
