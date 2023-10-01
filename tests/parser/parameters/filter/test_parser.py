@@ -1,7 +1,7 @@
 import pytest
 
-from src.parser.filter.filter import parse_filter
-from src.parser.filter.utils import to_dict
+from src.parser.parameters.filter.filter import parse_filter
+from src.parser.parameters.filter.utils import to_dict
 
 
 @pytest.mark.parametrize(

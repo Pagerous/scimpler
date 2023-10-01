@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 from src.parser.error import ValidationError
-from src.parser.filter import operator as op
+from src.parser.parameters.filter import operator as op
 
 _ATTR_NAME_REGEX = r"\w+"
 _SUB_ATTR_NAME_REGEX = r"\w+\.\w+"

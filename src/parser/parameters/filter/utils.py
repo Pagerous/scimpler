@@ -1,6 +1,6 @@
 from typing import Union
 
-from src.parser.filter import operator as op
+from src.parser.parameters.filter import operator as op
 
 
 def to_dict(filter_: Union[op.LogicalOperator, op.AttributeOperator, op.ComplexAttributeOperator]):
