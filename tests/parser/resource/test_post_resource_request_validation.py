@@ -10,14 +10,25 @@ def validator():
 
 
 def test_body_is_required(validator):
-    errors = validator.validate_request(body=None)
+    expected_issues = {
+        "request": {
+            "body": {
+                "_errors": [
+                    {
+                        "code": 15
+                    }
+                ]
+            }
+        }
+    }
 
-    assert len(errors) == 1
-    assert errors[0].code == 15
+    issues = validator.validate_request(body=None)
+
+    assert issues.to_dict() == expected_issues
 
 
 def test_correct_body_passes_validation(validator):
-    errors = validator.validate_request(
+    issues = validator.validate_request(
         body={
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
             "userName": "bjensen",
@@ -30,11 +41,25 @@ def test_correct_body_passes_validation(validator):
         }
     )
 
-    assert errors == []
+    assert not issues
 
 
 def test_missing_schemas_key_returns_error(validator):
-    errors = validator.validate_request(
+    expected_issues = {
+        "request": {
+            "body": {
+                "schemas": {
+                    "_errors": [
+                        {
+                            "code": 1
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_request(
         body={
             "userName": "bjensen",
             "externalId": "bjensen",
@@ -46,12 +71,31 @@ def test_missing_schemas_key_returns_error(validator):
         }
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 1
-    assert errors[0].location == "request.body.schemas"
+    assert issues.to_dict() == expected_issues
 
 
 def test_many_validation_errors_can_be_returned(validator):
+    expected_issues = {
+        "request": {
+            "body": {
+                "userName": {
+                    "_errors": [
+                        {
+                            "code": 1
+                        }
+                    ]
+                },
+                "name": {
+                    "_errors": [
+                        {
+                            "code": 2
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
     errors = validator.validate_request(
         body={
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -60,15 +104,11 @@ def test_many_validation_errors_can_be_returned(validator):
         }
     )
 
-    assert len(errors) == 2
-    assert errors[0].code == 1
-    assert errors[0].location == "request.body.userName"
-    assert errors[1].code == 2
-    assert errors[1].location == "request.body.name"
+    assert errors.to_dict() == expected_issues
 
 
 def test_external_id_may_be_omitted(validator):
-    errors = validator.validate_request(
+    issues = validator.validate_request(
         body={
              "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
              "userName": "bjensen",
@@ -80,4 +120,4 @@ def test_external_id_may_be_omitted(validator):
         }
     )
 
-    assert errors == []
+    assert not issues

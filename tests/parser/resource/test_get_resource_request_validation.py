@@ -10,6 +10,6 @@ def validator():
 
 
 def test_body_is_ignored(validator):
-    errors = validator.validate_request(body={"schemas": 123, "userName": 123})
+    issues = validator.validate_request(body={"schemas": 123, "userName": 123})
 
-    assert errors == []
+    assert not issues

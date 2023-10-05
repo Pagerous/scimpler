@@ -4,177 +4,333 @@ from src.parser.attributes import type as at
 
 
 def test_validate_invalid_string():
-    errors = at.String.validate(123)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {"scim_type": "string", "expected_type": "str", "provided_type": "int"}
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "string", "expected_type": "str", "provided_type": "int"}
+    issues = at.String.validate(123)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_string():
-    errors = at.String.validate("123")
+    issues = at.String.validate("123")
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_integer():
-    errors = at.Integer.validate("123")
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {"scim_type": "integer", "expected_type": "int", "provided_type": "str"}
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "integer", "expected_type": "int", "provided_type": "str"}
+    issues = at.Integer.validate("123")
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_integer():
-    errors = at.Integer.validate(123)
+    issues = at.Integer.validate(123)
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_integer_float_without_floating_numbers_is_valid():
-    errors = at.Integer.validate(1.0)
+    issues = at.Integer.validate(1.0)
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_integer_float_with_floating_numbers_is_invalid():
-    errors = at.Integer.validate(1.2)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "integer", "expected_type": "int", "provided_type": "float"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "integer", "expected_type": "int", "provided_type": "float"}
+    issues = at.Integer.validate(1.2)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_invalid_decimal():
-    errors = at.Decimal.validate("123")
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "decimal", "expected_type": "float", "provided_type": "str"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "decimal", "expected_type": "float", "provided_type": "str"}
+    issues = at.Decimal.validate("123")
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_decimal():
-    errors = at.Decimal.validate(1.2)
+    issues = at.Decimal.validate(1.2)
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_integer_is_valid_decimal():
-    errors = at.Decimal.validate(1)
+    issues = at.Decimal.validate(1)
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_boolean():
-    errors = at.Boolean.validate("Bad")
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "boolean", "expected_type": "bool", "provided_type": "str"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "boolean", "expected_type": "bool", "provided_type": "str"}
+    issues = at.Boolean.validate("Bad")
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_boolean():
-    errors = at.Boolean.validate(True)
+    issues = at.Boolean.validate(True)
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_uri_reference():
-    errors = at.URIReference.validate(123)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "reference", "expected_type": "str", "provided_type": "int"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "reference", "expected_type": "str", "provided_type": "int"}
+    issues = at.URIReference.validate(123)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_uri_reference():
-    errors = at.URIReference.validate("any:unique:resource:identifier")
+    issues = at.URIReference.validate("any:unique:resource:identifier")
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_scim_reference():
-    errors = at.SCIMReference.validate(123)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "reference", "expected_type": "str", "provided_type": "int"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "reference", "expected_type": "str", "provided_type": "int"}
+    issues = at.SCIMReference.validate(123)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_scim_reference():
-    errors = at.URIReference.validate("Users")
+    issues = at.URIReference.validate("Users")
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_external_reference_type():
-    errors = at.ExternalReference.validate(123)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "reference", "expected_type": "str", "provided_type": "int"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "reference", "expected_type": "str", "provided_type": "int"}
+    issues = at.ExternalReference.validate(123)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_external_reference_invalid_absolute_url():
-    errors = at.ExternalReference.validate("/not/absolute/url")
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 8,
+                "context": {"value": "/not/absolute/url"}
+            }
+        ]
+    }
 
-    assert errors[0].code == 8
-    assert errors[0].context == {"value": "/not/absolute/url"}
+    issues = at.ExternalReference.validate("/not/absolute/url")
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_external_reference_valid_absolute_url():
-    errors = at.ExternalReference.validate("https://www.example.com/absolute/url")
+    issues = at.ExternalReference.validate("https://www.example.com/absolute/url")
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_binary_type():
-    errors = at.Binary.validate(123)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "binary", "expected_type": "str", "provided_type": "int"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "binary", "expected_type": "str", "provided_type": "int"}
+    issues = at.Binary.validate(123)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_binary_invalid_encoding():
-    errors = at.Binary.validate("blablabl")
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 3,
+                "context": {"scim_type": "binary"}
+            }
+        ]
+    }
 
-    assert errors[0].code == 3
-    assert errors[0].context == {"scim_type": "binary"}
+    issues = at.Binary.validate("blablabl")
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_binary_valid_encoding():
-    errors = at.Binary.validate(base64.b64encode("blablabl".encode()).decode("utf-8"))
+    issues = at.Binary.validate(base64.b64encode("blablabl".encode()).decode("utf-8"))
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_datetime_type():
-    errors = at.DateTime.validate(123)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "dateTime", "expected_type": "str", "provided_type": "int"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "dateTime", "expected_type": "str", "provided_type": "int"}
+    issues = at.DateTime.validate(123)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_invalid_datetime_format():
-    errors = at.DateTime.validate("2022/05/05 12:34:56")
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 4,
+                "context": {"scim_type": "dateTime"}
+            }
+        ]
+    }
 
-    assert errors[0].code == 4
-    assert errors[0].context == {"scim_type": "dateTime"}
+    issues = at.DateTime.validate("2022/05/05 12:34:56")
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_datetime_format():
-    errors = at.DateTime.validate("2022-05-05T12:34:56")
+    issues = at.DateTime.validate("2022-05-05T12:34:56")
 
-    assert errors == []
+    assert not issues
 
 
 def test_validate_invalid_complex_type():
-    errors = at.Complex.validate(123)
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 2,
+                "context": {
+                    "scim_type": "complex", "expected_type": "dict", "provided_type": "int"
+                }
+            }
+        ]
+    }
 
-    assert errors[0].code == 2
-    assert errors[0].context == {"scim_type": "complex", "expected_type": "dict", "provided_type": "int"}
+    issues = at.Complex.validate(123)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_invalid_complex_sub_attribute_type():
-    errors = at.Complex.validate({"sub_attr_1": {}, "sub_attr_2": []})
+    expected_issues = {
+        "sub_attr_1": {
+            "_errors": [
+                {
+                    "code": 5,
+                    "context": {
+                        "allowed_types": ["bool", "float", "int", "str"],
+                        "provided_type": "dict",
+                        "scim_type": "complex",
+                    }
+                }
+            ]
+        },
+        "sub_attr_2": {
+            "_errors": [
+                {
+                    "code": 5,
+                    "context": {
+                        "allowed_types": ["bool", "float", "int", "str"],
+                        "provided_type": "list",
+                        "scim_type": "complex",
+                    }
+                }
+            ]
+        }
+    }
 
-    assert errors[0].code == 5
-    assert errors[1].code == 5
+    issues = at.Complex.validate({"sub_attr_1": {}, "sub_attr_2": []})
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_validate_valid_complex():
-    errors = at.Complex.validate({"sub_attr_1": 1, "sub_attr_2": "2"})
+    issues = at.Complex.validate({"sub_attr_1": 1, "sub_attr_2": "2"})
 
-    assert errors == []
+    assert not issues

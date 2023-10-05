@@ -1,4 +1,5 @@
-from typing import Any, Collection, Dict, Optional, Type
+from collections import defaultdict
+from typing import Any, Collection, Dict, List, Optional, Tuple, Type
 
 
 class ValidationError:
@@ -84,7 +85,7 @@ class ValidationError:
         return cls(
             code=5,
             scim_type=scim_type,
-            allowed_types=[type_.__name__ for type_ in allowed_types],
+            allowed_types=sorted({type_.__name__ for type_ in allowed_types}),
             provided_type=provided_type.__name__,
         )
 
@@ -233,20 +234,82 @@ class ValidationError:
     def code(self) -> int:
         return self._code
 
-    @property
-    def location(self) -> Optional[str]:
-        return self._location
-
-    def with_location(self, *location: Any) -> 'ValidationError':
-        location = ".".join([str(loc) for loc in location[::-1]])
-        if self._location is None:
-            self._location = location
-        else:
-            self._location = f"{location}.{self._location}"
-        return self
-
     def __repr__(self) -> str:
         return str(self._message)
 
     def __eq__(self, o):
         return o == self._message
+
+
+class ValidationIssues:
+    def __init__(self):
+        self._issues: Dict[Tuple, List[ValidationError]] = defaultdict(list)
+        self._stop_proceeding = set()
+
+    @property
+    def issues(self) -> Dict[Tuple, List[ValidationError]]:
+        return self._issues
+
+    def get_errors(self, location: Optional[Tuple] = None) -> List[ValidationError]:
+        errors = []
+        location = location or tuple()
+        for location_, errors_ in self._issues.items():
+            if location_[:len(location)] == location:
+                errors.extend(errors_)
+        return errors
+
+    def merge(self, issues: "ValidationIssues", location: Optional[Tuple] = None):
+        location = location or tuple()
+        for other_location, location_issues in issues.issues.items():
+            new_location = location + other_location
+            self._issues[new_location].extend(location_issues)
+            if not issues.can_proceed(other_location):
+                self._stop_proceeding.add(new_location)
+
+    def add(self, issue: ValidationError, proceed: bool, location: Optional[Tuple] = None):
+        location = location or tuple()
+        self._issues[location].append(issue)
+        if not proceed:
+            self._stop_proceeding.add(location)
+
+    def can_proceed(self, location: Optional[Tuple] = None) -> bool:
+        location = location or tuple()
+        for i in range(1, len(location)+1):
+            if location[:i] in self._stop_proceeding:
+                return False
+        return location not in self._stop_proceeding
+
+    def to_dict(self, msg: bool = False, ctx: bool = False):
+        output = {}
+        for location, errors in self._issues.items():
+            if not location:
+                if "_errors" not in output:
+                    output["_errors"] = []
+                for error in errors:
+                    item = {"code": error.code}
+                    if msg:
+                        item["error"] = str(error)
+                    if ctx:
+                        item["context"] = error.context
+                    output["_errors"].append(item)
+            else:
+                current_level = output
+                for i, part in enumerate(location):
+                    part = str(part)
+                    if part not in current_level:
+                        current_level[part] = {}  # noqa
+                    if i == len(location) - 1:
+                        if "_errors" not in current_level[part]:
+                            current_level[part]["_errors"] = []  # noqa
+                        for error in errors:
+                            item = {"code": error.code}
+                            if msg:
+                                item["error"] = str(error)
+                            if ctx:
+                                item["context"] = error.context
+                            current_level[part]["_errors"].append(item)  # noqa
+                    current_level = current_level[part]
+        return output
+
+    def __bool__(self) -> bool:
+        return bool(len(self._issues))

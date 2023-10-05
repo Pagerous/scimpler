@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Collection, Callable, Any, Optional, Type
 
-from src.parser.error import ValidationError
+from src.parser.error import ValidationError, ValidationIssues
 from src.parser.attributes import type as at
 
 
@@ -44,7 +44,7 @@ class Attribute:
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        validators: Optional[Collection[Callable[[Any], list[ValidationError]]]] = None
+        validators: Optional[Collection[Callable[[Any], ValidationIssues]]] = None
     ):
         self._name = name
         self._issuer = issuer
@@ -98,8 +98,8 @@ class Attribute:
     def uniqueness(self) -> AttributeUniqueness:
         return self._uniqueness
 
-    def validate(self, value: Any, direction: str) -> list[ValidationError]:
-        errors = []
+    def validate(self, value: Any, direction: str) -> ValidationIssues:
+        issues = ValidationIssues()
         if value is None:
             if (
                 not self._required or (
@@ -110,32 +110,44 @@ class Attribute:
                     self._returned == AttributeReturn.NEVER
                 )
             ):
-                return []
-            errors.append(ValidationError.missing_required_attribute(self._name).with_location(self._name))
-            return errors
+                return issues
+            issues.add(
+                issue=ValidationError.missing_required_attribute(self._name),
+                proceed=False,
+            )
+            return issues
         else:
             if direction == "RESPONSE" and self._returned == AttributeReturn.NEVER:
-                errors.append(ValidationError.returned_restricted_attribute(self._name).with_location(self._name))
-                return errors
+                issues.add(
+                    issue=ValidationError.returned_restricted_attribute(self._name),
+                    proceed=False,
+                )
+                return issues
 
         if self._multi_valued:
             if not isinstance(value, (list, tuple)):
-                errors.append(ValidationError.bad_multivalued_attribute_type(type(value)).with_location(self._name))
-                return errors
+                issues.add(
+                    issue=ValidationError.bad_multivalued_attribute_type(type(value)),
+                    proceed=False,
+                )
+                return issues
             for i, item in enumerate(value):
-                errors.extend([error.with_location(i, self._name) for error in self._type.validate(item)])
+                issues.merge(
+                    location=(i,),
+                    issues=self._type.validate(item),
+                )
                 if self._canonical_values is not None and item not in self._canonical_values:
                     pass  # TODO: warn about non-canonical value
         else:
-            errors.extend([error.with_location(self._name) for error in self._type.validate(value)])
+            issues.merge(issues=self._type.validate(value))
             if self._canonical_values is not None and value not in self._canonical_values:
                 pass  # TODO: warn about non-canonical value
         for validator in self._validators:
             try:
-                errors.extend([error.with_location(self._name) for error in validator(value)])
+                issues.merge(issues=validator(value))
             except:  # noqa: not interested in exceptions, only validation procedures that finished matter
                 pass
-        return errors
+        return issues
 
 
 class ComplexAttribute(Attribute):
@@ -150,7 +162,7 @@ class ComplexAttribute(Attribute):
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        validators: Optional[Collection[Callable[[Any], list[ValidationError]]]] = None,
+        validators: Optional[Collection[Callable[[Any], ValidationIssues]]] = None,
     ):
         super().__init__(
             name=name,
@@ -168,27 +180,21 @@ class ComplexAttribute(Attribute):
             attr.name: attr for attr in sub_attributes
         }
 
-    def validate(self, value: Any,  direction: str) -> list[ValidationError]:
-        errors = super().validate(value, direction)
-        if errors:
-            return errors
-        elif value is None:
-            return []
+    def validate(self, value: Any,  direction: str) -> ValidationIssues:
+        issues = super().validate(value, direction)
+        if not issues.can_proceed() or value is None:
+            return issues
         if self.multi_valued:
             for i, item in enumerate(value):
                 for attr_name, attr in self._sub_attributes.items():
-                    errors.extend(
-                        [
-                            error.with_location(i, self._name)
-                            for error in attr.validate(item.get(attr_name), direction)
-                        ]
+                    issues.merge(
+                        location=(i, attr.name),
+                        issues=attr.validate(item.get(attr_name), direction),
                     )
         else:
             for attr_name, attr in self._sub_attributes.items():
-                errors.extend(
-                    [
-                        error.with_location(self._name)
-                        for error in attr.validate(value.get(attr_name), direction)
-                    ]
+                issues.merge(
+                    location=(attr.name, ),
+                    issues=attr.validate(value.get(attr_name), direction),
                 )
-        return errors
+        return issues

@@ -25,9 +25,9 @@ def test_parse_basic_binary_attribute_filter(attr_name, operator):
     }
     filter_exp = f'{attr_name} {operator} "bjensen"'
 
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -51,9 +51,9 @@ def test_parse_basic_unary_attribute_filter(attr_name, operator):
     }
     filter_exp = f'{attr_name} {operator}'
 
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -78,9 +78,9 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
     }
     filter_exp = f'{attr_name}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
 
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -106,13 +106,13 @@ def test_basic_filters_can_be_combined_with_and_operator():
         ]
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         'userName eq "bjensen" '
         'and name.formatted ne "Crazy" '
         'and urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -138,12 +138,12 @@ def test_basic_filters_can_be_combined_with_or_operator():
         ]
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         'userName eq "bjensen" '
         'or name.formatted ne "Crazy" '
         'or urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"')
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -177,13 +177,13 @@ def test_precedence_of_logical_operators_is_preserved():
         ]
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         'userName eq "bjensen" '
         'or name.formatted ne "Crazy" '
         'and not urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -217,13 +217,13 @@ def test_any_sequence_of_whitespaces_between_tokens_with_logical_operators_has_n
         ]
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         'userName\t eq   "bjen\tsen" '
         'or\t  name.formatted    ne "Craz\ny" '
         'and \t\nnot  urn:ietf:params:scim:schemas:core:2.0:User:nickName co "b j"'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -267,7 +267,7 @@ def test_filter_groups_are_parsed():
         ]
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         'userName eq "bjensen" '
         'and '
         '('
@@ -276,7 +276,7 @@ def test_filter_groups_are_parsed():
         ')'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -320,7 +320,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
         ]
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         '\tuserName   eq \n"bjen  sen" '
         'and '
         '('
@@ -329,7 +329,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
         ')'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -344,9 +344,9 @@ def test_basic_complex_attribute_filter_is_parsed():
         }
     }
 
-    filter_, errors = parse_filter('emails[type eq "work"]')
+    filter_, issues = parse_filter('emails[type eq "work"]')
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -371,9 +371,9 @@ def test_complex_attribute_filter_with_logical_operators_is_parsed():
         }
     }
 
-    filter_, errors = parse_filter('emails[type eq "work" and value co "@example.com"]')
+    filter_, issues = parse_filter('emails[type eq "work" and value co "@example.com"]')
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -417,14 +417,14 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
         }
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         'urn:ietf:params:scim:schemas:core:2.0:User:emails['
         '(type eq "work" or emails.primary pr) and '
         '(value co "@example.com" or urn:ietf:params:scim:schemas:core:2.0:User:emails.display co "@example.com")'
         ']'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -468,7 +468,7 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
         }
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         ' \turn:ietf:params:scim:schemas:core:2.0:User:emails[  '
         '('
         'type \neq "work" or\t\t emails.primary pr'
@@ -480,7 +480,7 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
         ']'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -605,7 +605,7 @@ def test_gargantuan_filter():
         ]
     }
 
-    filter_, errors = parse_filter(
+    filter_, issues = parse_filter(
         'userName eq "bjensen" and '
         '('
         'name.formatted ne "Crazy" or '
@@ -623,7 +623,7 @@ def test_gargantuan_filter():
         ')'
     )
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -901,9 +901,9 @@ def test_gargantuan_filter():
     )
 )
 def test_rfc_7644_exemplary_filter(filter_exp, expected):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -927,7 +927,8 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
     )
 )
 def test_number_of_group_brackets_must_match(filter_exp, expected_error_codes):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_codes)
@@ -995,9 +996,9 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_error_codes):
     )
 )
 def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_exp, expected):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -1012,7 +1013,8 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
     )
 )
 def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_error_codes):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_codes)
@@ -1080,9 +1082,9 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_er
     )
 )
 def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_value(filter_exp, expected):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert errors == []
+    assert not issues
     assert to_dict(filter_) == expected
 
 
@@ -1367,10 +1369,11 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
         ),
     )
 )
-def test_missing_operand_for_operator_causes_parsing_errors(
+def test_missing_operand_for_operator_causes_parsing_issues(
     filter_exp, expected_error_codes, expected_error_contexts
 ):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_codes)
@@ -1439,10 +1442,11 @@ def test_missing_operand_for_operator_causes_parsing_errors(
         )
     )
 )
-def test_unknown_operator_causes_parsing_errors(
+def test_unknown_operator_causes_parsing_issues(
     filter_exp, expected_error_contexts
 ):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert len(errors) == len(expected_error_contexts)
     for error, expected_context in zip(errors, expected_error_contexts):
@@ -1453,7 +1457,8 @@ def test_unknown_operator_causes_parsing_errors(
 
 
 def test_putting_complex_attribute_operator_inside_other_complex_attribute_operator_fails():
-    filter_, errors = parse_filter('emails[type eq work and phones[type eq "home"]]')
+    filter_, issues = parse_filter('emails[type eq work and phones[type eq "home"]]')
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert errors[0].code == 109
@@ -1546,7 +1551,8 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
     )
 )
 def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_error_contexts):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_contexts)
@@ -1594,7 +1600,8 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_error_conte
 def test_lack_of_expression_inside_complex_attribute_is_discovered(
     filter_exp, expected_error_contexts
 ):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_contexts)
@@ -1638,7 +1645,8 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(
 def test_lack_of_top_level_complex_attribute_name_is_discovered(
     filter_exp, expected_error_contexts
 ):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_contexts)
@@ -1655,7 +1663,8 @@ def test_lack_of_top_level_complex_attribute_name_is_discovered(
     )
 )
 def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discovered(filter_exp):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == 1
@@ -1712,7 +1721,8 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
     )
 )
 def test_no_expression_is_discovered(filter_exp, expected_error_codes):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_codes)
@@ -1732,9 +1742,9 @@ def test_no_expression_is_discovered(filter_exp, expected_error_codes):
     )
 )
 def test_operators_are_case_insensitive(filter_exp):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert not errors
+    assert not issues
     assert filter_ is not None
 
 
@@ -1800,9 +1810,9 @@ def test_operators_are_case_insensitive(filter_exp):
     )
 )
 def test_operators_are_case_insensitive(filter_exp, expected_filter):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
 
-    assert not errors
+    assert not issues
     assert to_dict(filter_) == expected_filter
 
 
@@ -1852,7 +1862,8 @@ def test_operators_are_case_insensitive(filter_exp, expected_filter):
 def test_bad_comparison_values_are_discovered(
     filter_exp, expected_error_contexts
 ):
-    filter_, errors = parse_filter(filter_exp)
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
 
     assert filter_ is None
     assert len(errors) == len(expected_error_contexts)

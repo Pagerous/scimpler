@@ -1,13 +1,17 @@
 from .attributes import Attribute, AttributeIssuer, AttributeMutability, AttributeReturn, AttributeUniqueness, \
     ComplexAttribute
 from ..attributes import type as at
-from ..error import ValidationError
+from ..error import ValidationError, ValidationIssues
 
 
-def bulk_id_validator(value) -> list[ValidationError]:
+def bulk_id_validator(value) -> ValidationIssues:
+    issues = ValidationIssues()
     if "bulkId" in value:
-        return [ValidationError.reserved_keyword("bulkId")]
-    return []
+        issues.add(
+            issue=ValidationError.reserved_keyword("bulkId"),
+            proceed=False,
+        )
+    return issues
 
 
 schemas = Attribute(

@@ -5,7 +5,7 @@ import re
 from datetime import datetime
 from typing import Any, Type
 
-from ..error import ValidationError
+from ..error import ValidationError, ValidationIssues
 from . import validators
 
 
@@ -14,16 +14,18 @@ class AttributeType(abc.ABC):
     SCIM_NAME: str
 
     @classmethod
-    def validate(cls, value: Any) -> list[ValidationError]:
+    def validate(cls, value: Any) -> ValidationIssues:
+        issues = ValidationIssues()
         if not isinstance(value, cls.TYPE):
-            return [
-                ValidationError.bad_scim_type(
+            issues.add(
+                issue=ValidationError.bad_scim_type(
                     scim_type=cls.SCIM_NAME,
                     expected_type=cls.TYPE,
                     provided_type=type(value),
-                )
-            ]
-        return []
+                ),
+                proceed=False,
+            )
+        return issues
 
 
 class Boolean(AttributeType):
@@ -36,9 +38,9 @@ class Decimal(AttributeType):
     TYPE = float
 
     @classmethod
-    def validate(cls, value: Any) -> list[ValidationError]:
+    def validate(cls, value: Any) -> ValidationIssues:
         if isinstance(value, int):
-            return []
+            return ValidationIssues()
         return super().validate(value)
 
 
@@ -47,9 +49,9 @@ class Integer(AttributeType):
     TYPE = int
 
     @classmethod
-    def validate(cls, value: Any) -> list[ValidationError]:
+    def validate(cls, value: Any) -> ValidationIssues:
         if isinstance(value, float) and int(value) == value:
-            return []
+            return ValidationIssues()
         return super().validate(value)
 
 
@@ -63,16 +65,22 @@ class Binary(String):
     TYPE = str
 
     @classmethod
-    def validate(cls, value: TYPE) -> list[ValidationError]:
-        errors = super().validate(value)
-        if errors:
-            return errors
+    def validate(cls, value: TYPE) -> ValidationIssues:
+        issues = super().validate(value)
+        if not issues.can_proceed():
+            return issues
         try:
             if base64.b64encode(base64.b64decode(value).decode("utf-8").encode("utf-8")).decode("utf-8") != value:
-                errors.append(ValidationError.base_64_encoding_required(cls.SCIM_NAME))
+                issues.add(
+                    issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
+                    proceed=False,
+                )
         except (binascii.Error, UnicodeDecodeError):
-            errors.append(ValidationError.base_64_encoding_required(cls.SCIM_NAME))
-        return errors
+            issues.add(
+                issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
+                proceed=False,
+            )
+        return issues
 
 
 class ExternalReference(String):
@@ -80,11 +88,11 @@ class ExternalReference(String):
     TYPE = str
 
     @classmethod
-    def validate(cls, value: TYPE) -> list[ValidationError]:
-        errors = super().validate(value)
-        if errors:
-            return errors
-        return validators.validate_absolute_url(value)
+    def validate(cls, value: TYPE) -> ValidationIssues:
+        issues = super().validate(value)
+        if issues.can_proceed():
+            issues.merge(issues=validators.validate_absolute_url(value))
+        return issues
 
 
 class URIReference(String):
@@ -102,13 +110,14 @@ class DateTime(String):
     TYPE = str
 
     @classmethod
-    def validate(cls, value: TYPE) -> list[ValidationError]:
-        errors = super().validate(value)
-        if errors:
-            return errors
-        if not cls._is_xsd_datetime(value):
-            return [ValidationError.xsd_datetime_format_required(cls.SCIM_NAME)]
-        return []
+    def validate(cls, value: TYPE) -> ValidationIssues:
+        issues = super().validate(value)
+        if issues.can_proceed() and not cls._is_xsd_datetime(value):
+            issues.add(
+                issue=ValidationError.xsd_datetime_format_required(cls.SCIM_NAME),
+                proceed=False,
+            )
+        return issues
 
     @staticmethod
     def _is_xsd_datetime(value: str) -> bool:
@@ -141,18 +150,20 @@ class Complex(AttributeType):
     )
 
     @classmethod
-    def validate(cls, value: TYPE) -> list[ValidationError]:
-        errors = super().validate(value)
-        if errors:
-            return errors
+    def validate(cls, value: TYPE) -> ValidationIssues:
+        issues = super().validate(value)
+        if not issues.can_proceed():
+            return issues
         for k, v in value.items():
             if not isinstance(v, cls.ALLOWED_ITEM_TYPES):
-                errors.append(
-                    ValidationError.bad_sub_attribute_type(
+                issues.add(
+                    location=(k, ),
+                    issue=ValidationError.bad_sub_attribute_type(
                         scim_type=cls.SCIM_NAME,
                         allowed_types=cls.ALLOWED_ITEM_TYPES,
                         provided_type=type(v)
-                    )
+                    ),
+                    proceed=False,
                 )
-        return errors
+        return issues
 

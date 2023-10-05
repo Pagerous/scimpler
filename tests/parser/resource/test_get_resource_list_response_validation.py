@@ -68,41 +68,64 @@ def validator():
 
 
 def test_body_is_required(validator, request_body):
-    errors = validator.validate_response(
+    expected_issues = {
+        "response": {
+            "body": {
+                "_errors": [
+                    {
+                        "code": 15
+                    }
+                ]
+            }
+        }
+    }
+
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=None,
         status_code=200,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 15
-    assert errors[0].location == "response.body"
+    assert issues.to_dict() == expected_issues
 
 
 def test_correct_body_passes_validation(validator, request_body, response_body, response_headers):
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=200,
     )
 
-    assert errors == []
+    assert not issues
 
 
-def test_missing_schemas_key_returns_error(validator, request_body, response_body, response_headers):
+def test_missing_schemas_key_returns_error(
+    validator, request_body, response_body, response_headers
+):
     response_body.pop("schemas")
+    expected_issues = {
+        "response": {
+            "body": {
+                "schemas": {
+                    "_errors": [
+                        {
+                            "code": 1
+                        }
+                    ]
+                }
+            }
+        }
+    }
 
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=200,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 1
-    assert errors[0].location == "response.body.schemas"
+    assert issues.to_dict() == expected_issues
 
 
 def test_validation_errors_for_resources_attribute_can_be_returned_if_known_resource_type(
@@ -110,29 +133,60 @@ def test_validation_errors_for_resources_attribute_can_be_returned_if_known_reso
 ):
     response_body["Resources"][0]["userName"] = 123  # noqa
     response_body["Resources"][1]["userName"] = 123  # noqa
+    expected_issues = {
+        "response": {
+            "body": {
+                "Resources": {
+                    "0": {
+                        "userName": {
+                            "_errors": [
+                                {
+                                    "code": 2
+                                }
+                            ]
+                        }
+                    },
+                    "1": {
+                        "userName": {
+                            "_errors": [
+                                {
+                                    "code": 2
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=200,
     )
 
-    assert len(errors) == 2
-    assert errors[0].code == 2
-    assert errors[0].location == "response.body.Resources.0.userName"
-    assert errors[1].code == 2
-    assert errors[1].location == "response.body.Resources.1.userName"
+    assert issues.to_dict() == expected_issues
 
 
 def test_status_code_must_be_200(validator, request_body, response_body, response_headers):
-    errors = validator.validate_response(
+    expected_issues = {
+        "response": {
+            "status": {
+                "_errors": [
+                    {
+                        "code": 16
+                    }
+                ]
+            }
+        }
+    }
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=201,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 16
-    assert errors[0].location == "response.status"
+    assert issues.to_dict() == expected_issues

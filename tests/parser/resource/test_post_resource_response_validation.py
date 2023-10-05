@@ -54,111 +54,202 @@ def validator():
 
 
 def test_body_is_not_required(validator, request_body):
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=None,
         status_code=201
     )
 
-    assert errors == []
+    assert not issues
 
 
 def test_correct_body_passes_validation(validator, request_body, response_body, response_headers):
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=201,
     )
 
-    assert errors == []
+    assert not issues
 
 
-def test_missing_schemas_key_returns_error(validator, request_body, response_body, response_headers):
+def test_missing_schemas_key_returns_error(
+    validator, request_body, response_body, response_headers
+):
     response_body.pop("schemas")
+    expected_issues = {
+        "response": {
+            "body": {
+                "schemas": {
+                    "_errors": [
+                        {
+                            "code": 1
+                        }
+                    ]
+                }
+            }
+        }
+    }
 
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=201,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 1
-    assert errors[0].location == "response.body.schemas"
+    assert issues.to_dict() == expected_issues
 
 
-def test_many_validation_errors_can_be_returned(validator, request_body, response_body, response_headers):
+def test_many_validation_errors_can_be_returned(
+    validator, request_body, response_body, response_headers
+):
     response_body["meta"]["created"] = "123"
     response_body["name"] = 123  # noqa
+    expected_issues = {
+        "response": {
+            "body": {
+                "meta": {
+                    "created": {
+                        "_errors": [
+                            {
+                                "code": 4
+                            }
+                        ]
+                    }
+                },
+                "name": {
+                    "_errors": [
+                        {
+                            "code": 2
+                        }
+                    ]
+                }
+            }
+        }
+    }
 
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=201,
     )
 
-    assert len(errors) == 2
-    assert errors[0].code == 4
-    assert errors[0].location == "response.body.meta.created"
-    assert errors[1].code == 2
-    assert errors[1].location == "response.body.name"
+    assert issues.to_dict() == expected_issues
 
 
 def test_location_header_is_required(validator, request_body, response_body):
-    errors = validator.validate_response(
+    expected_issues = {
+        "response": {
+            "headers": {
+                "Location": {
+                    "_errors": [
+                        {
+                            "code": 10
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=None,
         status_code=201,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 10
-    assert errors[0].location == "response.headers"
+    assert issues.to_dict() == expected_issues
 
 
-def test_location_header_must_match_meta_location(validator, request_body, response_body, response_headers):
+def test_location_header_must_match_meta_location(
+    validator, request_body, response_body, response_headers
+):
     response_body["meta"]["location"] = "https://example.com/v2/Users/different-id"
+    expected_issues = {
+        "response": {
+            "body": {
+                "meta": {
+                    "location": {
+                        "_errors": [
+                            {
+                                "code": 11
+                            }
+                        ]
+                    }
+                }
+            },
+            "headers": {
+                "Location": {
+                    "_errors": [
+                        {
+                            "code": 11
+                        }
+                    ]
+                }
+            }
+        }
+    }
 
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=201,
     )
 
-    assert len(errors) == 2
-    assert errors[0].code == 11
-    assert errors[0].location == "response.body.meta.location"
-    assert errors[1].code == 11
-    assert errors[1].location == "response.headers"
+    assert issues.to_dict() == expected_issues
 
 
 def test_status_code_must_be_201(validator, request_body, response_body, response_headers):
-    errors = validator.validate_response(
+    expected_issues = {
+        "response": {
+            "status": {
+                "_errors": [
+                    {
+                        "code": 16
+                    }
+                ]
+            }
+        }
+    }
+
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=200,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 16
-    assert errors[0].location == "response.status"
+    assert issues.to_dict() == expected_issues
 
 
 def test_resource_type_must_match(validator, request_body, response_body, response_headers):
     response_body["meta"]["resourceType"] = "BlaBla"
-    errors = validator.validate_response(
+    expected_issues = {
+        "response": {
+            "body": {
+                "meta": {
+                    "resourceType": {
+                        "_errors": [
+                            {
+                                "code": 17
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
         status_code=201,
     )
 
-    assert len(errors) == 1
-    assert errors[0].code == 17
-    assert errors[0].location == "response.body.meta.resourceType"
+    assert issues.to_dict() == expected_issues

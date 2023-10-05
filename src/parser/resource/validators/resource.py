@@ -1,9 +1,9 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from src.parser.error import ValidationError
+from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.validators.validator import (
     EndpointValidator,
-    preprocess_response_validation,
+    EndpointValidatorGET, preprocess_response_validation,
     preprocess_request_validation,
 )
 from src.parser.resource.schemas import ResourceSchema
@@ -13,8 +13,8 @@ def _validate_resource_location_header(
     response_body: Dict[str, Any],
     response_headers: Optional[Dict[str, Any]],
     header_optional: bool
-) -> List[ValidationError]:
-    errors = []
+) -> ValidationIssues:
+    issues = ValidationIssues()
     meta = response_body.get("meta")
     if isinstance(meta, dict):
         meta_location = meta.get("location")
@@ -22,62 +22,73 @@ def _validate_resource_location_header(
         meta_location = None
     if "Location" not in (response_headers or {}):
         if not header_optional:
-            errors.append(
-                ValidationError.missing_required_header("Location").with_location("headers", "response")
+            issues.add(
+                issue=ValidationError.missing_required_header("Location"),
+                location=("response", "headers", "Location"),
+                proceed=False,
             )
+
     elif meta_location != response_headers["Location"]:
-        errors.append(
-            ValidationError.values_must_match(
-                value_1="'Location' header", value_2="'meta.location' attribute"
-            ).with_location("location", "meta", "body", "response")
+        issues.add(
+            issue=ValidationError.values_must_match(
+                value_1="'Location' header", value_2="'meta.location' attribute",
+            ),
+            location=("response", "body", "meta", "location"),
+            proceed=True,
         )
-        errors.append(
-            ValidationError.values_must_match(
-                value_1="'Location' header", value_2="'meta.location' attribute"
-            ).with_location("headers", "response")
+        issues.add(
+            issue=ValidationError.values_must_match(
+                value_1="'Location' header", value_2="'meta.location' attribute",
+            ),
+            location=("response", "headers", "Location"),
+            proceed=True,
         )
-    return errors
+    return issues
 
 
 def _validate_resource_response(
+    issues: ValidationIssues,
     schema: ResourceSchema,
     expected_status_code,
     actual_status_code: int,
     response_body: Dict[str, Any],
     response_headers: Dict[str, Any],
     is_location_header_optional: bool,
-) -> List[ValidationError]:
-    errors = []
-    for attr_name, attr in schema.attributes.items():
-        errors.extend(
-            [
-                error.with_location("body", "response")
-                for error in attr.validate(response_body.get(attr_name), "RESPONSE")
-            ]
-        )
+) -> ValidationIssues:
     meta = response_body.get("meta", {})
     if isinstance(meta, dict):
         resource_type = meta.get("resourcetype")
         if resource_type is not None and resource_type != repr(schema):
-            errors.append(
-                ValidationError.resource_type_mismatch(
-                    resource_type=repr(schema), provided=resource_type)
-                .with_location("resourceType", "meta", "body", "response")
+            issues.add(
+                issue=ValidationError.resource_type_mismatch(
+                    resource_type=repr(schema),
+                    provided=resource_type,
+                ),
+                location=("response", "body", "meta", "resourceType"),
+                proceed=True,
             )
-    errors.extend(
-        _validate_resource_location_header(
-            response_body=response_body,
-            response_headers=response_headers,
-            header_optional=is_location_header_optional,
+
+    if issues.can_proceed(location=("response", "headers")):
+        issues.merge(
+            issues=_validate_resource_location_header(
+                response_body=response_body,
+                response_headers=response_headers,
+                header_optional=is_location_header_optional,
+            )
         )
-    )
+
     if actual_status_code != expected_status_code:
-        errors.append(
-            ValidationError.bad_status_code(
-                "POST", expected_status_code, actual_status_code
-            ).with_location("status", "response")
+        issues.add(
+            issue=ValidationError.bad_status_code(
+                method="POST",
+                expected=expected_status_code,
+                provided=actual_status_code,
+            ),
+            location=("response", "status"),
+            proceed=True,
         )
-    return errors
+
+    return issues
 
 
 class ResourcePOST(EndpointValidator):
@@ -91,28 +102,27 @@ class ResourcePOST(EndpointValidator):
         query_string: Optional[Dict[str, Any]] = None,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
-    ) -> List[ValidationError]:
-        errors = []
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
         if not body:
-            errors.append(ValidationError.missing("body"))
+            issues.add(
+                location=("request", "body"),
+                issue=ValidationError.missing("body"),
+                proceed=False,
+            )
         elif not isinstance(body, dict):
-            errors.append(
-                ValidationError.bad_type(dict, type(body)).with_location("body", "request")
+            issues.add(
+                location=("request", "body"),
+                issue=ValidationError.bad_type(expected_type=dict, provided_type=type(body)),
+                proceed=False,
             )
-        else:
-            errors.extend(self.validate_schemas_field(body, "REQUEST"))
-
-        if errors:
-            return errors
-
-        for attr_name, attr in self._schema.attributes.items():
-            errors.extend(
-                [
-                    error.with_location("body", "request")
-                    for error in attr.validate(body.get(attr_name), "REQUEST")
-                ]
-            )
-        return errors
+        if issues.can_proceed(location=("request", "body")):
+            for attr_name, attr in self._schema.attributes.items():
+                issues.merge(
+                    issues=attr.validate(body.get(attr_name), "REQUEST"),
+                    location=("request", "body", attr.name)
+                )
+        return issues
 
     @preprocess_response_validation
     def validate_response(
@@ -124,22 +134,26 @@ class ResourcePOST(EndpointValidator):
         request_headers: Optional[Dict[str, Any]] = None,
         response_body: Optional[Dict[str, Any]] = None,
         response_headers: Optional[Dict[str, Any]] = None,
-    ) -> List[ValidationError]:
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
         if not response_body:
-            return []  # TODO: warn missing response body
-        errors = []
+            return issues  # TODO: warn missing response body
+
         if not isinstance(response_body, dict):
-            errors.append(
-                ValidationError.bad_type(dict, type(response_body)).with_location("body", "response")
+            issues.add(
+                issue=ValidationError.bad_type(dict, type(response_body)),
+                location=("response", "body"),
+                proceed=False,
             )
-        else:
-            errors.extend(self.validate_schemas_field(response_body, "RESPONSE"))
 
-        if errors:
-            return errors
+        if issues.can_proceed(location=("response", "body")):
+            issues.merge(
+                issues=self.validate_schema(body=response_body, direction="RESPONSE"),
+                location=("response", "body"),
+            )
 
-        errors.extend(
             _validate_resource_response(
+                issues=issues,
                 schema=self._schema,
                 expected_status_code=201,
                 actual_status_code=status_code,
@@ -147,12 +161,11 @@ class ResourcePOST(EndpointValidator):
                 response_headers=response_headers,
                 is_location_header_optional=False,
             )
-        )
 
-        return errors
+        return issues
 
 
-class ResourceGET(EndpointValidator):
+class ResourceGET(EndpointValidatorGET):
     def __init__(self, schema: ResourceSchema):
         super().__init__(schema)
 
@@ -163,8 +176,8 @@ class ResourceGET(EndpointValidator):
         query_string: Optional[Dict[str, Any]] = None,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
-    ) -> List[ValidationError]:
-        return []
+    ) -> ValidationIssues:
+        return ValidationIssues()
 
     @preprocess_response_validation
     def validate_response(
@@ -176,23 +189,18 @@ class ResourceGET(EndpointValidator):
         request_headers: Optional[Dict[str, Any]] = None,
         response_body: Optional[Dict[str, Any]] = None,
         response_headers: Optional[Dict[str, Any]] = None,
-    ) -> List[ValidationError]:
-        errors = []
-        if not response_body:
-            errors.append(ValidationError.missing("body").with_location("body", "response"))
-
-        elif not isinstance(response_body, dict):
-            errors.append(
-                ValidationError.bad_type(dict, type(response_body)).with_location("body", "response")
-            )
-        else:
-            errors.extend(self.validate_schemas_field(response_body, "RESPONSE"))
-
-        if errors:
-            return errors
-
-        errors.extend(
+    ) -> ValidationIssues:
+        issues = super().validate_response(
+            status_code=status_code,
+            request_query_string=request_query_string,
+            request_body=request_body,
+            request_headers=request_headers,
+            response_body=response_body,
+            response_headers=response_headers,
+        )
+        if issues.can_proceed(location=("response", "body")):
             _validate_resource_response(
+                issues=issues,
                 schema=self._schema,
                 expected_status_code=200,
                 actual_status_code=status_code,
@@ -200,6 +208,4 @@ class ResourceGET(EndpointValidator):
                 response_headers=response_headers,
                 is_location_header_optional=True,
             )
-        )
-
-        return errors
+        return issues

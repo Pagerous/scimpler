@@ -31,40 +31,74 @@ def validator():
 
 
 def test_correct_error_body_passes_validation(validator, request_body, response_body):
-    errors = validator.validate_response(
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         status_code=400,
     )
 
-    assert errors == []
+    assert not issues
 
 
 def test_error_status_should_be_equal_to_http_status(validator, request_body, response_body):
     response_body["status"] = "401"
-    errors = validator.validate_response(
+    expected_issues = {
+        "response": {
+            "status": {
+                "_errors": [
+                    {
+                        "code": 13
+                    }
+                ]
+            },
+            "body": {
+                "status": {
+                    "_errors": [
+                        {
+                            "code": 13
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         status_code=400,
     )
 
-    assert len(errors) == 2
-    assert errors[0].code == 13
-    assert errors[0].location == "response.body.status"
-    assert errors[1].code == 13
-    assert errors[1].location == "response.status"
+    assert issues.to_dict() == expected_issues
 
 
 def test_error_status_must_be_in_valid_range(validator, request_body, response_body):
     response_body["status"] = "600"
-    errors = validator.validate_response(
+    expected_issues = {
+        "response": {
+            "status": {
+                "_errors": [
+                    {
+                        "code": 12
+                    }
+                ]
+            },
+            "body": {
+                "status": {
+                    "_errors": [
+                        {
+                            "code": 12
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         status_code=600,
     )
 
-    assert len(errors) == 2
-    assert errors[0].code == 12
-    assert errors[0].location == "response.body.status"
-    assert errors[1].code == 12
-    assert errors[1].location == "response.status"
+    assert issues.to_dict() == expected_issues

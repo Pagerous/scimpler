@@ -1,5 +1,3 @@
-from typing import List
-
 from .attributes import (
     Attribute,
     AttributeIssuer,
@@ -8,20 +6,27 @@ from .attributes import (
     AttributeUniqueness,
 )
 from src.parser.attributes import type as at
-from ..error import ValidationError
+from ..error import ValidationError, ValidationIssues
 
 
-def validate_error_status(value: str) -> List[ValidationError]:
+def validate_error_status(value: str) -> ValidationIssues:
+    issues = ValidationIssues()
     try:
         value = int(value)
     except ValueError:
-        return [ValidationError.bad_error_status(value)]
+        issues.add(
+            issue=ValidationError.bad_error_status(value),
+            proceed=False,
+        )
     if not 300 <= value < 600:
-        return [ValidationError.bad_error_status(value)]
-    return []
+        issues.add(
+            issue=ValidationError.bad_error_status(value),
+            proceed=False,
+        )
+    return issues
 
 
-def validate_error_scim_type(value: str) -> List[ValidationError]:
+def validate_error_scim_type(value: str) -> ValidationIssues:
     scim_types = [
         "invalidFilter",
         "tooMany",
@@ -34,8 +39,13 @@ def validate_error_scim_type(value: str) -> List[ValidationError]:
         "invalidVers",
         "sensitive"
     ]
+    issues = ValidationIssues()
     if value not in scim_types:
-        return [ValidationError.must_be_one_of(scim_types, value)]
+        issues.add(
+            issue=ValidationError.must_be_one_of(scim_types, value),
+            proceed=False,
+        )
+    return issues
 
 
 status = Attribute(
@@ -76,4 +86,3 @@ detail = Attribute(
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,
 )
-

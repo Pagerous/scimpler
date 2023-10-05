@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
-from src.parser.error import ValidationError
+from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter import operator as op
 
 _ATTR_NAME_REGEX = r"\w+"
@@ -46,25 +46,25 @@ ParsedFilter = Union[op.AttributeOperator, op.LogicalOperator, op.ComplexAttribu
 @dataclass
 class _ParsedComplexAttributeFilter:
     operator: Optional[op.ComplexAttributeOperator]
-    errors: List[ValidationError]
+    issues: ValidationIssues
     expression: str
 
 
 @dataclass
 class _ParsedSubFilter:
     operator: Optional[Union[op.AttributeOperator, op.LogicalOperator]]
-    errors: List[ValidationError]
+    issues: ValidationIssues
     expression: str
 
 
-def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], List[ValidationError]]:
-    errors = []
+def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+    issues = ValidationIssues()
     bracket_open_index = None
     complex_attr_name = ""
     parsed_complex_filters = {}
     filter_exp_preprocessed = filter_exp
     ignore_processing = False
-    errors_ = []
+    issues_ = ValidationIssues()
     for i, char in enumerate(filter_exp_preprocessed):
         if char == "\"":
             ignore_processing = not ignore_processing
@@ -75,45 +75,55 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], List[Validati
             complex_attr_name += char
         elif char == "[":
             if bracket_open_index is not None:
-                errors.append(ValidationError.inner_complex_attribute_or_square_bracket())
+                issues.add(
+                    issue=ValidationError.inner_complex_attribute_or_square_bracket(),
+                    proceed=False,
+                )
                 break
             else:
                 bracket_open_index = i
         elif char == "]":
             if bracket_open_index is None:
-                errors.append(ValidationError.no_opening_complex_attribute_bracket(i))
+                issues.add(
+                    issue=ValidationError.no_opening_complex_attribute_bracket(i),
+                    proceed=False,
+                )
             else:
                 sub_filter_exp = filter_exp_preprocessed[bracket_open_index+1:i]
                 complex_attr_start = bracket_open_index - len(complex_attr_name)
                 complex_attr_exp = f"{complex_attr_name}[{sub_filter_exp}]"
                 if sub_filter_exp.strip() == "":
-                    errors_.append(
-                        ValidationError.empty_complex_attribute_expression(complex_attr_name, complex_attr_start)
+                    issues_.add(
+                        issue=ValidationError.empty_complex_attribute_expression(complex_attr_name, complex_attr_start),
+                        proceed=False,
                     )
                 if complex_attr_name == "":
-                    errors_.append(
-                        ValidationError.complex_attribute_without_top_level_attribute(complex_attr_exp)
+                    issues_.add(
+                        issue=ValidationError.complex_attribute_without_top_level_attribute(complex_attr_exp),
+                        proceed=False,
                     )
                 elif not _ALLOWED_IDENTIFIERS.fullmatch(complex_attr_name):
-                    errors_.append(ValidationError.bad_attribute_name(complex_attr_name))
-
-                if errors_:
+                    issues_.add(
+                        issue=ValidationError.bad_attribute_name(complex_attr_name),
+                        proceed=False,
+                    )
+                if not issues_.can_proceed():
                     parsed_complex_filters[complex_attr_start] = _ParsedComplexAttributeFilter(
                         operator=None,
-                        errors=errors_,
+                        issues=issues_,
                         expression=complex_attr_exp,
                     )
                 else:
-                    parsed_complex_sub_filter, errors_ = _parse_filter(
+                    parsed_complex_sub_filter, issues_ = _parse_filter(
                         filter_exp=sub_filter_exp,
                     )
-                    if errors_:
+                    if not issues_.can_proceed():
                         operator = None
                     else:
                         operator = op.ComplexAttributeOperator(complex_attr_name, parsed_complex_sub_filter)
                     parsed_complex_filters[complex_attr_start] = _ParsedComplexAttributeFilter(
                         operator=operator,
-                        errors=errors_,
+                        issues=issues_,
                         expression=complex_attr_exp,
                     )
                 filter_exp = filter_exp.replace(
@@ -121,36 +131,43 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], List[Validati
                 )
             bracket_open_index = None
             complex_attr_name = ""
-            errors_ = []
+            issues_ = ValidationIssues()
         elif bracket_open_index is None:
             complex_attr_name = ""
-            errors_ = []
+            issues_ = ValidationIssues()
 
-    if errors:
+    if not issues.can_proceed():
         for parsed in parsed_complex_filters.values():
-            errors.extend(parsed.errors)
-        return None, errors
+            issues.merge(issues=parsed.issues)
+        return None, issues
 
     if bracket_open_index and bracket_open_index not in parsed_complex_filters:
-        errors.append(ValidationError.no_closing_complex_attribute_bracket(bracket_open_index))
+        issues.add(
+            issue=ValidationError.no_closing_complex_attribute_bracket(bracket_open_index),
+            proceed=False,
+        )
 
-    if errors:
+    if not issues.can_proceed():
         for parsed in parsed_complex_filters.values():
-            errors.extend(parsed.errors)
-        return None, errors
+            issues.merge(issues=parsed.issues)
+        return None, issues
 
-    return _parse_filter(
+    parsed_filter, issues_ = _parse_filter(
         filter_exp=filter_exp,
-        parsed_complex_filters=parsed_complex_filters
+        parsed_complex_filters=parsed_complex_filters,
     )
+    issues.merge(issues=issues_)
+    if not issues.can_proceed():
+        return None, issues
+    return parsed_filter, issues
 
 
 def _parse_filter(
     filter_exp: str,
     parsed_complex_filters: Optional[Dict[int, _ParsedComplexAttributeFilter]] = None,
-) -> Tuple[Optional[ParsedFilter], List[ValidationError]]:
+) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
     parsed_complex_filters = parsed_complex_filters or {}
-    errors = []
+    issues = ValidationIssues()
     ignore_processing = False
     bracket_open = False
     bracket_open_index = None
@@ -172,16 +189,16 @@ def _parse_filter(
             if bracket_open:
                 bracket_cnt -= 1
             else:
-                errors.append(ValidationError.no_opening_bracket(i))
+                issues.add(issue=ValidationError.no_opening_bracket(i), proceed=False)
         if bracket_open and bracket_cnt == 0:
             sub_filter_exp = filter_exp[bracket_open_index:i+1]
-            parsed_sub_filter, sub_filter_errors = _parse_filter(
+            parsed_sub_filter, issues_ = _parse_filter(
                 filter_exp=sub_filter_exp[1:-1],  # without enclosing brackets
                 parsed_complex_filters=parsed_complex_filters,
             )
             parsed_sub_filters[bracket_open_index] = _ParsedSubFilter(
                 operator=parsed_sub_filter,
-                errors=sub_filter_errors,
+                issues=issues_,
                 expression=sub_filter_exp,
             )
             filter_exp_preprocessed = filter_exp_preprocessed.replace(
@@ -191,121 +208,127 @@ def _parse_filter(
             bracket_open_index = None
 
     if bracket_open and bracket_open_index not in parsed_sub_filters:
-        errors.append(ValidationError.no_closing_bracket(bracket_open_index))
+        issues.add(issue=ValidationError.no_closing_bracket(bracket_open_index), proceed=False)
 
     filter_exp_preprocessed = filter_exp_preprocessed.strip()
     if filter_exp_preprocessed == "":
-        errors.append(ValidationError.empty_expression())
+        issues.add(issue=ValidationError.empty_expression(), proceed=False)
 
-    if errors:
-        return None, errors
+    if not issues.can_proceed():
+        return None, issues
 
-    return _parse_filter_or_exp(
+    parsed_filter, issues_ = _parse_filter_or_exp(
         or_exp=filter_exp_preprocessed,
         parsed_sub_filters=parsed_sub_filters,
         parsed_complex_filters=parsed_complex_filters,
     )
+    issues.merge(issues=issues_)
+    if not issues.can_proceed():
+        return None, issues
+    return parsed_filter, issues
 
 
 def _parse_filter_or_exp(
     or_exp: str,
     parsed_sub_filters: Dict[int, _ParsedSubFilter],
     parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
-) -> Tuple[Optional[ParsedFilter], List[ValidationError]]:
-    errors = []
-    or_operands, errors_ = _split_exp_to_logical_operands(
+) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+    issues = ValidationIssues()
+    or_operands, issues_ = _split_exp_to_logical_operands(
         filter_exp=or_exp,
         regexp=_OR_LOGICAL_OPERATOR_SPLIT_REGEX,
         operator_name="or",
         parsed_sub_filters=parsed_sub_filters,
         parsed_complex_filters=parsed_complex_filters,
     )
-    errors.extend(errors_)
+    issues.merge(issues=issues_)
     if not or_operands:
-        return None, errors
+        return None, issues
 
     if len(or_operands) == 1:
-        parsed_or_operand, errors_ = _parse_filter_and_exp(
+        parsed_or_operand, issues_ = _parse_filter_and_exp(
             and_exp=or_operands[0],
             parsed_sub_filters=parsed_sub_filters,
             parsed_complex_filters=parsed_complex_filters,
         )
-        errors.extend(errors_)
-        if errors:
+        issues.merge(issues=issues_)
+        if not issues.can_proceed():
             parsed_or_operand = None
-        return parsed_or_operand, errors
+        return parsed_or_operand, issues
 
     parsed_or_operands = []
     for or_operand in or_operands:
-        parsed_or_operand, errors_ = _parse_filter_and_exp(
+        parsed_or_operand, issues_ = _parse_filter_and_exp(
             and_exp=or_operand,
             parsed_sub_filters=parsed_sub_filters,
             parsed_complex_filters=parsed_complex_filters,
         )
-        errors.extend(errors_)
-        if errors:
+        issues.merge(issues=issues_)
+        if not issues.can_proceed():
             parsed_or_operand = None
         parsed_or_operands.append(parsed_or_operand)
-    if errors:
-        return None, errors
-    return op.Or(*parsed_or_operands), []
+
+    if not issues.can_proceed():
+        return None, issues
+    return op.Or(*parsed_or_operands), issues
 
 
 def _parse_filter_and_exp(
     and_exp: str,
     parsed_sub_filters: Dict[int, _ParsedSubFilter],
     parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
-) -> Tuple[Optional[ParsedFilter], List[ValidationError]]:
-    errors = []
-    and_operands, errors_ = _split_exp_to_logical_operands(
+) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+    issues = ValidationIssues()
+    and_operands, issues_ = _split_exp_to_logical_operands(
         filter_exp=and_exp,
         regexp=_AND_LOGICAL_OPERATOR_SPLIT_REGEX,
         operator_name="and",
         parsed_sub_filters=parsed_sub_filters,
         parsed_complex_filters=parsed_complex_filters,
     )
-    errors.extend(errors_)
+    issues.merge(issues=issues_)
     if not and_operands:
-        return None, errors
+        return None, issues
 
     if len(and_operands) == 1:
-        parsed_and_operand, errors_ = _parse_filter_attr_exp(
+        parsed_and_operand, issues_ = _parse_filter_attr_exp(
             attr_exp=and_operands[0],
             parsed_sub_filters=parsed_sub_filters,
             parsed_complex_filters=parsed_complex_filters,
         )
-        errors.extend(errors_)
-        if errors:
+        issues.merge(issues=issues_)
+        if not issues.can_proceed():
             parsed_and_operand = None
-        return parsed_and_operand, errors
+        return parsed_and_operand, issues
 
     parsed_and_operands = []
     for and_operand in and_operands:
         match = _NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
         if match:
-            parsed_and_operand, errors_ = _parse_filter_attr_exp(
+            parsed_and_operand, issues_ = _parse_filter_attr_exp(
                 attr_exp=match.group(1),
                 parsed_sub_filters=parsed_sub_filters,
                 parsed_complex_filters=parsed_complex_filters,
             )
-            errors.extend(errors_)
-            if errors:
+            issues.merge(issues=issues_)
+            if not issues.can_proceed():
                 parsed_and_operand = None
             else:
                 parsed_and_operand = op.Not(parsed_and_operand)
         else:
-            parsed_and_operand, errors_ = _parse_filter_attr_exp(
+            parsed_and_operand, issues_ = _parse_filter_attr_exp(
                 attr_exp=and_operand,
                 parsed_sub_filters=parsed_sub_filters,
                 parsed_complex_filters=parsed_complex_filters,
             )
-            errors.extend(errors_)
-            if errors:
+            issues.merge(issues=issues_)
+            if not issues.can_proceed():
                 parsed_and_operand = None
         parsed_and_operands.append(parsed_and_operand)
-    if errors:
-        return None, errors
-    return op.And(*parsed_and_operands), []
+
+    if not issues.can_proceed():
+        return None, issues
+    return op.And(*parsed_and_operands), issues
 
 
 def _split_exp_to_logical_operands(
@@ -314,8 +337,8 @@ def _split_exp_to_logical_operands(
     operator_name: str,
     parsed_sub_filters: Dict[int, _ParsedSubFilter],
     parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
-) -> Tuple[List[str], List[ValidationError]]:
-    errors = []
+) -> Tuple[List[str], ValidationIssues]:
+    issues = ValidationIssues()
     operands = []
     current_position = 0
     matches = list(regexp.finditer(filter_exp))
@@ -353,11 +376,12 @@ def _split_exp_to_logical_operands(
             invalid_expression = (left_expression + match.group(0)).strip()
 
         if invalid_expression is not None:
-            errors.append(
-                ValidationError.missing_operand_for_operator(
+            issues.add(
+                issue=ValidationError.missing_operand_for_operator(
                     operator=operator_name,
                     expression=invalid_expression,
                 ),
+                proceed=False,
             )
 
         if i == 0:
@@ -369,15 +393,15 @@ def _split_exp_to_logical_operands(
         operands = [filter_exp]
 
     operands = [operand for operand in operands if operand != ""]
-    return operands, errors
+    return operands, issues
 
 
 def _parse_filter_attr_exp(
     attr_exp: str,
     parsed_sub_filters: Dict[int, _ParsedSubFilter],
     parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
-) -> Tuple[Optional[ParsedFilter], List[ValidationError]]:
-    errors = []
+) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+    issues = ValidationIssues()
     attr_exp = attr_exp.strip()
     sub_or_complex = _get_parsed_sub_or_complex_filter(
         filter_exp=attr_exp,
@@ -385,14 +409,14 @@ def _parse_filter_attr_exp(
         parsed_complex_filters=parsed_complex_filters,
     )
     if sub_or_complex is not None:
-        return sub_or_complex.operator, sub_or_complex.errors
+        return sub_or_complex.operator, sub_or_complex.issues
 
     components = re.split(r'\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', attr_exp)
     if len(components) == 2:
         op_ = _UNARY_ATTR_OPERATORS.get(components[1].lower())
         if op_ is None:
-            errors.append(
-                ValidationError.unknown_operator(
+            issues.add(
+                issue=ValidationError.unknown_operator(
                     operator_type="unary",
                     operator=_encode_sub_or_complex_into_exp(
                         exp=components[1],
@@ -404,20 +428,22 @@ def _parse_filter_attr_exp(
                         parsed_sub_filters=parsed_sub_filters,
                         parsed_complex_filters=parsed_complex_filters,
                     )
-                )
+                ),
+                proceed=False,
             )
         if not _ALLOWED_IDENTIFIERS.fullmatch(components[0]):
-            errors.append(
-                ValidationError.bad_attribute_name(components[0])
+            issues.add(
+                issue=ValidationError.bad_attribute_name(components[0]),
+                proceed=False,
             )
-        if errors:
-            return None, errors
-        return op_(components[0]), []
+        if not issues.can_proceed():
+            return None, issues
+        return op_(components[0]), issues
     elif len(components) == 3:
         op_ = _BINARY_ATTR_OPERATORS.get(components[1].lower())
         if op_ is None:
-            errors.append(
-                ValidationError.unknown_operator(
+            issues.add(
+                issue=ValidationError.unknown_operator(
                     operator_type="binary",
                     operator=_encode_sub_or_complex_into_exp(
                         exp=components[1],
@@ -429,24 +455,31 @@ def _parse_filter_attr_exp(
                         parsed_sub_filters=parsed_sub_filters,
                         parsed_complex_filters=parsed_complex_filters,
                     )
-                )
+                ),
+                proceed=False,
             )
         if not _ALLOWED_IDENTIFIERS.fullmatch(components[0]):
-            errors.append(ValidationError.bad_attribute_name(components[0]))
-        value, errors_ = _parse_comparison_value(components[2])
-        errors.extend(errors_)
-        if errors:
-            return None, errors
-        return op_(components[0], value), []
-    return None, [
-        ValidationError.unknown_expression(
+            issues.add(
+                issue=ValidationError.bad_attribute_name(components[0]),
+                proceed=False,
+            )
+        value, issues_ = _parse_comparison_value(components[2])
+        issues.merge(issues=issues_)
+        if not issues.can_proceed():
+            return None, issues
+        return op_(components[0], value), issues
+
+    issues.add(
+        issue=ValidationError.unknown_expression(
             _encode_sub_or_complex_into_exp(
                 exp=attr_exp,
                 parsed_sub_filters=parsed_sub_filters,
                 parsed_complex_filters=parsed_complex_filters,
             )
-        )
-    ]
+        ),
+        proceed=False,
+    )
+    return None, issues
 
 
 def _get_parsed_sub_or_complex_filter(
@@ -493,8 +526,8 @@ def _encode_sub_or_complex_into_exp(
 _AllowedOperandValues = Union[str, bool, int, float, None]
 
 
-def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, List[ValidationError]]:
-    errors = []
+def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, ValidationIssues]:
+    issues = ValidationIssues()
     if value.startswith("\"") and value.endswith("\""):
         value = value[1:-1]
     elif value == "false":
@@ -512,5 +545,8 @@ def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, List[Val
             else:
                 value = parsed
         except ValueError:
-            errors.append(ValidationError.bad_comparison_value(value))
-    return value, errors
+            issues.add(
+                issue=ValidationError.bad_comparison_value(value),
+                proceed=False,
+            )
+    return value, issues

@@ -1,15 +1,15 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from src.parser.error import ValidationError
+from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.validators.validator import (
     EndpointValidator,
-    preprocess_response_validation,
+    EndpointValidatorGET, preprocess_response_validation,
     preprocess_request_validation,
 )
 from src.parser.resource.schemas import ErrorSchema
 
 
-class _Error(EndpointValidator):
+class _Error(EndpointValidatorGET):
     def __init__(self):
         super().__init__(ErrorSchema())
 
@@ -20,8 +20,8 @@ class _Error(EndpointValidator):
         query_string: Optional[Dict[str, Any]] = None,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
-    ) -> List[ValidationError]:
-        return []
+    ) -> ValidationIssues:
+        return ValidationIssues()
 
     @preprocess_response_validation
     def validate_response(
@@ -33,42 +33,42 @@ class _Error(EndpointValidator):
         request_headers: Optional[Dict[str, Any]] = None,
         response_body: Optional[Dict[str, Any]] = None,
         response_headers: Optional[Dict[str, Any]] = None,
-    ) -> List[ValidationError]:
-        errors = []
-        if not response_body:
-            errors.append(ValidationError.missing("body").with_location("body", "response"))
+    ) -> ValidationIssues:
+        issues = super().validate_response(
+            status_code=status_code,
+            request_query_string=request_query_string,
+            request_body=request_body,
+            request_headers=request_headers,
+            response_body=response_body,
+            response_headers=response_headers,
+        )
 
-        elif not isinstance(response_body, dict):
-            errors.append(
-                ValidationError.bad_type(dict, type(request_body)).with_location("body", "response")
-            )
-        else:
-            errors.extend(self.validate_schemas_field(response_body, "RESPONSE"))
+        if issues.can_proceed(location=("response", "body")):
+            status_in_body = response_body.get("status")
+            if str(status_code) != status_in_body:
+                issues.add(
+                    issue=ValidationError.error_status_mismatch(
+                        str(status_code), status_in_body
+                    ),
+                    location=("response", "body", "status"),
+                    proceed=True,
+                )
+                issues.add(
+                    issue=ValidationError.error_status_mismatch(
+                        str(status_code), status_in_body
+                    ),
+                    location=("response", "status"),
+                    proceed=True,
+                )
 
-        for attr_name, attr in self._schema.attributes.items():
-            errors.extend(
-                [
-                    error.with_location("body", "response")
-                    for error in attr.validate(response_body.get(attr_name), "RESPONSE")
-                ]
-            )
-        status_in_body = response_body.get("status")
-        if str(status_code) != status_in_body:
-            errors.append(
-                ValidationError.error_status_mismatch(
-                    str(status_code), status_in_body
-                ).with_location("status", "body", "response")
-            )
-            errors.append(
-                ValidationError.error_status_mismatch(
-                    str(status_code), status_in_body
-                ).with_location("status", "response")
-            )
         if not 200 <= status_code < 600:
-            errors.append(
-                ValidationError.bad_error_status(status_code).with_location("status", "response")
+            issues.add(
+                issue=ValidationError.bad_error_status(status_code),
+                location=("response", "status"),
+                proceed=True,
             )
-        return errors
+
+        return issues
 
 
 ErrorGET = _Error
