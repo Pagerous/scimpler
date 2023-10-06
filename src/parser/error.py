@@ -30,9 +30,9 @@ class ValidationError:
         18: "expected type '{expected_type}', got '{provided_type}' instead",
         19: "attribute '{attr_name}' should never be returned",
         20: "provided 'schemas' do not correspond to the resource {resource_type!r}",
-        21: "too many results",
+        21: "too many results, must {must}",
         22: "total results ({total_results}) do not match number of resources ({n_resources})",
-        23: "too little results",
+        23: "too little results, must {must}",
         24: (
             "response value of {response_key!r} ({response_value}) "
             "does not correspond to query parameter {query_param_name!r} ({query_param_value}): {reason}"
@@ -150,16 +150,16 @@ class ValidationError:
         return cls(code=20, resource_type=resource_type)
 
     @classmethod
-    def too_many_results(cls):
-        return cls(code=21)
+    def too_many_results(cls, must: str):
+        return cls(code=21, must=must)
 
     @classmethod
     def total_results_mismatch(cls, total_results: int, n_resources: int):
         return cls(code=22, total_results=total_results, n_resources=n_resources)
 
     @classmethod
-    def too_little_results(cls):
-        return cls(code=23)
+    def too_little_results(cls, must: str):
+        return cls(code=23, must=must)
 
     @classmethod
     def response_value_does_not_correspond_to_parameter(

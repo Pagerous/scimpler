@@ -19,6 +19,7 @@ class _ListResponseGET(EndpointValidatorGET):
     ) -> ValidationIssues:
         return ValidationIssues()
 
+    @preprocess_response_validation
     def validate_response(
         self,
         *,
@@ -83,14 +84,18 @@ class _ListResponseGET(EndpointValidatorGET):
 
             if count is None and total_results > n_resources:
                 issues.add(
-                    issue=ValidationError.too_little_results(),
+                    issue=ValidationError.too_little_results(
+                        must="be equal to 'totalResults'"
+                    ),
                     location=("response", "body", "Resources"),
                     proceed=True,
                 )
 
             if count is not None and count < n_resources:
                 issues.add(
-                    issue=ValidationError.too_many_results(),
+                    issue=ValidationError.too_many_results(
+                        must="be lesser or equal to 'count' parameter"
+                    ),
                     location=("response", "body", "Resources"),
                     proceed=True,
                 )
@@ -142,14 +147,14 @@ class _ListResponseGET(EndpointValidatorGET):
                     issue=ValidationError.values_must_match(
                         value_1="itemsPerPage", value_2="numer of Resources"
                     ),
-                    location=("body", "response", "itemsPerPage"),
+                    location=("response", "body", "itemsPerPage"),
                     proceed=True,
                 )
                 issues.add(
                     issue=ValidationError.values_must_match(
                         value_1="itemsPerPage", value_2="numer of Resources"
                     ),
-                    location=("body", "response", "Resources"),
+                    location=("response", "body", "Resources"),
                     proceed=True,
                 )
 
@@ -161,6 +166,7 @@ class ListResponseResourceObjectGET(_ListResponseGET):
         super().__init__(ListResponseSchema())
         self._resource_schema = resource_schema
 
+    @preprocess_response_validation
     def validate_response(
         self,
         *,
@@ -193,7 +199,7 @@ class ListResponseResourceObjectGET(_ListResponseGET):
 
             elif n_resources > 1:
                 issues.add(
-                    issue=ValidationError.too_many_results(),
+                    issue=ValidationError.too_many_results(must="be at most 1"),
                     location=("response", "body", "Resources"),
                     proceed=True,
                 )
@@ -242,6 +248,7 @@ class ListResponseServerRootGET(_ListResponseGET):
         super().__init__(ListResponseSchema())
         self._resource_schemas = resource_schemas
 
+    @preprocess_response_validation
     def validate_response(
         self,
         *,
