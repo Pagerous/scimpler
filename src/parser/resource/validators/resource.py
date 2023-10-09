@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, Optional
 
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.validators.validator import (
@@ -6,7 +6,7 @@ from src.parser.resource.validators.validator import (
     EndpointValidatorGET, preprocess_response_validation,
     preprocess_request_validation,
 )
-from src.parser.resource.schemas import ResourceSchema
+from src.parser.resource.schemas import ListResponseSchema, ResourceSchema, Schema
 
 
 def _validate_resource_location_header(
@@ -46,7 +46,7 @@ def _validate_resource_location_header(
     return issues
 
 
-def _validate_resource_response(
+def _validate_resource_object_response(
     issues: ValidationIssues,
     schema: ResourceSchema,
     expected_status_code,
@@ -91,7 +91,53 @@ def _validate_resource_response(
     return issues
 
 
-class ResourcePOST(EndpointValidator):
+class ResourceObjectGET(EndpointValidatorGET):
+    def __init__(self, schema: ResourceSchema):
+        super().__init__(schema)
+
+    @preprocess_request_validation
+    def validate_request(
+        self,
+        *,
+        query_string: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        return ValidationIssues()
+
+    @preprocess_response_validation
+    def validate_response(
+        self,
+        *,
+        status_code: int,
+        request_query_string: Optional[Dict[str, Any]] = None,
+        request_body: Optional[Dict[str, Any]] = None,
+        request_headers: Optional[Dict[str, Any]] = None,
+        response_body: Optional[Dict[str, Any]] = None,
+        response_headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = super().validate_response(
+            status_code=status_code,
+            request_query_string=request_query_string,
+            request_body=request_body,
+            request_headers=request_headers,
+            response_body=response_body,
+            response_headers=response_headers,
+        )
+        if issues.can_proceed(location=("response", "body")):
+            _validate_resource_object_response(
+                issues=issues,
+                schema=self._schema,
+                expected_status_code=200,
+                actual_status_code=status_code,
+                response_body=response_body,
+                response_headers=response_headers,
+                is_location_header_optional=True,
+            )
+        return issues
+
+
+class ResourceTypePOST(EndpointValidator):
     def __init__(self, schema: ResourceSchema):
         super().__init__(schema)
 
@@ -152,7 +198,7 @@ class ResourcePOST(EndpointValidator):
                 location=("response", "body"),
             )
 
-            _validate_resource_response(
+            _validate_resource_object_response(
                 issues=issues,
                 schema=self._schema,
                 expected_status_code=201,
@@ -165,10 +211,7 @@ class ResourcePOST(EndpointValidator):
         return issues
 
 
-class ResourceGET(EndpointValidatorGET):
-    def __init__(self, schema: ResourceSchema):
-        super().__init__(schema)
-
+class _ManyResourcesGET(EndpointValidatorGET):
     @preprocess_request_validation
     def validate_request(
         self,
@@ -178,6 +221,153 @@ class ResourceGET(EndpointValidatorGET):
         headers: Optional[Dict[str, Any]] = None,
     ) -> ValidationIssues:
         return ValidationIssues()
+
+    @preprocess_response_validation
+    def validate_response(
+        self,
+        *,
+        status_code: int,
+        request_query_string: Dict[str, Any] = None,
+        request_body: Dict[str, Any] = None,
+        request_headers: Dict[str, Any] = None,
+        response_body: Dict[str, Any] = None,
+        response_headers: Dict[str, Any] = None,
+    ) -> ValidationIssues:
+        issues = super().validate_response(
+            status_code=status_code,
+            request_query_string=request_query_string,
+            request_body=request_body,
+            request_headers=request_headers,
+            response_body=response_body,
+            response_headers=response_headers,
+        )
+
+        if status_code != 200:
+            issues.add(
+                issue=ValidationError.bad_status_code(
+                    method="GET", expected=200, provided=status_code
+                ),
+                location=("response", "status"),
+                proceed=True,
+            )
+
+        if not issues.can_proceed(location=("response", "body")):
+            return issues
+
+        start_index = request_query_string.get("startindex", 1)
+        if start_index < 1:
+            start_index = 1
+        count = request_query_string.get("count")
+        if count is not None and count < 0:
+            count = 0
+
+        if (
+            issues.can_proceed(location=("response", "body", "totalResults"))
+            and issues.can_proceed(location=("response", "body", "Resources"))
+        ):
+            total_results = response_body["totalresults"]
+            resources = response_body.get("resources", [])
+            n_resources = len(resources)
+
+            if total_results < n_resources:
+                issues.add(
+                    issue=ValidationError.total_results_mismatch(
+                        total_results=total_results, n_resources=n_resources
+                    ),
+                    location=("response", "body", "totalResults"),
+                    proceed=True,
+                )
+                issues.add(
+                    issue=ValidationError.total_results_mismatch(
+                        total_results=total_results, n_resources=n_resources
+                    ),
+                    location=("response", "body", "Resources"),
+                    proceed=True,
+                )
+
+            if count is None and total_results > n_resources:
+                issues.add(
+                    issue=ValidationError.too_little_results(
+                        must="be equal to 'totalResults'"
+                    ),
+                    location=("response", "body", "Resources"),
+                    proceed=True,
+                )
+
+            if count is not None and count < n_resources:
+                issues.add(
+                    issue=ValidationError.too_many_results(
+                        must="be lesser or equal to 'count' parameter"
+                    ),
+                    location=("response", "body", "Resources"),
+                    proceed=True,
+                )
+
+            if (
+                issues.can_proceed(location=("response", "body", "startIndex"))
+                and issues.can_proceed(location=("response", "body", "itemsPerPage"))
+            ):
+                is_pagination = (count or 0) > 0 and total_results > n_resources
+                if is_pagination:
+                    if "startindex" not in response_body:
+                        issues.add(
+                            issue=ValidationError.missing_required_attribute("startIndex"),
+                            location=("response", "body", "startIndex"),
+                            proceed=False,
+                        )
+                    if "itemsperpage" not in response_body:
+                        issues.add(
+                            issue=ValidationError.missing_required_attribute("itemsPerPage"),
+                            location=("response", "body", "itemsPerPage"),
+                            proceed=False,
+                        )
+
+        if (
+            issues.can_proceed(location=("response", "body", "startIndex"))
+            and "startindex" in response_body
+            and response_body["startindex"] > start_index
+        ):
+            issues.add(
+                issue=ValidationError.response_value_does_not_correspond_to_parameter(
+                    response_key="startIndex",
+                    response_value=response_body["startindex"],
+                    query_param_name="startIndex",
+                    query_param_value=start_index,
+                    reason="bigger value than requested",
+                ),
+                location=("response", "body", "startIndex"),
+                proceed=True,
+            )
+
+        if (
+            issues.can_proceed(location=("response", "body", "itemsPerPage"))
+            and issues.can_proceed(location=("response", "body", "Resources"))
+        ):
+            n_resources = len(response_body.get("resources", []))
+
+            if "itemsperpage" in response_body and response_body["itemsperpage"] != n_resources:
+                issues.add(
+                    issue=ValidationError.values_must_match(
+                        value_1="itemsPerPage", value_2="numer of Resources"
+                    ),
+                    location=("response", "body", "itemsPerPage"),
+                    proceed=True,
+                )
+                issues.add(
+                    issue=ValidationError.values_must_match(
+                        value_1="itemsPerPage", value_2="numer of Resources"
+                    ),
+                    location=("response", "body", "Resources"),
+                    proceed=True,
+                )
+
+        return issues
+
+
+class ResourceTypeGET(_ManyResourcesGET):
+    def __init__(self, resource_schema: Schema):
+        super().__init__(ListResponseSchema())
+        self._resource_schema = resource_schema
 
     @preprocess_response_validation
     def validate_response(
@@ -198,14 +388,44 @@ class ResourceGET(EndpointValidatorGET):
             response_body=response_body,
             response_headers=response_headers,
         )
-        if issues.can_proceed(location=("response", "body")):
-            _validate_resource_response(
-                issues=issues,
-                schema=self._schema,
-                expected_status_code=200,
-                actual_status_code=status_code,
-                response_body=response_body,
-                response_headers=response_headers,
-                is_location_header_optional=True,
-            )
+
+        if issues.can_proceed(location=("response", "body", "Resources")):
+            resources = response_body.get("resources", [])
+            for i, resource in enumerate(resources):
+                for attr_name, attr in self._resource_schema.attributes.items():
+                    issues.merge(
+                        issues=attr.validate(resource.get(attr_name), "RESPONSE"),
+                        location=("response", "body", "Resources", i, attr.name),
+                    )
+        return issues
+
+
+class ServerRootResourceGET(_ManyResourcesGET):
+    def __init__(self, resource_schemas: Iterable[Schema]):
+        super().__init__(ListResponseSchema())
+        self._resource_schemas = resource_schemas
+
+    @preprocess_response_validation
+    def validate_response(
+        self,
+        *,
+        status_code: int,
+        request_query_string: Optional[Dict[str, Any]] = None,
+        request_body: Optional[Dict[str, Any]] = None,
+        request_headers: Optional[Dict[str, Any]] = None,
+        response_body: Optional[Dict[str, Any]] = None,
+        response_headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = super().validate_response(
+            status_code=status_code,
+            request_query_string=request_query_string,
+            request_body=request_body,
+            request_headers=request_headers,
+            response_body=response_body,
+            response_headers=response_headers,
+        )
+        if not issues.can_proceed():
+            return issues
+
+        # TODO: validate according to 'attributes' and  whether they exists in all provided schemas
         return issues

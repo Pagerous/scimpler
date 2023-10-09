@@ -1,9 +1,9 @@
 import pytest
 
 from src.parser.resource.schemas import UserSchema
-from src.parser.resource.validators.list_response import (
-    ListResponseResourceTypeGET,
-    ListResponseServerRootGET,
+from src.parser.resource.validators.resource import (
+    ResourceTypeGET,
+    ServerRootResourceGET,
 )
 
 
@@ -68,8 +68,8 @@ def response_headers():
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_body_is_required(validator, request_body):
@@ -97,8 +97,8 @@ def test_body_is_required(validator, request_body):
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_correct_body_passes_validation(validator, request_body, response_body, response_headers):
@@ -115,8 +115,8 @@ def test_correct_body_passes_validation(validator, request_body, response_body, 
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_missing_schemas_key_returns_error(
@@ -150,7 +150,7 @@ def test_missing_schemas_key_returns_error(
 def test_validation_errors_for_resources_attribute_can_be_returned(
     request_body, response_body, response_headers
 ):
-    validator = ListResponseResourceTypeGET(UserSchema())
+    validator = ResourceTypeGET(UserSchema())
     response_body["Resources"][0]["userName"] = 123  # noqa
     response_body["Resources"][1]["userName"] = 123  # noqa
     expected_issues = {
@@ -193,8 +193,8 @@ def test_validation_errors_for_resources_attribute_can_be_returned(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_status_code_must_be_200(validator, request_body, response_body, response_headers):
@@ -223,8 +223,8 @@ def test_status_code_must_be_200(validator, request_body, response_body, respons
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_fails_if_more_resources_than_total_results(
@@ -265,8 +265,8 @@ def test_fails_if_more_resources_than_total_results(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_fails_if_less_resources_than_total_results_with_count_unspecified(
@@ -300,8 +300,8 @@ def test_fails_if_less_resources_than_total_results_with_count_unspecified(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_fails_if_more_resources_than_specified_count(
@@ -335,8 +335,8 @@ def test_fails_if_more_resources_than_specified_count(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
@@ -378,8 +378,8 @@ def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_fails_if_start_index_bigger_than_requested(
@@ -416,8 +416,8 @@ def test_fails_if_start_index_bigger_than_requested(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
     )
 )
 def test_fails_if_items_per_page_do_not_match_resources(

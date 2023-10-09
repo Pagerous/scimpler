@@ -1,7 +1,7 @@
 import pytest
 
 from src.parser.resource.schemas import UserSchema
-from src.parser.resource.validators.resource import ResourcePOST
+from src.parser.resource.validators.resource import ResourceTypePOST
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ def response_headers():
 
 @pytest.fixture
 def validator():
-    return ResourcePOST(UserSchema())
+    return ResourceTypePOST(UserSchema())
 
 
 def test_body_is_not_required(validator, request_body):
