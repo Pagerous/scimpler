@@ -94,12 +94,16 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], ValidationIss
                 complex_attr_exp = f"{complex_attr_name}[{sub_filter_exp}]"
                 if sub_filter_exp.strip() == "":
                     issues_.add(
-                        issue=ValidationError.empty_complex_attribute_expression(complex_attr_name, complex_attr_start),
+                        issue=ValidationError.empty_complex_attribute_expression(
+                            complex_attr_name, complex_attr_start
+                        ),
                         proceed=False,
                     )
                 if complex_attr_name == "":
                     issues_.add(
-                        issue=ValidationError.complex_attribute_without_top_level_attribute(complex_attr_exp),
+                        issue=ValidationError.complex_attribute_without_top_level_attribute(
+                            complex_attr_exp
+                        ),
                         proceed=False,
                     )
                 elif not _ALLOWED_IDENTIFIERS.fullmatch(complex_attr_name):
@@ -433,7 +437,13 @@ def _parse_filter_attr_exp(
             )
         if not _ALLOWED_IDENTIFIERS.fullmatch(components[0]):
             issues.add(
-                issue=ValidationError.bad_attribute_name(components[0]),
+                issue=ValidationError.bad_attribute_name(
+                    _encode_sub_or_complex_into_exp(
+                        exp=components[0],
+                        parsed_sub_filters=parsed_sub_filters,
+                        parsed_complex_filters=parsed_complex_filters,
+                    )
+                ),
                 proceed=False,
             )
         if not issues.can_proceed():
@@ -460,7 +470,13 @@ def _parse_filter_attr_exp(
             )
         if not _ALLOWED_IDENTIFIERS.fullmatch(components[0]):
             issues.add(
-                issue=ValidationError.bad_attribute_name(components[0]),
+                issue=ValidationError.bad_attribute_name(
+                    _encode_sub_or_complex_into_exp(
+                        exp=components[0],
+                        parsed_sub_filters=parsed_sub_filters,
+                        parsed_complex_filters=parsed_complex_filters,
+                    )
+                ),
                 proceed=False,
             )
         value, issues_ = _parse_comparison_value(components[2])
