@@ -161,52 +161,6 @@ class _ListResponseGET(EndpointValidatorGET):
         return issues
 
 
-class ListResponseResourceObjectGET(_ListResponseGET):
-    def __init__(self, resource_schema: Schema):
-        super().__init__(ListResponseSchema())
-        self._resource_schema = resource_schema
-
-    @preprocess_response_validation
-    def validate_response(
-        self,
-        *,
-        status_code: int,
-        request_query_string: Optional[Dict[str, Any]] = None,
-        request_body: Optional[Dict[str, Any]] = None,
-        request_headers: Optional[Dict[str, Any]] = None,
-        response_body: Optional[Dict[str, Any]] = None,
-        response_headers: Optional[Dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        issues = super().validate_response(
-            status_code=status_code,
-            request_query_string=request_query_string,
-            request_body=request_body,
-            request_headers=request_headers,
-            response_body=response_body,
-            response_headers=response_headers,
-        )
-
-        if issues.can_proceed(location=("response", "body", "Resources")):
-            resources = response_body.get("resources", [])
-            n_resources = len(resources)
-            if n_resources == 1:
-                resource = resources[0]
-                for attr_name, attr in self._resource_schema.attributes.items():
-                    issues.merge(
-                        issues=attr.validate(resource.get(attr_name), "RESPONSE"),
-                        location=("response", "body", "Resources", 0, attr.name)
-                    )
-
-            elif n_resources > 1:
-                issues.add(
-                    issue=ValidationError.too_many_results(must="be at most 1"),
-                    location=("response", "body", "Resources"),
-                    proceed=True,
-                )
-
-        return issues
-
-
 class ListResponseResourceTypeGET(_ListResponseGET):
     def __init__(self, resource_schema: Schema):
         super().__init__(ListResponseSchema())

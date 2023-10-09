@@ -1,8 +1,10 @@
 import pytest
 
 from src.parser.resource.schemas import UserSchema
-from src.parser.resource.validators.list_response import ListResponseResourceObjectGET, \
-    ListResponseResourceTypeGET, ListResponseServerRootGET
+from src.parser.resource.validators.list_response import (
+    ListResponseResourceTypeGET,
+    ListResponseServerRootGET,
+)
 
 
 @pytest.fixture
@@ -14,7 +16,7 @@ def request_body():
 def response_body():
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
-        "totalResults": 1,
+        "totalResults": 2,
         "Resources": [
             {
                 "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -26,6 +28,25 @@ def response_body():
                     "lastModified": "2011-08-01T18:29:49.793Z",
                     "location":
                     "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+                    "version": r"W\/\"f250dd84f0671c3\""
+                },
+                "name": {
+                    "formatted": "Ms. Barbara J Jensen III",
+                    "familyName": "Jensen",
+                    "givenName": "Barbara"
+                },
+                "userName": "bjensen",
+            },
+            {
+                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                "id": "2819c223-7f76-453a-919d-413861904645",
+                "externalId": "bjensen",
+                "meta": {
+                    "resourceType": "User",
+                    "created": "2011-08-01T18:29:49.793Z",
+                    "lastModified": "2011-08-01T18:29:49.793Z",
+                    "location":
+                        "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
                     "version": r"W\/\"f250dd84f0671c3\""
                 },
                 "name": {
@@ -47,7 +68,6 @@ def response_headers():
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceObjectGET(UserSchema()),
         ListResponseResourceTypeGET(UserSchema()),
         ListResponseServerRootGET([UserSchema()]),
     )
@@ -77,7 +97,6 @@ def test_body_is_required(validator, request_body):
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceObjectGET(UserSchema()),
         ListResponseResourceTypeGET(UserSchema()),
         ListResponseServerRootGET([UserSchema()]),
     )
@@ -96,7 +115,6 @@ def test_correct_body_passes_validation(validator, request_body, response_body, 
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceObjectGET(UserSchema()),
         ListResponseResourceTypeGET(UserSchema()),
         ListResponseServerRootGET([UserSchema()]),
     )
@@ -129,22 +147,26 @@ def test_missing_schemas_key_returns_error(
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize(
-    "validator",
-    (
-        ListResponseResourceObjectGET(UserSchema()),
-        ListResponseResourceTypeGET(UserSchema()),
-    )
-)
 def test_validation_errors_for_resources_attribute_can_be_returned(
-    validator, request_body, response_body, response_headers
+    request_body, response_body, response_headers
 ):
+    validator = ListResponseResourceTypeGET(UserSchema())
     response_body["Resources"][0]["userName"] = 123  # noqa
+    response_body["Resources"][1]["userName"] = 123  # noqa
     expected_issues = {
         "response": {
             "body": {
                 "Resources": {
                     "0": {
+                        "userName": {
+                            "_errors": [
+                                {
+                                    "code": 2
+                                }
+                            ]
+                        }
+                    },
+                    "1": {
                         "userName": {
                             "_errors": [
                                 {
@@ -171,7 +193,6 @@ def test_validation_errors_for_resources_attribute_can_be_returned(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceObjectGET(UserSchema()),
         ListResponseResourceTypeGET(UserSchema()),
         ListResponseServerRootGET([UserSchema()]),
     )
@@ -202,7 +223,6 @@ def test_status_code_must_be_200(validator, request_body, response_body, respons
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceObjectGET(UserSchema()),
         ListResponseResourceTypeGET(UserSchema()),
         ListResponseServerRootGET([UserSchema()]),
     )
@@ -210,7 +230,7 @@ def test_status_code_must_be_200(validator, request_body, response_body, respons
 def test_fails_if_more_resources_than_total_results(
     validator, request_body, response_body, response_headers
 ):
-    response_body["totalResults"] = 0
+    response_body["totalResults"] = 1
     expected_issues = {
         "response": {
             "body": {
@@ -245,7 +265,6 @@ def test_fails_if_more_resources_than_total_results(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceObjectGET(UserSchema()),
         ListResponseResourceTypeGET(UserSchema()),
         ListResponseServerRootGET([UserSchema()]),
     )
@@ -281,7 +300,6 @@ def test_fails_if_less_resources_than_total_results_with_count_unspecified(
 @pytest.mark.parametrize(
     "validator",
     (
-        ListResponseResourceObjectGET(UserSchema()),
         ListResponseResourceTypeGET(UserSchema()),
         ListResponseServerRootGET([UserSchema()]),
     )
@@ -296,50 +314,6 @@ def test_fails_if_more_resources_than_specified_count(
                     "_errors": [
                         {
                             "code": 21
-                        }
-                    ]
-                }
-            }
-        }
-    }
-
-    issues = validator.validate_response(
-        request_query_string={"count": 0},
-        request_body=request_body,
-        response_body=response_body,
-        response_headers=response_headers,
-        status_code=200,
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-@pytest.mark.parametrize(
-    "validator",
-    (
-        ListResponseResourceObjectGET(UserSchema()),
-        ListResponseResourceTypeGET(UserSchema()),
-        ListResponseServerRootGET([UserSchema()]),
-    )
-)
-def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
-    validator, request_body, response_body, response_headers
-):
-    response_body["Resources"] = []
-    expected_issues = {
-        "response": {
-            "body": {
-                "startIndex": {
-                    "_errors": [
-                        {
-                            "code": 1
-                        }
-                    ]
-                },
-                "itemsPerPage": {
-                    "_errors": [
-                        {
-                            "code": 1
                         }
                     ]
                 }
@@ -365,12 +339,55 @@ def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
         ListResponseServerRootGET([UserSchema()]),
     )
 )
+def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
+    validator, request_body, response_body, response_headers
+):
+    response_body["Resources"] = response_body["Resources"][:1]
+    expected_issues = {
+        "response": {
+            "body": {
+                "startIndex": {
+                    "_errors": [
+                        {
+                            "code": 1
+                        }
+                    ]
+                },
+                "itemsPerPage": {
+                    "_errors": [
+                        {
+                            "code": 1
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"count": 2},
+        request_body=request_body,
+        response_body=response_body,
+        response_headers=response_headers,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
+    "validator",
+    (
+        ListResponseResourceTypeGET(UserSchema()),
+        ListResponseServerRootGET([UserSchema()]),
+    )
+)
 def test_fails_if_start_index_bigger_than_requested(
     validator, request_body, response_body, response_headers
 ):
-    response_body["totalResults"] = 2
+    response_body["totalResults"] = 3
     response_body["startIndex"] = 2
-    response_body["itemsPerPage"] = 1
+    response_body["itemsPerPage"] = 2
     expected_issues = {
         "response": {
             "body": {
@@ -386,7 +403,7 @@ def test_fails_if_start_index_bigger_than_requested(
     }
 
     issues = validator.validate_response(
-        request_query_string={"count": 1, "startIndex": 1},
+        request_query_string={"count": 2, "startIndex": 1},
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
@@ -406,10 +423,9 @@ def test_fails_if_start_index_bigger_than_requested(
 def test_fails_if_items_per_page_do_not_match_resources(
     validator, request_body, response_body, response_headers
 ):
-    response_body["totalResults"] = 2
+    response_body["totalResults"] = 3
     response_body["startIndex"] = 1
     response_body["itemsPerPage"] = 1
-    response_body["Resources"].append(response_body["Resources"][0].copy())
     expected_issues = {
         "response": {
             "body": {
@@ -433,36 +449,6 @@ def test_fails_if_items_per_page_do_not_match_resources(
 
     issues = validator.validate_response(
         request_query_string={"count": 2, "startIndex": 1},
-        request_body=request_body,
-        response_body=response_body,
-        response_headers=response_headers,
-        status_code=200,
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_fails_if_more_than_one_result_for_resource_object(
-    request_body, response_body, response_headers
-):
-    validator = ListResponseResourceObjectGET(UserSchema())
-    response_body["totalResults"] = 2
-    response_body["Resources"].append(response_body["Resources"][0].copy())
-    expected_issues = {
-        "response": {
-            "body": {
-                "Resources": {
-                    "_errors": [
-                        {
-                            "code": 21
-                        }
-                    ]
-                }
-            }
-        }
-    }
-
-    issues = validator.validate_response(
         request_body=request_body,
         response_body=response_body,
         response_headers=response_headers,
