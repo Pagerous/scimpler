@@ -166,7 +166,7 @@ class ResourceTypePOST(EndpointValidator):
             for attr_name, attr in self._schema.attributes.items():
                 issues.merge(
                     issues=attr.validate(body.get(attr_name), "REQUEST"),
-                    location=("request", "body", attr.name)
+                    location=("request", "body", attr.display_name)
                 )
         return issues
 

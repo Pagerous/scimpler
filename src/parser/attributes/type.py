@@ -70,7 +70,9 @@ class Binary(String):
         if not issues.can_proceed():
             return issues
         try:
-            if base64.b64encode(base64.b64decode(value).decode("utf-8").encode("utf-8")).decode("utf-8") != value:
+            if base64.b64encode(
+                base64.b64decode(value).decode("utf-8").encode("utf-8")
+            ).decode("utf-8") != value:
                 issues.add(
                     issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
                     proceed=False,
@@ -121,7 +123,9 @@ class DateTime(String):
 
     @staticmethod
     def _is_xsd_datetime(value: str) -> bool:
-        xsd_datetime_pattern = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?"
+        xsd_datetime_pattern = (
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?"
+        )
         match = re.fullmatch(xsd_datetime_pattern, value)
         if match is None:
             return False
@@ -166,4 +170,3 @@ class Complex(AttributeType):
                     proceed=False,
                 )
         return issues
-

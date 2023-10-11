@@ -1,15 +1,19 @@
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+from src.parser.attributes.attributes import ComplexAttribute
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter import operator as op
+from src.parser.resource.schemas import Schema
 
-_ATTR_NAME_REGEX = r"\w+"
-_SUB_ATTR_NAME_REGEX = r"\w+\.\w+"
+_ATTR_NAME_REGEX = re.compile(r"\w+")
+_SUB_ATTR_NAME_REGEX = re.compile(r"\w+\.\w+")
 _URI_ATTR_PREFIX = rf"(?:[\w.-]+:)*"
 
-_ALLOWED_IDENTIFIERS = re.compile(rf"({_URI_ATTR_PREFIX})?({_ATTR_NAME_REGEX}|{_SUB_ATTR_NAME_REGEX})")
+_ALLOWED_IDENTIFIERS = re.compile(
+    rf"({_URI_ATTR_PREFIX})?({_ATTR_NAME_REGEX.pattern}|{_SUB_ATTR_NAME_REGEX.pattern})"
+)
 
 _OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 _AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
@@ -40,28 +44,86 @@ _BINARY_ATTR_OPERATORS = {
 }
 
 
-ParsedFilter = Union[op.AttributeOperator, op.LogicalOperator, op.ComplexAttributeOperator]
+ParsedOperator = Union[
+    op.AttributeOperator,
+    op.LogicalOperator,
+    op.ComplexAttributeOperator,
+]
+
+
+class Filter:
+    def __init__(self, operator: ParsedOperator):
+        self._operator = operator
+
+    def match(self, data: Dict[str, Any], schema: Schema) -> bool:
+        if isinstance(self._operator, op.AttributeOperator):
+            attr = schema.attributes.get(self._operator.attr_name)
+            return self._operator.match(data.get(self._operator.attr_name), attr)
+        if isinstance(self._operator, op.ComplexAttributeOperator):
+            attr = schema.attributes.get(self._operator.attr_name)
+            if not isinstance(attr, ComplexAttribute):
+                return False
+            return self._operator.match(data.get(self._operator.attr_name), attr)
+        if isinstance(self._operator, op.LogicalOperator):
+            return self._operator.match(data, schema.attributes)
+        return False
+
+    def to_dict(self):
+        return self._to_dict(self._operator)
+
+    @staticmethod
+    def _to_dict(operator):
+        if isinstance(operator, op.AttributeOperator):
+            filter_dict = {
+                "op": operator.SCIM_OP,
+                "attr_name": operator.display_name,
+            }
+            if isinstance(operator, op.BinaryAttributeOperator):
+                filter_dict["value"] = operator.value
+            return filter_dict
+
+        if isinstance(operator, op.ComplexAttributeOperator):
+            return {
+                "op": "complex",
+                "attr_name": operator.display_name,
+                "sub_op": Filter._to_dict(operator.sub_operator)
+            }
+
+        if isinstance(operator, op.Not):
+            return {
+                "op": operator.SCIM_OP,
+                "sub_op": Filter._to_dict(operator.sub_operator),
+            }
+
+        if isinstance(operator, op.MultiOperandLogicalOperator):
+            return {
+                "op": operator.SCIM_OP,
+                "sub_ops": [
+                    Filter._to_dict(sub_operator) for sub_operator in operator.sub_operators
+                ]
+            }
+        raise TypeError(f"unsupported filter type '{type(operator).__name__}'")
 
 
 @dataclass
-class _ParsedComplexAttributeFilter:
+class _ParsedComplexAttributeOperator:
     operator: Optional[op.ComplexAttributeOperator]
     issues: ValidationIssues
     expression: str
 
 
 @dataclass
-class _ParsedSubFilter:
+class _ParsedGroupOperator:
     operator: Optional[Union[op.AttributeOperator, op.LogicalOperator]]
     issues: ValidationIssues
     expression: str
 
 
-def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+def parse_filter(filter_exp: str) -> Tuple[Optional[Filter], ValidationIssues]:
     issues = ValidationIssues()
     bracket_open_index = None
     complex_attr_name = ""
-    parsed_complex_filters = {}
+    parsed_complex_ops = {}
     filter_exp_preprocessed = filter_exp
     ignore_processing = False
     issues_ = ValidationIssues()
@@ -89,10 +151,10 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], ValidationIss
                     proceed=False,
                 )
             else:
-                sub_filter_exp = filter_exp_preprocessed[bracket_open_index+1:i]
+                sub_ops_exp = filter_exp_preprocessed[bracket_open_index+1:i]
                 complex_attr_start = bracket_open_index - len(complex_attr_name)
-                complex_attr_exp = f"{complex_attr_name}[{sub_filter_exp}]"
-                if sub_filter_exp.strip() == "":
+                complex_attr_exp = f"{complex_attr_name}[{sub_ops_exp}]"
+                if sub_ops_exp.strip() == "":
                     issues_.add(
                         issue=ValidationError.empty_complex_attribute_expression(
                             complex_attr_name, complex_attr_start
@@ -112,20 +174,22 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], ValidationIss
                         proceed=False,
                     )
                 if not issues_.can_proceed():
-                    parsed_complex_filters[complex_attr_start] = _ParsedComplexAttributeFilter(
+                    parsed_complex_ops[complex_attr_start] = _ParsedComplexAttributeOperator(
                         operator=None,
                         issues=issues_,
                         expression=complex_attr_exp,
                     )
                 else:
-                    parsed_complex_sub_filter, issues_ = _parse_filter(
-                        filter_exp=sub_filter_exp,
+                    parsed_complex_sub_ops, issues_ = _parse_operator(
+                        op_exp=sub_ops_exp,
                     )
                     if not issues_.can_proceed():
                         operator = None
                     else:
-                        operator = op.ComplexAttributeOperator(complex_attr_name, parsed_complex_sub_filter)
-                    parsed_complex_filters[complex_attr_start] = _ParsedComplexAttributeFilter(
+                        operator = op.ComplexAttributeOperator(
+                            complex_attr_name, parsed_complex_sub_ops
+                        )
+                    parsed_complex_ops[complex_attr_start] = _ParsedComplexAttributeOperator(
                         operator=operator,
                         issues=issues_,
                         expression=complex_attr_exp,
@@ -141,44 +205,44 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[ParsedFilter], ValidationIss
             issues_ = ValidationIssues()
 
     if not issues.can_proceed():
-        for parsed in parsed_complex_filters.values():
+        for parsed in parsed_complex_ops.values():
             issues.merge(issues=parsed.issues)
         return None, issues
 
-    if bracket_open_index and bracket_open_index not in parsed_complex_filters:
+    if bracket_open_index and bracket_open_index not in parsed_complex_ops:
         issues.add(
             issue=ValidationError.no_closing_complex_attribute_bracket(bracket_open_index),
             proceed=False,
         )
 
     if not issues.can_proceed():
-        for parsed in parsed_complex_filters.values():
+        for parsed in parsed_complex_ops.values():
             issues.merge(issues=parsed.issues)
         return None, issues
 
-    parsed_filter, issues_ = _parse_filter(
-        filter_exp=filter_exp,
-        parsed_complex_filters=parsed_complex_filters,
+    parsed_op, issues_ = _parse_operator(
+        op_exp=filter_exp,
+        parsed_complex_ops=parsed_complex_ops,
     )
     issues.merge(issues=issues_)
     if not issues.can_proceed():
         return None, issues
-    return parsed_filter, issues
+    return Filter(parsed_op), issues
 
 
-def _parse_filter(
-    filter_exp: str,
-    parsed_complex_filters: Optional[Dict[int, _ParsedComplexAttributeFilter]] = None,
-) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
-    parsed_complex_filters = parsed_complex_filters or {}
+def _parse_operator(
+    op_exp: str,
+    parsed_complex_ops: Optional[Dict[int, _ParsedComplexAttributeOperator]] = None,
+) -> Tuple[Optional[ParsedOperator], ValidationIssues]:
+    parsed_complex_ops = parsed_complex_ops or {}
     issues = ValidationIssues()
     ignore_processing = False
     bracket_open = False
     bracket_open_index = None
     bracket_cnt = 0
-    parsed_sub_filters = {}
-    filter_exp_preprocessed = filter_exp
-    for i, char in enumerate(filter_exp):
+    parsed_group_ops = {}
+    op_exp_preprocessed = op_exp
+    for i, char in enumerate(op_exp):
         if char == "\"":
             ignore_processing = not ignore_processing
         if ignore_processing:
@@ -195,65 +259,65 @@ def _parse_filter(
             else:
                 issues.add(issue=ValidationError.no_opening_bracket(i), proceed=False)
         if bracket_open and bracket_cnt == 0:
-            sub_filter_exp = filter_exp[bracket_open_index:i+1]
-            parsed_sub_filter, issues_ = _parse_filter(
-                filter_exp=sub_filter_exp[1:-1],  # without enclosing brackets
-                parsed_complex_filters=parsed_complex_filters,
+            group_op_exp = op_exp[bracket_open_index:i + 1]
+            parsed_group_op, issues_ = _parse_operator(
+                op_exp=group_op_exp[1:-1],  # without enclosing brackets
+                parsed_complex_ops=parsed_complex_ops,
             )
-            parsed_sub_filters[bracket_open_index] = _ParsedSubFilter(
-                operator=parsed_sub_filter,
+            parsed_group_ops[bracket_open_index] = _ParsedGroupOperator(
+                operator=parsed_group_op,
                 issues=issues_,
-                expression=sub_filter_exp,
+                expression=group_op_exp,
             )
-            filter_exp_preprocessed = filter_exp_preprocessed.replace(
-                sub_filter_exp, _get_placeholder(bracket_open_index), 1
+            op_exp_preprocessed = op_exp_preprocessed.replace(
+                group_op_exp, _get_placeholder(bracket_open_index), 1
             )
             bracket_open = False
             bracket_open_index = None
 
-    if bracket_open and bracket_open_index not in parsed_sub_filters:
+    if bracket_open and bracket_open_index not in parsed_group_ops:
         issues.add(issue=ValidationError.no_closing_bracket(bracket_open_index), proceed=False)
 
-    filter_exp_preprocessed = filter_exp_preprocessed.strip()
-    if filter_exp_preprocessed == "":
+    op_exp_preprocessed = op_exp_preprocessed.strip()
+    if op_exp_preprocessed == "":
         issues.add(issue=ValidationError.empty_expression(), proceed=False)
 
     if not issues.can_proceed():
         return None, issues
 
-    parsed_filter, issues_ = _parse_filter_or_exp(
-        or_exp=filter_exp_preprocessed,
-        parsed_sub_filters=parsed_sub_filters,
-        parsed_complex_filters=parsed_complex_filters,
+    parsed_op, issues_ = _parsed_op_or_exp(
+        or_exp=op_exp_preprocessed,
+        parsed_group_ops=parsed_group_ops,
+        parsed_complex_ops=parsed_complex_ops,
     )
     issues.merge(issues=issues_)
     if not issues.can_proceed():
         return None, issues
-    return parsed_filter, issues
+    return parsed_op, issues
 
 
-def _parse_filter_or_exp(
+def _parsed_op_or_exp(
     or_exp: str,
-    parsed_sub_filters: Dict[int, _ParsedSubFilter],
-    parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
-) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+    parsed_group_ops: Dict[int, _ParsedGroupOperator],
+    parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
+) -> Tuple[Optional[ParsedOperator], ValidationIssues]:
     issues = ValidationIssues()
     or_operands, issues_ = _split_exp_to_logical_operands(
-        filter_exp=or_exp,
+        op_exp=or_exp,
         regexp=_OR_LOGICAL_OPERATOR_SPLIT_REGEX,
         operator_name="or",
-        parsed_sub_filters=parsed_sub_filters,
-        parsed_complex_filters=parsed_complex_filters,
+        parsed_group_ops=parsed_group_ops,
+        parsed_complex_ops=parsed_complex_ops,
     )
     issues.merge(issues=issues_)
     if not or_operands:
         return None, issues
 
     if len(or_operands) == 1:
-        parsed_or_operand, issues_ = _parse_filter_and_exp(
+        parsed_or_operand, issues_ = _parse_op_and_exp(
             and_exp=or_operands[0],
-            parsed_sub_filters=parsed_sub_filters,
-            parsed_complex_filters=parsed_complex_filters,
+            parsed_group_ops=parsed_group_ops,
+            parsed_complex_ops=parsed_complex_ops,
         )
         issues.merge(issues=issues_)
         if not issues.can_proceed():
@@ -262,10 +326,10 @@ def _parse_filter_or_exp(
 
     parsed_or_operands = []
     for or_operand in or_operands:
-        parsed_or_operand, issues_ = _parse_filter_and_exp(
+        parsed_or_operand, issues_ = _parse_op_and_exp(
             and_exp=or_operand,
-            parsed_sub_filters=parsed_sub_filters,
-            parsed_complex_filters=parsed_complex_filters,
+            parsed_group_ops=parsed_group_ops,
+            parsed_complex_ops=parsed_complex_ops,
         )
         issues.merge(issues=issues_)
         if not issues.can_proceed():
@@ -277,28 +341,28 @@ def _parse_filter_or_exp(
     return op.Or(*parsed_or_operands), issues
 
 
-def _parse_filter_and_exp(
+def _parse_op_and_exp(
     and_exp: str,
-    parsed_sub_filters: Dict[int, _ParsedSubFilter],
-    parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
-) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+    parsed_group_ops: Dict[int, _ParsedGroupOperator],
+    parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
+) -> Tuple[Optional[ParsedOperator], ValidationIssues]:
     issues = ValidationIssues()
     and_operands, issues_ = _split_exp_to_logical_operands(
-        filter_exp=and_exp,
+        op_exp=and_exp,
         regexp=_AND_LOGICAL_OPERATOR_SPLIT_REGEX,
         operator_name="and",
-        parsed_sub_filters=parsed_sub_filters,
-        parsed_complex_filters=parsed_complex_filters,
+        parsed_group_ops=parsed_group_ops,
+        parsed_complex_ops=parsed_complex_ops,
     )
     issues.merge(issues=issues_)
     if not and_operands:
         return None, issues
 
     if len(and_operands) == 1:
-        parsed_and_operand, issues_ = _parse_filter_attr_exp(
+        parsed_and_operand, issues_ = _parse_op_attr_exp(
             attr_exp=and_operands[0],
-            parsed_sub_filters=parsed_sub_filters,
-            parsed_complex_filters=parsed_complex_filters,
+            parsed_group_ops=parsed_group_ops,
+            parsed_complex_ops=parsed_complex_ops,
         )
         issues.merge(issues=issues_)
         if not issues.can_proceed():
@@ -309,10 +373,10 @@ def _parse_filter_and_exp(
     for and_operand in and_operands:
         match = _NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
         if match:
-            parsed_and_operand, issues_ = _parse_filter_attr_exp(
+            parsed_and_operand, issues_ = _parse_op_attr_exp(
                 attr_exp=match.group(1),
-                parsed_sub_filters=parsed_sub_filters,
-                parsed_complex_filters=parsed_complex_filters,
+                parsed_group_ops=parsed_group_ops,
+                parsed_complex_ops=parsed_complex_ops,
             )
             issues.merge(issues=issues_)
             if not issues.can_proceed():
@@ -320,10 +384,10 @@ def _parse_filter_and_exp(
             else:
                 parsed_and_operand = op.Not(parsed_and_operand)
         else:
-            parsed_and_operand, issues_ = _parse_filter_attr_exp(
+            parsed_and_operand, issues_ = _parse_op_attr_exp(
                 attr_exp=and_operand,
-                parsed_sub_filters=parsed_sub_filters,
-                parsed_complex_filters=parsed_complex_filters,
+                parsed_group_ops=parsed_group_ops,
+                parsed_complex_ops=parsed_complex_ops,
             )
             issues.merge(issues=issues_)
             if not issues.can_proceed():
@@ -336,45 +400,45 @@ def _parse_filter_and_exp(
 
 
 def _split_exp_to_logical_operands(
-    filter_exp: str,
+    op_exp: str,
     regexp: re.Pattern[str],
     operator_name: str,
-    parsed_sub_filters: Dict[int, _ParsedSubFilter],
-    parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
+    parsed_group_ops: Dict[int, _ParsedGroupOperator],
+    parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
 ) -> Tuple[List[str], ValidationIssues]:
     issues = ValidationIssues()
     operands = []
     current_position = 0
-    matches = list(regexp.finditer(filter_exp))
+    matches = list(regexp.finditer(op_exp))
     for i, match in enumerate(matches):
-        left_operand = filter_exp[current_position:match.start()]
+        left_operand = op_exp[current_position:match.start()]
         if i == len(matches) - 1:
-            right_operand = filter_exp[match.end():]
+            right_operand = op_exp[match.end():]
         else:
-            right_operand = filter_exp[match.end():matches[i + 1].start()]
+            right_operand = op_exp[match.end():matches[i + 1].start()]
 
         invalid_expression = None
         if left_operand == right_operand == "":
             invalid_expression = match.group(0).strip()
         elif left_operand == "":
-            parsed_filter = _get_parsed_sub_or_complex_filter(
-                filter_exp=right_operand,
-                parsed_sub_filters=parsed_sub_filters,
-                parsed_complex_filters=parsed_complex_filters,
+            parsed_op = _get_parsed_group_or_complex_op(
+                op_exp=right_operand,
+                parsed_group_ops=parsed_group_ops,
+                parsed_complex_ops=parsed_complex_ops,
             )
-            if parsed_filter is not None:
-                right_expression = parsed_filter.expression
+            if parsed_op is not None:
+                right_expression = parsed_op.expression
             else:
                 right_expression = right_operand
             invalid_expression = (match.group(0) + right_expression).strip()
         elif right_operand == "":
-            parsed_filter = _get_parsed_sub_or_complex_filter(
-                filter_exp=left_operand,
-                parsed_sub_filters=parsed_sub_filters,
-                parsed_complex_filters=parsed_complex_filters,
+            parsed_op = _get_parsed_group_or_complex_op(
+                op_exp=left_operand,
+                parsed_group_ops=parsed_group_ops,
+                parsed_complex_ops=parsed_complex_ops,
             )
-            if parsed_filter is not None:
-                left_expression = parsed_filter.expression
+            if parsed_op is not None:
+                left_expression = parsed_op.expression
             else:
                 left_expression = left_operand
             invalid_expression = (left_expression + match.group(0)).strip()
@@ -394,23 +458,23 @@ def _split_exp_to_logical_operands(
         current_position = match.end()
 
     if not matches:
-        operands = [filter_exp]
+        operands = [op_exp]
 
     operands = [operand for operand in operands if operand != ""]
     return operands, issues
 
 
-def _parse_filter_attr_exp(
+def _parse_op_attr_exp(
     attr_exp: str,
-    parsed_sub_filters: Dict[int, _ParsedSubFilter],
-    parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
-) -> Tuple[Optional[ParsedFilter], ValidationIssues]:
+    parsed_group_ops: Dict[int, _ParsedGroupOperator],
+    parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
+) -> Tuple[Optional[ParsedOperator], ValidationIssues]:
     issues = ValidationIssues()
     attr_exp = attr_exp.strip()
-    sub_or_complex = _get_parsed_sub_or_complex_filter(
-        filter_exp=attr_exp,
-        parsed_sub_filters=parsed_sub_filters,
-        parsed_complex_filters=parsed_complex_filters,
+    sub_or_complex = _get_parsed_group_or_complex_op(
+        op_exp=attr_exp,
+        parsed_group_ops=parsed_group_ops,
+        parsed_complex_ops=parsed_complex_ops,
     )
     if sub_or_complex is not None:
         return sub_or_complex.operator, sub_or_complex.issues
@@ -424,31 +488,42 @@ def _parse_filter_attr_exp(
                     operator_type="unary",
                     operator=_encode_sub_or_complex_into_exp(
                         exp=components[1],
-                        parsed_sub_filters=parsed_sub_filters,
-                        parsed_complex_filters=parsed_complex_filters,
+                        parsed_group_ops=parsed_group_ops,
+                        parsed_complex_ops=parsed_complex_ops,
                     ),
                     expression=_encode_sub_or_complex_into_exp(
                         exp=attr_exp,
-                        parsed_sub_filters=parsed_sub_filters,
-                        parsed_complex_filters=parsed_complex_filters,
+                        parsed_group_ops=parsed_group_ops,
+                        parsed_complex_ops=parsed_complex_ops,
                     )
                 ),
                 proceed=False,
             )
-        if not _ALLOWED_IDENTIFIERS.fullmatch(components[0]):
+        match = _ALLOWED_IDENTIFIERS.fullmatch(components[0])
+        if not match:
             issues.add(
                 issue=ValidationError.bad_attribute_name(
                     _encode_sub_or_complex_into_exp(
                         exp=components[0],
-                        parsed_sub_filters=parsed_sub_filters,
-                        parsed_complex_filters=parsed_complex_filters,
+                        parsed_group_ops=parsed_group_ops,
+                        parsed_complex_ops=parsed_complex_ops,
                     )
                 ),
                 proceed=False,
             )
         if not issues.can_proceed():
             return None, issues
-        return op_(components[0]), issues
+
+        if _SUB_ATTR_NAME_REGEX.match(match.group(2)):
+            attr_name, sub_attr_name = match.group(2).split(".", 1)
+            operator = op.ComplexAttributeOperator(
+                attr_name=match.group(1) + attr_name,
+                sub_operator=op_(sub_attr_name)
+            )
+        else:
+            operator = op_(components[0])
+        return operator, issues
+
     elif len(components) == 3:
         op_ = _BINARY_ATTR_OPERATORS.get(components[1].lower())
         if op_ is None:
@@ -457,24 +532,25 @@ def _parse_filter_attr_exp(
                     operator_type="binary",
                     operator=_encode_sub_or_complex_into_exp(
                         exp=components[1],
-                        parsed_sub_filters=parsed_sub_filters,
-                        parsed_complex_filters=parsed_complex_filters,
+                        parsed_group_ops=parsed_group_ops,
+                        parsed_complex_ops=parsed_complex_ops,
                     ),
                     expression=_encode_sub_or_complex_into_exp(
                         exp=attr_exp,
-                        parsed_sub_filters=parsed_sub_filters,
-                        parsed_complex_filters=parsed_complex_filters,
+                        parsed_group_ops=parsed_group_ops,
+                        parsed_complex_ops=parsed_complex_ops,
                     )
                 ),
                 proceed=False,
             )
-        if not _ALLOWED_IDENTIFIERS.fullmatch(components[0]):
+        match = _ALLOWED_IDENTIFIERS.fullmatch(components[0])
+        if not match:
             issues.add(
                 issue=ValidationError.bad_attribute_name(
                     _encode_sub_or_complex_into_exp(
                         exp=components[0],
-                        parsed_sub_filters=parsed_sub_filters,
-                        parsed_complex_filters=parsed_complex_filters,
+                        parsed_group_ops=parsed_group_ops,
+                        parsed_complex_ops=parsed_complex_ops,
                     )
                 ),
                 proceed=False,
@@ -483,14 +559,23 @@ def _parse_filter_attr_exp(
         issues.merge(issues=issues_)
         if not issues.can_proceed():
             return None, issues
-        return op_(components[0], value), issues
+
+        if _SUB_ATTR_NAME_REGEX.match(match.group(2)):
+            attr_name, sub_attr_name = match.group(2).split(".", 1)
+            operator = op.ComplexAttributeOperator(
+                attr_name=match.group(1) + attr_name,
+                sub_operator=op_(sub_attr_name, value)
+            )
+        else:
+            operator = op_(components[0], value)
+        return operator, issues
 
     issues.add(
         issue=ValidationError.unknown_expression(
             _encode_sub_or_complex_into_exp(
                 exp=attr_exp,
-                parsed_sub_filters=parsed_sub_filters,
-                parsed_complex_filters=parsed_complex_filters,
+                parsed_group_ops=parsed_group_ops,
+                parsed_complex_ops=parsed_complex_ops,
             )
         ),
         proceed=False,
@@ -498,18 +583,18 @@ def _parse_filter_attr_exp(
     return None, issues
 
 
-def _get_parsed_sub_or_complex_filter(
-    filter_exp: str,
-    parsed_sub_filters: Dict[int, _ParsedSubFilter],
-    parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter]
-) -> Optional[Union[_ParsedSubFilter, _ParsedComplexAttributeFilter]]:
-    position = _parse_placeholder(filter_exp)
+def _get_parsed_group_or_complex_op(
+    op_exp: str,
+    parsed_group_ops: Dict[int, _ParsedGroupOperator],
+    parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator]
+) -> Optional[Union[_ParsedGroupOperator, _ParsedComplexAttributeOperator]]:
+    position = _parse_placeholder(op_exp)
     if position is None:
         return None
-    if position in parsed_sub_filters:
-        return parsed_sub_filters[position]
-    elif position in parsed_complex_filters:
-        return parsed_complex_filters[position]
+    if position in parsed_group_ops:
+        return parsed_group_ops[position]
+    elif position in parsed_complex_ops:
+        return parsed_complex_ops[position]
     return None
 
 
@@ -526,22 +611,23 @@ def _parse_placeholder(exp: str) -> Optional[int]:
 
 def _encode_sub_or_complex_into_exp(
     exp: str,
-    parsed_sub_filters: Dict[int, _ParsedSubFilter],
-    parsed_complex_filters: Dict[int, _ParsedComplexAttributeFilter],
+    parsed_group_ops: Dict[int, _ParsedGroupOperator],
+    parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
 ):
     encoded = exp
     for match in _PLACEHOLDER_REGEX.finditer(exp):
         index = int(match.group(1))
-        if index in parsed_sub_filters:
-            encoded = encoded.replace(match.group(0), parsed_sub_filters[index].expression)
-        elif index in parsed_complex_filters:
-            encoded = encoded.replace(match.group(0), parsed_complex_filters[index].expression)
+        if index in parsed_group_ops:
+            encoded = encoded.replace(match.group(0), parsed_group_ops[index].expression)
+        elif index in parsed_complex_ops:
+            encoded = encoded.replace(match.group(0), parsed_complex_ops[index].expression)
     return encoded
 
 
 _AllowedOperandValues = Union[str, bool, int, float, None]
 
 
+# TODO validate comparison value according to operator (e.g. 'le' for booleans is incorrect)
 def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, ValidationIssues]:
     issues = ValidationIssues()
     if value.startswith("\"") and value.endswith("\""):

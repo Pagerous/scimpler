@@ -1,16 +1,13 @@
 import pytest
 
 from src.parser.parameters.filter.filter import parse_filter
-from src.parser.parameters.filter.utils import to_dict
 
 
 @pytest.mark.parametrize(
     "attr_name",
     (
         "userName",
-        "name.formatted",
         "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
     )
 )
 @pytest.mark.parametrize(
@@ -28,16 +25,46 @@ def test_parse_basic_binary_attribute_filter(attr_name, operator):
     filter_, issues = parse_filter(filter_exp)
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    "full_attr_name",
+    (
+        "name.formatted",
+        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
+    )
+)
+@pytest.mark.parametrize(
+    "operator",
+    ("eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le")
+)
+def test_parse_basic_binary_complex_attribute_filter(full_attr_name, operator):
+    sub_attr_name, attr_name = full_attr_name[::-1].split(".", 1)
+    attr_name = attr_name[::-1]
+    sub_attr_name = sub_attr_name[::-1]
+    expected = {
+        "op": "complex",
+        "attr_name": attr_name,
+        "sub_op": {
+            "op": operator,
+            "attr_name": sub_attr_name,
+            "value": "bjensen",
+        }
+    }
+    filter_exp = f'{full_attr_name} {operator} "bjensen"'
+
+    filter_, issues = parse_filter(filter_exp)
+
+    assert not issues
+    assert filter_.to_dict() == expected
 
 
 @pytest.mark.parametrize(
     "attr_name",
     (
         "userName",
-        "name.formatted",
         "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
     )
 )
 @pytest.mark.parametrize(
@@ -54,16 +81,45 @@ def test_parse_basic_unary_attribute_filter(attr_name, operator):
     filter_, issues = parse_filter(filter_exp)
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    "full_attr_name",
+    (
+        "name.formatted",
+        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
+    )
+)
+@pytest.mark.parametrize(
+    "operator",
+    ("pr", )
+)
+def test_parse_basic_unary_attribute_filter_with_complex_attribute(full_attr_name, operator):
+    sub_attr_name, attr_name = full_attr_name[::-1].split(".", 1)
+    attr_name = attr_name[::-1]
+    sub_attr_name = sub_attr_name[::-1]
+    expected = {
+        "op": "complex",
+        "attr_name": attr_name,
+        "sub_op": {
+            "op": operator,
+            "attr_name": sub_attr_name,
+        }
+    }
+    filter_exp = f'{full_attr_name} {operator}'
+
+    filter_, issues = parse_filter(filter_exp)
+
+    assert not issues
+    assert filter_.to_dict() == expected
 
 
 @pytest.mark.parametrize(
     "attr_name",
     (
         "userName",
-        "name.formatted",
         "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
     )
 )
 @pytest.mark.parametrize(
@@ -81,7 +137,43 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
     filter_, issues = parse_filter(filter_exp)
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    "full_attr_name",
+    (
+        "name.formatted",
+        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
+    )
+)
+@pytest.mark.parametrize(
+    "sequence",
+    ("  ", "\t\t", "\n", " \t", "\t ", "\n\n", " \n", "\n ")
+)
+def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_with_complex_attribute(
+    full_attr_name, sequence
+):
+    sub_attr_name, attr_name = full_attr_name[::-1].split(".", 1)
+    attr_name = attr_name[::-1]
+    sub_attr_name = sub_attr_name[::-1]
+
+    expected = {
+        "op": "complex",
+        "attr_name": attr_name,
+        "sub_op": {
+            "op": "eq",
+            "attr_name": sub_attr_name,
+            "value": f"bjen{sequence}sen"
+        }
+    }
+
+    filter_exp = f'{full_attr_name}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
+
+    filter_, issues = parse_filter(filter_exp)
+
+    assert not issues
+    assert filter_.to_dict() == expected
 
 
 def test_basic_filters_can_be_combined_with_and_operator():
@@ -94,14 +186,18 @@ def test_basic_filters_can_be_combined_with_and_operator():
                 "value": 'bjensen'
             },
             {
-                "op": "ne",
-                "attr_name": "name.formatted",
-                "value": 'Crazy'
+                "op": "complex",
+                "attr_name": "name",
+                "sub_op": {
+                    "op": "ne",
+                    "attr_name": "formatted",
+                    "value": 'Crazy'
+                }
             },
             {
                 "op": "co",
                 "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                "value": 'bj'
+                "value": "bj",
             }
         ]
     }
@@ -113,7 +209,7 @@ def test_basic_filters_can_be_combined_with_and_operator():
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_basic_filters_can_be_combined_with_or_operator():
@@ -126,9 +222,13 @@ def test_basic_filters_can_be_combined_with_or_operator():
                 "value": 'bjensen'
             },
             {
-                "op": "ne",
-                "attr_name": "name.formatted",
-                "value": 'Crazy'
+                "op": "complex",
+                "attr_name": "name",
+                "sub_op": {
+                    "op": "ne",
+                    "attr_name": "formatted",
+                    "value": 'Crazy'
+                }
             },
             {
                 "op": "co",
@@ -144,7 +244,7 @@ def test_basic_filters_can_be_combined_with_or_operator():
         'or urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"')
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_precedence_of_logical_operators_is_preserved():
@@ -160,9 +260,13 @@ def test_precedence_of_logical_operators_is_preserved():
                 "op": "and",
                 "sub_ops": [
                     {
-                        "op": "ne",
-                        "attr_name": "name.formatted",
-                        "value": 'Crazy',
+                        "op": "complex",
+                        "attr_name": "name",
+                        "sub_op": {
+                            "op": "ne",
+                            "attr_name": "formatted",
+                            "value": "Crazy",
+                        },
                     },
                     {
                         "op": "not",
@@ -184,10 +288,10 @@ def test_precedence_of_logical_operators_is_preserved():
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
-def test_any_sequence_of_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_filter():
+def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_filter():
     expected = {
         "op": "or",
         "sub_ops": [
@@ -200,9 +304,13 @@ def test_any_sequence_of_whitespaces_between_tokens_with_logical_operators_has_n
                 "op": "and",
                 "sub_ops": [
                     {
-                        "op": "ne",
-                        "attr_name": "name.formatted",
-                        "value": 'Craz\ny',
+                        "op": "complex",
+                        "attr_name": "name",
+                        "sub_op": {
+                            "op": "ne",
+                            "attr_name": "formatted",
+                            "value": "Craz\ny",
+                        },
                     },
                     {
                         "op": "not",
@@ -224,7 +332,7 @@ def test_any_sequence_of_whitespaces_between_tokens_with_logical_operators_has_n
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_filter_groups_are_parsed():
@@ -234,15 +342,19 @@ def test_filter_groups_are_parsed():
             {
                 "op": "eq",
                 "attr_name": "userName",
-                "value": 'bjensen'
+                "value": "bjensen"
             },
             {
                 "op": "or",
                 "sub_ops": [
                     {
-                        "op": "ne",
-                        "attr_name": "name.formatted",
-                        "value": 'Crazy',
+                        "op": "complex",
+                        "attr_name": "name",
+                        "sub_op": {
+                            "op": "ne",
+                            "attr_name": "formatted",
+                            "value": "Crazy",
+                        },
                     },
                     {
                         "op": "and",
@@ -251,7 +363,8 @@ def test_filter_groups_are_parsed():
                                 "op": "not",
                                 "sub_op": {
                                     "op": "co",
-                                    "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
+                                    "attr_name": "urn:ietf:params:scim:schemas:core:2.0:"
+                                                 "User:nickName",
                                     "value": 'bj'
                                 },
                              },
@@ -277,7 +390,7 @@ def test_filter_groups_are_parsed():
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
@@ -293,9 +406,13 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                 "op": "or",
                 "sub_ops": [
                     {
-                        "op": "ne",
-                        "attr_name": "name.formatted",
-                        "value": 'Craz\ny',
+                        "op": "complex",
+                        "attr_name": "name",
+                        "sub_op": {
+                            "op": "ne",
+                            "attr_name": "formatted",
+                            "value": 'Craz\ny',
+                        }
                     },
                     {
                         "op": "and",
@@ -305,7 +422,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                                 "sub_op": {
                                     "op": "co",
                                     "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
-                                    "value": 'b\t\tj'
+                                    "value": "b\t\tj",
                                 },
                              },
                             {
@@ -325,12 +442,14 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
         'and '
         '('
         '\t  name.formatted ne "Craz\ny" '
-        'or (\tnot urn:ietf:params:scim:schemas:core:2.0:User:nickName   co "b\t\tj" and id eq 1)\n\n'
+        'or ('
+        '\tnot urn:ietf:params:scim:schemas:core:2.0:User:nickName   co "b\t\tj" and id eq 1'
+        ')\n\n'
         ')'
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_basic_complex_attribute_filter_is_parsed():
@@ -347,7 +466,7 @@ def test_basic_complex_attribute_filter_is_parsed():
     filter_, issues = parse_filter('emails[type eq "work"]')
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_complex_attribute_filter_with_logical_operators_is_parsed():
@@ -374,7 +493,7 @@ def test_complex_attribute_filter_with_logical_operators_is_parsed():
     filter_, issues = parse_filter('emails[type eq "work" and value co "@example.com"]')
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
@@ -394,7 +513,7 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
                         },
                         {
                             "op": "pr",
-                            "attr_name": "emails.primary",
+                            "attr_name": "primary",
                         },
                     ]
                 },
@@ -407,9 +526,13 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
                             "value": '@example.com',
                         },
                         {
-                            "op": "co",
-                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails.display",
-                            "value": '@example.com',
+                            "op": "complex",
+                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                            "sub_op": {
+                                "op": "co",
+                                "attr_name": "display",
+                                "value": '@example.com',
+                            }
                         },
                     ]
                 }
@@ -419,13 +542,16 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
 
     filter_, issues = parse_filter(
         'urn:ietf:params:scim:schemas:core:2.0:User:emails['
-        '(type eq "work" or emails.primary pr) and '
-        '(value co "@example.com" or urn:ietf:params:scim:schemas:core:2.0:User:emails.display co "@example.com")'
+        '(type eq "work" or primary pr) and '
+        '('
+        'value co "@example.com" or urn:ietf:params:scim:schemas:core:2.0:User:emails.display '
+        'co "@example.com"'
+        ')'
         ']'
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attribute_filter():
@@ -444,8 +570,12 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
                             "value": 'work',
                         },
                         {
-                            "op": "pr",
-                            "attr_name": "emails.primary",
+                            "op": "complex",
+                            "attr_name": "emails",
+                            "sub_op": {
+                                "op": "pr",
+                                "attr_name": "primary",
+                            }
                         },
                     ]
                 },
@@ -458,9 +588,13 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
                             "value": '@ex am\nple.com',
                         },
                         {
-                            "op": "co",
-                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails.display",
-                            "value": '@example\t.com',
+                            "op": "complex",
+                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                            "sub_op": {
+                                "op": "co",
+                                "attr_name": "display",
+                                "value": '@example\t.com',
+                            }
                         },
                     ]
                 }
@@ -481,7 +615,7 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 def test_gargantuan_filter():
@@ -497,9 +631,13 @@ def test_gargantuan_filter():
                 "op": "or",
                 "sub_ops": [
                     {
-                        "op": "ne",
-                        "attr_name": "name.formatted",
-                        "value": 'Crazy',
+                        "op": "complex",
+                        "attr_name": "name",
+                        "sub_op": {
+                            "op": "ne",
+                            "attr_name": "formatted",
+                            "value": 'Crazy',
+                        }
                     },
                     {
                         "op": "and",
@@ -508,7 +646,8 @@ def test_gargantuan_filter():
                                 "op": "not",
                                 "sub_op": {
                                     "op": "co",
-                                    "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
+                                    "attr_name": "urn:ietf:params:scim:schemas:core:2.0:"
+                                                 "User:nickName",
                                     "value": 'bj'
                                 },
                              },
@@ -540,7 +679,7 @@ def test_gargantuan_filter():
                                         },
                                         {
                                             "op": "pr",
-                                            "attr_name": "emails.primary",
+                                            "attr_name": "primary",
                                         },
                                     ]
                                 },
@@ -553,9 +692,13 @@ def test_gargantuan_filter():
                                             "value": '@example.com',
                                         },
                                         {
-                                            "op": "co",
-                                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails.display",
-                                            "value": '@example.com',
+                                            "op": "complex",
+                                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                                            "sub_op": {
+                                                "op": "co",
+                                                "attr_name": "display",
+                                                "value": '@example.com',
+                                            },
                                         },
                                     ]
                                 }
@@ -578,7 +721,7 @@ def test_gargantuan_filter():
                                         },
                                         {
                                             "op": "pr",
-                                            "attr_name": "emails.primary",
+                                            "attr_name": "primary",
                                         },
                                     ]
                                 },
@@ -613,18 +756,21 @@ def test_gargantuan_filter():
         ') and '
         '('
         'urn:ietf:params:scim:schemas:core:2.0:User:emails['
-        '(type eq "work" or emails.primary pr) and '
-        '(value co "@example.com" or urn:ietf:params:scim:schemas:core:2.0:User:emails.display co "@example.com")'
+        '(type eq "work" or primary pr) and '
+        '('
+        'value co "@example.com" or urn:ietf:params:scim:schemas:core:2.0:User:emails.display '
+        'co "@example.com"'
+        ')'
         '] or '
         'ims['
-        '(type eq "work" or emails.primary pr) and '
+        '(type eq "work" or primary pr) and '
         '(value co "@example.com" or display co "@example.com")'
         ']'
         ')'
     )
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 @pytest.mark.parametrize(
@@ -641,9 +787,13 @@ def test_gargantuan_filter():
         (
             'name.familyName co "O\'Malley"',
             {
-                "op": "co",
-                "attr_name": "name.familyName",
-                "value": 'O\'Malley',
+                "op": "complex",
+                "attr_name": "name",
+                "sub_op": {
+                    "op": "co",
+                    "attr_name": "familyName",
+                    "value": 'O\'Malley',
+                }
             },
         ),
         (
@@ -672,33 +822,49 @@ def test_gargantuan_filter():
         (
             'meta.lastModified gt "2011-05-13T04:42:34Z"',
             {
-                "op": "gt",
-                "attr_name": "meta.lastModified",
-                "value": '2011-05-13T04:42:34Z',
+                "op": "complex",
+                "attr_name": "meta",
+                "sub_op": {
+                    "op": "gt",
+                    "attr_name": "lastModified",
+                    "value": '2011-05-13T04:42:34Z',
+                }
             },
         ),
         (
             'meta.lastModified ge "2011-05-13T04:42:34Z"',
             {
-                "op": "ge",
-                "attr_name": "meta.lastModified",
-                "value": '2011-05-13T04:42:34Z',
+                "op": "complex",
+                "attr_name": "meta",
+                "sub_op": {
+                    "op": "ge",
+                    "attr_name": "lastModified",
+                    "value": '2011-05-13T04:42:34Z',
+                }
             },
         ),
         (
             'meta.lastModified lt "2011-05-13T04:42:34Z"',
             {
-                "op": "lt",
-                "attr_name": "meta.lastModified",
-                "value": '2011-05-13T04:42:34Z',
+                "op": "complex",
+                "attr_name": "meta",
+                "sub_op": {
+                    "op": "lt",
+                    "attr_name": "lastModified",
+                    "value": '2011-05-13T04:42:34Z',
+                }
             },
         ),
         (
             'meta.lastModified le "2011-05-13T04:42:34Z"',
             {
-                "op": "le",
-                "attr_name": "meta.lastModified",
-                "value": '2011-05-13T04:42:34Z',
+                "op": "complex",
+                "attr_name": "meta",
+                "sub_op": {
+                    "op": "le",
+                    "attr_name": "lastModified",
+                    "value": '2011-05-13T04:42:34Z',
+                }
             },
         ),
         (
@@ -762,9 +928,13 @@ def test_gargantuan_filter():
                                 "value": 'example.com',
                             },
                             {
-                                "op": "co",
-                                "attr_name": "emails.value",
-                                "value": 'example.org',
+                                "op": "complex",
+                                "attr_name": "emails",
+                                "sub_op": {
+                                    "op": "co",
+                                    "attr_name": "value",
+                                    "value": 'example.org',
+                                }
                             },
                         ],
                     }
@@ -772,7 +942,8 @@ def test_gargantuan_filter():
             },
         ),
         (
-            'userType ne "Employee" and not (emails co "example.com" or emails.value co "example.org")',
+            'userType ne "Employee" '
+            'and not (emails co "example.com" or emails.value co "example.org")',
             {
                 "op": "and",
                 "sub_ops": [
@@ -792,9 +963,13 @@ def test_gargantuan_filter():
                                     "value": 'example.com',
                                 },
                                 {
-                                    "op": "co",
-                                    "attr_name": "emails.value",
-                                    "value": 'example.org',
+                                    "op": "complex",
+                                    "attr_name": "emails",
+                                    "sub_op": {
+                                        "op": "co",
+                                        "attr_name": "value",
+                                        "value": 'example.org',
+                                    }
                                 },
                             ],
                         }
@@ -813,9 +988,13 @@ def test_gargantuan_filter():
                         "value": 'Employee',
                     },
                     {
-                        "op": "eq",
-                        "attr_name": "emails.type",
-                        "value": 'work',
+                        "op": "complex",
+                        "attr_name": "emails",
+                        "sub_op": {
+                            "op": "eq",
+                            "attr_name": "type",
+                            "value": 'work',
+                        }
                     },
                 ]
             },
@@ -853,7 +1032,8 @@ def test_gargantuan_filter():
             },
         ),
         (
-            'emails[type eq "work" and value co "@example.com"] or ims[type eq "xmpp" and value co "@foo.com"]',
+            'emails[type eq "work" and value co "@example.com"] '
+            'or ims[type eq "xmpp" and value co "@foo.com"]',
             {
                 "op": "or",
                 "sub_ops": [
@@ -904,7 +1084,7 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
     filter_, issues = parse_filter(filter_exp)
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 @pytest.mark.parametrize(
@@ -916,12 +1096,23 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
         ('userName eq "user(123" and id eq 1 or display co "user")', [101]),
         ('userName eq "user123") and (id eq 1 or display co "user"', [101, 100]),
         ('userName eq "user(123") and (id eq 1 or display co "use)r"', [101, 100]),
-        ('userName eq "user123") and (id eq 1 or display co "user") or (id eq 2 or display co "user"', [101, 100]),
-        ('userName eq "user123") and ((id eq 1 or display co "user") or (id eq 2 or display co "user")', [101, 100]),
+        (
+            'userName eq "user123") and (id eq 1 or display co "user") '
+            'or (id eq 2 or display co "user"',
+            [101, 100]
+        ),
+        (
+            'userName eq "user123") and ((id eq 1 or display co "user") '
+            'or (id eq 2 or display co "user")',
+            [101, 100]
+        ),
         ('userName eq "user123" and (not (id eq 1 or display co "user")', [100]),
         ('userName eq "user123" and not (id eq 1 or display co "user"))', [101]),
         ('emails[type eq "work" and (display co "@example.com" or value co "@example"]', [100]),
-        ('emails[type eq "work") and (display co "@example.com" or value co "@example"]', [101, 100]),
+        (
+            'emails[type eq "work") and (display co "@example.com" or value co "@example"]',
+            [101, 100]
+        ),
         ('emails[type eq "work") and display co "@example.com" or value co "@example"]', [101]),
 
     )
@@ -999,7 +1190,7 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
     filter_, issues = parse_filter(filter_exp)
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 @pytest.mark.parametrize(
@@ -1081,11 +1272,13 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_er
         ),
     )
 )
-def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_value(filter_exp, expected):
+def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_value(
+    filter_exp, expected
+):
     filter_, issues = parse_filter(filter_exp)
 
     assert not issues
-    assert to_dict(filter_) == expected
+    assert filter_.to_dict() == expected
 
 
 @pytest.mark.parametrize(
@@ -1813,7 +2006,7 @@ def test_operators_are_case_insensitive(filter_exp, expected_filter):
     filter_, issues = parse_filter(filter_exp)
 
     assert not issues
-    assert to_dict(filter_) == expected_filter
+    assert filter_.to_dict() == expected_filter
 
 
 @pytest.mark.parametrize(

@@ -25,11 +25,11 @@ class Schema(abc.ABC):
 
 class ErrorSchema(Schema):
     def __init__(self):
-        self.schemas_attribute = common_attrs.schemas
-        self.core_attributes = {
-            error_attrs.status.name.lower(): error_attrs.status,
-            error_attrs.scim_type.name.lower(): error_attrs.scim_type,
-            error_attrs.detail.name.lower(): error_attrs.detail,
+        self._attributes = {
+            common_attrs.schemas.name: common_attrs.schemas,
+            error_attrs.status.name: error_attrs.status,
+            error_attrs.scim_type.name: error_attrs.scim_type,
+            error_attrs.detail.name: error_attrs.detail,
         }
 
     def __repr__(self) -> str:
@@ -37,10 +37,7 @@ class ErrorSchema(Schema):
 
     @property
     def attributes(self) -> Dict[str, Attribute]:
-        return {
-            "schemas": self.schemas_attribute,
-            **self.core_attributes
-        }
+        return self._attributes
 
     @property
     def schemas(self) -> List[str]:
@@ -49,11 +46,11 @@ class ErrorSchema(Schema):
 
 class ListResponseSchema(Schema):
     def __init__(self):
-        self.schemas_attribute = common_attrs.schemas
-        self.core_attributes = {  # 'Resources' are special and not included here
-            query_result_attrs.total_results.name.lower(): query_result_attrs.total_results,
-            query_result_attrs.start_index.name.lower(): query_result_attrs.start_index,
-            query_result_attrs.items_per_page.name.lower(): query_result_attrs.items_per_page,
+        self._attributes = {  # 'Resources' are special and not included here
+            common_attrs.schemas.name: common_attrs.schemas,
+            query_result_attrs.total_results.name: query_result_attrs.total_results,
+            query_result_attrs.start_index.name: query_result_attrs.start_index,
+            query_result_attrs.items_per_page.name: query_result_attrs.items_per_page,
         }
 
     def __repr__(self) -> str:
@@ -61,10 +58,7 @@ class ListResponseSchema(Schema):
 
     @property
     def attributes(self) -> Dict[str, Attribute]:
-        return {
-            "schemas": self.schemas_attribute,
-            **self.core_attributes
-        }
+        return self._attributes
 
     @property
     def schemas(self) -> List[str]:
@@ -73,21 +67,17 @@ class ListResponseSchema(Schema):
 
 class ResourceSchema(Schema, abc.ABC):
     def __init__(self, *core_attributes: Attribute):
-        self.schemas_attribute = common_attrs.schemas
-        self.common_attributes = {
-            common_attrs.id_.name.lower(): common_attrs.id_,
-            common_attrs.external_id.name.lower(): common_attrs.external_id,
-            common_attrs.meta.name.lower(): common_attrs.meta
+        self._attributes = {
+            common_attrs.schemas.name: common_attrs.schemas,
+            common_attrs.id_.name: common_attrs.id_,
+            common_attrs.external_id.name: common_attrs.external_id,
+            common_attrs.meta.name: common_attrs.meta,
+            **{attr.name: attr for attr in core_attributes},
         }
-        self.core_attributes = {attr.name.lower(): attr for attr in core_attributes}
 
     @property
     def attributes(self) -> Dict[str, Attribute]:
-        return {
-            "schemas": self.schemas_attribute,
-            **self.common_attributes,
-            **self.core_attributes
-        }
+        return self._attributes
 
 
 class UserSchema(ResourceSchema):
