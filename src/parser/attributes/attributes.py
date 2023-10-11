@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Collection, Callable, Any, Optional, Type
+from typing import Collection, Callable, Any, Dict, Optional, Type
 
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.attributes import type as at
@@ -180,11 +180,15 @@ class ComplexAttribute(Attribute):
             uniqueness=uniqueness,
             validators=validators
         )
-        self._sub_attributes: dict[str, Attribute] = {
+        self._sub_attributes: Dict[str, Attribute] = {
             attr.name: attr for attr in sub_attributes
         }
 
-    def validate(self, value: Any,  direction: str) -> ValidationIssues:
+    @property
+    def sub_attributes(self) -> Dict[str, Attribute]:
+        return self._sub_attributes
+
+    def validate(self, value: Any, direction: str) -> ValidationIssues:
         issues = super().validate(value, direction)
         if not issues.can_proceed() or value is None:
             return issues
