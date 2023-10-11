@@ -60,6 +60,10 @@ class Attribute:
 
     @property
     def name(self) -> str:
+        return self._name.lower()
+
+    @property
+    def display_name(self) -> str:
         return self._name
 
     @property
@@ -188,13 +192,13 @@ class ComplexAttribute(Attribute):
             for i, item in enumerate(value):
                 for attr_name, attr in self._sub_attributes.items():
                     issues.merge(
-                        location=(i, attr.name),
+                        location=(i, attr.display_name),
                         issues=attr.validate(item.get(attr_name), direction),
                     )
         else:
             for attr_name, attr in self._sub_attributes.items():
                 issues.merge(
-                    location=(attr.name, ),
+                    location=(attr.display_name, ),
                     issues=attr.validate(value.get(attr_name), direction),
                 )
         return issues

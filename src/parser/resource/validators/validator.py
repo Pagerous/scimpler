@@ -88,7 +88,6 @@ def preprocess_response_validation(func):
     return wrapper
 
 
-
 class EndpointValidator(abc.ABC):
     def __init__(self, schema: TSchema):
         self._schema = schema
