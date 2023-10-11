@@ -51,6 +51,7 @@ class ValidationError:
         110: "complex attribute {attribute!r} at position {expression_position} has no expression",
         111: "attribute {attribute!r} does not conform the rules",
         112: "bad comparison value {value!r}",
+        113: "comparison value {value!r} is not compatible with {operator!r} operator",
     }
 
     def __init__(self, code: int, **context):
@@ -225,6 +226,10 @@ class ValidationError:
     @classmethod
     def bad_comparison_value(cls, value: Any):
         return cls(code=112, value=value)
+
+    @classmethod
+    def non_compatible_comparison_value(cls, value: Any, operator: str):
+        return cls(code=113, value=value, operator=operator)
 
     @property
     def context(self) -> Dict:

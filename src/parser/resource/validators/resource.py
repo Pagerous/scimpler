@@ -395,7 +395,7 @@ class ResourceTypeGET(_ManyResourcesGET):
                 for attr_name, attr in self._resource_schema.attributes.items():
                     issues.merge(
                         issues=attr.validate(resource.get(attr_name), "RESPONSE"),
-                        location=("response", "body", "Resources", i, attr.name),
+                        location=("response", "body", "Resources", i, attr.display_name),
                     )
         return issues
 

@@ -43,6 +43,18 @@ _BINARY_ATTR_OPERATORS = {
     "le": op.LesserThanOrEqual,
 }
 
+_ALLOWED_VALUE_TYPES_FOR_BINARY_OPERATORS = {
+    op.Equal: {int, float, str, bool, type(None)},
+    op.NotEqual: {int, float, str, bool, type(None)},
+    op.Contains: {str},
+    op.StartsWith: {str},
+    op.EndsWith: {str},
+    op.GreaterThan: {str, int, float},
+    op.GreaterThanOrEqual: {str, int, float},
+    op.LesserThan: {str, int, float},
+    op.LesserThanOrEqual: {str, int, float},
+}
+
 
 ParsedOperator = Union[
     op.AttributeOperator,
@@ -557,6 +569,16 @@ def _parse_op_attr_exp(
             )
         value, issues_ = _parse_comparison_value(components[2])
         issues.merge(issues=issues_)
+
+        if not issues.can_proceed():
+            return None, issues
+
+        if type(value) not in _ALLOWED_VALUE_TYPES_FOR_BINARY_OPERATORS[op_]:
+            issues.add(
+                issue=ValidationError.non_compatible_comparison_value(value, op_.SCIM_OP),
+                proceed=False,
+            )
+
         if not issues.can_proceed():
             return None, issues
 
@@ -627,7 +649,6 @@ def _encode_sub_or_complex_into_exp(
 _AllowedOperandValues = Union[str, bool, int, float, None]
 
 
-# TODO validate comparison value according to operator (e.g. 'le' for booleans is incorrect)
 def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, ValidationIssues]:
     issues = ValidationIssues()
     if value.startswith("\"") and value.endswith("\""):

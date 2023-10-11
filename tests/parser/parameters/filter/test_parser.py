@@ -2063,3 +2063,84 @@ def test_bad_comparison_values_are_discovered(
     for error, context in zip(errors, expected_error_contexts):
         assert error.code == 112
         assert error.context == context
+
+
+@pytest.mark.parametrize(
+    ("filter_exp", "expected_error_contexts"),
+    (
+        (
+            "userName gt true",
+            [
+                {
+                    "value": True,
+                    "operator": "gt",
+                }
+            ]
+        ),
+        (
+            "userName ge true",
+            [
+                {
+                    "value": True,
+                    "operator": "ge",
+                }
+            ]
+        ),
+        (
+            "userName lt true",
+            [
+                {
+                    "value": True,
+                    "operator": "lt",
+                }
+            ]
+        ),
+        (
+            "userName le true",
+            [
+                {
+                    "value": True,
+                    "operator": "le",
+                }
+            ]
+        ),
+        (
+            "userName co null",
+            [
+                {
+                    "value": None,
+                    "operator": "co",
+                }
+            ]
+        ),
+        (
+            "userName sw 1",
+            [
+                {
+                    "value": 1,
+                    "operator": "sw",
+                }
+            ]
+        ),
+        (
+            "userName ew 2",
+            [
+                {
+                    "value": 2,
+                    "operator": "ew",
+                }
+            ]
+        ),
+    )
+)
+def test_binary_operator_non_compatible_comparison_values_are_discovered(
+    filter_exp, expected_error_contexts
+):
+    filter_, issues = parse_filter(filter_exp)
+    errors = issues.get_errors()
+
+    assert filter_ is None
+    assert len(errors) == len(expected_error_contexts)
+    for error, context in zip(errors, expected_error_contexts):
+        assert error.code == 113
+        assert error.context == context
