@@ -55,6 +55,7 @@ _ALLOWED_VALUE_TYPES_FOR_BINARY_OPERATORS = {
     op.LesserThanOrEqual: {str, int, float},
 }
 
+_AllowedOperandValues = Union[str, bool, int, float, None]
 
 ParsedOperator = Union[
     op.AttributeOperator,
@@ -67,17 +68,29 @@ class Filter:
     def __init__(self, operator: ParsedOperator):
         self._operator = operator
 
-    def match(self, data: Dict[str, Any], schema: Schema) -> bool:
+    def match(self, data: Dict[str, Any], schema: Optional[Schema]) -> bool:
         if isinstance(self._operator, op.AttributeOperator):
-            attr = schema.attributes.get(self._operator.attr_name)
+            if schema is not None:
+                attr = schema.attributes.get(self._operator.attr_name)
+                if attr is None:
+                    return False
+            else:
+                attr = None
             return self._operator.match(data.get(self._operator.attr_name), attr)
         if isinstance(self._operator, op.ComplexAttributeOperator):
-            attr = schema.attributes.get(self._operator.attr_name)
-            if not isinstance(attr, ComplexAttribute):
-                return False
+            if schema is not None:
+                attr = schema.attributes.get(self._operator.attr_name)
+                if not isinstance(attr, ComplexAttribute):
+                    return False
+            else:
+                attr = None
             return self._operator.match(data.get(self._operator.attr_name), attr)
         if isinstance(self._operator, op.LogicalOperator):
-            return self._operator.match(data, schema.attributes)
+            if schema is not None:
+                attrs = schema.attributes
+            else:
+                attrs = None
+            return self._operator.match(data, attrs)
         return False
 
     def to_dict(self):
@@ -644,9 +657,6 @@ def _encode_sub_or_complex_into_exp(
         elif index in parsed_complex_ops:
             encoded = encoded.replace(match.group(0), parsed_complex_ops[index].expression)
     return encoded
-
-
-_AllowedOperandValues = Union[str, bool, int, float, None]
 
 
 def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, ValidationIssues]:

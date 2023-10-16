@@ -7,9 +7,10 @@ from typing import (
     Dict,
     Generator,
     Optional,
-    Sequence,
+    List,
     Set,
     Tuple,
+    Type,
     TypeVar,
     Union,
 )
@@ -22,7 +23,7 @@ class LogicalOperator(abc.ABC):
     SCIM_OP = None
 
     @abc.abstractmethod
-    def match(self, value: Dict[str, Any], attrs: [str, Attribute]) -> bool: ...
+    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool: ...
 
 
 class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
@@ -34,32 +35,31 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         return self._sub_operators
 
     def _collect_matches(
-        self, value: Dict[str, Any], attrs: [str, Attribute]
+        self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]
     ) -> Generator[bool, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
                 yield sub_operator.match(value, attrs)
+            elif attrs is not None and sub_operator.attr_name not in attrs:
+                yield False
             else:
-                if sub_operator.attr_name not in attrs:
-                    yield False
-                else:
-                    yield sub_operator.match(
-                        value.get(sub_operator.attr_name),
-                        attrs.get(sub_operator.attr_name),
-                    )
+                yield sub_operator.match(
+                    value=value.get(sub_operator.attr_name),
+                    attr=(attrs or {}).get(sub_operator.attr_name),
+                )
 
 
 class And(MultiOperandLogicalOperator):
     SCIM_OP = "and"
 
-    def match(self, value: Dict[str, Any], attrs: [str, Attribute]) -> bool:
+    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool:
         return all(self._collect_matches(value, attrs))
 
 
 class Or(MultiOperandLogicalOperator):
     SCIM_OP = "or"
 
-    def match(self, value: Dict[str, Any], attrs: [str, Attribute]) -> bool:
+    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool:
         return any(self._collect_matches(value, attrs))
 
 
@@ -76,14 +76,16 @@ class Not(LogicalOperator):
     def sub_operator(self) -> T1:
         return self._sub_operator
 
-    def match(self, value: Dict[str, Any], attrs: [str, Attribute]) -> bool:
+    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool:
         if isinstance(self._sub_operator, LogicalOperator):
             return not self._sub_operator.match(value, attrs)
-        if self._sub_operator.attr_name not in attrs:
+
+        if attrs is not None and self._sub_operator.attr_name not in attrs:
             return False
+
         return not self._sub_operator.match(
-            value.get(self._sub_operator.attr_name),
-            attrs.get(self._sub_operator.attr_name)
+            value=value.get(self._sub_operator.attr_name),
+            attr=(attrs or {}).get(self._sub_operator.attr_name)
         )
 
 
@@ -102,18 +104,38 @@ class AttributeOperator(abc.ABC):
         return self._attr_name
 
     @abc.abstractmethod
-    def match(self, value: Any, attr: Attribute) -> bool: ...
+    def match(self, value: Any, attr: Optional[Attribute]) -> bool: ...
 
 
 class Present(AttributeOperator):
     SCIM_OP = "pr"
 
-    def match(self, value: Any, attr: Attribute) -> bool:
+    @staticmethod
+    def _match_no_attr(value: Any) -> bool:
+        if isinstance(value, List):
+            for item in value:
+                if isinstance(item, dict):
+                    if bool(item.get("value")):
+                        return True
+                elif bool(item):
+                    return True
+            return False
+        if isinstance(value, Dict):
+            return False
+        if isinstance(value, str):
+            return bool(value)
+        return value is not None
+
+    def match(self, value: Any, attr: Optional[Attribute]) -> bool:
+        if attr is None:
+            return self._match_no_attr(value)
         if isinstance(attr, ComplexAttribute):
-            if attr.multi_valued:
+            if isinstance(value, List):
                 return any([item.get("value") for item in value])
             return False
-        if isinstance(value, Sequence):
+        if isinstance(value, List):
+            return any([bool(item) for item in value])
+        if isinstance(value, str):
             return bool(value)
         return value is not None
 
@@ -123,17 +145,49 @@ T2 = TypeVar("T2")
 
 class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     SUPPORTED_SCIM_TYPES: Set[str]
+    SUPPORTED_TYPES: Set[Type]
     OPERATOR: Callable[[Any, Any], bool]
 
     def __init__(self, attr_name: str, value: T2):
         super().__init__(attr_name)
+        if type(value) not in self.SUPPORTED_TYPES:
+            raise TypeError(
+                f"unsupported value type {type(value).__name__!r} for {self.SCIM_OP!r} operator"
+            )
         self._value = value
 
     @property
     def value(self) -> T2:
         return self._value
 
-    def get_values_for_comparison(self, value: Any, attr: Attribute) -> Optional[Tuple[Any, Any]]:
+    def _get_values_for_comparison_no_attribute(self, value: Any) -> Optional[Tuple[Any, Any]]:
+        if not isinstance(value, List):
+            value = [value]
+
+        value_ = []
+        for item in value:
+            if isinstance(item, Dict):
+                item_value = item.get("value")
+                if item_value is not None and isinstance(item_value, type(self.value)):
+                    value_.append(item_value)
+            elif not isinstance(item, type(self.value)):
+                return None
+            else:
+                value_.append(item)
+        value = value_
+
+        if isinstance(self.value, str):
+            try:
+                return (
+                    [datetime.fromisoformat(item) for item in value],
+                    datetime.fromisoformat(self.value)
+                )
+            except ValueError:
+                return [item.lower() for item in value], self.value.lower()
+
+        return value, self.value
+
+    def _get_values_for_comparison(self, value: Any, attr: Attribute) -> Optional[Tuple[Any, Any]]:
         if attr.type.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
             return None
 
@@ -145,40 +199,48 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             if not isinstance(self.value, value_sub_attr.type.TYPE):
                 return None
 
-            if attr.multi_valued:
-                value = [item.get("value") for item in value]
-            else:
-                value = value.get("value")
+            if not attr.multi_valued:
+                return None
+
+            value = [item.get("value") for item in value]
+
         else:
             if not isinstance(self.value, attr.type.TYPE):
                 return None
 
         if attr.type.SCIM_NAME == "dateTime":
             try:
-                return value, datetime.fromisoformat(self.value)
+                return datetime.fromisoformat(value), datetime.fromisoformat(self.value)
             except ValueError:
                 return None
 
         if isinstance(self.value, str):
             if not attr.case_exact:
-                if attr.multi_valued:
-                    value = [item.lower() for item in value]
-                else:
-                    value = value.lower()
+                if not isinstance(value, List):
+                    value = [value]
+                value = [item.lower() for item in value]
                 return value, self.value.lower()
-            return value, self.value
 
         return value, self.value
 
-    def match(self, value: Any, attr: Attribute) -> bool:
-        if self.attr_name != attr.name:
-            return False
+    def match(self, value: Any, attr: Optional[Attribute]) -> bool:
+        if attr is None and isinstance(value, str) and isinstance(self.value, str):
+            try:
+                datetime.fromisoformat(value)
+            except ValueError:
+                return True
 
-        values = self.get_values_for_comparison(value, attr)
+        if attr is not None:
+            if self.attr_name != attr.name:
+                return False
+            values = self._get_values_for_comparison(value, attr)
+        else:
+            values = self._get_values_for_comparison_no_attribute(value)
+
         if values is None:
             return False
 
-        if isinstance(values[0], (list, tuple)):
+        if isinstance(values[0], List):
             for item in values[0]:
                 if self.OPERATOR(item, values[1]):
                     return True
@@ -201,6 +263,7 @@ class Equal(BinaryAttributeOperator):
         at.Integer.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, bool, int, dict, float, type(None)}
 
 
 class NotEqual(BinaryAttributeOperator):
@@ -218,6 +281,7 @@ class NotEqual(BinaryAttributeOperator):
         at.Integer.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, bool, int, dict, float, type(None)}
 
 
 class Contains(BinaryAttributeOperator):
@@ -230,6 +294,7 @@ class Contains(BinaryAttributeOperator):
         at.ExternalReference.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, float}
 
 
 class StartsWith(BinaryAttributeOperator):
@@ -247,6 +312,7 @@ class StartsWith(BinaryAttributeOperator):
         at.ExternalReference.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, float}
 
 
 class EndsWith(BinaryAttributeOperator):
@@ -264,6 +330,7 @@ class EndsWith(BinaryAttributeOperator):
         at.ExternalReference.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, float}
 
 
 class GreaterThan(BinaryAttributeOperator):
@@ -276,6 +343,7 @@ class GreaterThan(BinaryAttributeOperator):
         at.Decimal.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, float, int, dict}
 
 
 class GreaterThanOrEqual(BinaryAttributeOperator):
@@ -288,6 +356,7 @@ class GreaterThanOrEqual(BinaryAttributeOperator):
         at.Decimal.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, float, int, dict}
 
 
 class LesserThan(BinaryAttributeOperator):
@@ -300,6 +369,7 @@ class LesserThan(BinaryAttributeOperator):
         at.Decimal.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, float, int, dict}
 
 
 class LesserThanOrEqual(BinaryAttributeOperator):
@@ -312,6 +382,7 @@ class LesserThanOrEqual(BinaryAttributeOperator):
         at.Decimal.SCIM_NAME,
         at.Complex.SCIM_NAME,
     }
+    SUPPORTED_TYPES = {str, float, int, dict}
 
 
 class ComplexAttributeOperator:
@@ -331,30 +402,21 @@ class ComplexAttributeOperator:
     def sub_operator(self) -> T1:
         return self._sub_operator
 
-    def match(self, value: Union[Sequence[Dict[str, Any]], Dict[str, Any]], attr: ComplexAttribute) -> bool:
-        sub_attrs = attr.sub_attributes
+    def match(self, value: Union[List[Dict[str, Any]], Dict[str, Any]], attr: Optional[ComplexAttribute]) -> bool:
+        sub_attrs = attr.sub_attributes if attr else None
+        if not isinstance(value, List):
+            value = [value]
 
-        if attr.multi_valued:
-            if isinstance(self._sub_operator, AttributeOperator):
-                for item in value:
-                    if self._sub_operator.match(
-                        value=item.get(self._sub_operator.attr_name),
-                        attr=sub_attrs.get(self._sub_operator.attr_name),
-                    ):
-                        return True
-                return False
-
+        if isinstance(self._sub_operator, AttributeOperator):
             for item in value:
-                if self._sub_operator.match(item, sub_attrs):
+                if self._sub_operator.match(
+                    value=item.get(self._sub_operator.attr_name),
+                    attr=(sub_attrs or {}).get(self._sub_operator.attr_name),
+                ):
                     return True
             return False
 
-        if isinstance(self._sub_operator, AttributeOperator):
-            if self._sub_operator.match(
-                    value=value.get(self._sub_operator.attr_name),
-                    attr=sub_attrs.get(self._sub_operator.attr_name),
-            ):
+        for item in value:
+            if self._sub_operator.match(item, sub_attrs):
                 return True
-            return False
-
-        return self._sub_operator.match(value, sub_attrs)
+        return False
