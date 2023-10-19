@@ -661,7 +661,10 @@ def _encode_sub_or_complex_into_exp(
 
 def _parse_comparison_value(value: str) -> Tuple[_AllowedOperandValues, ValidationIssues]:
     issues = ValidationIssues()
-    if value.startswith("\"") and value.endswith("\""):
+    if (
+        value.startswith("\"") and value.endswith("\"")
+        or value.startswith("'") and value.endswith("'")
+    ):
         value = value[1:-1]
     elif value == "false":
         value = False
