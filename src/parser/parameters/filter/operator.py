@@ -160,7 +160,9 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     def value(self) -> T2:
         return self._value
 
-    def _get_values_for_comparison_no_attribute(self, value: Any) -> Optional[Tuple[Any, Any]]:
+    def _get_values_for_comparison_no_attribute(
+            self, value: Any
+    ) -> Optional[List[Tuple[Any, Any]]]:
         if not isinstance(value, List):
             value = [value]
 
@@ -178,16 +180,22 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         if isinstance(self.value, str):
             try:
-                return (
-                    [datetime.fromisoformat(item) for item in value],
-                    datetime.fromisoformat(self.value)
-                )
+                op_value = datetime.fromisoformat(self.value)
+                return [
+                    (datetime.fromisoformat(item), op_value)
+                    for item in value
+                ]
             except ValueError:
-                return [item.lower() for item in value], self.value.lower()
+                value_ = []
+                for item in value:
+                    value_.extend([(item.lower(), self.value.lower()), (item, self.value)])
+                return value_
 
-        return value, self.value
+        return [(item, self.value) for item in value]
 
-    def _get_values_for_comparison(self, value: Any, attr: Attribute) -> Optional[Tuple[Any, Any]]:
+    def _get_values_for_comparison(
+        self, value: Any, attr: Attribute
+    ) -> Optional[List[Tuple[Any, Any]]]:
         if attr.type.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
             return None
 
@@ -210,26 +218,23 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         if attr.type.SCIM_NAME == "dateTime":
             try:
-                return datetime.fromisoformat(value), datetime.fromisoformat(self.value)
+                return [(datetime.fromisoformat(value), datetime.fromisoformat(self.value))]
             except ValueError:
                 return None
 
         if isinstance(self.value, str):
             if not attr.case_exact:
+                op_value = self.value.lower()
                 if not isinstance(value, List):
                     value = [value]
-                value = [item.lower() for item in value]
-                return value, self.value.lower()
+                return [(item.lower(), op_value) for item in value]
 
-        return value, self.value
+        if not isinstance(value, List):
+            value = [value]
+
+        return [(item, self.value) for item in value]
 
     def match(self, value: Any, attr: Optional[Attribute]) -> bool:
-        if attr is None and isinstance(value, str) and isinstance(self.value, str):
-            try:
-                datetime.fromisoformat(value)
-            except ValueError:
-                return True
-
         if attr is not None:
             if self.attr_name != attr.name:
                 return False
@@ -240,12 +245,10 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if values is None:
             return False
 
-        if isinstance(values[0], List):
-            for item in values[0]:
-                if self.OPERATOR(item, values[1]):
-                    return True
-            return False
-        return self.OPERATOR(values[0], values[1])
+        for attr_value, op_value in values:
+            if self.OPERATOR(attr_value, op_value):
+                return True
+        return False
 
 
 class Equal(BinaryAttributeOperator):

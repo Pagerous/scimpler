@@ -219,8 +219,9 @@ def test_equal_operator_without_attribute(value, operator_value, expected):
     (
         (1, 1, False),
         (1, 2, True),
-        ("a", "a", True),  # ignored
-        ("A", "a", True),  # ignored
+        ("a", "a", False),
+        ("A", "a", True),
+        ("a", "b", True),
         (True, True, False),
         (True, False, True),
         (
@@ -281,12 +282,12 @@ def test_greater_than_operator(value, operator_value, attribute, expected):
     (
         (1, 1, False),
         (2, 1, True),
-        ("a", "a", True),
+        ("a", "a", False),
         ("a", "A", True),
-        ("A", "a", True),
+        ("A", "a", False),
         ("b", "a", True),
         ("B", "a", True),
-        ("a", "b", True),
+        ("a", "b", False),
         ("a", "B", True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
@@ -361,7 +362,7 @@ def test_greater_than_or_equal_operator(value, operator_value, attribute, expect
         ("A", "a", True),
         ("b", "a", True),
         ("B", "a", True),
-        ("a", "b", True),
+        ("a", "b", False),
         ("a", "B", True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
@@ -427,10 +428,10 @@ def test_lesser_than_operator(value, operator_value, attribute, expected):
     (
         (1, 1, False),
         (1, 2, True),
-        ("a", "a", True),
-        ("a", "A", True),
+        ("a", "a", False),
+        ("a", "A", False),
         ("A", "a", True),
-        ("b", "a", True),
+        ("b", "a", False),
         ("B", "a", True),
         ("a", "b", True),
         ("a", "B", True),
@@ -505,7 +506,7 @@ def test_lesser_than_or_equal_operator(value, operator_value, attribute, expecte
         ("a", "a", True),
         ("a", "A", True),
         ("A", "a", True),
-        ("b", "a", True),
+        ("b", "a", False),
         ("B", "a", True),
         ("a", "b", True),
         ("a", "B", True),
@@ -612,8 +613,12 @@ def test_contains_operator(value, operator_value, expected):
     (
         ("abc", "ab", True),
         ("abc", "bc", True),
-        ("abc", "cd", True),
-        ("ab", "abc", True)
+        ("abc", "cd", False),
+        ("ab", "abc", False),
+        ("Abc", "ab", True),
+        ("aBC", "bc", True),
+        ("abc", "aB", True),
+        ("abc", "Bc", True),
     )
 )
 def test_contains_operator_without_attribute(value, operator_value, expected):
@@ -647,10 +652,12 @@ def test_starts_with_operator(value, operator_value, expected):
     ("value", "operator_value", "expected"),
     (
         ("abc", "ab", True),
-        ("abc", "bc", True),
-        ("abc", "cd", True),
-        ("ab", "abc", True),
+        ("abc", "bc", False),
+        ("abc", "cd", False),
+        ("ab", "abc", False),
         ("ab", "", True),
+        ("abc", "Ab", True),
+        ("aBC", "ab", True),
     )
 )
 def test_starts_with_operator_without_attribute(value, operator_value, expected):
@@ -683,11 +690,13 @@ def test_ends_with_operator(value, operator_value, expected):
 @pytest.mark.parametrize(
     ("value", "operator_value", "expected"),
     (
-        ("abc", "ab", True),
+        ("abc", "ab", False),
         ("abc", "bc", True),
-        ("abc", "cd", True),
-        ("ab", "abc", True),
+        ("abc", "cd", False),
+        ("ab", "abc", False),
         ("ab", "", True),
+        ("abc", "bC", True),
+        ("aBC", "bc", True),
     )
 )
 def test_ends_with_operator_without_attribute(value, operator_value, expected):
@@ -1001,14 +1010,19 @@ def test_complex_attribute_operator_matches_all_complex_sub_attrs(use_attr):
     assert match
 
 
-def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
-    attribute = ComplexAttribute(
-        name="complex_attr",
-        sub_attributes=[
-            Attribute(name="sub_attr_1", type_=at.String),
-            Attribute(name="sub_attr_2", type_=at.Integer),
-            Attribute(name="sub_attr_3", type_=at.Boolean),
-        ]
+@pytest.mark.parametrize("use_attr", (True, False))
+def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_attr):
+    attribute = (
+        ComplexAttribute(
+            name="complex_attr",
+            sub_attributes=[
+                Attribute(name="sub_attr_1", type_=at.String),
+                Attribute(name="sub_attr_2", type_=at.Integer),
+                Attribute(name="sub_attr_3", type_=at.Boolean),
+            ]
+        )
+        if use_attr
+        else None
     )
 
     operator = ComplexAttributeOperator(
@@ -1026,25 +1040,6 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
     )
 
     assert not match
-
-
-def test_complex_attribute_operator_ignores_str_values_when_matching_sub_attrs_without_attribute():
-    operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
-        sub_operator=Or(
-            Equal("sub_attr_1", "admin"),
-            GreaterThan("sub_attr_2", 18),
-            NotEqual("sub_attr_3", True),
-        )
-    )
-
-    # 'sub_attr_1' evaluates to 'True'
-    match = operator.match(
-        value={"sub_attr_1": "user", "sub_attr_2": 18, "sub_attr_3": True},
-        attr=None,
-    )
-
-    assert match
 
 
 @pytest.mark.parametrize("use_attr", (True, False))
@@ -1083,15 +1078,20 @@ def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
     assert match
 
 
-def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
-    attribute = ComplexAttribute(
-        name="complex_attr",
-        sub_attributes=[
-            Attribute(name="sub_attr_1", type_=at.String),
-            Attribute(name="sub_attr_2", type_=at.Integer),
-            Attribute(name="sub_attr_3", type_=at.Boolean),
-        ],
-        multi_valued=True,
+@pytest.mark.parametrize("use_attr", (True, False))
+def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(use_attr):
+    attribute = (
+        ComplexAttribute(
+            name="complex_attr",
+            sub_attributes=[
+                Attribute(name="sub_attr_1", type_=at.String),
+                Attribute(name="sub_attr_2", type_=at.Integer),
+                Attribute(name="sub_attr_3", type_=at.Boolean),
+            ],
+            multi_valued=True,
+        )
+        if use_attr
+        else None
     )
 
     operator = ComplexAttributeOperator(
@@ -1115,29 +1115,7 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
     assert not match
 
 
-def test_complex_attr_op_ignores_str_vals_when_matching_multivalued_complex_sub_attrs_without_attr():
-    operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
-        sub_operator=Or(
-            Equal("sub_attr_1", "admin"),
-            GreaterThan("sub_attr_2", 18),
-            NotEqual("sub_attr_3", True),
-        )
-    )
-
-    # all 'sub_attr_1' are ignored and evaluate to 'True'
-    match = operator.match(
-        value=[
-            {"sub_attr_1": "user", "sub_attr_2": 16, "sub_attr_3": True},
-            {"sub_attr_1": "customer", "sub_attr_2": 18, "sub_attr_3": True},
-            {"sub_attr_1": "santa-claus", "sub_attr_2": 12, "sub_attr_3": True},
-        ],
-        attr=None,
-    )
-
-    assert match
-
-
+@pytest.mark.parametrize("use_attr", (True, False))
 @pytest.mark.parametrize(
     ("value", "is_multivalued", "expected"),
     (
@@ -1171,15 +1149,19 @@ def test_complex_attr_op_ignores_str_vals_when_matching_multivalued_complex_sub_
         )
     )
 )
-def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalued, expected):
-    attribute = ComplexAttribute(
-        name="complex_attr",
-        sub_attributes=[
-            Attribute(name="sub_attr_1", type_=at.String),
-            Attribute(name="sub_attr_2", type_=at.Integer),
-            Attribute(name="sub_attr_3", type_=at.Boolean),
-        ],
-        multi_valued=is_multivalued,
+def test_attribute_operator_matches_single_complex_sub_attr(use_attr, value, is_multivalued, expected):
+    attribute = (
+        ComplexAttribute(
+            name="complex_attr",
+            sub_attributes=[
+                Attribute(name="sub_attr_1", type_=at.String),
+                Attribute(name="sub_attr_2", type_=at.Integer),
+                Attribute(name="sub_attr_3", type_=at.Boolean),
+            ],
+            multi_valued=is_multivalued,
+        )
+        if use_attr
+        else None
     )
 
     operator = ComplexAttributeOperator(
@@ -1190,56 +1172,6 @@ def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalue
     actual = operator.match(
         value=value,
         attr=attribute,
-    )
-
-    assert actual is expected
-
-
-@pytest.mark.parametrize(
-    ("value", "is_multivalued", "expected"),
-    (
-        (
-            {"sub_attr_1": "admin", "sub_attr_2": 19, "sub_attr_3": False},
-            False,
-            True,
-        ),
-        (
-            {"sub_attr_1": "user", "sub_attr_2": 18, "sub_attr_3": True},
-            False,
-            True,
-        ),
-        (
-            [
-                {"sub_attr_1": "admin", "sub_attr_2": 19, "sub_attr_3": False},
-                {"sub_attr_1": "user", "sub_attr_2": 18, "sub_attr_3": True},
-                {"sub_attr_1": "user", "sub_attr_2": 19, "sub_attr_3": False},
-            ],
-            True,
-            True,
-        ),
-        (
-            [
-                {"sub_attr_1": "user", "sub_attr_2": 16, "sub_attr_3": True},
-                {"sub_attr_1": "customer", "sub_attr_2": 18, "sub_attr_3": True},
-                {"sub_attr_1": "santa-claus", "sub_attr_2": 12, "sub_attr_3": True},
-            ],
-            True,
-            True,
-        )
-    )
-)
-def test_complex_attr_op_ignores_str_values_when_matching_complex_sub_attr_without_attribute(
-    value, is_multivalued, expected
-):
-
-    operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
-        sub_operator=Equal("sub_attr_1", "admin"),
-    )
-
-    actual = operator.match(
-        value=value,
-        attr=None,
     )
 
     assert actual is expected
