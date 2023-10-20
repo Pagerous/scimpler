@@ -151,7 +151,7 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
     "sequence",
     ("  ", "\t\t", "\n", " \t", "\t ", "\n\n", " \n", "\n ")
 )
-def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_with_complex_attribute(
+def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_with_complex_attr(
     full_attr_name, sequence
 ):
     sub_attr_name, attr_name = full_attr_name[::-1].split(".", 1)
@@ -242,6 +242,22 @@ def test_basic_filters_can_be_combined_with_or_operator():
         'userName eq "bjensen" '
         'or name.formatted ne "Crazy" '
         'or urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"')
+
+    assert not issues
+    assert filter_.to_dict() == expected
+
+
+def test_basic_filter_can_be_combined_with_not_operator():
+    expected = {
+        "op": "not",
+        "sub_op": {
+            "op": "eq",
+            "attr_name": "userName",
+            "value": "bjensen",
+        }
+    }
+
+    filter_, issues = parse_filter('not userName eq "bjensen"')
 
     assert not issues
     assert filter_.to_dict() == expected
@@ -421,7 +437,9 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                                 "op": "not",
                                 "sub_op": {
                                     "op": "co",
-                                    "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
+                                    "attr_name": (
+                                        "urn:ietf:params:scim:schemas:core:2.0:User:nickName"
+                                    ),
                                     "value": "b\t\tj",
                                 },
                              },
@@ -693,7 +711,9 @@ def test_gargantuan_filter():
                                         },
                                         {
                                             "op": "complex",
-                                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                                            "attr_name": (
+                                                "urn:ietf:params:scim:schemas:core:2.0:User:emails"
+                                            ),
                                             "sub_op": {
                                                 "op": "co",
                                                 "attr_name": "display",

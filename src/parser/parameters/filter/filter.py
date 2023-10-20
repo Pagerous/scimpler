@@ -425,17 +425,6 @@ def _parse_op_and_exp(
     if not and_operands:
         return None, issues
 
-    if len(and_operands) == 1:
-        parsed_and_operand, issues_ = _parse_op_attr_exp(
-            attr_exp=and_operands[0],
-            parsed_group_ops=parsed_group_ops,
-            parsed_complex_ops=parsed_complex_ops,
-        )
-        issues.merge(issues=issues_)
-        if not issues.can_proceed():
-            parsed_and_operand = None
-        return parsed_and_operand, issues
-
     parsed_and_operands = []
     for and_operand in and_operands:
         match = _NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
@@ -463,6 +452,9 @@ def _parse_op_and_exp(
 
     if not issues.can_proceed():
         return None, issues
+
+    if len(parsed_and_operands) == 1:
+        return parsed_and_operands[0], issues
     return op.And(*parsed_and_operands), issues
 
 
