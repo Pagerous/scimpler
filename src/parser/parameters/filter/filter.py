@@ -380,17 +380,6 @@ def _parsed_op_or_exp(
     if not or_operands:
         return None, issues
 
-    if len(or_operands) == 1:
-        parsed_or_operand, issues_ = _parse_op_and_exp(
-            and_exp=or_operands[0],
-            parsed_group_ops=parsed_group_ops,
-            parsed_complex_ops=parsed_complex_ops,
-        )
-        issues.merge(issues=issues_)
-        if not issues.can_proceed():
-            parsed_or_operand = None
-        return parsed_or_operand, issues
-
     parsed_or_operands = []
     for or_operand in or_operands:
         parsed_or_operand, issues_ = _parse_op_and_exp(
@@ -405,6 +394,9 @@ def _parsed_op_or_exp(
 
     if not issues.can_proceed():
         return None, issues
+
+    if len(parsed_or_operands) == 1:
+        return parsed_or_operands[0], issues
     return op.Or(*parsed_or_operands), issues
 
 
