@@ -1,6 +1,7 @@
 import abc
 import operator
 from datetime import datetime
+from enum import Enum
 from typing import (
     Any,
     Callable,
@@ -19,11 +20,61 @@ from src.parser.attributes.attributes import Attribute, ComplexAttribute
 from src.parser.attributes import type as at
 
 
+class MatchStatus(Enum):
+    PASSED = "PASSED"
+    FAILED = "FAILED"
+    MISSING_DATA = "MISSING_DATA"
+
+
+class MatchResult:
+    def __init__(self, status: MatchStatus):
+        self._status = status
+
+    @classmethod
+    def passed(cls):
+        return cls(MatchStatus.PASSED)
+
+    @classmethod
+    def failed(cls):
+        return cls(MatchStatus.FAILED)
+
+    @classmethod
+    def missing_data(cls):
+        return cls(MatchStatus.MISSING_DATA)
+
+    @property
+    def status(self) -> MatchStatus:
+        return self._status
+
+    def __eq__(self, other):
+        if isinstance(other, bool):
+            if self._status == MatchStatus.PASSED and other is True:
+                return True
+            elif self._status == MatchStatus.FAILED and other is False:
+                return True
+            return False
+        if isinstance(other, MatchResult):
+            return self.status == other.status
+        return False
+
+    def __bool__(self):
+        if self._status == MatchStatus.PASSED:
+            return True
+        elif self._status == MatchStatus.FAILED:
+            return False
+        raise ValueError("unable to determine result for missing data")
+
+
 class LogicalOperator(abc.ABC):
     SCIM_OP = None
 
     @abc.abstractmethod
-    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool: ...
+    def match(
+        self,
+        value: Dict[str, Any],
+        attrs: Optional[Dict[str, Attribute]],
+        strict: bool = True,
+    ) -> MatchResult: ...
 
 
 class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
@@ -35,13 +86,21 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         return self._sub_operators
 
     def _collect_matches(
-        self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]
-    ) -> Generator[bool, None, None]:
+        self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]], strict: bool = True,
+    ) -> Generator[MatchResult, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
-                yield sub_operator.match(value, attrs)
+                yield sub_operator.match(value, attrs, strict)
+            elif sub_operator.attr_name not in value:
+                if attrs is None or sub_operator.attr_name in attrs:
+                    if strict:
+                        yield MatchResult.missing_data()
+                    else:
+                        yield MatchResult.passed()
+                else:
+                    yield MatchResult.failed()
             elif attrs is not None and sub_operator.attr_name not in attrs:
-                yield False
+                yield MatchResult.failed()
             else:
                 yield sub_operator.match(
                     value=value.get(sub_operator.attr_name),
@@ -52,15 +111,41 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
 class And(MultiOperandLogicalOperator):
     SCIM_OP = "and"
 
-    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool:
-        return all(self._collect_matches(value, attrs))
+    def match(
+        self,
+        value: Dict[str, Any],
+        attrs: Optional[Dict[str, Attribute]],
+        strict: bool = True,
+    ) -> MatchResult:
+        missing_data = False
+        for match in self._collect_matches(value, attrs, strict):
+            if match.status == MatchStatus.FAILED:
+                return MatchResult.failed()
+            if match.status == MatchStatus.MISSING_DATA:
+                missing_data = True
+        if missing_data:
+            return MatchResult.missing_data()
+        return MatchResult.passed()
 
 
 class Or(MultiOperandLogicalOperator):
     SCIM_OP = "or"
 
-    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool:
-        return any(self._collect_matches(value, attrs))
+    def match(
+        self,
+        value: Dict[str, Any],
+        attrs: Optional[Dict[str, Attribute]],
+        strict: bool = True,
+    ) -> MatchResult:
+        missing_data = False
+        for match in self._collect_matches(value, attrs, strict):
+            if match.status == MatchStatus.PASSED:
+                return MatchResult.passed()
+            if match.status == MatchStatus.MISSING_DATA:
+                missing_data = True
+        if missing_data:
+            return MatchResult.missing_data()
+        return MatchResult.failed()
 
 
 T1 = TypeVar("T1", bound=Union[LogicalOperator, "AttributeOperator"])
@@ -76,17 +161,40 @@ class Not(LogicalOperator):
     def sub_operator(self) -> T1:
         return self._sub_operator
 
-    def match(self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]]) -> bool:
+    def match(
+        self,
+        value: Dict[str, Any],
+        attrs: Optional[Dict[str, Attribute]],
+        strict: bool = True
+    ) -> MatchResult:
         if isinstance(self._sub_operator, LogicalOperator):
-            return not self._sub_operator.match(value, attrs)
+            match = self._sub_operator.match(value, attrs, strict=True)
+            if match.status == MatchStatus.MISSING_DATA:
+                if strict:
+                    return MatchResult.failed()
+                return MatchResult.passed()
+            if match.status == MatchStatus.FAILED:
+                return MatchResult.passed()
+            return MatchResult.failed()
+
+        if self._sub_operator.attr_name not in value:
+            if (
+                (attrs is None or self._sub_operator.attr_name in attrs)
+                and not strict
+            ):
+                return MatchResult.passed()
+            return MatchResult.failed()
 
         if attrs is not None and self._sub_operator.attr_name not in attrs:
-            return False
+            return MatchResult.failed()
 
-        return not self._sub_operator.match(
+        match = self._sub_operator.match(
             value=value.get(self._sub_operator.attr_name),
             attr=(attrs or {}).get(self._sub_operator.attr_name)
         )
+        if match.status == MatchStatus.FAILED:
+            return MatchResult.passed()
+        return MatchResult.failed()
 
 
 class AttributeOperator(abc.ABC):
@@ -104,7 +212,7 @@ class AttributeOperator(abc.ABC):
         return self._attr_name
 
     @abc.abstractmethod
-    def match(self, value: Any, attr: Optional[Attribute]) -> bool: ...
+    def match(self, value: Any, attr: Optional[Attribute]) -> MatchResult: ...
 
 
 class Present(AttributeOperator):
@@ -126,18 +234,20 @@ class Present(AttributeOperator):
             return bool(value)
         return value is not None
 
-    def match(self, value: Any, attr: Optional[Attribute]) -> bool:
+    def match(self, value: Any, attr: Optional[Attribute]) -> MatchResult:
+        match = False
         if attr is None:
-            return self._match_no_attr(value)
-        if isinstance(attr, ComplexAttribute):
+            match = self._match_no_attr(value)
+        elif isinstance(attr, ComplexAttribute):
             if isinstance(value, List):
-                return any([item.get("value") for item in value])
-            return False
-        if isinstance(value, List):
-            return any([bool(item) for item in value])
-        if isinstance(value, str):
-            return bool(value)
-        return value is not None
+                match = any([item.get("value") for item in value])
+        elif isinstance(value, List):
+            match = any([bool(item) for item in value])
+        elif isinstance(value, str):
+            match = bool(value)
+        else:
+            match = value is not None
+        return MatchResult.passed() if match else MatchResult.failed()
 
 
 T2 = TypeVar("T2")
@@ -234,21 +344,20 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         return [(item, self.value) for item in value]
 
-    def match(self, value: Any, attr: Optional[Attribute]) -> bool:
-        if attr is not None:
-            if self.attr_name != attr.name:
-                return False
-            values = self._get_values_for_comparison(value, attr)
-        else:
-            values = self._get_values_for_comparison_no_attribute(value)
+    def match(self, value: Any, attr: Optional[Attribute]) -> MatchResult:
+        values = (
+            self._get_values_for_comparison_no_attribute(value)
+            if attr is None
+            else self._get_values_for_comparison(value, attr)
+        )
 
         if values is None:
-            return False
+            return MatchResult.failed()
 
         for attr_value, op_value in values:
             if self.OPERATOR(attr_value, op_value):
-                return True
-        return False
+                return MatchResult.passed()
+        return MatchResult.failed()
 
 
 class Equal(BinaryAttributeOperator):
@@ -405,21 +514,40 @@ class ComplexAttributeOperator:
     def sub_operator(self) -> T1:
         return self._sub_operator
 
-    def match(self, value: Union[List[Dict[str, Any]], Dict[str, Any]], attr: Optional[ComplexAttribute]) -> bool:
+    def match(
+        self,
+        value: Union[List[Dict[str, Any]], Dict[str, Any]],
+        attr: Optional[ComplexAttribute],
+        strict: bool = True,
+    ) -> MatchResult:
         sub_attrs = attr.sub_attributes if attr else None
         if not isinstance(value, List):
             value = [value]
 
         if isinstance(self._sub_operator, AttributeOperator):
+            has_value = False
             for item in value:
-                if self._sub_operator.match(
-                    value=item.get(self._sub_operator.attr_name),
-                    attr=(sub_attrs or {}).get(self._sub_operator.attr_name),
-                ):
-                    return True
-            return False
+                if self._sub_operator.attr_name not in item:
+                    continue
+                if sub_attrs is None or self._sub_operator.attr_name in sub_attrs:
+                    has_value = True
+                    if self._sub_operator.match(
+                        value=item.get(self._sub_operator.attr_name),
+                        attr=(sub_attrs or {}).get(self._sub_operator.attr_name),
+                    ).status == MatchStatus.PASSED:
+                        return MatchResult.passed()
+            if not has_value and not strict:
+                return MatchResult.passed()
+            return MatchResult.failed()
 
+        missing_data = False
         for item in value:
-            if self._sub_operator.match(item, sub_attrs):
-                return True
-        return False
+            match = self._sub_operator.match(item, sub_attrs, strict)
+            if match.status == MatchStatus.PASSED:
+                return MatchResult.passed()
+            if match.status == MatchStatus.MISSING_DATA:
+                missing_data = True
+
+        if missing_data and not strict:
+            return MatchResult.passed()
+        return MatchResult.failed()

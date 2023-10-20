@@ -12,6 +12,7 @@ from src.parser.parameters.filter.operator import (
     GreaterThanOrEqual,
     LesserThan,
     LesserThanOrEqual,
+    MatchStatus, Not,
     NotEqual,
     Or,
     Present,
@@ -99,7 +100,7 @@ def test_equal_operator(value, operator_value, attribute, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -180,7 +181,7 @@ def test_not_equal_operator(value, operator_value, attribute, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -211,7 +212,7 @@ def test_equal_operator_without_attribute(value, operator_value, expected):
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -243,7 +244,7 @@ def test_equal_not_operator_without_attribute(value, operator_value, expected):
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -274,7 +275,7 @@ def test_greater_than_operator(value, operator_value, attribute, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -308,7 +309,7 @@ def test_greater_than_operator_without_attribute(value, operator_value, expected
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -348,7 +349,7 @@ def test_greater_than_or_equal_operator(value, operator_value, attribute, expect
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -389,7 +390,7 @@ def test_greater_than_or_equal_operator_without_attribute(value, operator_value,
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -420,7 +421,7 @@ def test_lesser_than_operator(value, operator_value, attribute, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -454,7 +455,7 @@ def test_lesser_than_operator_without_attribute(value, operator_value, expected)
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -494,7 +495,7 @@ def test_lesser_than_or_equal_operator(value, operator_value, attribute, expecte
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -537,7 +538,7 @@ def test_lesser_than_or_equal_operator_without_attribute(
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 def test_binary_operator_does_not_match_if_non_matching_attribute_type():
@@ -549,13 +550,13 @@ def test_binary_operator_does_not_match_if_non_matching_attribute_type():
     assert not match
 
 
-def test_binary_operator_does_not_match_if_non_matching_attribute_name():
+def test_binary_operator_does_not_check_attribute_name():
     attribute = Attribute(name="my_attr", type_=at.Integer)
     operator = Equal(attr_name="other_attr", value=1)
 
     match = operator.match(1, attribute)
 
-    assert not match
+    assert match
 
 
 def test_binary_operator_does_not_match_if_not_supported_scim_type():
@@ -587,7 +588,7 @@ def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expect
 
     actual = operator.match("a", attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -605,7 +606,7 @@ def test_contains_operator(value, operator_value, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -626,7 +627,7 @@ def test_contains_operator_without_attribute(value, operator_value, expected):
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -645,7 +646,7 @@ def test_starts_with_operator(value, operator_value, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -665,7 +666,7 @@ def test_starts_with_operator_without_attribute(value, operator_value, expected)
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -684,7 +685,7 @@ def test_ends_with_operator(value, operator_value, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -704,7 +705,7 @@ def test_ends_with_operator_without_attribute(value, operator_value, expected):
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 def test_multi_value_attribute_is_matched_if_one_of_values_match():
@@ -801,7 +802,7 @@ def test_present_operator(value, attribute, expected):
 
     actual = operator.match(value, attribute)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -824,7 +825,7 @@ def test_present_operator_without_attribute(value, expected):
 
     actual = operator.match(value, None)
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize("use_attribute", (True, False))
@@ -849,7 +850,9 @@ def test_complex_attribute_matches_binary_operator_if_one_of_values_matches(use_
 
 
 @pytest.mark.parametrize("use_attribute", (True, False))
-def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches(use_attribute):
+def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches(
+    use_attribute
+):
     attribute = (
         ComplexAttribute(
             name="my_attr",
@@ -921,7 +924,7 @@ def test_and_operator_matches(lt_attr_value, le_attr_value, expected):
         },
     )
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -976,7 +979,7 @@ def test_or_operator_matches(lt_attr_value, le_attr_value, expected):
         }
     )
 
-    assert actual is expected
+    assert actual == expected
 
 
 @pytest.mark.parametrize("use_attr", (True, False))
@@ -1149,7 +1152,9 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(us
         )
     )
 )
-def test_attribute_operator_matches_single_complex_sub_attr(use_attr, value, is_multivalued, expected):
+def test_attribute_operator_matches_single_complex_sub_attr(
+    use_attr, value, is_multivalued, expected
+):
     attribute = (
         ComplexAttribute(
             name="complex_attr",
@@ -1174,4 +1179,256 @@ def test_attribute_operator_matches_single_complex_sub_attr(use_attr, value, is_
         attr=attribute,
     )
 
-    assert actual is expected
+    assert actual == expected
+
+
+def test_binary_op_does_not_match_if_value_not_provided():
+    operator = Equal("my_attr", 2)
+
+    match = operator.match(value=None, attr=None)
+
+    assert not match
+
+
+@pytest.mark.parametrize("use_attr", (True, False))
+def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict(use_attr):
+    attribute = (
+        ComplexAttribute(
+            sub_attributes=[Attribute("sub_attr", type_=at.Integer)],
+            name="my_attr",
+        )
+        if use_attr
+        else None
+    )
+    operator = ComplexAttributeOperator(
+        "my_attr", sub_operator=Equal("sub_attr", 1)
+    )
+    value = {"my_attr": {}}
+
+    match = operator.match(value=value, attr=attribute, strict=False)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_attr", (True, False))
+def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict(use_attr):
+    attribute = (
+        ComplexAttribute(
+            sub_attributes=[Attribute("sub_attr", type_=at.Integer)],
+            name="my_attr",
+        )
+        if use_attr
+        else None
+    )
+    operator = ComplexAttributeOperator(
+        "my_attr", sub_operator=Equal("sub_attr", 1)
+    )
+    value = {"my_attr": {}}
+
+    match = operator.match(value=value, attr=attribute, strict=True)
+
+    assert not match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = Or(
+        Equal("attr_1", 1), Equal("attr_2", 2)
+    )
+    value = {"attr_1": 2}
+
+    match = operator.match(value=value, attrs=attributes, strict=True)
+
+    assert match.status == MatchStatus.MISSING_DATA
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_or_op_matches_if_any_sub_attr_matched_without_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = Or(
+        Equal("attr_1", 1), Equal("attr_2", 2)
+    )
+    value = {"attr_1": 1}
+
+    match = operator.match(value=value, attrs=attributes, strict=False)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_or_op_matches_if_any_sub_attr_matched_with_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = Or(
+        Equal("attr_1", 1), Equal("attr_2", 2)
+    )
+    value = {"attr_1": 1}
+
+    match = operator.match(value=value, attrs=attributes, strict=True)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = And(
+        Equal("attr_1", 1), Equal("attr_2", 2)
+    )
+    value = {"attr_1": 1}  # value for this attr is correct, but missing 'attr_2'
+
+    match = operator.match(value=value, attrs=attributes, strict=True)
+
+    assert match.status == MatchStatus.MISSING_DATA
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = And(
+        Equal("attr_1", 1), Equal("attr_2", 2)
+    )
+    value = {"attr_1": 1, "attr_2": 3}
+
+    match = operator.match(value=value, attrs=attributes, strict=True)
+
+    assert not match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = And(
+        Equal("attr_1", 1), Equal("attr_2", 2)
+    )
+    value = {"attr_1": 1}
+
+    match = operator.match(value=value, attrs=attributes, strict=False)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = Not(
+        Or(Equal("attr_1", 1), Equal("attr_2", 2))
+    )
+    value = {"attr_1": 2}
+
+    match = operator.match(value=value, attrs=attributes, strict=False)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr_1", type_=at.Integer),
+            "attr_2": Attribute("attr_2", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = Not(
+        Or(Equal("attr_1", 1), Equal("attr_2", 2))
+    )
+    value = {"attr_1": 2}
+
+    match = operator.match(value=value, attrs=attributes, strict=True)
+
+    assert not match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict(use_attrs):
+    attributes = (
+        {"attr": Attribute("attr", type_=at.Integer)}
+        if use_attrs
+        else None
+    )
+    operator = Not(Equal("attr", 1))
+    value = {}
+
+    match = operator.match(value=value, attrs=attributes, strict=False)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_attrs", (True, False))
+def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict(use_attrs):
+    attributes = (
+        {
+            "attr_1": Attribute("attr", type_=at.Integer),
+        }
+        if use_attrs
+        else None
+    )
+    operator = Not(Equal("attr_1", 1))
+    value = {}
+
+    match = operator.match(value=value, attrs=attributes, strict=True)
+
+    assert not match
+
+
+def test_not_op_does_not_match_if_op_attr_not_in_attrs():
+    attributes = {
+        "attr": Attribute("attr", type_=at.Integer),
+    }
+    operator = Not(Equal("other_attr", 1))
+    value = {"other_attr": 2}
+
+    match = operator.match(value=value, attrs=attributes)
+
+    assert not match

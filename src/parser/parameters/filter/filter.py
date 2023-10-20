@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from src.parser.attributes.attributes import ComplexAttribute
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter import operator as op
+from src.parser.parameters.filter.operator import MatchResult
 from src.parser.resource.schemas import Schema
 
 _ATTR_NAME_REGEX = re.compile(r"\w+")
@@ -68,30 +69,71 @@ class Filter:
     def __init__(self, operator: ParsedOperator):
         self._operator = operator
 
-    def match(self, data: Dict[str, Any], schema: Optional[Schema]) -> bool:
+    def match(
+        self,
+        data: Dict[str, Any],
+        schema: Optional[Schema],
+        strict: bool = True,
+    ) -> MatchResult:
         if isinstance(self._operator, op.AttributeOperator):
-            if schema is not None:
-                attr = schema.attributes.get(self._operator.attr_name)
-                if attr is None:
-                    return False
-            else:
-                attr = None
-            return self._operator.match(data.get(self._operator.attr_name), attr)
+            return self._match_attribute_operator(data, schema, strict)
         if isinstance(self._operator, op.ComplexAttributeOperator):
-            if schema is not None:
-                attr = schema.attributes.get(self._operator.attr_name)
-                if not isinstance(attr, ComplexAttribute):
-                    return False
-            else:
-                attr = None
-            return self._operator.match(data.get(self._operator.attr_name), attr)
+            return self._match_complex_attribute_operator(data, schema, strict)
         if isinstance(self._operator, op.LogicalOperator):
-            if schema is not None:
-                attrs = schema.attributes
-            else:
-                attrs = None
-            return self._operator.match(data, attrs)
-        return False
+            return self._match_logical_operator(data, schema, strict)
+        return MatchResult.failed()
+
+    def _match_attribute_operator(
+        self,
+        data: Dict[str, Any],
+        schema: Optional[Schema],
+        strict: bool = True
+    ) -> MatchResult:
+        if self._operator.attr_name not in data:
+            if strict:
+                return MatchResult.failed()
+            return MatchResult.passed()
+
+        if schema is not None:
+            attr = schema.attributes.get(self._operator.attr_name)
+            if attr is None:
+                return MatchResult.failed()
+        else:
+            attr = None
+
+        return self._operator.match(data.get(self._operator.attr_name), attr)
+
+    def _match_complex_attribute_operator(
+        self,
+        data: Dict[str, Any],
+        schema: Optional[Schema],
+        strict: bool = True
+    ) -> MatchResult:
+        if self._operator.attr_name not in data:
+            if strict:
+                return MatchResult.failed()
+            return MatchResult.passed()
+
+        if schema is not None:
+            attr = schema.attributes.get(self._operator.attr_name)
+            if not isinstance(attr, ComplexAttribute):
+                return MatchResult.failed()
+        else:
+            attr = None
+
+        return self._operator.match(data.get(self._operator.attr_name), attr)
+
+    def _match_logical_operator(
+        self,
+        data: Dict[str, Any],
+        schema: Optional[Schema],
+        strict: bool = True
+    ) -> MatchResult:
+        if schema is not None:
+            attrs = schema.attributes
+        else:
+            attrs = None
+        return self._operator.match(data, attrs, strict)
 
     def to_dict(self):
         return self._to_dict(self._operator)
