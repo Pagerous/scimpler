@@ -1,6 +1,7 @@
 from typing import Any, Dict, Iterable, Optional
 
 from src.parser.error import ValidationError, ValidationIssues
+from src.parser.parameters.filter.filter import parse_filter
 from src.parser.resource.validators.validator import (
     EndpointValidator,
     EndpointValidatorGET, preprocess_response_validation,
@@ -220,7 +221,15 @@ class _ManyResourcesGET(EndpointValidatorGET):
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
     ) -> ValidationIssues:
-        return ValidationIssues()
+        issues = ValidationIssues()
+        filter_exp = query_string.get("filter")
+        if filter_exp is not None:
+            _, issues_ = parse_filter(filter_exp)
+            issues.merge(
+                issues=issues_,
+                location=("request", "query_string", "filter")
+            )
+        return issues
 
     @preprocess_response_validation
     def validate_response(
@@ -390,12 +399,31 @@ class ResourceTypeGET(_ManyResourcesGET):
         )
 
         if issues.can_proceed(location=("response", "body", "Resources")):
+
+            filter_ = None
+            filter_exp = request_query_string.get("filter")
+            if filter_exp is not None:
+                filter_, issues_ = parse_filter(filter_exp)
+                issues.merge(
+                    issues=issues_,
+                    location=("request", "query_string", "filter")
+                )
+
             resources = response_body.get("resources", [])
             for i, resource in enumerate(resources):
                 for attr_name, attr in self._resource_schema.attributes.items():
                     issues.merge(
                         issues=attr.validate(resource.get(attr_name), "RESPONSE"),
                         location=("response", "body", "Resources", i, attr.display_name),
+                    )
+                if (
+                    filter_ is not None
+                    and not filter_.match(data=resource, schema=self._resource_schema, strict=False)
+                ):
+                    issues.add(
+                        issue=ValidationError.included_resource_does_not_match_filter(),
+                        proceed=True,
+                        location=("response", "body", "Resources", i),
                     )
         return issues
 
@@ -424,8 +452,26 @@ class ServerRootResourceGET(_ManyResourcesGET):
             response_body=response_body,
             response_headers=response_headers,
         )
-        if not issues.can_proceed():
-            return issues
+        if issues.can_proceed(location=("response", "body", "Resources")):
 
-        # TODO: validate according to 'attributes' and  whether they exists in all provided schemas
+            filter_ = None
+            filter_exp = request_query_string.get("filter")
+            if filter_exp is not None:
+                filter_, issues_ = parse_filter(filter_exp)
+                issues.merge(
+                    issues=issues_,
+                    location=("request", "query_string", "filter"),
+                )
+
+            resources = response_body.get("resources", [])
+            for i, resource in enumerate(resources):
+                if (
+                    filter_ is not None
+                    and not filter_.match(data=resource, schema=None, strict=False)
+                ):
+                    issues.add(
+                        issue=ValidationError.included_resource_does_not_match_filter(),
+                        proceed=True,
+                        location=("response", "body", "Resources", i),
+                    )
         return issues

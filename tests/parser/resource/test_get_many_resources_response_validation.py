@@ -8,11 +8,6 @@ from src.parser.resource.validators.resource import (
 
 
 @pytest.fixture
-def request_body():
-    return None
-
-
-@pytest.fixture
 def response_body():
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
@@ -36,6 +31,17 @@ def response_body():
                     "givenName": "Barbara"
                 },
                 "userName": "bjensen",
+                "emails": [
+                    {
+                        "value": "bjensen@example.com",
+                        "type": "work",
+                        "primary": True,
+                    },
+                    {
+                        "value": "babs@jensen.org",
+                        "type": "home",
+                    }
+                ]
             },
             {
                 "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -50,19 +56,25 @@ def response_body():
                     "version": r"W\/\"f250dd84f0671c3\""
                 },
                 "name": {
-                    "formatted": "Ms. Barbara J Jensen III",
-                    "familyName": "Jensen",
+                    "formatted": "Ms. Barbara J Sven III",
+                    "familyName": "Sven",
                     "givenName": "Barbara"
                 },
-                "userName": "bjensen",
+                "userName": "sven",
+                "emails": [
+                    {
+                        "value": "sven@example.com",
+                        "type": "work",
+                        "primary": True,
+                    },
+                    {
+                        "value": "babs@sven.org",
+                        "type": "home",
+                    }
+                ]
             },
         ]
     }
-
-
-@pytest.fixture
-def response_headers():
-    return None
 
 
 @pytest.mark.parametrize(
@@ -72,7 +84,7 @@ def response_headers():
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_body_is_required(validator, request_body):
+def test_body_is_required(validator):
     expected_issues = {
         "response": {
             "body": {
@@ -86,7 +98,7 @@ def test_body_is_required(validator, request_body):
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
+        request_body=None,
         response_body=None,
         status_code=200,
     )
@@ -101,11 +113,11 @@ def test_body_is_required(validator, request_body):
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_correct_body_passes_validation(validator, request_body, response_body, response_headers):
+def test_correct_body_passes_validation(validator, response_body):
     issues = validator.validate_response(
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
@@ -119,9 +131,7 @@ def test_correct_body_passes_validation(validator, request_body, response_body, 
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_missing_schemas_key_returns_error(
-    validator, request_body, response_body, response_headers
-):
+def test_missing_schemas_key_returns_error(validator, response_body):
     response_body.pop("schemas")
     expected_issues = {
         "response": {
@@ -138,18 +148,16 @@ def test_missing_schemas_key_returns_error(
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
     assert issues.to_dict() == expected_issues
 
 
-def test_validation_errors_for_resources_attribute_can_be_returned(
-    request_body, response_body, response_headers
-):
+def test_validation_errors_for_resources_attribute_can_be_returned(response_body):
     validator = ResourceTypeGET(UserSchema())
     response_body["Resources"][0]["userName"] = 123  # noqa
     response_body["Resources"][1]["userName"] = 123  # noqa
@@ -181,9 +189,9 @@ def test_validation_errors_for_resources_attribute_can_be_returned(
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
@@ -197,7 +205,7 @@ def test_validation_errors_for_resources_attribute_can_be_returned(
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_status_code_must_be_200(validator, request_body, response_body, response_headers):
+def test_status_code_must_be_200(validator, response_body):
     expected_issues = {
         "response": {
             "status": {
@@ -211,9 +219,9 @@ def test_status_code_must_be_200(validator, request_body, response_body, respons
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=201,
     )
 
@@ -227,9 +235,7 @@ def test_status_code_must_be_200(validator, request_body, response_body, respons
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_fails_if_more_resources_than_total_results(
-    validator, request_body, response_body, response_headers
-):
+def test_fails_if_more_resources_than_total_results(validator, response_body):
     response_body["totalResults"] = 1
     expected_issues = {
         "response": {
@@ -253,9 +259,9 @@ def test_fails_if_more_resources_than_total_results(
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
@@ -270,7 +276,7 @@ def test_fails_if_more_resources_than_total_results(
     )
 )
 def test_fails_if_less_resources_than_total_results_with_count_unspecified(
-    validator, request_body, response_body, response_headers
+    validator, response_body,
 ):
     response_body["Resources"] = []
     expected_issues = {
@@ -288,9 +294,9 @@ def test_fails_if_less_resources_than_total_results_with_count_unspecified(
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
@@ -304,9 +310,7 @@ def test_fails_if_less_resources_than_total_results_with_count_unspecified(
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_fails_if_more_resources_than_specified_count(
-    validator, request_body, response_body, response_headers
-):
+def test_fails_if_more_resources_than_specified_count(validator, response_body):
     expected_issues = {
         "response": {
             "body": {
@@ -323,9 +327,9 @@ def test_fails_if_more_resources_than_specified_count(
 
     issues = validator.validate_response(
         request_query_string={"count": 1},
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
@@ -340,7 +344,7 @@ def test_fails_if_more_resources_than_specified_count(
     )
 )
 def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
-    validator, request_body, response_body, response_headers
+    validator, response_body,
 ):
     response_body["Resources"] = response_body["Resources"][:1]
     expected_issues = {
@@ -366,9 +370,9 @@ def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
 
     issues = validator.validate_response(
         request_query_string={"count": 2},
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
@@ -382,9 +386,7 @@ def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_fails_if_start_index_bigger_than_requested(
-    validator, request_body, response_body, response_headers
-):
+def test_fails_if_start_index_bigger_than_requested(validator, response_body):
     response_body["totalResults"] = 3
     response_body["startIndex"] = 2
     response_body["itemsPerPage"] = 2
@@ -404,9 +406,9 @@ def test_fails_if_start_index_bigger_than_requested(
 
     issues = validator.validate_response(
         request_query_string={"count": 2, "startIndex": 1},
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
@@ -420,9 +422,7 @@ def test_fails_if_start_index_bigger_than_requested(
         ServerRootResourceGET([UserSchema()]),
     )
 )
-def test_fails_if_items_per_page_do_not_match_resources(
-    validator, request_body, response_body, response_headers
-):
+def test_fails_if_items_per_page_do_not_match_resources(validator, response_body):
     response_body["totalResults"] = 3
     response_body["startIndex"] = 1
     response_body["itemsPerPage"] = 1
@@ -449,10 +449,134 @@ def test_fails_if_items_per_page_do_not_match_resources(
 
     issues = validator.validate_response(
         request_query_string={"count": 2, "startIndex": 1},
-        request_body=request_body,
+        request_body=None,
         response_body=response_body,
-        response_headers=response_headers,
+        response_headers=None,
         status_code=200,
     )
 
     assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
+    "filter_exp",
+    (
+        'emails[value eq "sven@example.com"]',
+        'emails eq "sven@example.com"',
+        'name.familyName eq "Sven"',
+    )
+)
+def test_fails_if_output_resources_does_not_match_provided_filter(filter_exp, response_body):
+    validator = ResourceTypeGET(UserSchema())
+    expected_issues = {
+        "response": {
+            "body": {
+                "Resources": {
+                    "0": {
+                        "_errors": [
+                            {
+                                "code": 25,
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"filter": filter_exp},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_case_sensitive_attributes_are_validated_for_resource_type_endpoints(response_body):
+    validator = ResourceTypeGET(UserSchema())
+    expected_issues = {
+        "response": {
+            "body": {
+                "Resources": {
+                    "0": {
+                        "_errors": [
+                            {
+                                "code": 25,
+                            }
+                        ]
+                    },
+                    "1": {
+                        "_errors": [
+                            {
+                                "code": 25,
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"filter": 'meta.resourceType eq "user"'},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
+    "filter_exp",
+    (
+        'meta.resourceType eq "Group"',
+        'not name.givenName sw "B"',
+    )
+)
+def test_fails_if_output_resources_does_not_match_provided_filter_for_root_endpoint(
+    filter_exp, response_body
+):
+    validator = ServerRootResourceGET([UserSchema()])
+    expected_issues = {
+        "response": {
+            "body": {
+                "Resources": {
+                    "0": {
+                        "_errors": [
+                            {
+                                "code": 25,
+                            }
+                        ]
+                    },
+                    "1": {
+                        "_errors": [
+                            {
+                                "code": 25,
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"filter": filter_exp},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_case_sensitive_attributes_are_not_validated_for_server_root_endpoint(response_body):
+    validator = ServerRootResourceGET([UserSchema()])
+
+    issues = validator.validate_response(
+        request_query_string={"filter": 'meta.resourceType eq "user"'},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert not issues

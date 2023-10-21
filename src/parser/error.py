@@ -56,6 +56,7 @@ class ValidationError:
             "does not correspond to query parameter {query_param_name!r} ({query_param_value}): "
             "{reason}"
         ),
+        25: "resource included in the result, but does not match the filter",
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -201,6 +202,10 @@ class ValidationError:
             query_param_value=query_param_value,
             reason=reason,
         )
+
+    @classmethod
+    def included_resource_does_not_match_filter(cls):
+        return cls(code=25)
 
     @classmethod
     def no_closing_bracket(cls, bracket_position: int):
