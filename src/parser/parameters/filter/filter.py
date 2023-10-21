@@ -18,7 +18,7 @@ _ALLOWED_IDENTIFIERS = re.compile(
 
 _OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 _AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
-_NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s+(.*)", flags=re.DOTALL)
+_NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s*(.*)", flags=re.DOTALL)
 
 _PLACEHOLDER_REGEX = re.compile(r"\|&PLACE_HOLDER_(\d+)&\|")
 
@@ -421,16 +421,24 @@ def _parse_op_and_exp(
     for and_operand in and_operands:
         match = _NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
         if match:
-            parsed_and_operand, issues_ = _parse_op_attr_exp(
-                attr_exp=match.group(1),
-                parsed_group_ops=parsed_group_ops,
-                parsed_complex_ops=parsed_complex_ops,
-            )
-            issues.merge(issues=issues_)
-            if not issues.can_proceed():
+            not_operand = match.group(1)
+            if not not_operand:
+                issues.add(
+                    issue=ValidationError.missing_operand_for_operator("not", and_operand),
+                    proceed=False,
+                )
                 parsed_and_operand = None
             else:
-                parsed_and_operand = op.Not(parsed_and_operand)
+                parsed_and_operand, issues_ = _parse_op_attr_exp(
+                    attr_exp=not_operand,
+                    parsed_group_ops=parsed_group_ops,
+                    parsed_complex_ops=parsed_complex_ops,
+                )
+                issues.merge(issues=issues_)
+                if not issues.can_proceed():
+                    parsed_and_operand = None
+                else:
+                    parsed_and_operand = op.Not(parsed_and_operand)
         else:
             parsed_and_operand, issues_ = _parse_op_attr_exp(
                 attr_exp=and_operand,
@@ -532,24 +540,38 @@ def _parse_op_attr_exp(
 
     components = re.split(r'\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', attr_exp)
     if len(components) == 2:
-        op_ = _UNARY_ATTR_OPERATORS.get(components[1].lower())
+        op_exp = components[1].lower()
+        op_ = _UNARY_ATTR_OPERATORS.get(op_exp)
         if op_ is None:
-            issues.add(
-                issue=ValidationError.unknown_operator(
-                    operator_type="unary",
-                    operator=_encode_sub_or_complex_into_exp(
-                        exp=components[1],
-                        parsed_group_ops=parsed_group_ops,
-                        parsed_complex_ops=parsed_complex_ops,
+            if op_exp in _BINARY_ATTR_OPERATORS:
+                issues.add(
+                    issue=ValidationError.missing_operand_for_operator(
+                        operator=op_exp,
+                        expression=_encode_sub_or_complex_into_exp(
+                            exp=attr_exp,
+                            parsed_group_ops=parsed_group_ops,
+                            parsed_complex_ops=parsed_complex_ops,
+                        )
                     ),
-                    expression=_encode_sub_or_complex_into_exp(
-                        exp=attr_exp,
-                        parsed_group_ops=parsed_group_ops,
-                        parsed_complex_ops=parsed_complex_ops,
-                    )
-                ),
-                proceed=False,
-            )
+                    proceed=False
+                )
+            else:
+                issues.add(
+                    issue=ValidationError.unknown_operator(
+                        operator_type="unary",
+                        operator=_encode_sub_or_complex_into_exp(
+                            exp=components[1],
+                            parsed_group_ops=parsed_group_ops,
+                            parsed_complex_ops=parsed_complex_ops,
+                        ),
+                        expression=_encode_sub_or_complex_into_exp(
+                            exp=attr_exp,
+                            parsed_group_ops=parsed_group_ops,
+                            parsed_complex_ops=parsed_complex_ops,
+                        )
+                    ),
+                    proceed=False,
+                )
         match = _ALLOWED_IDENTIFIERS.fullmatch(components[0])
         if not match:
             issues.add(

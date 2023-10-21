@@ -5,14 +5,20 @@ from typing import Any, Collection, Dict, List, Optional, Tuple, Type
 class ValidationError:
     _message_for_code = {
         1: "attribute '{attr_name}' is required",
-        2: "expected type for SCIM '{scim_type}' is '{expected_type}', got '{provided_type}' instead",
+        2: (
+            "expected type for SCIM '{scim_type}' is '{expected_type}', "
+            "got '{provided_type}' instead"
+        ),
         3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
         4: "SCIM '{scim_type}' should be encoded as a valid xsd:dateTime",
         5: (
             "SCIM '{scim_type}' can contain the values of these types only: {allowed_types}, "
             "but got '{provided_type}' instead"
         ),
-        6: "multi-valued attribute should be of type 'list' or 'tuple', but got '{provided_type}' instead",
+        6: (
+            "multi-valued attribute should be of type 'list' or 'tuple', "
+            "but got '{provided_type}' instead"
+        ),
         7: "'{keyword}' is SCIM reserved keyword that MUST NOT occur in a attribute value",
         8: "'{value}' is not a valid URL",
         9: (
@@ -21,12 +27,24 @@ class ValidationError:
         ),
         10: "header '{header}' is required",
         11: "values of {value_1} and {value_2} must match",
-        12: "error status should be greater or equal to 300 and lesser than 600, but provided {provided}",
-        13: "HTTP response status ({response_status}) and error status in body ({body_status}) must match",
+        12: (
+            "error status should be greater or equal to 300 and lesser than 600, "
+            "but provided {provided}"
+        ),
+        13: (
+            "HTTP response status ({response_status}) and error status in body "
+            "({body_status}) must match"
+        ),
         14: "value must be one of: {expected_values}, but provided '{provided}'",
         15: "missing {missing}",
-        16: "HTTP response status for method '{method}' must be '{expected}', but provided '{provided}'",
-        17: "meta.resourceType must match configured type `{resource_type}`, but provided '{provided}'",
+        16: (
+            "HTTP response status for method '{method}' must be '{expected}', "
+            "but provided '{provided}'"
+        ),
+        17: (
+            "meta.resourceType must match configured type `{resource_type}`, "
+            "but provided '{provided}'"
+        ),
         18: "expected type '{expected_type}', got '{provided_type}' instead",
         19: "attribute '{attr_name}' should never be returned",
         20: "provided 'schemas' do not correspond to the resource {resource_type!r}",
@@ -35,9 +53,9 @@ class ValidationError:
         23: "too little results, must {must}",
         24: (
             "response value of {response_key!r} ({response_value}) "
-            "does not correspond to query parameter {query_param_name!r} ({query_param_value}): {reason}"
+            "does not correspond to query parameter {query_param_name!r} ({query_param_value}): "
+            "{reason}"
         ),
-
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -82,7 +100,9 @@ class ValidationError:
         return cls(code=4, scim_type=scim_type)
 
     @classmethod
-    def bad_sub_attribute_type(cls, scim_type: str, allowed_types: Collection[Type], provided_type: Type):
+    def bad_sub_attribute_type(
+        cls, scim_type: str, allowed_types: Collection[Type], provided_type: Type
+    ):
         return cls(
             code=5,
             scim_type=scim_type,
@@ -140,7 +160,9 @@ class ValidationError:
 
     @classmethod
     def bad_type(cls, expected_type: Type, provided_type: Type):
-        return cls(code=18, expected_type=expected_type.__name__, provided_type=provided_type.__name__)
+        return cls(
+            code=18, expected_type=expected_type.__name__, provided_type=provided_type.__name__
+        )
 
     @classmethod
     def returned_restricted_attribute(cls, attr_name: str):
@@ -164,7 +186,12 @@ class ValidationError:
 
     @classmethod
     def response_value_does_not_correspond_to_parameter(
-        cls, response_key: str, response_value: Any, query_param_name: str, query_param_value: Any, reason: str
+        cls,
+        response_key: str,
+        response_value: Any,
+        query_param_name: str,
+        query_param_value: Any,
+        reason: str,
     ):
         return cls(
             code=24,

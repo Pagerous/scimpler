@@ -1580,6 +1580,26 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
                 }
             ]
         ),
+        (
+            'not',
+            [104],
+            [
+                {
+                    "operator": "not",
+                    "expression": "not",
+                }
+            ],
+        ),
+        (
+            'userName eq',
+            [104],
+            [
+                {
+                    "operator": "eq",
+                    "expression": "userName eq",
+                }
+            ],
+        ),
     )
 )
 def test_missing_operand_for_operator_causes_parsing_issues(
