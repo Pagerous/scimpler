@@ -318,8 +318,14 @@ class ValidationIssues:
             if not issues.can_proceed(other_location):
                 self._stop_proceeding.add(new_location)
 
-    def add(self, issue: ValidationError, proceed: bool, location: Optional[Tuple] = None):
+    def add(
+        self,
+        issue: ValidationError,
+        proceed: bool,
+        location: Optional[Collection[str]] = None
+    ) -> None:
         location = location or tuple()
+        location = tuple(location)
         self._issues[location].append(issue)
         if not proceed:
             self._stop_proceeding.add(location)
