@@ -71,6 +71,9 @@ class ValidationError:
         111: "attribute {attribute!r} does not conform the rules",
         112: "bad comparison value {value!r}",
         113: "comparison value {value!r} is not compatible with {operator!r} operator",
+        200: "unknown sortBy attribute {attribute!r}",
+        201: "complex attribute {attribute!r} is not multivalued",
+        202: "complex attribute {attribute!r} does not contain 'primary' or 'value' sub-attribute",
     }
 
     def __init__(self, code: int, **context):
@@ -262,6 +265,18 @@ class ValidationError:
     @classmethod
     def non_compatible_comparison_value(cls, value: Any, operator: str):
         return cls(code=113, value=value, operator=operator)
+
+    @classmethod
+    def unknown_sort_by_attr(cls, attribute: str):
+        return cls(code=200, attribute=attribute)
+
+    @classmethod
+    def complex_attr_is_not_multivalued(cls, attribute: str):
+        return cls(code=201, attribute=attribute)
+
+    @classmethod
+    def complex_attr_does_not_contain_primary_sub_attr(cls, attribute: str):
+        return cls(code=202, attribute=attribute)
 
     @property
     def context(self) -> Dict:
