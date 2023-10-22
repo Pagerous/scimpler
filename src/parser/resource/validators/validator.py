@@ -176,7 +176,7 @@ class EndpointValidatorGET(EndpointValidator, abc.ABC):
                 proceed=False,
             )
 
-        if issues.can_proceed(location=("response", "body")):
+        if issues.can_proceed(("response", "body")):
             issues.merge(
                 issues=self.validate_schema(body=response_body, direction="RESPONSE"),
                 location=("response", "body"),

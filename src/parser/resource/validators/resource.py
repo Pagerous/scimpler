@@ -69,7 +69,7 @@ def _validate_resource_object_response(
                 proceed=True,
             )
 
-    if issues.can_proceed(location=("response", "headers")):
+    if issues.can_proceed(("response", "headers")):
         issues.merge(
             issues=_validate_resource_location_header(
                 response_body=response_body,
@@ -125,7 +125,7 @@ class ResourceObjectGET(EndpointValidatorGET):
             response_body=response_body,
             response_headers=response_headers,
         )
-        if issues.can_proceed(location=("response", "body")):
+        if issues.can_proceed(("response", "body")):
             _validate_resource_object_response(
                 issues=issues,
                 schema=self._schema,
@@ -163,7 +163,7 @@ class ResourceTypePOST(EndpointValidator):
                 issue=ValidationError.bad_type(expected_type=dict, provided_type=type(body)),
                 proceed=False,
             )
-        if issues.can_proceed(location=("request", "body")):
+        if issues.can_proceed(("request", "body")):
             for attr_name, attr in self._schema.attributes.items():
                 issues.merge(
                     issues=attr.validate(body.get(attr_name), "REQUEST"),
@@ -193,7 +193,7 @@ class ResourceTypePOST(EndpointValidator):
                 proceed=False,
             )
 
-        if issues.can_proceed(location=("response", "body")):
+        if issues.can_proceed(("response", "body")):
             issues.merge(
                 issues=self.validate_schema(body=response_body, direction="RESPONSE"),
                 location=("response", "body"),
@@ -260,7 +260,7 @@ class _ManyResourcesGET(EndpointValidatorGET):
                 proceed=True,
             )
 
-        if not issues.can_proceed(location=("response", "body")):
+        if not issues.can_proceed(("response", "body")):
             return issues
 
         start_index = request_query_string.get("startindex", 1)
@@ -270,9 +270,8 @@ class _ManyResourcesGET(EndpointValidatorGET):
         if count is not None and count < 0:
             count = 0
 
-        if (
-            issues.can_proceed(location=("response", "body", "totalResults"))
-            and issues.can_proceed(location=("response", "body", "Resources"))
+        if issues.can_proceed(
+            ("response", "body", "totalResults"), ("response", "body", "Resources")
         ):
             total_results = response_body["totalresults"]
             resources = response_body.get("resources", [])
@@ -312,9 +311,8 @@ class _ManyResourcesGET(EndpointValidatorGET):
                     proceed=True,
                 )
 
-            if (
-                issues.can_proceed(location=("response", "body", "startIndex"))
-                and issues.can_proceed(location=("response", "body", "itemsPerPage"))
+            if issues.can_proceed(
+                ("response", "body", "startIndex"), ("response", "body", "itemsPerPage")
             ):
                 is_pagination = (count or 0) > 0 and total_results > n_resources
                 if is_pagination:
@@ -332,7 +330,7 @@ class _ManyResourcesGET(EndpointValidatorGET):
                         )
 
         if (
-            issues.can_proceed(location=("response", "body", "startIndex"))
+            issues.can_proceed(("response", "body", "startIndex"))
             and "startindex" in response_body
             and response_body["startindex"] > start_index
         ):
@@ -348,9 +346,8 @@ class _ManyResourcesGET(EndpointValidatorGET):
                 proceed=True,
             )
 
-        if (
-            issues.can_proceed(location=("response", "body", "itemsPerPage"))
-            and issues.can_proceed(location=("response", "body", "Resources"))
+        if issues.can_proceed(
+            ("response", "body", "itemsPerPage"), ("response", "body", "Resources")
         ):
             n_resources = len(response_body.get("resources", []))
 
@@ -398,7 +395,7 @@ class ResourceTypeGET(_ManyResourcesGET):
             response_headers=response_headers,
         )
 
-        if issues.can_proceed(location=("response", "body", "Resources")):
+        if issues.can_proceed(("response", "body", "Resources")):
 
             filter_ = None
             filter_exp = request_query_string.get("filter")
@@ -452,7 +449,7 @@ class ServerRootResourceGET(_ManyResourcesGET):
             response_body=response_body,
             response_headers=response_headers,
         )
-        if issues.can_proceed(location=("response", "body", "Resources")):
+        if issues.can_proceed(("response", "body", "Resources")):
 
             filter_ = None
             filter_exp = request_query_string.get("filter")

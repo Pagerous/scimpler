@@ -43,7 +43,7 @@ class _Error(EndpointValidatorGET):
             response_headers=response_headers,
         )
 
-        if issues.can_proceed(location=("response", "body")):
+        if issues.can_proceed(("response", "body")):
             status_in_body = response_body.get("status")
             if str(status_code) != status_in_body:
                 issues.add(

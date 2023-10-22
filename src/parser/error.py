@@ -309,12 +309,16 @@ class ValidationIssues:
         if not proceed:
             self._stop_proceeding.add(location)
 
-    def can_proceed(self, location: Optional[Tuple] = None) -> bool:
-        location = location or tuple()
-        for i in range(1, len(location)+1):
-            if location[:i] in self._stop_proceeding:
+    def can_proceed(self, *locations: Collection[str]) -> bool:
+        if not locations:
+            locations = [tuple()]
+        for location in locations:
+            for i in range(1, len(location)+1):
+                if location[:i] in self._stop_proceeding:
+                    return False
+            if location in self._stop_proceeding:
                 return False
-        return location not in self._stop_proceeding
+        return True
 
     def to_dict(self, msg: bool = False, ctx: bool = False):
         output = {}
