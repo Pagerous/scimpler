@@ -1,7 +1,9 @@
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
+from src.parser.attributes.attributes import AttributeName
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter.filter import parse_filter
+from src.parser.parameters.sorter.sorter import Sorter
 from src.parser.resource.validators.validator import (
     EndpointValidator,
     EndpointValidatorGET, preprocess_response_validation,
@@ -231,6 +233,79 @@ class _ManyResourcesGET(EndpointValidatorGET):
             )
         return issues
 
+    @staticmethod
+    def _validate_sorter(
+        issues: ValidationIssues,
+        query_string: Dict[str, Any],
+        schema: Optional[Schema],
+    ):
+        sort_by = query_string.get("sortBy")
+        if sort_by is None:
+            return issues
+
+        sort_order = query_string.get("sortOrder", "ascending")
+        if sort_order not in ["ascending", "descending"]:
+            pass  # TODO add warning here
+
+        _, issues_ = Sorter(
+            attr_name=sort_by,
+            schema=schema,
+            asc=sort_order == "ascending",
+            strict=True,
+        )
+        issues.merge(
+            issues=issues_,
+            location=("request", "query_string", "sortBy")
+        )
+        return issues
+
+    @staticmethod
+    def _validate_resources_sorted(
+        issues: ValidationIssues,
+        request_query_string: Dict[str, Any],
+        resources: List[Dict[str, Any]],
+        schema: Optional[Schema],
+    ):
+        sort_by = request_query_string.get("sortBy")
+        if sort_by is None:
+            return issues
+
+        sort_order = request_query_string.get("sortOrder", "ascending")
+        if sort_order not in ["ascending", "descending"]:
+            pass  # TODO add warning here
+
+        sorter, issues_ = Sorter.parse(
+            by=sort_by,
+            schema=schema,
+            asc=sort_order == "ascending",
+            strict=True,
+        )
+        issues.merge(
+            issues=issues_,
+            location=("request", "query_string", "sortBy")
+        )
+
+        if issues.can_proceed(("request", "query_string", "sortBy")):
+            locations = []
+            if schema:
+                attr = schema.get_attr(AttributeName(sorter.attr_name.full_attr))
+                if sorter.attr_name.sub_attr:
+                    sub_attr = schema.get_attr(sorter.attr_name)
+                    location = (attr.display_name, sub_attr.display_name)
+                else:
+                    location = (attr.display_name,)
+                locations = [
+                    ("response", "body", "Resources", i, *location)
+                    for i in range(len(resources))
+                ]
+            if issues.can_proceed(*locations) and resources != sorter(resources):
+                issues.add(
+                    issue=ValidationError.resources_not_sorted(),
+                    proceed=True,
+                    location=("response", "body", "Resources"),
+                )
+        return issues
+
     @preprocess_response_validation
     def validate_response(
         self,
@@ -375,6 +450,21 @@ class ResourceTypeGET(_ManyResourcesGET):
         super().__init__(ListResponseSchema())
         self._resource_schema = resource_schema
 
+    @preprocess_request_validation
+    def validate_request(
+        self,
+        *,
+        query_string: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = super().validate_request(query_string=query_string, body=body, headers=headers)
+        return self._validate_sorter(
+            issues=issues,
+            query_string=query_string,
+            schema=self._resource_schema,
+        )
+
     @preprocess_response_validation
     def validate_response(
         self,
@@ -422,6 +512,12 @@ class ResourceTypeGET(_ManyResourcesGET):
                         proceed=True,
                         location=("response", "body", "Resources", i),
                     )
+            self._validate_resources_sorted(
+                issues=issues,
+                request_query_string=request_query_string,
+                resources=resources,
+                schema=self._resource_schema,
+            )
         return issues
 
 
@@ -429,6 +525,21 @@ class ServerRootResourceGET(_ManyResourcesGET):
     def __init__(self, resource_schemas: Iterable[Schema]):
         super().__init__(ListResponseSchema())
         self._resource_schemas = resource_schemas
+
+    @preprocess_request_validation
+    def validate_request(
+        self,
+        *,
+        query_string: Optional[Dict[str, Any]] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = super().validate_request(query_string=query_string, body=body, headers=headers)
+        return self._validate_sorter(
+            issues=issues,
+            query_string=query_string,
+            schema=None,
+        )
 
     @preprocess_response_validation
     def validate_response(
@@ -471,4 +582,10 @@ class ServerRootResourceGET(_ManyResourcesGET):
                         proceed=True,
                         location=("response", "body", "Resources", i),
                     )
+            self._validate_resources_sorted(
+                issues=issues,
+                request_query_string=request_query_string,
+                resources=resources,
+                schema=None,
+            )
         return issues

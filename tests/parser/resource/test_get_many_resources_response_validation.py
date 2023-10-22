@@ -580,3 +580,103 @@ def test_case_sensitive_attributes_are_not_validated_for_server_root_endpoint(re
     )
 
     assert not issues
+
+
+@pytest.mark.parametrize(
+    "validator",
+    (
+        ResourceTypeGET(UserSchema()),
+        ServerRootResourceGET([UserSchema()]),
+    )
+)
+def test_fails_if_resources_are_not_sorted(validator, response_body):
+    expected = {
+        "response": {
+            "body": {
+                "Resources": {
+                    "_errors": [
+                        {
+                            "code": 26
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"sortBy": "name.familyName", "sortOrder": "descending"},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_sorting_is_not_checked_if_issues_for_related_values(response_body):
+    validator = ResourceTypeGET(UserSchema())
+    response_body["Resources"][1]["name"]["familyName"] = 123  # noqa, bad type
+    expected = {
+        "response": {
+            "body": {
+                "Resources": {
+                    "1": {
+                        "name": {
+                            "familyName": {
+                                "_errors": [
+                                    {
+                                        "code": 2
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"sortBy": "name.familyName", "sortOrder": "descending"},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_sorting_is_checked_if_issues_for_not_related_resource_values(response_body):
+    validator = ResourceTypeGET(UserSchema())
+    response_body["Resources"][1]["name"]["givenName"] = 123  # noqa, bad type
+    expected = {
+        "response": {
+            "body": {
+                "Resources": {
+                    "_errors": [
+                        {
+                            "code": 26
+                        },
+                    ],
+                    "1": {
+                        "name": {
+                            "givenName": {
+                                "_errors": [
+                                    {
+                                        "code": 2
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"sortBy": "name.familyName", "sortOrder": "descending"},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected

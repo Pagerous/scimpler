@@ -57,6 +57,7 @@ class ValidationError:
             "{reason}"
         ),
         25: "resource included in the result, but does not match the filter",
+        26: "resources are not sorted",
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -209,6 +210,10 @@ class ValidationError:
     @classmethod
     def included_resource_does_not_match_filter(cls):
         return cls(code=25)
+
+    @classmethod
+    def resources_not_sorted(cls):
+        return cls(code=26)
 
     @classmethod
     def no_closing_bracket(cls, bracket_position: int):
