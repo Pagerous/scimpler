@@ -15,7 +15,7 @@ from src.parser.resource.schemas import UserSchema
         "urn:ietf:params:scim:schemas:core:2.0:User:name.givenName",
         "emails",  # complex, multivalued,
         "urn:ietf:params:scim:schemas:core:2.0:User:emails",
-    )
+    ),
 )
 def test_sorter_is_parsed(use_schema, sort_by):
     schema = UserSchema() if use_schema else None
@@ -31,7 +31,7 @@ def test_sorter_is_parsed(use_schema, sort_by):
         ("bad.attr.name", {"_errors": [{"code": 111}]}),
         ("non_existing.attr", {"_errors": [{"code": 200}]}),
         ("name", {"_errors": [{"code": 201}, {"code": 202}]}),
-    )
+    ),
 )
 def test_sorter_parsing_fails_with_schema(sort_by, expected_issues):
     sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=UserSchema())
@@ -46,7 +46,7 @@ def test_sorter_parsing_fails_with_schema(sort_by, expected_issues):
         ("bad.attr.name", {"_errors": [{"code": 111}]}),
         ("non_existing.attr", {}),
         ("name", {}),
-    )
+    ),
 )
 def test_sorter_parsing_fails_without_schema(sort_by, expected_issues):
     sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=None)
@@ -335,62 +335,48 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
 
 
 @pytest.mark.parametrize("use_schema", (True, False))
-def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs(use_schema):
+def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs(
+    use_schema,
+):
     schema = UserSchema() if use_schema else None
     sorter = Sorter(AttributeName("emails"), schema=schema, asc=True)
     values = [
         {
             "id": "1",
             "emails": [
-                {
-                    "primary": True,
-                    "value": "z@example.com"
-                },
+                {"primary": True, "value": "z@example.com"},
             ],
         },
         {
             "id": "2",
             "emails": [
-                {
-                    "value": "a@example.com"
-                },
+                {"value": "a@example.com"},
             ],
         },
         {
             "id": "3",
             "emails": [
-                {
-                    "primary": True,
-                    "value": "a@example.com"
-                },
+                {"primary": True, "value": "a@example.com"},
             ],
-        }
+        },
     ]
     expected = [
         {
             "id": "3",
             "emails": [
-                {
-                    "primary": True,
-                    "value": "a@example.com"
-                },
+                {"primary": True, "value": "a@example.com"},
             ],
         },
         {
             "id": "1",
             "emails": [
-                {
-                    "primary": True,
-                    "value": "z@example.com"
-                },
+                {"primary": True, "value": "z@example.com"},
             ],
         },
         {
             "id": "2",
             "emails": [
-                {
-                    "value": "a@example.com"
-                },
+                {"value": "a@example.com"},
             ],
         },
     ]

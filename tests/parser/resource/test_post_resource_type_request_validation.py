@@ -10,17 +10,7 @@ def validator():
 
 
 def test_body_is_required(validator):
-    expected_issues = {
-        "request": {
-            "body": {
-                "_errors": [
-                    {
-                        "code": 15
-                    }
-                ]
-            }
-        }
-    }
+    expected_issues = {"request": {"body": {"_errors": [{"code": 15}]}}}
 
     issues = validator.validate_request(body=None)
 
@@ -36,8 +26,8 @@ def test_correct_body_passes_validation(validator):
             "name": {
                 "formatted": "Ms. Barbara J Jensen III",
                 "familyName": "Jensen",
-                "givenName": "Barbara"
-            }
+                "givenName": "Barbara",
+            },
         }
     )
 
@@ -45,19 +35,7 @@ def test_correct_body_passes_validation(validator):
 
 
 def test_missing_schemas_key_returns_error(validator):
-    expected_issues = {
-        "request": {
-            "body": {
-                "schemas": {
-                    "_errors": [
-                        {
-                            "code": 1
-                        }
-                    ]
-                }
-            }
-        }
-    }
+    expected_issues = {"request": {"body": {"schemas": {"_errors": [{"code": 1}]}}}}
 
     issues = validator.validate_request(
         body={
@@ -66,8 +44,8 @@ def test_missing_schemas_key_returns_error(validator):
             "name": {
                 "formatted": "Ms. Barbara J Jensen III",
                 "familyName": "Jensen",
-                "givenName": "Barbara"
-            }
+                "givenName": "Barbara",
+            },
         }
     )
 
@@ -78,20 +56,8 @@ def test_many_validation_errors_can_be_returned(validator):
     expected_issues = {
         "request": {
             "body": {
-                "userName": {
-                    "_errors": [
-                        {
-                            "code": 1
-                        }
-                    ]
-                },
-                "name": {
-                    "_errors": [
-                        {
-                            "code": 2
-                        }
-                    ]
-                }
+                "userName": {"_errors": [{"code": 1}]},
+                "name": {"_errors": [{"code": 2}]},
             }
         }
     }
@@ -110,13 +76,13 @@ def test_many_validation_errors_can_be_returned(validator):
 def test_external_id_may_be_omitted(validator):
     issues = validator.validate_request(
         body={
-             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-             "userName": "bjensen",
-             "name": {
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "userName": "bjensen",
+            "name": {
                 "formatted": "Ms. Barbara J Jensen III",
                 "familyName": "Jensen",
-                "givenName": "Barbara"
-             }
+                "givenName": "Barbara",
+            },
         }
     )
 

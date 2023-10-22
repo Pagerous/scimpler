@@ -1,10 +1,10 @@
+from src.parser.attributes import type as at
 from src.parser.attributes.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeReturn,
-    ComplexAttribute
+    ComplexAttribute,
 )
-from src.parser.attributes import type as at
 
 
 def test_validates_required_attribute():
@@ -90,7 +90,7 @@ def test_complex_attribute_sub_attributes_are_validated_separately():
                     "code": 2,
                 }
             ]
-        }
+        },
     }
 
     issues = attr.validate(value={"sub_attr_2": "123"}, direction="REQUEST")
@@ -123,7 +123,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
                         "code": 2,
                     }
                 ]
-            }
+            },
         },
         "1": {
             "sub_attr_1": {
@@ -133,7 +133,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
                     }
                 ]
             },
-        }
+        },
     }
 
     issues = attr.validate(

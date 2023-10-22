@@ -1,7 +1,13 @@
-from .attributes import Attribute, AttributeIssuer, AttributeMutability, AttributeReturn, AttributeUniqueness, \
-    ComplexAttribute
 from ..attributes import type as at
 from ..error import ValidationError, ValidationIssues
+from .attributes import (
+    Attribute,
+    AttributeIssuer,
+    AttributeMutability,
+    AttributeReturn,
+    AttributeUniqueness,
+    ComplexAttribute,
+)
 
 
 def bulk_id_validator(value) -> ValidationIssues:
@@ -37,7 +43,7 @@ id_ = Attribute(
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.SERVER,
-    validators=[bulk_id_validator]
+    validators=[bulk_id_validator],
 )
 
 external_id = Attribute(

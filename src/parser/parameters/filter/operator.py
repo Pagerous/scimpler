@@ -7,8 +7,8 @@ from typing import (
     Callable,
     Dict,
     Generator,
-    Optional,
     List,
+    Optional,
     Set,
     Tuple,
     Type,
@@ -16,8 +16,8 @@ from typing import (
     Union,
 )
 
-from src.parser.attributes.attributes import Attribute, ComplexAttribute
 from src.parser.attributes import type as at
+from src.parser.attributes.attributes import Attribute, ComplexAttribute
 
 
 class MatchStatus(Enum):
@@ -74,7 +74,8 @@ class LogicalOperator(abc.ABC):
         value: Dict[str, Any],
         attrs: Optional[Dict[str, Attribute]],
         strict: bool = True,
-    ) -> MatchResult: ...
+    ) -> MatchResult:
+        ...
 
 
 class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
@@ -86,7 +87,10 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         return self._sub_operators
 
     def _collect_matches(
-        self, value: Dict[str, Any], attrs: Optional[Dict[str, Attribute]], strict: bool = True,
+        self,
+        value: Dict[str, Any],
+        attrs: Optional[Dict[str, Attribute]],
+        strict: bool = True,
     ) -> Generator[MatchResult, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
@@ -165,7 +169,7 @@ class Not(LogicalOperator):
         self,
         value: Dict[str, Any],
         attrs: Optional[Dict[str, Attribute]],
-        strict: bool = True
+        strict: bool = True,
     ) -> MatchResult:
         if isinstance(self._sub_operator, LogicalOperator):
             match = self._sub_operator.match(value, attrs, strict=True)
@@ -178,10 +182,7 @@ class Not(LogicalOperator):
             return MatchResult.failed()
 
         if self._sub_operator.attr_name not in value:
-            if (
-                (attrs is None or self._sub_operator.attr_name in attrs)
-                and not strict
-            ):
+            if (attrs is None or self._sub_operator.attr_name in attrs) and not strict:
                 return MatchResult.passed()
             return MatchResult.failed()
 
@@ -190,7 +191,7 @@ class Not(LogicalOperator):
 
         match = self._sub_operator.match(
             value=value.get(self._sub_operator.attr_name),
-            attr=(attrs or {}).get(self._sub_operator.attr_name)
+            attr=(attrs or {}).get(self._sub_operator.attr_name),
         )
         if match.status == MatchStatus.FAILED:
             return MatchResult.passed()
@@ -212,7 +213,8 @@ class AttributeOperator(abc.ABC):
         return self._attr_name
 
     @abc.abstractmethod
-    def match(self, value: Any, attr: Optional[Attribute]) -> MatchResult: ...
+    def match(self, value: Any, attr: Optional[Attribute]) -> MatchResult:
+        ...
 
 
 class Present(AttributeOperator):
@@ -271,7 +273,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         return self._value
 
     def _get_values_for_comparison_no_attribute(
-            self, value: Any
+        self, value: Any
     ) -> Optional[List[Tuple[Any, Any]]]:
         if not isinstance(value, List):
             value = [value]
@@ -291,10 +293,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if isinstance(self.value, str):
             try:
                 op_value = datetime.fromisoformat(self.value)
-                return [
-                    (datetime.fromisoformat(item), op_value)
-                    for item in value
-                ]
+                return [(datetime.fromisoformat(item), op_value) for item in value]
             except ValueError:
                 value_ = []
                 for item in value:
@@ -410,7 +409,6 @@ class Contains(BinaryAttributeOperator):
 
 
 class StartsWith(BinaryAttributeOperator):
-
     @staticmethod
     def _starts_with(val1: str, val2: str):
         return val1.startswith(val2)
@@ -428,7 +426,6 @@ class StartsWith(BinaryAttributeOperator):
 
 
 class EndsWith(BinaryAttributeOperator):
-
     @staticmethod
     def _ends_with(val1: str, val2: str):
         return val1.endswith(val2)
@@ -531,10 +528,13 @@ class ComplexAttributeOperator:
                     continue
                 if sub_attrs is None or self._sub_operator.attr_name in sub_attrs:
                     has_value = True
-                    if self._sub_operator.match(
-                        value=item.get(self._sub_operator.attr_name),
-                        attr=(sub_attrs or {}).get(self._sub_operator.attr_name),
-                    ).status == MatchStatus.PASSED:
+                    if (
+                        self._sub_operator.match(
+                            value=item.get(self._sub_operator.attr_name),
+                            attr=(sub_attrs or {}).get(self._sub_operator.attr_name),
+                        ).status
+                        == MatchStatus.PASSED
+                    ):
                         return MatchResult.passed()
             if not has_value and not strict:
                 return MatchResult.passed()

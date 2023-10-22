@@ -166,7 +166,9 @@ class ValidationError:
     @classmethod
     def bad_type(cls, expected_type: Type, provided_type: Type):
         return cls(
-            code=18, expected_type=expected_type.__name__, provided_type=provided_type.__name__
+            code=18,
+            expected_type=expected_type.__name__,
+            provided_type=provided_type.__name__,
         )
 
     @classmethod
@@ -237,7 +239,12 @@ class ValidationError:
 
     @classmethod
     def unknown_operator(cls, operator_type: str, operator: str, expression: str):
-        return cls(code=105, operator_type=operator_type, operator=operator, expression=expression)
+        return cls(
+            code=105,
+            operator_type=operator_type,
+            operator=operator,
+            expression=expression,
+        )
 
     @classmethod
     def unknown_expression(cls, expression: str):
@@ -319,7 +326,7 @@ class ValidationIssues:
         self,
         issue: ValidationError,
         proceed: bool,
-        location: Optional[Collection[str]] = None
+        location: Optional[Collection[str]] = None,
     ) -> None:
         location = location or tuple()
         location = tuple(location)
@@ -331,7 +338,7 @@ class ValidationIssues:
         if not locations:
             locations = [tuple()]
         for location in locations:
-            for i in range(1, len(location)+1):
+            for i in range(1, len(location) + 1):
                 if location[:i] in self._stop_proceeding:
                     return False
             if location in self._stop_proceeding:

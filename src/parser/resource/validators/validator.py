@@ -6,7 +6,6 @@ from src.parser.attributes.common import schemas as schemas_field
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.schemas import Schema
 
-
 TSchema = TypeVar("TSchema", bound=Schema)
 
 
@@ -14,7 +13,7 @@ def _lower_dict_keys(d: dict) -> dict:
     d_lowered = {}
     for k, v in d.items():
         if isinstance(v, list):
-            d_lowered[k.lower()] = [_lower_dict_keys(i) if isinstance(i, dict) else i for i in v ]
+            d_lowered[k.lower()] = [_lower_dict_keys(i) if isinstance(i, dict) else i for i in v]
         elif isinstance(v, dict):
             d_lowered[k.lower()] = _lower_dict_keys(v)
         else:
@@ -35,7 +34,6 @@ def _preprocess_dict(d: Optional[Any]):
 
 
 def preprocess_request_validation(func):
-
     @wraps(func)
     def wrapper(
         self,
@@ -47,18 +45,12 @@ def preprocess_request_validation(func):
         body = _preprocess_body(body)
         query_string = _preprocess_dict(query_string)
         headers = _preprocess_dict(headers)
-        return func(
-            self,
-            query_string=query_string,
-            body=body,
-            headers=headers
-        )
+        return func(self, query_string=query_string, body=body, headers=headers)
 
     return wrapper
 
 
 def preprocess_response_validation(func):
-
     @wraps(func)
     def wrapper(
         self,
@@ -120,7 +112,7 @@ class EndpointValidator(abc.ABC):
         for attr_name, attr in self._schema.attributes.items():
             issues.merge(
                 issues=attr.validate(body.get(attr_name), direction),
-                location=(attr.name, )
+                location=(attr.name,),
             )
         return issues
 
@@ -144,7 +136,7 @@ class EndpointValidator(abc.ABC):
             )
         else:
             issues.merge(
-                location=("schemas", ),
+                location=("schemas",),
                 issues=schemas_field.validate(schemas_value, direction),
             )
         return issues

@@ -1,6 +1,5 @@
-from .attributes import Attribute, AttributeIssuer
 from ..attributes import type as at
-
+from .attributes import Attribute, AttributeIssuer
 
 total_results = Attribute(
     name="totalResults",

@@ -70,9 +70,12 @@ class Binary(String):
         if not issues.can_proceed():
             return issues
         try:
-            if base64.b64encode(
-                base64.b64decode(value).decode("utf-8").encode("utf-8")
-            ).decode("utf-8") != value:
+            if (
+                base64.b64encode(base64.b64decode(value).decode("utf-8").encode("utf-8")).decode(
+                    "utf-8"
+                )
+                != value
+            ):
                 issues.add(
                     issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
                     proceed=False,
@@ -149,7 +152,7 @@ class Complex(AttributeType):
             ExternalReference.TYPE,
             URIReference.TYPE,
             SCIMReference.TYPE,
-            DateTime.TYPE
+            DateTime.TYPE,
         }
     )
 
@@ -161,11 +164,11 @@ class Complex(AttributeType):
         for k, v in value.items():
             if not isinstance(v, cls.ALLOWED_ITEM_TYPES):
                 issues.add(
-                    location=(k, ),
+                    location=(k,),
                     issue=ValidationError.bad_sub_attribute_type(
                         scim_type=cls.SCIM_NAME,
                         allowed_types=cls.ALLOWED_ITEM_TYPES,
-                        provided_type=type(v)
+                        provided_type=type(v),
                     ),
                     proceed=False,
                 )

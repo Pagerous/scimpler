@@ -10,9 +10,7 @@ def request_body():
 
 @pytest.fixture
 def response_headers():
-    return {
-        "Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646"
-    }
+    return {"Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646"}
 
 
 @pytest.fixture
@@ -44,22 +42,8 @@ def test_error_status_should_be_equal_to_http_status(validator, request_body, re
     response_body["status"] = "401"
     expected_issues = {
         "response": {
-            "status": {
-                "_errors": [
-                    {
-                        "code": 13
-                    }
-                ]
-            },
-            "body": {
-                "status": {
-                    "_errors": [
-                        {
-                            "code": 13
-                        }
-                    ]
-                }
-            }
+            "status": {"_errors": [{"code": 13}]},
+            "body": {"status": {"_errors": [{"code": 13}]}},
         }
     }
 
@@ -76,22 +60,8 @@ def test_error_status_must_be_in_valid_range(validator, request_body, response_b
     response_body["status"] = "600"
     expected_issues = {
         "response": {
-            "status": {
-                "_errors": [
-                    {
-                        "code": 12
-                    }
-                ]
-            },
-            "body": {
-                "status": {
-                    "_errors": [
-                        {
-                            "code": 12
-                        }
-                    ]
-                }
-            }
+            "status": {"_errors": [{"code": 12}]},
+            "body": {"status": {"_errors": [{"code": 12}]}},
         }
     }
 

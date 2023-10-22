@@ -1,10 +1,9 @@
 import re
 from enum import Enum
-from typing import Collection, Callable, Any, Dict, Optional, Type
+from typing import Any, Callable, Collection, Dict, Optional, Type
 
-from src.parser.error import ValidationError, ValidationIssues
 from src.parser.attributes import type as at
-
+from src.parser.error import ValidationError, ValidationIssues
 
 _ATTR_NAME_REGEX = re.compile(r"((?:[\w.-]+:)*)?(\w+(\.\w+)?)")
 
@@ -73,7 +72,7 @@ class AttributeReturn(str, Enum):
 
 
 class AttributeUniqueness(str, Enum):
-    NONE = "none",
+    NONE = ("none",)
     SERVER = "server"
     GLOBAL = "global"
 
@@ -91,7 +90,7 @@ class Attribute:
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        validators: Optional[Collection[Callable[[Any], ValidationIssues]]] = None
+        validators: Optional[Collection[Callable[[Any], ValidationIssues]]] = None,
     ):
         self._name = name
         self._issuer = issuer
@@ -153,13 +152,9 @@ class Attribute:
         issues = ValidationIssues()
         if value is None:
             if (
-                not self._required or (
-                    direction == "REQUEST" and
-                    self.issuer == AttributeIssuer.SERVICE_PROVIDER
-                ) or (
-                    direction == "RESPONSE" and
-                    self._returned == AttributeReturn.NEVER
-                )
+                not self._required
+                or (direction == "REQUEST" and self.issuer == AttributeIssuer.SERVICE_PROVIDER)
+                or (direction == "RESPONSE" and self._returned == AttributeReturn.NEVER)
             ):
                 return issues
             issues.add(
@@ -225,11 +220,9 @@ class ComplexAttribute(Attribute):
             mutability=mutability,
             returned=returned,
             uniqueness=uniqueness,
-            validators=validators
+            validators=validators,
         )
-        self._sub_attributes: Dict[str, Attribute] = {
-            attr.name: attr for attr in sub_attributes
-        }
+        self._sub_attributes: Dict[str, Attribute] = {attr.name: attr for attr in sub_attributes}
 
     @property
     def sub_attributes(self) -> Dict[str, Attribute]:
@@ -249,7 +242,7 @@ class ComplexAttribute(Attribute):
         else:
             for attr_name, attr in self._sub_attributes.items():
                 issues.merge(
-                    location=(attr.display_name, ),
+                    location=(attr.display_name,),
                     issues=attr.validate(value.get(attr_name), direction),
                 )
         return issues

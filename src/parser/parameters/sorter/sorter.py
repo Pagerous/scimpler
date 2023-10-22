@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.parser.attributes.attributes import AttributeName, ComplexAttribute
 from src.parser.attributes import type as at
+from src.parser.attributes.attributes import AttributeName, ComplexAttribute
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.schemas import Schema
 
@@ -110,7 +110,10 @@ class Sorter:
                 if not issues.can_proceed():
                     return None, issues
 
-        return Sorter(attr_name=attr_name, schema=schema, asc=asc, strict=strict), issues
+        return (
+            Sorter(attr_name=attr_name, schema=schema, asc=asc, strict=strict),
+            issues,
+        )
 
     def __call__(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if not any(self._get_value(item) for item in data):
@@ -130,9 +133,8 @@ class Sorter:
         if self._attr_name.sub_attr:
             if not isinstance(value, Dict):
                 return None
-            value = (
-                value.get(self._attr_name.sub_attr)
-                or value.get(self._attr_name.sub_attr.lower())
+            value = value.get(self._attr_name.sub_attr) or value.get(
+                self._attr_name.sub_attr.lower()
             )
         return value
 

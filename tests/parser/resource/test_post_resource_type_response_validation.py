@@ -13,8 +13,8 @@ def request_body():
         "name": {
             "formatted": "Ms. Barbara J Jensen III",
             "familyName": "Jensen",
-            "givenName": "Barbara"
-        }
+            "givenName": "Barbara",
+        },
     }
 
 
@@ -28,9 +28,8 @@ def response_body():
             "resourceType": "User",
             "created": "2011-08-01T21:32:44.882Z",
             "lastModified": "2011-08-01T21:32:44.882Z",
-            "location":
-            "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
-            "version": "W/\"e180ee84f0671b1\"",
+            "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+            "version": 'W/"e180ee84f0671b1"',
         },
         "name": {
             "formatted": "Ms. Barbara J Jensen III",
@@ -43,9 +42,7 @@ def response_body():
 
 @pytest.fixture
 def response_headers():
-    return {
-        "Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646"
-    }
+    return {"Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646"}
 
 
 @pytest.fixture
@@ -55,9 +52,7 @@ def validator():
 
 def test_body_is_not_required(validator, request_body):
     issues = validator.validate_response(
-        request_body=request_body,
-        response_body=None,
-        status_code=201
+        request_body=request_body, response_body=None, status_code=201
     )
 
     assert not issues
@@ -78,19 +73,7 @@ def test_missing_schemas_key_returns_error(
     validator, request_body, response_body, response_headers
 ):
     response_body.pop("schemas")
-    expected_issues = {
-        "response": {
-            "body": {
-                "schemas": {
-                    "_errors": [
-                        {
-                            "code": 1
-                        }
-                    ]
-                }
-            }
-        }
-    }
+    expected_issues = {"response": {"body": {"schemas": {"_errors": [{"code": 1}]}}}}
 
     issues = validator.validate_response(
         request_body=request_body,
@@ -110,22 +93,8 @@ def test_many_validation_errors_can_be_returned(
     expected_issues = {
         "response": {
             "body": {
-                "meta": {
-                    "created": {
-                        "_errors": [
-                            {
-                                "code": 4
-                            }
-                        ]
-                    }
-                },
-                "name": {
-                    "_errors": [
-                        {
-                            "code": 2
-                        }
-                    ]
-                }
+                "meta": {"created": {"_errors": [{"code": 4}]}},
+                "name": {"_errors": [{"code": 2}]},
             }
         }
     }
@@ -141,19 +110,7 @@ def test_many_validation_errors_can_be_returned(
 
 
 def test_location_header_is_required(validator, request_body, response_body):
-    expected_issues = {
-        "response": {
-            "headers": {
-                "Location": {
-                    "_errors": [
-                        {
-                            "code": 10
-                        }
-                    ]
-                }
-            }
-        }
-    }
+    expected_issues = {"response": {"headers": {"Location": {"_errors": [{"code": 10}]}}}}
 
     issues = validator.validate_response(
         request_body=request_body,
@@ -171,26 +128,8 @@ def test_location_header_must_match_meta_location(
     response_body["meta"]["location"] = "https://example.com/v2/Users/different-id"
     expected_issues = {
         "response": {
-            "body": {
-                "meta": {
-                    "location": {
-                        "_errors": [
-                            {
-                                "code": 11
-                            }
-                        ]
-                    }
-                }
-            },
-            "headers": {
-                "Location": {
-                    "_errors": [
-                        {
-                            "code": 11
-                        }
-                    ]
-                }
-            }
+            "body": {"meta": {"location": {"_errors": [{"code": 11}]}}},
+            "headers": {"Location": {"_errors": [{"code": 11}]}},
         }
     }
 
@@ -205,17 +144,7 @@ def test_location_header_must_match_meta_location(
 
 
 def test_status_code_must_be_201(validator, request_body, response_body, response_headers):
-    expected_issues = {
-        "response": {
-            "status": {
-                "_errors": [
-                    {
-                        "code": 16
-                    }
-                ]
-            }
-        }
-    }
+    expected_issues = {"response": {"status": {"_errors": [{"code": 16}]}}}
 
     issues = validator.validate_response(
         request_body=request_body,
@@ -230,19 +159,7 @@ def test_status_code_must_be_201(validator, request_body, response_body, respons
 def test_resource_type_must_match(validator, request_body, response_body, response_headers):
     response_body["meta"]["resourceType"] = "BlaBla"
     expected_issues = {
-        "response": {
-            "body": {
-                "meta": {
-                    "resourceType": {
-                        "_errors": [
-                            {
-                                "code": 17
-                            }
-                        ]
-                    }
-                }
-            }
-        }
+        "response": {"body": {"meta": {"resourceType": {"_errors": [{"code": 17}]}}}}
     }
 
     issues = validator.validate_response(

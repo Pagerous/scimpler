@@ -2,6 +2,8 @@ from datetime import datetime
 
 import pytest
 
+from src.parser.attributes import type as at
+from src.parser.attributes.attributes import Attribute, ComplexAttribute
 from src.parser.parameters.filter.operator import (
     And,
     ComplexAttributeOperator,
@@ -12,14 +14,13 @@ from src.parser.parameters.filter.operator import (
     GreaterThanOrEqual,
     LesserThan,
     LesserThanOrEqual,
-    MatchStatus, Not,
+    MatchStatus,
+    Not,
     NotEqual,
     Or,
     Present,
     StartsWith,
 )
-from src.parser.attributes.attributes import Attribute, ComplexAttribute
-from src.parser.attributes import type as at
 
 
 @pytest.mark.parametrize(
@@ -35,13 +36,13 @@ from src.parser.attributes import type as at
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            True
+            True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            False
+            False,
         ),
         (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
         (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), False),
@@ -93,7 +94,7 @@ from src.parser.attributes import type as at
             Attribute(name="my_attr", type_=at.SCIMReference),
             False,
         ),
-    )
+    ),
 )
 def test_equal_operator(value, operator_value, attribute, expected):
     operator = Equal(attribute.name, operator_value)
@@ -116,13 +117,13 @@ def test_equal_operator(value, operator_value, attribute, expected):
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            False
+            False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            True
+            True,
         ),
         (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
         (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), True),
@@ -174,7 +175,7 @@ def test_equal_operator(value, operator_value, attribute, expected):
             Attribute(name="my_attr", type_=at.SCIMReference),
             True,
         ),
-    )
+    ),
 )
 def test_not_equal_operator(value, operator_value, attribute, expected):
     operator = NotEqual(attribute.name, operator_value)
@@ -196,16 +197,16 @@ def test_not_equal_operator(value, operator_value, attribute, expected):
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True
+            True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            False
+            False,
         ),
         (3.14, 3.14, True),
         (3.14, 3.141, False),
-    )
+    ),
 )
 def test_equal_operator_without_attribute(value, operator_value, expected):
     operator = Equal("my_attr", operator_value)
@@ -228,16 +229,16 @@ def test_equal_operator_without_attribute(value, operator_value, expected):
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            False
+            False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            True
+            True,
         ),
         (3.14, 3.14, False),
         (3.14, 3.141, True),
-    )
+    ),
 )
 def test_equal_not_operator_without_attribute(value, operator_value, expected):
     operator = NotEqual("my_attr", operator_value)
@@ -264,11 +265,11 @@ def test_equal_not_operator_without_attribute(value, operator_value, expected):
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            True
+            True,
         ),
         (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
         (3.141, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
-    )
+    ),
 )
 def test_greater_than_operator(value, operator_value, attribute, expected):
     operator = GreaterThan(attribute.name, operator_value)
@@ -298,11 +299,11 @@ def test_greater_than_operator(value, operator_value, attribute, expected):
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True
+            True,
         ),
         (3.14, 3.14, False),
         (3.141, 3.14, True),
-    )
+    ),
 )
 def test_greater_than_operator_without_attribute(value, operator_value, expected):
     operator = GreaterThan("my_attr", operator_value)
@@ -337,12 +338,12 @@ def test_greater_than_operator_without_attribute(value, operator_value, expected
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            True
+            True,
         ),
         (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), False),
         (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
         (3.141, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
-    )
+    ),
 )
 def test_greater_than_or_equal_operator(value, operator_value, attribute, expected):
     operator = GreaterThanOrEqual(attribute.name, operator_value)
@@ -378,12 +379,12 @@ def test_greater_than_or_equal_operator(value, operator_value, attribute, expect
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True
+            True,
         ),
         (3.14, 3.141, False),
         (3.14, 3.14, True),
         (3.141, 3.14, True),
-    )
+    ),
 )
 def test_greater_than_or_equal_operator_without_attribute(value, operator_value, expected):
     operator = GreaterThanOrEqual("my_attr", operator_value)
@@ -410,11 +411,11 @@ def test_greater_than_or_equal_operator_without_attribute(value, operator_value,
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            True
+            True,
         ),
         (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
         (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), True),
-    )
+    ),
 )
 def test_lesser_than_operator(value, operator_value, attribute, expected):
     operator = LesserThan(attribute.name, operator_value)
@@ -444,11 +445,11 @@ def test_lesser_than_operator(value, operator_value, attribute, expected):
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            True
+            True,
         ),
         (3.14, 3.14, False),
         (3.14, 3.141, True),
-    )
+    ),
 )
 def test_lesser_than_operator_without_attribute(value, operator_value, expected):
     operator = LesserThan("my_attr", operator_value)
@@ -483,12 +484,12 @@ def test_lesser_than_operator_without_attribute(value, operator_value, expected)
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             Attribute(name="my_attr", type_=at.DateTime),
-            False
+            False,
         ),
         (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), True),
         (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
         (3.141, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
-    )
+    ),
 )
 def test_lesser_than_or_equal_operator(value, operator_value, attribute, expected):
     operator = LesserThanOrEqual(attribute.name, operator_value)
@@ -524,16 +525,14 @@ def test_lesser_than_or_equal_operator(value, operator_value, attribute, expecte
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            False
+            False,
         ),
         (3.14, 3.141, True),
         (3.14, 3.14, True),
         (3.141, 3.1, False),
-    )
+    ),
 )
-def test_lesser_than_or_equal_operator_without_attribute(
-    value, operator_value, expected
-):
+def test_lesser_than_or_equal_operator_without_attribute(value, operator_value, expected):
     operator = LesserThanOrEqual("my_attr", operator_value)
 
     actual = operator.match(value, None)
@@ -580,7 +579,7 @@ def test_binary_operator_does_not_match_if_not_supported_scim_type():
         (LesserThanOrEqual, True),
         (NotEqual, False),
         (StartsWith, True),
-    )
+    ),
 )
 def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expected):
     attribute = Attribute(name="my_attr", type_=at.String, case_exact=False)
@@ -597,8 +596,8 @@ def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expect
         ("abc", "ab", True),
         ("abc", "bc", True),
         ("abc", "cd", False),
-        ("ab", "abc", False)
-    )
+        ("ab", "abc", False),
+    ),
 )
 def test_contains_operator(value, operator_value, expected):
     attribute = Attribute(name="my_attr", type_=at.String, case_exact=True)
@@ -620,7 +619,7 @@ def test_contains_operator(value, operator_value, expected):
         ("aBC", "bc", True),
         ("abc", "aB", True),
         ("abc", "Bc", True),
-    )
+    ),
 )
 def test_contains_operator_without_attribute(value, operator_value, expected):
     operator = Contains("my_attr", operator_value)
@@ -638,7 +637,7 @@ def test_contains_operator_without_attribute(value, operator_value, expected):
         ("abc", "cd", False),
         ("ab", "abc", False),
         ("ab", "", True),
-    )
+    ),
 )
 def test_starts_with_operator(value, operator_value, expected):
     attribute = Attribute(name="my_attr", type_=at.String, case_exact=True)
@@ -659,7 +658,7 @@ def test_starts_with_operator(value, operator_value, expected):
         ("ab", "", True),
         ("abc", "Ab", True),
         ("aBC", "ab", True),
-    )
+    ),
 )
 def test_starts_with_operator_without_attribute(value, operator_value, expected):
     operator = StartsWith("my_attr", operator_value)
@@ -677,7 +676,7 @@ def test_starts_with_operator_without_attribute(value, operator_value, expected)
         ("abc", "cd", False),
         ("ab", "abc", False),
         ("ab", "", True),
-    )
+    ),
 )
 def test_ends_with_operator(value, operator_value, expected):
     attribute = Attribute(name="my_attr", type_=at.String, case_exact=True)
@@ -698,7 +697,7 @@ def test_ends_with_operator(value, operator_value, expected):
         ("ab", "", True),
         ("abc", "bC", True),
         ("aBC", "bc", True),
-    )
+    ),
 )
 def test_ends_with_operator_without_attribute(value, operator_value, expected):
     operator = EndsWith("my_attr", operator_value)
@@ -742,16 +741,20 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
         (None, Attribute(name="my_attr", type_=at.Boolean), False),
         (False, Attribute(name="my_attr", type_=at.Boolean), True),
         ([], Attribute(name="my_attr", type_=at.String, multi_valued=True), False),
-        (["a", "b", "c"], Attribute(name="my_attr", type_=at.String, multi_valued=True), True),
+        (
+            ["a", "b", "c"],
+            Attribute(name="my_attr", type_=at.String, multi_valued=True),
+            True,
+        ),
         (
             {
                 "value": "",
             },
             ComplexAttribute(
                 name="my_attr",
-                sub_attributes=[Attribute(name="value", type_=at.String)]
+                sub_attributes=[Attribute(name="value", type_=at.String)],
             ),
-            False
+            False,
         ),
         (
             {
@@ -759,9 +762,9 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
             },
             ComplexAttribute(
                 name="my_attr",
-                sub_attributes=[Attribute(name="value", type_=at.String)]
+                sub_attributes=[Attribute(name="value", type_=at.String)],
             ),
-            False  # only multivalued complex attributes can be matched
+            False,  # only multivalued complex attributes can be matched
         ),
         (
             [
@@ -777,7 +780,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
                 sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
                 multi_valued=True,
             ),
-            False
+            False,
         ),
         (
             [
@@ -793,9 +796,9 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
                 sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
                 multi_valued=True,
             ),
-            True
+            True,
         ),
-    )
+    ),
 )
 def test_present_operator(value, attribute, expected):
     operator = Present("my_attr")
@@ -818,7 +821,7 @@ def test_present_operator(value, attribute, expected):
         ({"value": "abc"}, False),  # only multivalued complex attributes can be matched
         ([{"value": ""}, {"value": ""}], False),
         ([{"value": ""}, {"value": "abc"}], True),
-    )
+    ),
 )
 def test_present_operator_without_attribute(value, expected):
     operator = Present("my_attr")
@@ -829,7 +832,9 @@ def test_present_operator_without_attribute(value, expected):
 
 
 @pytest.mark.parametrize("use_attribute", (True, False))
-def test_complex_attribute_matches_binary_operator_if_one_of_values_matches(use_attribute):
+def test_complex_attribute_matches_binary_operator_if_one_of_values_matches(
+    use_attribute,
+):
     attribute = (
         ComplexAttribute(
             name="my_attr",
@@ -851,7 +856,7 @@ def test_complex_attribute_matches_binary_operator_if_one_of_values_matches(use_
 
 @pytest.mark.parametrize("use_attribute", (True, False))
 def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches(
-    use_attribute
+    use_attribute,
 ):
     attribute = (
         ComplexAttribute(
@@ -877,7 +882,7 @@ def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_m
     (
         (1, 0, True),
         (1, 2, False),
-    )
+    ),
 )
 def test_and_operator_matches(lt_attr_value, le_attr_value, expected):
     operator = And(
@@ -894,7 +899,7 @@ def test_and_operator_matches(lt_attr_value, le_attr_value, expected):
             LesserThanOrEqual("le_attr", 1),
         ),
         Contains("co_attr", "b"),
-        Present("pr_attr")
+        Present("pr_attr"),
     )
 
     actual = operator.match(
@@ -932,7 +937,7 @@ def test_and_operator_matches(lt_attr_value, le_attr_value, expected):
     (
         (1, 0, True),
         (1, 2, False),
-    )
+    ),
 )
 def test_or_operator_matches(lt_attr_value, le_attr_value, expected):
     operator = Or(
@@ -949,7 +954,7 @@ def test_or_operator_matches(lt_attr_value, le_attr_value, expected):
             LesserThanOrEqual("le_attr", 1),
         ),
         Contains("co_attr", "b"),
-        Present("pr_attr")
+        Present("pr_attr"),
     )
 
     actual = operator.match(
@@ -976,7 +981,7 @@ def test_or_operator_matches(lt_attr_value, le_attr_value, expected):
             "le_attr": Attribute("le_attr", type_=at.Integer),
             "co_attr": Attribute("co_attr", type_=at.String),
             "pr_attr": Attribute("pr_attr", type_=at.String),
-        }
+        },
     )
 
     assert actual == expected
@@ -991,7 +996,7 @@ def test_complex_attribute_operator_matches_all_complex_sub_attrs(use_attr):
                 Attribute(name="sub_attr_1", type_=at.String),
                 Attribute(name="sub_attr_2", type_=at.Integer),
                 Attribute(name="sub_attr_3", type_=at.Boolean),
-            ]
+            ],
         )
         if use_attr
         else None
@@ -1002,7 +1007,7 @@ def test_complex_attribute_operator_matches_all_complex_sub_attrs(use_attr):
             Equal("sub_attr_1", "admin"),
             GreaterThan("sub_attr_2", 18),
             NotEqual("sub_attr_3", True),
-        )
+        ),
     )
 
     match = operator.match(
@@ -1022,7 +1027,7 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_att
                 Attribute(name="sub_attr_1", type_=at.String),
                 Attribute(name="sub_attr_2", type_=at.Integer),
                 Attribute(name="sub_attr_3", type_=at.Boolean),
-            ]
+            ],
         )
         if use_attr
         else None
@@ -1034,7 +1039,7 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_att
             Equal("sub_attr_1", "admin"),
             GreaterThan("sub_attr_2", 18),
             NotEqual("sub_attr_3", True),
-        )
+        ),
     )
 
     match = operator.match(
@@ -1046,7 +1051,9 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_att
 
 
 @pytest.mark.parametrize("use_attr", (True, False))
-def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(use_attr):
+def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
+    use_attr,
+):
     attribute = (
         ComplexAttribute(
             name="complex_attr",
@@ -1066,7 +1073,7 @@ def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
             Equal("sub_attr_1", "admin"),
             GreaterThan("sub_attr_2", 18),
             NotEqual("sub_attr_3", True),
-        )
+        ),
     )
 
     match = operator.match(
@@ -1103,7 +1110,7 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(us
             Equal("sub_attr_1", "admin"),
             GreaterThan("sub_attr_2", 18),
             NotEqual("sub_attr_3", True),
-        )
+        ),
     )
 
     match = operator.match(
@@ -1149,8 +1156,8 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(us
             ],
             True,
             False,
-        )
-    )
+        ),
+    ),
 )
 def test_attribute_operator_matches_single_complex_sub_attr(
     use_attr, value, is_multivalued, expected
@@ -1200,9 +1207,7 @@ def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict(use_at
         if use_attr
         else None
     )
-    operator = ComplexAttributeOperator(
-        "my_attr", sub_operator=Equal("sub_attr", 1)
-    )
+    operator = ComplexAttributeOperator("my_attr", sub_operator=Equal("sub_attr", 1))
     value = {"my_attr": {}}
 
     match = operator.match(value=value, attr=attribute, strict=False)
@@ -1211,7 +1216,9 @@ def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict(use_at
 
 
 @pytest.mark.parametrize("use_attr", (True, False))
-def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict(use_attr):
+def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict(
+    use_attr,
+):
     attribute = (
         ComplexAttribute(
             sub_attributes=[Attribute("sub_attr", type_=at.Integer)],
@@ -1220,9 +1227,7 @@ def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict(u
         if use_attr
         else None
     )
-    operator = ComplexAttributeOperator(
-        "my_attr", sub_operator=Equal("sub_attr", 1)
-    )
+    operator = ComplexAttributeOperator("my_attr", sub_operator=Equal("sub_attr", 1))
     value = {"my_attr": {}}
 
     match = operator.match(value=value, attr=attribute, strict=True)
@@ -1240,9 +1245,7 @@ def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict(use_attrs
         if use_attrs
         else None
     )
-    operator = Or(
-        Equal("attr_1", 1), Equal("attr_2", 2)
-    )
+    operator = Or(Equal("attr_1", 1), Equal("attr_2", 2))
     value = {"attr_1": 2}
 
     match = operator.match(value=value, attrs=attributes, strict=True)
@@ -1260,9 +1263,7 @@ def test_or_op_matches_if_any_sub_attr_matched_without_strict(use_attrs):
         if use_attrs
         else None
     )
-    operator = Or(
-        Equal("attr_1", 1), Equal("attr_2", 2)
-    )
+    operator = Or(Equal("attr_1", 1), Equal("attr_2", 2))
     value = {"attr_1": 1}
 
     match = operator.match(value=value, attrs=attributes, strict=False)
@@ -1280,9 +1281,7 @@ def test_or_op_matches_if_any_sub_attr_matched_with_strict(use_attrs):
         if use_attrs
         else None
     )
-    operator = Or(
-        Equal("attr_1", 1), Equal("attr_2", 2)
-    )
+    operator = Or(Equal("attr_1", 1), Equal("attr_2", 2))
     value = {"attr_1": 1}
 
     match = operator.match(value=value, attrs=attributes, strict=True)
@@ -1291,7 +1290,9 @@ def test_or_op_matches_if_any_sub_attr_matched_with_strict(use_attrs):
 
 
 @pytest.mark.parametrize("use_attrs", (True, False))
-def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict(use_attrs):
+def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict(
+    use_attrs,
+):
     attributes = (
         {
             "attr_1": Attribute("attr_1", type_=at.Integer),
@@ -1300,9 +1301,7 @@ def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict
         if use_attrs
         else None
     )
-    operator = And(
-        Equal("attr_1", 1), Equal("attr_2", 2)
-    )
+    operator = And(Equal("attr_1", 1), Equal("attr_2", 2))
     value = {"attr_1": 1}  # value for this attr is correct, but missing 'attr_2'
 
     match = operator.match(value=value, attrs=attributes, strict=True)
@@ -1320,9 +1319,7 @@ def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict(use_at
         if use_attrs
         else None
     )
-    operator = And(
-        Equal("attr_1", 1), Equal("attr_2", 2)
-    )
+    operator = And(Equal("attr_1", 1), Equal("attr_2", 2))
     value = {"attr_1": 1, "attr_2": 3}
 
     match = operator.match(value=value, attrs=attributes, strict=True)
@@ -1340,9 +1337,7 @@ def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict(use_attrs)
         if use_attrs
         else None
     )
-    operator = And(
-        Equal("attr_1", 1), Equal("attr_2", 2)
-    )
+    operator = And(Equal("attr_1", 1), Equal("attr_2", 2))
     value = {"attr_1": 1}
 
     match = operator.match(value=value, attrs=attributes, strict=False)
@@ -1360,9 +1355,7 @@ def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict(use_a
         if use_attrs
         else None
     )
-    operator = Not(
-        Or(Equal("attr_1", 1), Equal("attr_2", 2))
-    )
+    operator = Not(Or(Equal("attr_1", 1), Equal("attr_2", 2)))
     value = {"attr_1": 2}
 
     match = operator.match(value=value, attrs=attributes, strict=False)
@@ -1371,7 +1364,9 @@ def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict(use_a
 
 
 @pytest.mark.parametrize("use_attrs", (True, False))
-def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(use_attrs):
+def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(
+    use_attrs,
+):
     attributes = (
         {
             "attr_1": Attribute("attr_1", type_=at.Integer),
@@ -1380,9 +1375,7 @@ def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(u
         if use_attrs
         else None
     )
-    operator = Not(
-        Or(Equal("attr_1", 1), Equal("attr_2", 2))
-    )
+    operator = Not(Or(Equal("attr_1", 1), Equal("attr_2", 2)))
     value = {"attr_1": 2}
 
     match = operator.match(value=value, attrs=attributes, strict=True)
@@ -1392,11 +1385,7 @@ def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(u
 
 @pytest.mark.parametrize("use_attrs", (True, False))
 def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict(use_attrs):
-    attributes = (
-        {"attr": Attribute("attr", type_=at.Integer)}
-        if use_attrs
-        else None
-    )
+    attributes = {"attr": Attribute("attr", type_=at.Integer)} if use_attrs else None
     operator = Not(Equal("attr", 1))
     value = {}
 

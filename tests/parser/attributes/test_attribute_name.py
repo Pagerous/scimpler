@@ -4,9 +4,15 @@ from src.parser.attributes.attributes import AttributeName
 
 
 @pytest.mark.parametrize(
-    ("input_", "expected_schema", "expected_full_attr", "expected_attr", "expected_sub_attr"),
     (
-        ("userName", "", "userName",  "userName", ""),
+        "input_",
+        "expected_schema",
+        "expected_full_attr",
+        "expected_attr",
+        "expected_sub_attr",
+    ),
+    (
+        ("userName", "", "userName", "userName", ""),
         ("name.firstName", "", "name", "name", "firstName"),
         (
             "urn:ietf:params:scim:schemas:core:2.0:User:userName",
@@ -22,7 +28,7 @@ from src.parser.attributes.attributes import AttributeName
             "name",
             "firstName",
         ),
-    )
+    ),
 )
 def test_attribute_identifier_is_parsed(
     input_, expected_schema, expected_full_attr, expected_attr, expected_sub_attr
@@ -43,8 +49,8 @@ def test_attribute_identifier_is_parsed(
         "attr with spaces",
         'emails[type eq "work"]',
         "(attr_with_parenthesis)",
-        "urn:ietf:params:scim:schemas:core:2.0:User:name.firstName.blahblah"
-    )
+        "urn:ietf:params:scim:schemas:core:2.0:User:name.firstName.blahblah",
+    ),
 )
 def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
     attr_name = AttributeName.parse(input_)

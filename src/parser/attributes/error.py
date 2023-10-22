@@ -1,3 +1,6 @@
+from src.parser.attributes import type as at
+
+from ..error import ValidationError, ValidationIssues
 from .attributes import (
     Attribute,
     AttributeIssuer,
@@ -5,8 +8,6 @@ from .attributes import (
     AttributeReturn,
     AttributeUniqueness,
 )
-from src.parser.attributes import type as at
-from ..error import ValidationError, ValidationIssues
 
 
 def validate_error_status(value: str) -> ValidationIssues:
@@ -37,7 +38,7 @@ def validate_error_scim_type(value: str) -> ValidationIssues:
         "noTarget",
         "invalidValue",
         "invalidVers",
-        "sensitive"
+        "sensitive",
     ]
     issues = ValidationIssues()
     if value not in scim_types:

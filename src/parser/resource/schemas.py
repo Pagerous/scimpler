@@ -11,7 +11,8 @@ from src.parser.attributes.attributes import Attribute, AttributeName, ComplexAt
 class Schema(abc.ABC):
     @property
     @abc.abstractmethod
-    def attributes(self) -> Dict[str, Union[Attribute, ComplexAttribute]]: ...
+    def attributes(self) -> Dict[str, Union[Attribute, ComplexAttribute]]:
+        ...
 
     @property
     @abc.abstractmethod

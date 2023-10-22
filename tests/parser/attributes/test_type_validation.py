@@ -8,7 +8,11 @@ def test_validate_invalid_string():
         "_errors": [
             {
                 "code": 2,
-                "context": {"scim_type": "string", "expected_type": "str", "provided_type": "int"}
+                "context": {
+                    "scim_type": "string",
+                    "expected_type": "str",
+                    "provided_type": "int",
+                },
             }
         ]
     }
@@ -29,7 +33,11 @@ def test_validate_invalid_integer():
         "_errors": [
             {
                 "code": 2,
-                "context": {"scim_type": "integer", "expected_type": "int", "provided_type": "str"}
+                "context": {
+                    "scim_type": "integer",
+                    "expected_type": "int",
+                    "provided_type": "str",
+                },
             }
         ]
     }
@@ -57,8 +65,10 @@ def test_validate_integer_float_with_floating_numbers_is_invalid():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "integer", "expected_type": "int", "provided_type": "float"
-                }
+                    "scim_type": "integer",
+                    "expected_type": "int",
+                    "provided_type": "float",
+                },
             }
         ]
     }
@@ -74,8 +84,10 @@ def test_validate_invalid_decimal():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "decimal", "expected_type": "float", "provided_type": "str"
-                }
+                    "scim_type": "decimal",
+                    "expected_type": "float",
+                    "provided_type": "str",
+                },
             }
         ]
     }
@@ -103,8 +115,10 @@ def test_validate_invalid_boolean():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "boolean", "expected_type": "bool", "provided_type": "str"
-                }
+                    "scim_type": "boolean",
+                    "expected_type": "bool",
+                    "provided_type": "str",
+                },
             }
         ]
     }
@@ -126,8 +140,10 @@ def test_validate_invalid_uri_reference():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "reference", "expected_type": "str", "provided_type": "int"
-                }
+                    "scim_type": "reference",
+                    "expected_type": "str",
+                    "provided_type": "int",
+                },
             }
         ]
     }
@@ -149,8 +165,10 @@ def test_validate_invalid_scim_reference():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "reference", "expected_type": "str", "provided_type": "int"
-                }
+                    "scim_type": "reference",
+                    "expected_type": "str",
+                    "provided_type": "int",
+                },
             }
         ]
     }
@@ -172,8 +190,10 @@ def test_validate_invalid_external_reference_type():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "reference", "expected_type": "str", "provided_type": "int"
-                }
+                    "scim_type": "reference",
+                    "expected_type": "str",
+                    "provided_type": "int",
+                },
             }
         ]
     }
@@ -184,14 +204,7 @@ def test_validate_invalid_external_reference_type():
 
 
 def test_validate_external_reference_invalid_absolute_url():
-    expected_issues = {
-        "_errors": [
-            {
-                "code": 8,
-                "context": {"value": "/not/absolute/url"}
-            }
-        ]
-    }
+    expected_issues = {"_errors": [{"code": 8, "context": {"value": "/not/absolute/url"}}]}
 
     issues = at.ExternalReference.validate("/not/absolute/url")
 
@@ -210,8 +223,10 @@ def test_validate_invalid_binary_type():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "binary", "expected_type": "str", "provided_type": "int"
-                }
+                    "scim_type": "binary",
+                    "expected_type": "str",
+                    "provided_type": "int",
+                },
             }
         ]
     }
@@ -222,14 +237,7 @@ def test_validate_invalid_binary_type():
 
 
 def test_validate_binary_invalid_encoding():
-    expected_issues = {
-        "_errors": [
-            {
-                "code": 3,
-                "context": {"scim_type": "binary"}
-            }
-        ]
-    }
+    expected_issues = {"_errors": [{"code": 3, "context": {"scim_type": "binary"}}]}
 
     issues = at.Binary.validate("blablabl")
 
@@ -248,8 +256,10 @@ def test_validate_invalid_datetime_type():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "dateTime", "expected_type": "str", "provided_type": "int"
-                }
+                    "scim_type": "dateTime",
+                    "expected_type": "str",
+                    "provided_type": "int",
+                },
             }
         ]
     }
@@ -260,14 +270,7 @@ def test_validate_invalid_datetime_type():
 
 
 def test_validate_invalid_datetime_format():
-    expected_issues = {
-        "_errors": [
-            {
-                "code": 4,
-                "context": {"scim_type": "dateTime"}
-            }
-        ]
-    }
+    expected_issues = {"_errors": [{"code": 4, "context": {"scim_type": "dateTime"}}]}
 
     issues = at.DateTime.validate("2022/05/05 12:34:56")
 
@@ -286,8 +289,10 @@ def test_validate_invalid_complex_type():
             {
                 "code": 2,
                 "context": {
-                    "scim_type": "complex", "expected_type": "dict", "provided_type": "int"
-                }
+                    "scim_type": "complex",
+                    "expected_type": "dict",
+                    "provided_type": "int",
+                },
             }
         ]
     }
@@ -307,7 +312,7 @@ def test_validate_invalid_complex_sub_attribute_type():
                         "allowed_types": ["bool", "float", "int", "str"],
                         "provided_type": "dict",
                         "scim_type": "complex",
-                    }
+                    },
                 }
             ]
         },
@@ -319,10 +324,10 @@ def test_validate_invalid_complex_sub_attribute_type():
                         "allowed_types": ["bool", "float", "int", "str"],
                         "provided_type": "list",
                         "scim_type": "complex",
-                    }
+                    },
                 }
             ]
-        }
+        },
     }
 
     issues = at.Complex.validate({"sub_attr_1": {}, "sub_attr_2": []})

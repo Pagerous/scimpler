@@ -1,12 +1,13 @@
 from typing import Any, Dict, Optional
 
 from src.parser.error import ValidationError, ValidationIssues
+from src.parser.resource.schemas import ErrorSchema
 from src.parser.resource.validators.validator import (
     EndpointValidator,
-    EndpointValidatorGET, preprocess_response_validation,
+    EndpointValidatorGET,
     preprocess_request_validation,
+    preprocess_response_validation,
 )
-from src.parser.resource.schemas import ErrorSchema
 
 
 class _Error(EndpointValidatorGET):
@@ -47,16 +48,12 @@ class _Error(EndpointValidatorGET):
             status_in_body = response_body.get("status")
             if str(status_code) != status_in_body:
                 issues.add(
-                    issue=ValidationError.error_status_mismatch(
-                        str(status_code), status_in_body
-                    ),
+                    issue=ValidationError.error_status_mismatch(str(status_code), status_in_body),
                     location=("response", "body", "status"),
                     proceed=True,
                 )
                 issues.add(
-                    issue=ValidationError.error_status_mismatch(
-                        str(status_code), status_in_body
-                    ),
+                    issue=ValidationError.error_status_mismatch(str(status_code), status_in_body),
                     location=("response", "status"),
                     proceed=True,
                 )
