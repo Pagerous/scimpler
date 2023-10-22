@@ -1,17 +1,17 @@
 import abc
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 
 from src.parser.attributes import common as common_attrs
 from src.parser.attributes import error as error_attrs
 from src.parser.attributes import list_result as query_result_attrs
 from src.parser.attributes import user as user_attrs
-from src.parser.attributes.attributes import Attribute
+from src.parser.attributes.attributes import Attribute, AttributeName, ComplexAttribute
 
 
 class Schema(abc.ABC):
     @property
     @abc.abstractmethod
-    def attributes(self) -> Dict[str, Attribute]: ...
+    def attributes(self) -> Dict[str, Union[Attribute, ComplexAttribute]]: ...
 
     @property
     @abc.abstractmethod
@@ -21,6 +21,22 @@ class Schema(abc.ABC):
     @abc.abstractmethod
     def __repr__(self):
         ...
+
+    def get_attr(
+        self,
+        attr_name: AttributeName,
+    ) -> Optional[Union[Attribute, ComplexAttribute]]:
+        if attr_name.schema and attr_name.schema not in self.schemas:
+            return None
+        if attr_name.attr.lower() not in self.attributes:
+            return None
+
+        attr = self.attributes[attr_name.attr.lower()]
+        if isinstance(attr, ComplexAttribute) and attr_name.sub_attr:
+            if attr_name.sub_attr.lower() not in attr.sub_attributes:
+                return None
+            return attr.sub_attributes[attr_name.sub_attr.lower()]
+        return attr
 
 
 class ErrorSchema(Schema):
@@ -36,7 +52,7 @@ class ErrorSchema(Schema):
         return "Error"
 
     @property
-    def attributes(self) -> Dict[str, Attribute]:
+    def attributes(self) -> Dict[str, Union[Attribute, ComplexAttribute]]:
         return self._attributes
 
     @property
@@ -57,7 +73,7 @@ class ListResponseSchema(Schema):
         return "ListResponse"
 
     @property
-    def attributes(self) -> Dict[str, Attribute]:
+    def attributes(self) -> Dict[str, Union[Attribute, ComplexAttribute]]:
         return self._attributes
 
     @property
@@ -76,7 +92,7 @@ class ResourceSchema(Schema, abc.ABC):
         }
 
     @property
-    def attributes(self) -> Dict[str, Attribute]:
+    def attributes(self) -> Dict[str, Union[Attribute, ComplexAttribute]]:
         return self._attributes
 
 
