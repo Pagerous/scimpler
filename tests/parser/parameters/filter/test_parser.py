@@ -1108,43 +1108,163 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_codes"),
+    ("filter_exp", "expected_issues"),
     (
-        ('userName eq "user123" and (id eq 1 or display co "user"', [100]),
-        ('userName eq "user123" and (id eq 1 or display co "use)r"', [100]),
-        ('userName eq "user123" and id eq 1 or display co "user")', [101]),
-        ('userName eq "user(123" and id eq 1 or display co "user")', [101]),
-        ('userName eq "user123") and (id eq 1 or display co "user"', [101, 100]),
-        ('userName eq "user(123") and (id eq 1 or display co "use)r"', [101, 100]),
+        (
+            'userName eq "user123" and (id eq 1 or display co "user"',
+            {
+                "_errors": [
+                    {
+                        "code": 100
+                    }
+                ]
+            }
+        ),
+        (
+            'userName eq "user123" and (id eq 1 or display co "use)r"',
+            {
+                "_errors": [
+                    {
+                        "code": 100
+                    }
+                ]
+            }
+        ),
+        (
+            'userName eq "user123" and id eq 1 or display co "user")',
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    }
+                ]
+            }
+        ),
+        (
+            'userName eq "user(123" and id eq 1 or display co "user")',
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    }
+                ]
+            }
+        ),
+        (
+            'userName eq "user123") and (id eq 1 or display co "user"',
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    },
+                    {
+                        "code": 100
+                    }
+                ]
+            }
+        ),
+        (
+            'userName eq "user(123") and (id eq 1 or display co "use)r"',
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    },
+                    {
+                        "code": 100
+                    }
+                ]
+            }
+        ),
         (
             'userName eq "user123") and (id eq 1 or display co "user") '
             'or (id eq 2 or display co "user"',
-            [101, 100]
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    },
+                    {
+                        "code": 100
+                    }
+                ]
+            }
         ),
         (
             'userName eq "user123") and ((id eq 1 or display co "user") '
             'or (id eq 2 or display co "user")',
-            [101, 100]
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    },
+                    {
+                        "code": 100
+                    }
+                ]
+            }
         ),
-        ('userName eq "user123" and (not (id eq 1 or display co "user")', [100]),
-        ('userName eq "user123" and not (id eq 1 or display co "user"))', [101]),
-        ('emails[type eq "work" and (display co "@example.com" or value co "@example"]', [100]),
+        (
+            'userName eq "user123" and (not (id eq 1 or display co "user")',
+            {
+                "_errors": [
+                    {
+                        "code": 100
+                    }
+                ]
+            }
+        ),
+        (
+            'userName eq "user123" and not (id eq 1 or display co "user"))',
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    }
+                ]
+            }
+        ),
+        (
+            'emails[type eq "work" and (display co "@example.com" or value co "@example"]',
+            {
+                "_errors": [
+                    {
+                        "code": 100
+                    }
+                ]
+            }
+        ),
         (
             'emails[type eq "work") and (display co "@example.com" or value co "@example"]',
-            [101, 100]
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    },
+                    {
+                        "code": 100
+                    }
+                ]
+            }
         ),
-        ('emails[type eq "work") and display co "@example.com" or value co "@example"]', [101]),
+        (
+            'emails[type eq "work") and display co "@example.com" or value co "@example"]',
+            {
+                "_errors": [
+                    {
+                        "code": 101
+                    }
+                ]
+            }
+        ),
 
     )
 )
-def test_number_of_group_brackets_must_match(filter_exp, expected_error_codes):
+def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_codes)
-    for error, expected_error_code in zip(errors, expected_error_codes):
-        assert error.code == expected_error_code
+    assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize(
@@ -1214,23 +1334,68 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_codes"),
+    ("filter_exp", "expected_issues"),
     (
-        ('emails[type eq "work" and display co "@example.com" or value co "@example"', [102]),
-        ('emails type eq "work" and display co "@example.com" or value co "@example"]', [103]),
-        ('emails[type eq "work" and ims[type eq "work"', [109]),
-        ('emails[type eq "work"] and ims[type eq "work"', [102]),
-        ('emails type eq "work"] and ims type eq "work"]', [103, 103]),
+        (
+            'emails[type eq "work" and display co "@example.com" or value co "@example"',
+            {
+                "_errors": [
+                    {
+                        "code": 102
+                    }
+                ]
+            }
+        ),
+        (
+            'emails type eq "work" and display co "@example.com" or value co "@example"]',
+            {
+                "_errors": [
+                    {
+                        "code": 103
+                    }
+                ]
+            }
+        ),
+        (
+            'emails[type eq "work" and ims[type eq "work"',
+            {
+                "_errors": [
+                    {
+                        "code": 109
+                    }
+                ]
+            }
+        ),
+        (
+            'emails[type eq "work"] and ims[type eq "work"',
+            {
+                "_errors": [
+                    {
+                        "code": 102
+                    }
+                ]
+            }
+        ),
+        (
+            'emails type eq "work"] and ims type eq "work"]',
+            {
+                "_errors": [
+                    {
+                        "code": 103
+                    },
+                    {
+                        "code": 103
+                    }
+                ]
+            }
+        ),
     )
 )
-def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_error_codes):
+def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_issues):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_codes)
-    for error, expected_error_code in zip(errors, expected_error_codes):
-        assert error.code == expected_error_code
+    assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize(
@@ -1302,590 +1467,831 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_codes", "expected_error_contexts"),
+    ("filter_exp", "expected_issues"),
     (
         (
             'userName eq "user123" and',
-            [104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'userName eq "user123" and',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'userName eq "user123" and',
+                        }
+                    }
+                ]
+            }
         ),
         (
             ' and userName eq "user123"',
-            [104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'and userName eq "user123"',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and userName eq "user123"',
+                        }
+                    }
+                ]
+            }
         ),
         (
             'id eq 1 and and userName eq "user123"',
-            [104, 104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'id eq 1 and',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'and userName eq "user123"',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'id eq 1 and',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and userName eq "user123"',
+                        }
+                    }
+                ]
+            }
         ),
         (
             'id eq 1 and userName eq "user123" and',
-            [104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'userName eq "user123" and',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'userName eq "user123" and',
+                        }
+                    }
+                ]
+            }
         ),
         (
             'emails[type eq "work" and ]',
-            [104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'type eq "work" and',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'type eq "work" and',
+                        }
+                    }
+                ]
+            }
         ),
         (
             'emails[ and type eq "work"]',
-            [104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'and type eq "work"',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and type eq "work"',
+                        }
+                    }
+                ]
+            }
         ),
         (
             'emails[ and type eq "work" and]',
-            [104, 104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'and type eq "work"',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'type eq "work" and',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and type eq "work"',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'type eq "work" and',
+                        }
+                    }
+                ]
+            }
         ),
         (
             'and emails[ and type eq "work" and]',
-            [104, 104, 104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'and emails[ and type eq "work" and]',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'and type eq "work"',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'type eq "work" and',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and emails[ and type eq "work" and]',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and type eq "work"',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'type eq "work" and',
+                        }
+                    }
+                ]
+            }
         ),
         (
             'userName eq "user123" or',
-            [104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'userName eq "user123" or',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'userName eq "user123" or',
+                        }
+                    },
+                ]
+            }
         ),
         (
             ' or userName eq "user123"',
-            [104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'or userName eq "user123"',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or userName eq "user123"',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'id eq 1 or or userName eq "user123"',
-            [104, 104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'id eq 1 or',
-                },
-                {
-                    "operator": "or",
-                    "expression": 'or userName eq "user123"',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'id eq 1 or',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or userName eq "user123"',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'id eq 1 or userName eq "user123" or',
-            [104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'userName eq "user123" or',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'userName eq "user123" or',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'emails[type eq "work" or ]',
-            [104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'type eq "work" or',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'type eq "work" or',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'emails[ or type eq "work"]',
-            [104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'or type eq "work"',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or type eq "work"',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'emails[ or type eq "work" or]',
-            [104, 104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'or type eq "work"',
-                },
-                {
-                    "operator": "or",
-                    "expression": 'type eq "work" or',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or type eq "work"',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'type eq "work" or',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'or emails[ or type eq "work" or]',
-            [104, 104, 104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'or emails[ or type eq "work" or]',
-                },
-                {
-                    "operator": "or",
-                    "expression": 'or type eq "work"',
-                },
-                {
-                    "operator": "or",
-                    "expression": 'type eq "work" or',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or emails[ or type eq "work" or]',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or type eq "work"',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'type eq "work" or',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'emails[ or type eq "work" and]',
-            [104, 104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'or type eq "work" and',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'type eq "work" and',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or type eq "work" and',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'type eq "work" and',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'or emails[ and type eq "work" or]',
-            [104, 104, 104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'or emails[ and type eq "work" or]',
-                },
-                {
-                    "operator": "or",
-                    "expression": 'and type eq "work" or',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'and type eq "work"',
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'or emails[ and type eq "work" or]',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'and type eq "work" or',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and type eq "work"',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'userName eq "user123" or (id eq 1 and)',
-            [104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'id eq 1 and',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'id eq 1 and',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'userName eq "user123" or (and id eq 1)',
-            [104],
-            [
-                {
-                    "operator": "and",
-                    "expression": 'and id eq 1',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and id eq 1',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'userName eq "user123" or (and id eq 1 or )',
-            [104, 104],
-            [
-                {
-                    "operator": "or",
-                    "expression": 'and id eq 1 or',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'and id eq 1',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'and id eq 1 or',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and id eq 1',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'userName eq "user123" or (and id eq 1 or ) and ',
-            [104, 104, 104],
-            [
-                {
-                    "operator": "and",
-                    "expression": '(and id eq 1 or ) and',
-                },
-                {
-                    "operator": "or",
-                    "expression": 'and id eq 1 or',
-                },
-                {
-                    "operator": "and",
-                    "expression": 'and id eq 1',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": '(and id eq 1 or ) and',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "or",
+                            "expression": 'and id eq 1 or',
+                        }
+                    },
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "and",
+                            "expression": 'and id eq 1',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'not',
-            [104],
-            [
-                {
-                    "operator": "not",
-                    "expression": "not",
-                }
-            ],
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "not",
+                            "expression": 'not',
+                        }
+                    },
+                ]
+            }
         ),
         (
             'userName eq',
-            [104],
-            [
-                {
-                    "operator": "eq",
-                    "expression": "userName eq",
-                }
-            ],
+            {
+                "_errors": [
+                    {
+                        "code": 104,
+                        "context": {
+                            "operator": "eq",
+                            "expression": "userName eq",
+                        }
+                    },
+                ]
+            }
         ),
     )
 )
-def test_missing_operand_for_operator_causes_parsing_issues(
-    filter_exp, expected_error_codes, expected_error_contexts
-):
+def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected_issues):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_codes)
-    for error, code, context in zip(errors, expected_error_codes, expected_error_contexts):
-        assert error.code == code
-        assert error.context == context
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_contexts"),
+    ("filter_exp", "expected_issues"),
     (
         (
             "apple banana",
-            [
-                {
-                    "operator_type": "unary",
-                    "operator": "banana",
-                    "expression": "apple banana",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 105,
+                        "context": {
+                            "operator_type": "unary",
+                            "operator": "banana",
+                            "expression": "apple banana",
+                        }
+                    }
+                ]
+            }
         ),
         (
             'apple banana "pear"',
-            [
-                {
-                    "operator_type": "binary",
-                    "operator": "banana",
-                    "expression": 'apple banana "pear"',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 105,
+                        "context": {
+                            "operator_type": "binary",
+                            "operator": "banana",
+                            "expression": 'apple banana "pear"',
+                        }
+                    }
+                ]
+            }
         ),
         (
             '(a b "c") or (c d "e")',
-            [
-                {
-                    "operator_type": "binary",
-                    "operator": "b",
-                    "expression": 'a b "c"'
-                },
-                {
-                    "operator_type": "binary",
-                    "operator": "d",
-                    "expression": 'c d "e"'
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 105,
+                        "context": {
+                            "operator_type": "binary",
+                            "operator": "b",
+                            "expression": 'a b "c"'
+                        }
+                    },
+                    {
+                        "code": 105,
+                        "context": {
+                            "operator_type": "binary",
+                            "operator": "d",
+                            "expression": 'c d "e"'
+                        }
+                    }
+                ]
+            }
         ),
         (
             '(a b) and emails[c d "e" or g h]',
-            [
-                {
-                    "operator_type": "unary",
-                    "operator": "b",
-                    "expression": "a b"
-                },
-                {
-                    "operator_type": "binary",
-                    "operator": "d",
-                    "expression": 'c d "e"'
-                },
-                {
-                    "operator_type": "unary",
-                    "operator": "h",
-                    "expression": "g h"
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 105,
+                        "context": {
+                            "operator_type": "unary",
+                            "operator": "b",
+                            "expression": "a b"
+                        }
+                    },
+                    {
+                        "code": 105,
+                        "context": {
+                            "operator_type": "binary",
+                            "operator": "d",
+                            "expression": 'c d "e"'
+                        }
+                    },
+                    {
+                        "code": 105,
+                        "context": {
+                            "operator_type": "unary",
+                            "operator": "h",
+                            "expression": "g h"
+                        }
+                    }
+                ]
+            }
         )
     )
 )
 def test_unknown_operator_causes_parsing_issues(
-    filter_exp, expected_error_contexts
+    filter_exp, expected_issues
 ):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
-
-    assert len(errors) == len(expected_error_contexts)
-    for error, expected_context in zip(errors, expected_error_contexts):
-        assert error.code == 105
-        assert error.context == expected_context
 
     assert filter_ is None
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_putting_complex_attribute_operator_inside_other_complex_attribute_operator_fails():
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 109
+            }
+        ]
+    }
     filter_, issues = parse_filter('emails[type eq work and phones[type eq "home"]]')
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert errors[0].code == 109
+    assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_contexts"),
+    ("filter_exp", "expected_issues"),
     (
         (
             'emai..ls[type eq "work"]',
-            [
-                {
-                    "attribute": "emai..ls",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "emai..ls"
+                        }
+                    }
+                ]
+            }
         ),
         (
             'urn:ietf:params:scim:schemas:core:2.0:User:emai..ls[type eq "work"]',
-            [
-                {
-                    "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:emai..ls",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:emai..ls",
+                        }
+                    }
+                ]
+            }
         ),
         (
             'urn:ietf:params:scim:schemas:core:2.0:User:emails.bla.bla[type eq "work"]',
-            [
-                {
-                    "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:emails.bla.bla",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": (
+                                "urn:ietf:params:scim:schemas:core:2.0:User:emails.bla.bla"
+                            ),
+                        }
+                    }
+                ]
+            }
         ),
         (
             'user..name eq "John Smith"',
-            [
-                {
-                    "attribute": "user..name",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "user..name",
+                        }
+                    }
+                ]
+            }
         ),
         (
             'user..name pr',
-            [
-                {
-                    "attribute": "user..name",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "user..name",
+                        }
+                    }
+                ]
+            }
         ),
         (
             'user..name eq "John Smith" and very.first.name eq "John"',
-            [
-                {
-                    "attribute": "user..name",
-                },
-                {
-                    "attribute": "very.first.name",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "user..name",
+                        }
+                    },
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "very.first.name",
+                        }
+                    }
+                ]
+            }
         ),
         (
             'urn:ietf:params:scim:schemas:core:2.0:User:user..name eq "John Smith"',
-            [
-                {
-                    "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
+                        }
+                    }
+                ]
+            }
         ),
         (
             'urn:ietf:params:scim:schemas:core:2.0:User:user..name pr',
-            [
-                {
-                    "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
+                        }
+                    }
+                ]
+            }
         ),
         (
             (
                 'urn:ietf:params:scim:schemas:core:2.0:User:user..name eq "John Smith" '
                 'and urn:ietf:params:scim:schemas:core:2.0:User:very.first.name eq "John"'
             ),
-            [
-                {
-                    "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
-                },
-                {
-                    "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:very.first.name",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
+                        }
+                    },
+                    {
+                        "code": 111,
+                        "context": {
+                            "attribute": (
+                                "urn:ietf:params:scim:schemas:core:2.0:User:very.first.name"
+                            ),
+                        }
+                    }
+                ]
+            }
         ),
     )
 )
-def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_error_contexts):
+def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_contexts)
-    for error, expected_error_context in zip(errors, expected_error_contexts):
-        assert error.code == 111
-        assert error.context == expected_error_context
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_contexts"),
+    ("filter_exp", "expected_issues"),
     (
         (
             "emails[]",
-            [
-                {
-                    "attribute": "emails",
-                    "expression_position": 0,
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 110,
+                        "context": {
+                            "attribute": "emails",
+                            "expression_position": 0,
+                        }
+                    }
+                ]
+            }
         ),
         (
             'emails[type eq "work"] and ims[]',
-            [
-                {
-                    "attribute": "ims",
-                    "expression_position": 27,
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 110,
+                        "context": {
+                            "attribute": "ims",
+                            "expression_position": 27,
+                        }
+                    }
+                ]
+            }
         ),
         (
             'emails[] and ims[]',
-            [
-                {
-                    "attribute": "emails",
-                    "expression_position": 0,
-                },
-                {
-                    "attribute": "ims",
-                    "expression_position": 13,
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 110,
+                        "context": {
+                            "attribute": "emails",
+                            "expression_position": 0,
+                        }
+                    },
+                    {
+                        "code": 110,
+                        "context": {
+                            "attribute": "ims",
+                            "expression_position": 13,
+                        }
+                    }
+                ]
+            }
         ),
     )
 )
 def test_lack_of_expression_inside_complex_attribute_is_discovered(
-    filter_exp, expected_error_contexts
+    filter_exp, expected_issues
 ):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_contexts)
-    for error, expected_error_context in zip(errors, expected_error_contexts):
-        assert error.code == 110
-        assert error.context == expected_error_context
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_contexts"),
+    ("filter_exp", "expected_issues"),
     (
         (
             '[type eq "work"]',
-            [
-                {
-                    "expression": '[type eq "work"]',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 108,
+                        "context": {
+                            "expression": '[type eq "work"]'
+                        },
+                    }
+                ]
+            }
         ),
         (
             '[type eq "work"] and [type eq "home"]',
-            [
-                {
-                    "expression": '[type eq "work"]',
-                },
-                {
-                    "expression": '[type eq "home"]',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 108,
+                        "context": {
+                            "expression": '[type eq "work"]'
+                        },
+                    },
+                    {
+                        "code": 108,
+                        "context": {
+                            "expression": '[type eq "home"]'
+                        },
+                    }
+                ]
+            }
         ),
         (
             'emails[type eq "work"] and [type eq "home"]',
-            [
-                {
-                    "expression": '[type eq "home"]',
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 108,
+                        "context": {
+                            "expression": '[type eq "home"]'
+                        },
+                    }
+                ]
+            }
         ),
     )
 )
 def test_lack_of_top_level_complex_attribute_name_is_discovered(
-    filter_exp, expected_error_contexts
+    filter_exp, expected_issues
 ):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_contexts)
-    for error, expected_error_context in zip(errors, expected_error_contexts):
-        assert error.code == 108
-        assert error.context == expected_error_context
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 @pytest.mark.parametrize(
@@ -1896,71 +2302,163 @@ def test_lack_of_top_level_complex_attribute_name_is_discovered(
     )
 )
 def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discovered(filter_exp):
+    expected_issues = {
+        "_errors": [
+            {
+                "code": 109
+            }
+        ]
+    }
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == 1
-    assert errors[0].code == 109
+    assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_codes"),
+    ("filter_exp", "expected_issues"),
     (
         (
             "",
-            [107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             "()",
-            [107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             'userName eq "John" and ()',
-            [107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             '() and userName eq "John"',
-            [107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             '() or userName eq "John" and ()',
-            [107, 107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             'emails[type eq "work" and ()]',
-            [107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             'emails[() and type eq "work"]',
-            [107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             'emails[() or type eq "work" and ()]',
-            [107, 107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             'userName eq "John" and emails[() or type eq "work" and ()]',
-            [107, 107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             'userName eq "John" and emails[() or type eq "work" and ()] and ()',
-            [107, 107, 107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
         (
             '() or userName eq "John" and emails[() or type eq "work" and ()] and ()',
-            [107, 107, 107, 107]
+            {
+                "_errors": [
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    },
+                    {
+                        "code": 107
+                    }
+                ]
+            }
         ),
     )
 )
-def test_no_expression_is_discovered(filter_exp, expected_error_codes):
+def test_no_expression_is_discovered(filter_exp, expected_issues):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_codes)
-    for error, expected_error_code in zip(errors, expected_error_codes):
-        assert error.code == expected_error_code
+    assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize(
@@ -2050,137 +2548,190 @@ def test_operators_are_case_insensitive(filter_exp, expected_filter):
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_contexts"),
+    ("filter_exp", "expected_issues"),
     (
         (
             "userName eq blabla",
-            [
-                {
-                    "value": "blabla",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 112,
+                        "context": {
+                            "value": "blabla",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "userName eq blabla and displayName eq not_true",
-            [
-                {
-                    "value": "blabla",
-                },
-                {
-                    "value": "not_true",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 112,
+                        "context": {
+                            "value": "blabla",
+                        }
+                    },
+                    {
+                        "code": 112,
+                        "context": {
+                            "value": "not_true",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "emails[type eq blabla]",
-            [
-                {
-                    "value": "blabla",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 112,
+                        "context": {
+                            "value": "blabla",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "emails[type eq blabla] or ims[type eq omnomnom]",
-            [
-                {
-                    "value": "blabla",
-                },
-                {
-                    "value": "omnomnom",
-                },
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 112,
+                        "context": {
+                            "value": "blabla",
+                        }
+                    },
+                    {
+                        "code": 112,
+                        "context": {
+                            "value": "omnomnom",
+                        }
+                    }
+                ]
+            }
         )
     )
 )
 def test_bad_comparison_values_are_discovered(
-    filter_exp, expected_error_contexts
+    filter_exp, expected_issues
 ):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_contexts)
-    for error, context in zip(errors, expected_error_contexts):
-        assert error.code == 112
-        assert error.context == context
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_error_contexts"),
+    ("filter_exp", "expected_issues"),
     (
         (
             "userName gt true",
-            [
-                {
-                    "value": True,
-                    "operator": "gt",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 113,
+                        "context": {
+                            "value": True,
+                            "operator": "gt",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "userName ge true",
-            [
-                {
-                    "value": True,
-                    "operator": "ge",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 113,
+                        "context": {
+                            "value": True,
+                            "operator": "ge",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "userName lt true",
-            [
-                {
-                    "value": True,
-                    "operator": "lt",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 113,
+                        "context": {
+                            "value": True,
+                            "operator": "lt",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "userName le true",
-            [
-                {
-                    "value": True,
-                    "operator": "le",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 113,
+                        "context": {
+                            "value": True,
+                            "operator": "le",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "userName co null",
-            [
-                {
-                    "value": None,
-                    "operator": "co",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 113,
+                        "context": {
+                            "value": None,
+                            "operator": "co",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "userName sw 1",
-            [
-                {
-                    "value": 1,
-                    "operator": "sw",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 113,
+                        "context": {
+                            "value": 1,
+                            "operator": "sw",
+                        }
+                    }
+                ]
+            }
         ),
         (
             "userName ew 2",
-            [
-                {
-                    "value": 2,
-                    "operator": "ew",
-                }
-            ]
+            {
+                "_errors": [
+                    {
+                        "code": 113,
+                        "context": {
+                            "value": 2,
+                            "operator": "ew",
+                        }
+                    }
+                ]
+            }
         ),
     )
 )
 def test_binary_operator_non_compatible_comparison_values_are_discovered(
-    filter_exp, expected_error_contexts
+    filter_exp, expected_issues
 ):
     filter_, issues = parse_filter(filter_exp)
-    errors = issues.get_errors()
 
     assert filter_ is None
-    assert len(errors) == len(expected_error_contexts)
-    for error, context in zip(errors, expected_error_contexts):
-        assert error.code == 113
-        assert error.context == context
+    assert issues.to_dict(ctx=True) == expected_issues

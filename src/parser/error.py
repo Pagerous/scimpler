@@ -307,14 +307,6 @@ class ValidationIssues:
     def issues(self) -> Dict[Tuple, List[ValidationError]]:
         return self._issues
 
-    def get_errors(self, location: Optional[Tuple] = None) -> List[ValidationError]:
-        errors = []
-        location = location or tuple()
-        for location_, errors_ in self._issues.items():
-            if location_[:len(location)] == location:
-                errors.extend(errors_)
-        return errors
-
     def merge(self, issues: "ValidationIssues", location: Optional[Tuple] = None):
         location = location or tuple()
         for other_location, location_issues in issues.issues.items():
