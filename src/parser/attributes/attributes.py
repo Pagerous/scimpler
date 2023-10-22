@@ -1,8 +1,55 @@
+import re
 from enum import Enum
 from typing import Collection, Callable, Any, Dict, Optional, Type
 
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.attributes import type as at
+
+
+_ATTR_NAME_REGEX = re.compile(r"((?:[\w.-]+:)*)?(\w+(\.\w+)?)")
+
+
+class AttributeName:
+    def __init__(self, attr: str):
+        match = _ATTR_NAME_REGEX.fullmatch(attr)
+        if not match:
+            raise ValueError(f"{attr!r} is not valid attribute name")
+
+        schema, attr_name = match.group(1), match.group(2)
+        self._schema = schema[:-1] if schema else ""
+        if "." in attr_name:
+            self._attr, self._sub_attr = attr_name.split(".")
+        else:
+            self._attr, self._sub_attr = attr_name, ""
+        self._original_value = attr
+
+    def __repr__(self) -> str:
+        return self._original_value
+
+    @classmethod
+    def parse(cls, attr: str) -> Optional["AttributeName"]:
+        try:
+            return cls(attr)
+        except ValueError:
+            return None
+
+    @property
+    def schema(self) -> str:
+        return self._schema
+
+    @property
+    def full_attr(self) -> str:
+        if self._schema:
+            return f"{self._schema}:{self.attr}"
+        return self.attr
+
+    @property
+    def attr(self) -> str:
+        return self._attr
+
+    @property
+    def sub_attr(self) -> str:
+        return self._sub_attr
 
 
 class AttributeMutability(str, Enum):

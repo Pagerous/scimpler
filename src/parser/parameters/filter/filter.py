@@ -2,31 +2,17 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from src.parser.attributes.attributes import ComplexAttribute
+from src.parser.attributes.attributes import AttributeName, ComplexAttribute
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter import operator as op
 from src.parser.parameters.filter.operator import MatchResult
 from src.parser.resource.schemas import Schema
 
-_ATTR_NAME_REGEX = re.compile(r"\w+")
-_SUB_ATTR_NAME_REGEX = re.compile(r"\w+\.\w+")
-_URI_ATTR_PREFIX = rf"(?:[\w.-]+:)*"
-
-_ALLOWED_IDENTIFIERS = re.compile(
-    rf"({_URI_ATTR_PREFIX})?({_ATTR_NAME_REGEX.pattern}|{_SUB_ATTR_NAME_REGEX.pattern})"
-)
-
 _OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 _AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
 _NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s*(.*)", flags=re.DOTALL)
-
 _PLACEHOLDER_REGEX = re.compile(r"\|&PLACE_HOLDER_(\d+)&\|")
 
-_LOGICAL_OPERATORS = {
-    "and": op.And,
-    "or": op.Or,
-    "not": op.Not,
-}
 
 _UNARY_ATTR_OPERATORS = {
     "pr": op.Present,
@@ -235,7 +221,7 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[Filter], ValidationIssues]:
                         ),
                         proceed=False,
                     )
-                elif not _ALLOWED_IDENTIFIERS.fullmatch(complex_attr_name):
+                elif AttributeName.parse(complex_attr_name) is None:
                     issues_.add(
                         issue=ValidationError.bad_attribute_name(complex_attr_name),
                         proceed=False,
@@ -572,8 +558,8 @@ def _parse_op_attr_exp(
                     ),
                     proceed=False,
                 )
-        match = _ALLOWED_IDENTIFIERS.fullmatch(components[0])
-        if not match:
+        attr_name = AttributeName.parse(components[0])
+        if attr_name is None:
             issues.add(
                 issue=ValidationError.bad_attribute_name(
                     _encode_sub_or_complex_into_exp(
@@ -587,14 +573,13 @@ def _parse_op_attr_exp(
         if not issues.can_proceed():
             return None, issues
 
-        if _SUB_ATTR_NAME_REGEX.match(match.group(2)):
-            attr_name, sub_attr_name = match.group(2).split(".", 1)
+        if attr_name.sub_attr:
             operator = op.ComplexAttributeOperator(
-                attr_name=match.group(1) + attr_name,
-                sub_operator=op_(sub_attr_name)
+                attr_name=attr_name.full_attr,
+                sub_operator=op_(attr_name.sub_attr)
             )
         else:
-            operator = op_(components[0])
+            operator = op_(attr_name.full_attr)
         return operator, issues
 
     elif len(components) == 3:
@@ -616,8 +601,8 @@ def _parse_op_attr_exp(
                 ),
                 proceed=False,
             )
-        match = _ALLOWED_IDENTIFIERS.fullmatch(components[0])
-        if not match:
+        attr_name = AttributeName.parse(components[0])
+        if attr_name is None:
             issues.add(
                 issue=ValidationError.bad_attribute_name(
                     _encode_sub_or_complex_into_exp(
@@ -643,14 +628,13 @@ def _parse_op_attr_exp(
         if not issues.can_proceed():
             return None, issues
 
-        if _SUB_ATTR_NAME_REGEX.match(match.group(2)):
-            attr_name, sub_attr_name = match.group(2).split(".", 1)
+        if attr_name.sub_attr:
             operator = op.ComplexAttributeOperator(
-                attr_name=match.group(1) + attr_name,
-                sub_operator=op_(sub_attr_name, value)
+                attr_name=attr_name.full_attr,
+                sub_operator=op_(attr_name.sub_attr, value)
             )
         else:
-            operator = op_(components[0], value)
+            operator = op_(attr_name.full_attr, value)
         return operator, issues
 
     issues.add(
