@@ -603,7 +603,11 @@ def _parse_op_attr_exp(
                 ),
                 proceed=False,
             )
-        value, issues_ = _parse_comparison_value(components[2])
+        value, issues_ = _parse_comparison_value(
+            value=components[2],
+            parsed_group_ops=parsed_group_ops,
+            parsed_complex_ops=parsed_complex_ops,
+        )
         issues.merge(issues=issues_)
 
         if not issues.can_proceed():
@@ -683,6 +687,8 @@ def _encode_sub_or_complex_into_exp(
 
 def _parse_comparison_value(
     value: str,
+    parsed_group_ops: Dict[int, _ParsedGroupOperator],
+    parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
 ) -> Tuple[_AllowedOperandValues, ValidationIssues]:
     issues = ValidationIssues()
     if (
@@ -708,7 +714,13 @@ def _parse_comparison_value(
                 value = parsed
         except ValueError:
             issues.add(
-                issue=ValidationError.bad_comparison_value(value),
+                issue=ValidationError.bad_comparison_value(
+                    _encode_sub_or_complex_into_exp(
+                        exp=value,
+                        parsed_group_ops=parsed_group_ops,
+                        parsed_complex_ops=parsed_complex_ops,
+                    )
+                ),
                 proceed=False,
             )
     return value, issues
