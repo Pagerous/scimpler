@@ -15,12 +15,13 @@ class AttributeName:
             raise ValueError(f"{attr!r} is not valid attribute name")
 
         schema, attr_name = match.group(1), match.group(2)
-        self._schema = schema[:-1] if schema else ""
+        self._schema = schema[:-1].lower() if schema else ""
         if "." in attr_name:
             self._attr, self._sub_attr = attr_name.split(".")
         else:
             self._attr, self._sub_attr = attr_name, ""
-        self._original_value = attr
+        self._attr, self._sub_attr = self._attr.lower(), self._sub_attr.lower()
+        self._original_value = attr.lower()
 
     def __repr__(self) -> str:
         return self._original_value
@@ -236,13 +237,13 @@ class ComplexAttribute(Attribute):
             for i, item in enumerate(value):
                 for attr_name, attr in self._sub_attributes.items():
                     issues.merge(
-                        location=(i, attr.display_name),
+                        location=(i, attr.name),
                         issues=attr.validate(item.get(attr_name), direction),
                     )
         else:
             for attr_name, attr in self._sub_attributes.items():
                 issues.merge(
-                    location=(attr.display_name,),
+                    location=(attr.name,),
                     issues=attr.validate(value.get(attr_name), direction),
                 )
         return issues

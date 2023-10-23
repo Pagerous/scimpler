@@ -205,14 +205,8 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[Filter], ValidationIssues]:
                         ),
                         proceed=False,
                     )
-                if complex_attr_name == "":
-                    issues_.add(
-                        issue=ValidationError.complex_attribute_without_top_level_attribute(
-                            complex_attr_exp
-                        ),
-                        proceed=False,
-                    )
-                elif AttributeName.parse(complex_attr_name) is None:
+                attr_name = AttributeName.parse(complex_attr_name)
+                if attr_name is None:
                     issues_.add(
                         issue=ValidationError.bad_attribute_name(complex_attr_name),
                         proceed=False,
@@ -231,7 +225,7 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[Filter], ValidationIssues]:
                         operator = None
                     else:
                         operator = op.ComplexAttributeOperator(
-                            complex_attr_name, parsed_complex_sub_ops
+                            attr_name.full_attr, parsed_complex_sub_ops
                         )
                     parsed_complex_ops[complex_attr_start] = _ParsedComplexAttributeOperator(
                         operator=operator,

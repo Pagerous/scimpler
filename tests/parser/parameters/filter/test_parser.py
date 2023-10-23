@@ -12,7 +12,7 @@ from src.parser.parameters.filter.filter import parse_filter
 )
 @pytest.mark.parametrize("operator", ("eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"))
 def test_parse_basic_binary_attribute_filter(attr_name, operator):
-    expected = {"op": operator, "attr_name": attr_name, "value": "bjensen"}
+    expected = {"op": operator, "attr_name": attr_name.lower(), "value": "bjensen"}
     filter_exp = f'{attr_name} {operator} "bjensen"'
 
     filter_, issues = parse_filter(filter_exp)
@@ -35,10 +35,10 @@ def test_parse_basic_binary_complex_attribute_filter(full_attr_name, operator):
     sub_attr_name = sub_attr_name[::-1]
     expected = {
         "op": "complex",
-        "attr_name": attr_name,
+        "attr_name": attr_name.lower(),
         "sub_op": {
             "op": operator,
-            "attr_name": sub_attr_name,
+            "attr_name": sub_attr_name.lower(),
             "value": "bjensen",
         },
     }
@@ -61,7 +61,7 @@ def test_parse_basic_binary_complex_attribute_filter(full_attr_name, operator):
 def test_parse_basic_unary_attribute_filter(attr_name, operator):
     expected = {
         "op": operator,
-        "attr_name": attr_name,
+        "attr_name": attr_name.lower(),
     }
     filter_exp = f"{attr_name} {operator}"
 
@@ -85,10 +85,10 @@ def test_parse_basic_unary_attribute_filter_with_complex_attribute(full_attr_nam
     sub_attr_name = sub_attr_name[::-1]
     expected = {
         "op": "complex",
-        "attr_name": attr_name,
+        "attr_name": attr_name.lower(),
         "sub_op": {
             "op": operator,
-            "attr_name": sub_attr_name,
+            "attr_name": sub_attr_name.lower(),
         },
     }
     filter_exp = f"{full_attr_name} {operator}"
@@ -108,7 +108,7 @@ def test_parse_basic_unary_attribute_filter_with_complex_attribute(full_attr_nam
 )
 @pytest.mark.parametrize("sequence", ("  ", "\t\t", "\n", " \t", "\t ", "\n\n", " \n", "\n "))
 def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(attr_name, sequence):
-    expected = {"op": "eq", "attr_name": attr_name, "value": f"bjen{sequence}sen"}
+    expected = {"op": "eq", "attr_name": attr_name.lower(), "value": f"bjen{sequence}sen"}
     filter_exp = f'{attr_name}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
 
     filter_, issues = parse_filter(filter_exp)
@@ -134,10 +134,10 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_w
 
     expected = {
         "op": "complex",
-        "attr_name": attr_name,
+        "attr_name": attr_name.lower(),
         "sub_op": {
             "op": "eq",
-            "attr_name": sub_attr_name,
+            "attr_name": sub_attr_name.lower(),
             "value": f"bjen{sequence}sen",
         },
     }
@@ -154,7 +154,7 @@ def test_basic_filters_can_be_combined_with_and_operator():
     expected = {
         "op": "and",
         "sub_ops": [
-            {"op": "eq", "attr_name": "userName", "value": "bjensen"},
+            {"op": "eq", "attr_name": "username", "value": "bjensen"},
             {
                 "op": "complex",
                 "attr_name": "name",
@@ -162,7 +162,7 @@ def test_basic_filters_can_be_combined_with_and_operator():
             },
             {
                 "op": "co",
-                "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
+                "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:nickname",
                 "value": "bj",
             },
         ],
@@ -182,7 +182,7 @@ def test_basic_filters_can_be_combined_with_or_operator():
     expected = {
         "op": "or",
         "sub_ops": [
-            {"op": "eq", "attr_name": "userName", "value": "bjensen"},
+            {"op": "eq", "attr_name": "username", "value": "bjensen"},
             {
                 "op": "complex",
                 "attr_name": "name",
@@ -190,7 +190,7 @@ def test_basic_filters_can_be_combined_with_or_operator():
             },
             {
                 "op": "co",
-                "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
+                "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:nickname",
                 "value": "bj",
             },
         ],
@@ -211,7 +211,7 @@ def test_basic_filter_can_be_combined_with_not_operator():
         "op": "not",
         "sub_op": {
             "op": "eq",
-            "attr_name": "userName",
+            "attr_name": "username",
             "value": "bjensen",
         },
     }
@@ -226,7 +226,7 @@ def test_precedence_of_logical_operators_is_preserved():
     expected = {
         "op": "or",
         "sub_ops": [
-            {"op": "eq", "attr_name": "userName", "value": "bjensen"},
+            {"op": "eq", "attr_name": "username", "value": "bjensen"},
             {
                 "op": "and",
                 "sub_ops": [
@@ -243,7 +243,7 @@ def test_precedence_of_logical_operators_is_preserved():
                         "op": "not",
                         "sub_op": {
                             "op": "co",
-                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
+                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:nickname",
                             "value": "bj",
                         },
                     },
@@ -266,7 +266,7 @@ def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_f
     expected = {
         "op": "or",
         "sub_ops": [
-            {"op": "eq", "attr_name": "userName", "value": "bjen\tsen"},
+            {"op": "eq", "attr_name": "username", "value": "bjen\tsen"},
             {
                 "op": "and",
                 "sub_ops": [
@@ -283,7 +283,7 @@ def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_f
                         "op": "not",
                         "sub_op": {
                             "op": "co",
-                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
+                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:nickname",
                             "value": "b j",
                         },
                     },
@@ -306,7 +306,7 @@ def test_filter_groups_are_parsed():
     expected = {
         "op": "and",
         "sub_ops": [
-            {"op": "eq", "attr_name": "userName", "value": "bjensen"},
+            {"op": "eq", "attr_name": "username", "value": "bjensen"},
             {
                 "op": "or",
                 "sub_ops": [
@@ -327,7 +327,7 @@ def test_filter_groups_are_parsed():
                                 "sub_op": {
                                     "op": "co",
                                     "attr_name": "urn:ietf:params:scim:schemas:core:2.0:"
-                                    "User:nickName",
+                                    "user:nickname",
                                     "value": "bj",
                                 },
                             },
@@ -356,7 +356,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
     expected = {
         "op": "and",
         "sub_ops": [
-            {"op": "eq", "attr_name": "userName", "value": "bjen  sen"},
+            {"op": "eq", "attr_name": "username", "value": "bjen  sen"},
             {
                 "op": "or",
                 "sub_ops": [
@@ -377,7 +377,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                                 "sub_op": {
                                     "op": "co",
                                     "attr_name": (
-                                        "urn:ietf:params:scim:schemas:core:2.0:User:nickName"
+                                        "urn:ietf:params:scim:schemas:core:2.0:user:nickname"
                                     ),
                                     "value": "b\t\tj",
                                 },
@@ -452,7 +452,7 @@ def test_complex_attribute_filter_with_logical_operators_is_parsed():
 def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
     expected = {
         "op": "complex",
-        "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+        "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:emails",
         "sub_op": {
             "op": "and",
             "sub_ops": [
@@ -480,7 +480,7 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
                         },
                         {
                             "op": "complex",
-                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:emails",
                             "sub_op": {
                                 "op": "co",
                                 "attr_name": "display",
@@ -510,7 +510,7 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
 def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attribute_filter():
     expected = {
         "op": "complex",
-        "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+        "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:emails",
         "sub_op": {
             "op": "and",
             "sub_ops": [
@@ -542,7 +542,7 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
                         },
                         {
                             "op": "complex",
-                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                            "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:emails",
                             "sub_op": {
                                 "op": "co",
                                 "attr_name": "display",
@@ -575,7 +575,7 @@ def test_gargantuan_filter():
     expected = {
         "op": "and",
         "sub_ops": [
-            {"op": "eq", "attr_name": "userName", "value": "bjensen"},
+            {"op": "eq", "attr_name": "username", "value": "bjensen"},
             {
                 "op": "or",
                 "sub_ops": [
@@ -596,7 +596,7 @@ def test_gargantuan_filter():
                                 "sub_op": {
                                     "op": "co",
                                     "attr_name": "urn:ietf:params:scim:schemas:core:2.0:"
-                                    "User:nickName",
+                                    "user:nickname",
                                     "value": "bj",
                                 },
                             },
@@ -610,7 +610,7 @@ def test_gargantuan_filter():
                 "sub_ops": [
                     {
                         "op": "complex",
-                        "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+                        "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:emails",
                         "sub_op": {
                             "op": "and",
                             "sub_ops": [
@@ -639,7 +639,7 @@ def test_gargantuan_filter():
                                         {
                                             "op": "complex",
                                             "attr_name": (
-                                                "urn:ietf:params:scim:schemas:core:2.0:User:emails"
+                                                "urn:ietf:params:scim:schemas:core:2.0:user:emails"
                                             ),
                                             "sub_op": {
                                                 "op": "co",
@@ -727,7 +727,7 @@ def test_gargantuan_filter():
             'userName eq "bjensen"',
             {
                 "op": "eq",
-                "attr_name": "userName",
+                "attr_name": "username",
                 "value": "bjensen",
             },
         ),
@@ -738,7 +738,7 @@ def test_gargantuan_filter():
                 "attr_name": "name",
                 "sub_op": {
                     "op": "co",
-                    "attr_name": "familyName",
+                    "attr_name": "familyname",
                     "value": "O'Malley",
                 },
             },
@@ -747,7 +747,7 @@ def test_gargantuan_filter():
             'userName sw "J"',
             {
                 "op": "sw",
-                "attr_name": "userName",
+                "attr_name": "username",
                 "value": "J",
             },
         ),
@@ -755,7 +755,7 @@ def test_gargantuan_filter():
             'urn:ietf:params:scim:schemas:core:2.0:User:userName sw "J"',
             {
                 "op": "sw",
-                "attr_name": "urn:ietf:params:scim:schemas:core:2.0:User:userName",
+                "attr_name": "urn:ietf:params:scim:schemas:core:2.0:user:username",
                 "value": "J",
             },
         ),
@@ -773,7 +773,7 @@ def test_gargantuan_filter():
                 "attr_name": "meta",
                 "sub_op": {
                     "op": "gt",
-                    "attr_name": "lastModified",
+                    "attr_name": "lastmodified",
                     "value": "2011-05-13T04:42:34Z",
                 },
             },
@@ -785,7 +785,7 @@ def test_gargantuan_filter():
                 "attr_name": "meta",
                 "sub_op": {
                     "op": "ge",
-                    "attr_name": "lastModified",
+                    "attr_name": "lastmodified",
                     "value": "2011-05-13T04:42:34Z",
                 },
             },
@@ -797,7 +797,7 @@ def test_gargantuan_filter():
                 "attr_name": "meta",
                 "sub_op": {
                     "op": "lt",
-                    "attr_name": "lastModified",
+                    "attr_name": "lastmodified",
                     "value": "2011-05-13T04:42:34Z",
                 },
             },
@@ -809,7 +809,7 @@ def test_gargantuan_filter():
                 "attr_name": "meta",
                 "sub_op": {
                     "op": "le",
-                    "attr_name": "lastModified",
+                    "attr_name": "lastmodified",
                     "value": "2011-05-13T04:42:34Z",
                 },
             },
@@ -825,7 +825,7 @@ def test_gargantuan_filter():
                     },
                     {
                         "op": "eq",
-                        "attr_name": "userType",
+                        "attr_name": "usertype",
                         "value": "Employee",
                     },
                 ],
@@ -842,7 +842,7 @@ def test_gargantuan_filter():
                     },
                     {
                         "op": "eq",
-                        "attr_name": "userType",
+                        "attr_name": "usertype",
                         "value": "Intern",
                     },
                 ],
@@ -863,7 +863,7 @@ def test_gargantuan_filter():
                 "sub_ops": [
                     {
                         "op": "eq",
-                        "attr_name": "userType",
+                        "attr_name": "usertype",
                         "value": "Employee",
                     },
                     {
@@ -896,7 +896,7 @@ def test_gargantuan_filter():
                 "sub_ops": [
                     {
                         "op": "ne",
-                        "attr_name": "userType",
+                        "attr_name": "usertype",
                         "value": "Employee",
                     },
                     {
@@ -931,7 +931,7 @@ def test_gargantuan_filter():
                 "sub_ops": [
                     {
                         "op": "eq",
-                        "attr_name": "userType",
+                        "attr_name": "usertype",
                         "value": "Employee",
                     },
                     {
@@ -953,7 +953,7 @@ def test_gargantuan_filter():
                 "sub_ops": [
                     {
                         "op": "eq",
-                        "attr_name": "userType",
+                        "attr_name": "usertype",
                         "value": "Employee",
                     },
                     {
@@ -1108,7 +1108,7 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
             {
                 "op": "and",
                 "sub_ops": [
-                    {"op": "eq", "attr_name": "userName", "value": "use(r123"},
+                    {"op": "eq", "attr_name": "username", "value": "use(r123"},
                     {"op": "co", "attr_name": "display", "value": "us)er"},
                 ],
             },
@@ -1118,7 +1118,7 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
             {
                 "op": "and",
                 "sub_ops": [
-                    {"op": "eq", "attr_name": "userName", "value": "use(r123"},
+                    {"op": "eq", "attr_name": "username", "value": "use(r123"},
                     {"op": "co", "attr_name": "display", "value": "user"},
                 ],
             },
@@ -1128,7 +1128,7 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
             {
                 "op": "and",
                 "sub_ops": [
-                    {"op": "eq", "attr_name": "userName", "value": "user123"},
+                    {"op": "eq", "attr_name": "username", "value": "user123"},
                     {"op": "co", "attr_name": "display", "value": "us)er"},
                 ],
             },
@@ -1176,7 +1176,7 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_is
             {
                 "op": "and",
                 "sub_ops": [
-                    {"op": "eq", "attr_name": "userName", "value": "use[r123"},
+                    {"op": "eq", "attr_name": "username", "value": "use[r123"},
                     {"op": "co", "attr_name": "display", "value": "us]er"},
                 ],
             },
@@ -1186,7 +1186,7 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_is
             {
                 "op": "and",
                 "sub_ops": [
-                    {"op": "eq", "attr_name": "userName", "value": "use[r123"},
+                    {"op": "eq", "attr_name": "username", "value": "use[r123"},
                     {"op": "co", "attr_name": "display", "value": "user"},
                 ],
             },
@@ -1196,7 +1196,7 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_is
             {
                 "op": "and",
                 "sub_ops": [
-                    {"op": "eq", "attr_name": "userName", "value": "user123"},
+                    {"op": "eq", "attr_name": "username", "value": "user123"},
                     {"op": "co", "attr_name": "display", "value": "us]er"},
                 ],
             },
@@ -1970,8 +1970,8 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
             {
                 "_errors": [
                     {
-                        "code": 108,
-                        "context": {"expression": '[type eq "work"]'},
+                        "code": 111,
+                        "context": {"attribute": ""},
                     }
                 ]
             },
@@ -1981,12 +1981,12 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
             {
                 "_errors": [
                     {
-                        "code": 108,
-                        "context": {"expression": '[type eq "work"]'},
+                        "code": 111,
+                        "context": {"attribute": ""},
                     },
                     {
-                        "code": 108,
-                        "context": {"expression": '[type eq "home"]'},
+                        "code": 111,
+                        "context": {"attribute": ""},
                     },
                 ]
             },
@@ -1996,8 +1996,8 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
             {
                 "_errors": [
                     {
-                        "code": 108,
-                        "context": {"expression": '[type eq "home"]'},
+                        "code": 111,
+                        "context": {"attribute": ""},
                     }
                 ]
             },

@@ -140,9 +140,9 @@ def test_validation_errors_for_resources_attribute_can_be_returned(response_body
     expected_issues = {
         "response": {
             "body": {
-                "Resources": {
-                    "0": {"userName": {"_errors": [{"code": 2}]}},
-                    "1": {"userName": {"_errors": [{"code": 2}]}},
+                "resources": {
+                    "0": {"username": {"_errors": [{"code": 2}]}},
+                    "1": {"username": {"_errors": [{"code": 2}]}},
                 }
             }
         }
@@ -190,8 +190,8 @@ def test_fails_if_more_resources_than_total_results(validator, response_body):
     expected_issues = {
         "response": {
             "body": {
-                "totalResults": {"_errors": [{"code": 22}]},
-                "Resources": {"_errors": [{"code": 22}]},
+                "totalresults": {"_errors": [{"code": 22}]},
+                "resources": {"_errors": [{"code": 22}]},
             }
         }
     }
@@ -218,7 +218,7 @@ def test_fails_if_less_resources_than_total_results_with_count_unspecified(
     response_body,
 ):
     response_body["Resources"] = []
-    expected_issues = {"response": {"body": {"Resources": {"_errors": [{"code": 23}]}}}}
+    expected_issues = {"response": {"body": {"resources": {"_errors": [{"code": 23}]}}}}
 
     issues = validator.validate_response(
         request_body=None,
@@ -238,7 +238,7 @@ def test_fails_if_less_resources_than_total_results_with_count_unspecified(
     ),
 )
 def test_fails_if_more_resources_than_specified_count(validator, response_body):
-    expected_issues = {"response": {"body": {"Resources": {"_errors": [{"code": 21}]}}}}
+    expected_issues = {"response": {"body": {"resources": {"_errors": [{"code": 21}]}}}}
 
     issues = validator.validate_response(
         request_query_string={"count": 1},
@@ -266,8 +266,8 @@ def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
     expected_issues = {
         "response": {
             "body": {
-                "startIndex": {"_errors": [{"code": 1}]},
-                "itemsPerPage": {"_errors": [{"code": 1}]},
+                "startindex": {"_errors": [{"code": 1}]},
+                "itemsperpage": {"_errors": [{"code": 1}]},
             }
         }
     }
@@ -297,7 +297,7 @@ def test_fails_if_start_index_bigger_than_requested(validator, response_body):
     expected_issues = {
         "response": {
             "body": {
-                "startIndex": {"_errors": [{"code": 24}]},
+                "startindex": {"_errors": [{"code": 24}]},
             }
         }
     }
@@ -327,8 +327,8 @@ def test_fails_if_items_per_page_do_not_match_resources(validator, response_body
     expected_issues = {
         "response": {
             "body": {
-                "itemsPerPage": {"_errors": [{"code": 11}]},
-                "Resources": {"_errors": [{"code": 11}]},
+                "itemsperpage": {"_errors": [{"code": 11}]},
+                "resources": {"_errors": [{"code": 11}]},
             }
         }
     }
@@ -357,7 +357,7 @@ def test_fails_if_output_resources_does_not_match_provided_filter(filter_exp, re
     expected_issues = {
         "response": {
             "body": {
-                "Resources": {
+                "resources": {
                     "0": {
                         "_errors": [
                             {
@@ -386,7 +386,7 @@ def test_case_sensitive_attributes_are_validated_for_resource_type_endpoints(
     expected_issues = {
         "response": {
             "body": {
-                "Resources": {
+                "resources": {
                     "0": {
                         "_errors": [
                             {
@@ -429,7 +429,7 @@ def test_fails_if_output_resources_does_not_match_provided_filter_for_root_endpo
     expected_issues = {
         "response": {
             "body": {
-                "Resources": {
+                "resources": {
                     "0": {
                         "_errors": [
                             {
@@ -480,7 +480,7 @@ def test_case_sensitive_attributes_are_not_validated_for_server_root_endpoint(
     ),
 )
 def test_fails_if_resources_are_not_sorted(validator, response_body):
-    expected = {"response": {"body": {"Resources": {"_errors": [{"code": 26}]}}}}
+    expected = {"response": {"body": {"resources": {"_errors": [{"code": 26}]}}}}
 
     issues = validator.validate_response(
         request_query_string={"sortBy": "name.familyName", "sortOrder": "descending"},
@@ -496,7 +496,7 @@ def test_sorting_is_not_checked_if_issues_for_related_values(response_body):
     response_body["Resources"][1]["name"]["familyName"] = 123  # noqa, bad type
     expected = {
         "response": {
-            "body": {"Resources": {"1": {"name": {"familyName": {"_errors": [{"code": 2}]}}}}}
+            "body": {"resources": {"1": {"name": {"familyname": {"_errors": [{"code": 2}]}}}}}
         }
     }
 
@@ -515,11 +515,11 @@ def test_sorting_is_checked_if_issues_for_not_related_resource_values(response_b
     expected = {
         "response": {
             "body": {
-                "Resources": {
+                "resources": {
                     "_errors": [
                         {"code": 26},
                     ],
-                    "1": {"name": {"givenName": {"_errors": [{"code": 2}]}}},
+                    "1": {"name": {"givenname": {"_errors": [{"code": 2}]}}},
                 }
             }
         }

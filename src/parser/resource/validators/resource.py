@@ -172,7 +172,7 @@ class ResourceTypePOST(EndpointValidator):
             for attr_name, attr in self._schema.attributes.items():
                 issues.merge(
                     issues=attr.validate(body.get(attr_name), "REQUEST"),
-                    location=("request", "body", attr.display_name),
+                    location=("request", "body", attr.name),
                 )
         return issues
 
@@ -285,17 +285,17 @@ class _ManyResourcesGET(EndpointValidatorGET):
                 attr = schema.get_attr(AttributeName(sorter.attr_name.full_attr))
                 if sorter.attr_name.sub_attr:
                     sub_attr = schema.get_attr(sorter.attr_name)
-                    location = (attr.display_name, sub_attr.display_name)
+                    location = (attr.name, sub_attr.name)
                 else:
-                    location = (attr.display_name,)
+                    location = (attr.name,)
                 locations = [
-                    ("response", "body", "Resources", i, *location) for i in range(len(resources))
+                    ("response", "body", "resources", i, *location) for i in range(len(resources))
                 ]
             if issues.can_proceed(*locations) and resources != sorter(resources):
                 issues.add(
                     issue=ValidationError.resources_not_sorted(),
                     proceed=True,
-                    location=("response", "body", "Resources"),
+                    location=("response", "body", "resources"),
                 )
         return issues
 
@@ -331,7 +331,7 @@ class _ManyResourcesGET(EndpointValidatorGET):
         if not issues.can_proceed(("response", "body")):
             return issues
 
-        start_index = request_query_string.get("startindex", 1)
+        start_index = request_query_string.get("startIndex", 1)
         if start_index < 1:
             start_index = 1
         count = request_query_string.get("count")
@@ -339,7 +339,7 @@ class _ManyResourcesGET(EndpointValidatorGET):
             count = 0
 
         if issues.can_proceed(
-            ("response", "body", "totalResults"), ("response", "body", "Resources")
+            ("response", "body", "totalresults"), ("response", "body", "resources")
         ):
             total_results = response_body["totalresults"]
             resources = response_body.get("resources", [])
@@ -350,21 +350,21 @@ class _ManyResourcesGET(EndpointValidatorGET):
                     issue=ValidationError.total_results_mismatch(
                         total_results=total_results, n_resources=n_resources
                     ),
-                    location=("response", "body", "totalResults"),
+                    location=("response", "body", "totalresults"),
                     proceed=True,
                 )
                 issues.add(
                     issue=ValidationError.total_results_mismatch(
                         total_results=total_results, n_resources=n_resources
                     ),
-                    location=("response", "body", "Resources"),
+                    location=("response", "body", "resources"),
                     proceed=True,
                 )
 
             if count is None and total_results > n_resources:
                 issues.add(
-                    issue=ValidationError.too_little_results(must="be equal to 'totalResults'"),
-                    location=("response", "body", "Resources"),
+                    issue=ValidationError.too_little_results(must="be equal to 'totalresults'"),
+                    location=("response", "body", "resources"),
                     proceed=True,
                 )
 
@@ -373,63 +373,63 @@ class _ManyResourcesGET(EndpointValidatorGET):
                     issue=ValidationError.too_many_results(
                         must="be lesser or equal to 'count' parameter"
                     ),
-                    location=("response", "body", "Resources"),
+                    location=("response", "body", "resources"),
                     proceed=True,
                 )
 
             if issues.can_proceed(
-                ("response", "body", "startIndex"), ("response", "body", "itemsPerPage")
+                ("response", "body", "startindex"), ("response", "body", "itemsperpage")
             ):
                 is_pagination = (count or 0) > 0 and total_results > n_resources
                 if is_pagination:
                     if "startindex" not in response_body:
                         issues.add(
-                            issue=ValidationError.missing_required_attribute("startIndex"),
-                            location=("response", "body", "startIndex"),
+                            issue=ValidationError.missing_required_attribute("startindex"),
+                            location=("response", "body", "startindex"),
                             proceed=False,
                         )
                     if "itemsperpage" not in response_body:
                         issues.add(
-                            issue=ValidationError.missing_required_attribute("itemsPerPage"),
-                            location=("response", "body", "itemsPerPage"),
+                            issue=ValidationError.missing_required_attribute("itemsperpage"),
+                            location=("response", "body", "itemsperpage"),
                             proceed=False,
                         )
 
         if (
-            issues.can_proceed(("response", "body", "startIndex"))
+            issues.can_proceed(("response", "body", "startindex"))
             and "startindex" in response_body
             and response_body["startindex"] > start_index
         ):
             issues.add(
                 issue=ValidationError.response_value_does_not_correspond_to_parameter(
-                    response_key="startIndex",
+                    response_key="startindex",
                     response_value=response_body["startindex"],
-                    query_param_name="startIndex",
+                    query_param_name="startindex",
                     query_param_value=start_index,
                     reason="bigger value than requested",
                 ),
-                location=("response", "body", "startIndex"),
+                location=("response", "body", "startindex"),
                 proceed=True,
             )
 
         if issues.can_proceed(
-            ("response", "body", "itemsPerPage"), ("response", "body", "Resources")
+            ("response", "body", "itemsperpage"), ("response", "body", "resources")
         ):
             n_resources = len(response_body.get("resources", []))
 
             if "itemsperpage" in response_body and response_body["itemsperpage"] != n_resources:
                 issues.add(
                     issue=ValidationError.values_must_match(
-                        value_1="itemsPerPage", value_2="numer of Resources"
+                        value_1="itemsperpage", value_2="numer of Resources"
                     ),
-                    location=("response", "body", "itemsPerPage"),
+                    location=("response", "body", "itemsperpage"),
                     proceed=True,
                 )
                 issues.add(
                     issue=ValidationError.values_must_match(
-                        value_1="itemsPerPage", value_2="numer of Resources"
+                        value_1="itemsperpage", value_2="numer of Resources"
                     ),
-                    location=("response", "body", "Resources"),
+                    location=("response", "body", "resources"),
                     proceed=True,
                 )
 
@@ -476,7 +476,7 @@ class ResourceTypeGET(_ManyResourcesGET):
             response_headers=response_headers,
         )
 
-        if issues.can_proceed(("response", "body", "Resources")):
+        if issues.can_proceed(("response", "body", "resources")):
             filter_ = None
             filter_exp = request_query_string.get("filter")
             if filter_exp is not None:
@@ -491,9 +491,9 @@ class ResourceTypeGET(_ManyResourcesGET):
                         location=(
                             "response",
                             "body",
-                            "Resources",
+                            "resources",
                             i,
-                            attr.display_name,
+                            attr.name,
                         ),
                     )
                 if filter_ is not None and not filter_.match(
@@ -502,7 +502,7 @@ class ResourceTypeGET(_ManyResourcesGET):
                     issues.add(
                         issue=ValidationError.included_resource_does_not_match_filter(),
                         proceed=True,
-                        location=("response", "body", "Resources", i),
+                        location=("response", "body", "resources", i),
                     )
             self._validate_resources_sorted(
                 issues=issues,
@@ -552,7 +552,7 @@ class ServerRootResourceGET(_ManyResourcesGET):
             response_body=response_body,
             response_headers=response_headers,
         )
-        if issues.can_proceed(("response", "body", "Resources")):
+        if issues.can_proceed(("response", "body", "resources")):
             filter_ = None
             filter_exp = request_query_string.get("filter")
             if filter_exp is not None:
@@ -570,7 +570,7 @@ class ServerRootResourceGET(_ManyResourcesGET):
                     issues.add(
                         issue=ValidationError.included_resource_does_not_match_filter(),
                         proceed=True,
-                        location=("response", "body", "Resources", i),
+                        location=("response", "body", "resources", i),
                     )
             self._validate_resources_sorted(
                 issues=issues,

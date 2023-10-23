@@ -27,7 +27,7 @@ class Schema(abc.ABC):
         self,
         attr_name: AttributeName,
     ) -> Optional[Union[Attribute, ComplexAttribute]]:
-        if attr_name.schema and attr_name.schema not in self.schemas:
+        if attr_name.schema and attr_name.schema not in map(str.lower, self.schemas):
             return None
         if attr_name.attr.lower() not in self.attributes:
             return None
@@ -58,7 +58,7 @@ class ErrorSchema(Schema):
 
     @property
     def schemas(self) -> List[str]:
-        return ["urn:ietf:params:scim:api:messages:2.0:Error"]
+        return ["urn:ietf:params:scim:api:messages:2.0:error"]
 
 
 class ListResponseSchema(Schema):
@@ -79,7 +79,7 @@ class ListResponseSchema(Schema):
 
     @property
     def schemas(self) -> List[str]:
-        return ["urn:ietf:params:scim:api:messages:2.0:ListResponse"]
+        return ["urn:ietf:params:scim:api:messages:2.0:listresponse"]
 
 
 class ResourceSchema(Schema, abc.ABC):
@@ -124,7 +124,7 @@ class UserSchema(ResourceSchema):
 
     @property
     def schemas(self) -> List[str]:
-        return ["urn:ietf:params:scim:schemas:core:2.0:User"]
+        return ["urn:ietf:params:scim:schemas:core:2.0:user"]
 
     def __repr__(self) -> str:
         return "User"

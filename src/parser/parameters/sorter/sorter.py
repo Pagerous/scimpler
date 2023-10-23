@@ -4,6 +4,7 @@ from src.parser.attributes import type as at
 from src.parser.attributes.attributes import AttributeName, ComplexAttribute
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.schemas import Schema
+from src.parser.utils import lower_dict_keys
 
 
 class AlwaysLastKey:
@@ -122,20 +123,14 @@ class Sorter:
         return sorted(data, key=key, reverse=not self._asc)
 
     def _get_value(self, item: Dict[str, Any]) -> Optional[Any]:
-        value = (  # TODO: improve attribute case-insensitivity handling
-            item.get(self._attr_name.full_attr)
-            or item.get(self._attr_name.full_attr.lower())
-            or item.get(self._attr_name.attr)
-            or item.get(self._attr_name.attr.lower())
-        )
+        item = lower_dict_keys(item)
+        value = item.get(self._attr_name.full_attr) or item.get(self._attr_name.attr)
         if value is None:
             return None
         if self._attr_name.sub_attr:
             if not isinstance(value, Dict):
                 return None
-            value = value.get(self._attr_name.sub_attr) or value.get(
-                self._attr_name.sub_attr.lower()
-            )
+            value = value.get(self._attr_name.sub_attr)
         return value
 
     def _get_key(self, value):

@@ -56,7 +56,7 @@ def test_many_validation_errors_can_be_returned(validator):
     expected_issues = {
         "request": {
             "body": {
-                "userName": {"_errors": [{"code": 1}]},
+                "username": {"_errors": [{"code": 1}]},
                 "name": {"_errors": [{"code": 2}]},
             }
         }

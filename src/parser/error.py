@@ -66,7 +66,6 @@ class ValidationError:
         105: "unknown {operator_type} operator '{operator}' in expression '{expression}'",
         106: "unknown expression '{expression}'",
         107: "no expression or empty expression inside precedence grouping operator",
-        108: "complex attribute expression '{expression}' misses top-level attribute name",
         109: "complex attribute can not contain inner complex attributes or square brackets",
         110: "complex attribute {attribute!r} at position {expression_position} has no expression",
         111: "attribute {attribute!r} does not conform the rules",
@@ -253,10 +252,6 @@ class ValidationError:
     @classmethod
     def empty_expression(cls):
         return cls(code=107)
-
-    @classmethod
-    def complex_attribute_without_top_level_attribute(cls, expression: str):
-        return cls(code=108, expression=expression)
 
     @classmethod
     def inner_complex_attribute_or_square_bracket(cls):
