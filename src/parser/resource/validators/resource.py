@@ -2,7 +2,7 @@ from typing import Any, Dict, Iterable, List, Optional
 
 from src.parser.attributes.attributes import AttributeName
 from src.parser.error import ValidationError, ValidationIssues
-from src.parser.parameters.filter.filter import parse_filter
+from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.sorter.sorter import Sorter
 from src.parser.resource.schemas import ListResponseSchema, ResourceSchema, Schema
 from src.parser.resource.validators.validator import (
@@ -229,7 +229,7 @@ class _ManyResourcesGET(EndpointValidatorGET):
         issues = ValidationIssues()
         filter_exp = query_string.get("filter")
         if filter_exp is not None:
-            _, issues_ = parse_filter(filter_exp)
+            _, issues_ = Filter.parse(filter_exp)
             issues.merge(issues=issues_, location=("request", "query_string", "filter"))
         return issues
 
@@ -480,7 +480,7 @@ class ResourceTypeGET(_ManyResourcesGET):
             filter_ = None
             filter_exp = request_query_string.get("filter")
             if filter_exp is not None:
-                filter_, issues_ = parse_filter(
+                filter_, issues_ = Filter.parse(
                     filter_exp=filter_exp, schema=self._resource_schema, strict=False
                 )
                 issues.merge(issues=issues_, location=("request", "query_string", "filter"))
@@ -556,7 +556,7 @@ class ServerRootResourceGET(_ManyResourcesGET):
             filter_ = None
             filter_exp = request_query_string.get("filter")
             if filter_exp is not None:
-                filter_, issues_ = parse_filter(filter_exp=filter_exp, schema=None, strict=False)
+                filter_, issues_ = Filter.parse(filter_exp=filter_exp, schema=None, strict=False)
                 issues.merge(
                     issues=issues_,
                     location=("request", "query_string", "filter"),
