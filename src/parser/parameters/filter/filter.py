@@ -52,33 +52,28 @@ ParsedOperator = Union[
 
 
 class Filter:
-    def __init__(self, operator: ParsedOperator):
+    def __init__(self, operator: ParsedOperator, schema: Optional[Schema], strict: bool = True):
         self._operator = operator
+        self._schema = schema
+        self._strict = strict
 
-    def match(
-        self,
-        data: Dict[str, Any],
-        schema: Optional[Schema],
-        strict: bool = True,
-    ) -> MatchResult:
+    def __call__(self, data: Dict[str, Any]) -> MatchResult:
         if isinstance(self._operator, op.AttributeOperator):
-            return self._match_attribute_operator(data, schema, strict)
+            return self._match_attribute_operator(data)
         if isinstance(self._operator, op.ComplexAttributeOperator):
-            return self._match_complex_attribute_operator(data, schema, strict)
+            return self._match_complex_attribute_operator(data)
         if isinstance(self._operator, op.LogicalOperator):
-            return self._match_logical_operator(data, schema, strict)
+            return self._match_logical_operator(data)
         return MatchResult.failed()
 
-    def _match_attribute_operator(
-        self, data: Dict[str, Any], schema: Optional[Schema], strict: bool = True
-    ) -> MatchResult:
+    def _match_attribute_operator(self, data: Dict[str, Any]) -> MatchResult:
         if self._operator.attr_name not in data:
-            if strict:
+            if self._strict:
                 return MatchResult.failed()
             return MatchResult.passed()
 
-        if schema is not None:
-            attr = schema.attributes.get(self._operator.attr_name)
+        if self._schema is not None:
+            attr = self._schema.attributes.get(self._operator.attr_name)
             if attr is None:
                 return MatchResult.failed()
         else:
@@ -86,16 +81,14 @@ class Filter:
 
         return self._operator.match(data.get(self._operator.attr_name), attr)
 
-    def _match_complex_attribute_operator(
-        self, data: Dict[str, Any], schema: Optional[Schema], strict: bool = True
-    ) -> MatchResult:
+    def _match_complex_attribute_operator(self, data: Dict[str, Any]) -> MatchResult:
         if self._operator.attr_name not in data:
-            if strict:
+            if self._strict:
                 return MatchResult.failed()
             return MatchResult.passed()
 
-        if schema is not None:
-            attr = schema.attributes.get(self._operator.attr_name)
+        if self._schema is not None:
+            attr = self._schema.attributes.get(self._operator.attr_name)
             if not isinstance(attr, ComplexAttribute):
                 return MatchResult.failed()
         else:
@@ -103,14 +96,12 @@ class Filter:
 
         return self._operator.match(data.get(self._operator.attr_name), attr)
 
-    def _match_logical_operator(
-        self, data: Dict[str, Any], schema: Optional[Schema], strict: bool = True
-    ) -> MatchResult:
-        if schema is not None:
-            attrs = schema.attributes
+    def _match_logical_operator(self, data: Dict[str, Any]) -> MatchResult:
+        if self._schema is not None:
+            attrs = self._schema.attributes
         else:
             attrs = None
-        return self._operator.match(data, attrs, strict)
+        return self._operator.match(data, attrs, self._strict)
 
     def to_dict(self):
         return self._to_dict(self._operator)
@@ -163,7 +154,9 @@ class _ParsedGroupOperator:
     expression: str
 
 
-def parse_filter(filter_exp: str) -> Tuple[Optional[Filter], ValidationIssues]:
+def parse_filter(
+    filter_exp: str, schema: Optional[Schema] = None, strict: bool = True
+) -> Tuple[Optional[Filter], ValidationIssues]:
     issues = ValidationIssues()
     bracket_open_index = None
     complex_attr_name = ""
@@ -265,7 +258,7 @@ def parse_filter(filter_exp: str) -> Tuple[Optional[Filter], ValidationIssues]:
     issues.merge(issues=issues_)
     if not issues.can_proceed():
         return None, issues
-    return Filter(parsed_op), issues
+    return Filter(parsed_op, schema=schema, strict=strict), issues
 
 
 def _parse_operator(

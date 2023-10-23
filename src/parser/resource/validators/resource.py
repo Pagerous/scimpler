@@ -480,7 +480,9 @@ class ResourceTypeGET(_ManyResourcesGET):
             filter_ = None
             filter_exp = request_query_string.get("filter")
             if filter_exp is not None:
-                filter_, issues_ = parse_filter(filter_exp)
+                filter_, issues_ = parse_filter(
+                    filter_exp=filter_exp, schema=self._resource_schema, strict=False
+                )
                 issues.merge(issues=issues_, location=("request", "query_string", "filter"))
 
             resources = response_body.get("resources", [])
@@ -496,9 +498,7 @@ class ResourceTypeGET(_ManyResourcesGET):
                             attr.name,
                         ),
                     )
-                if filter_ is not None and not filter_.match(
-                    data=resource, schema=self._resource_schema, strict=False
-                ):
+                if filter_ is not None and not filter_(resource):
                     issues.add(
                         issue=ValidationError.included_resource_does_not_match_filter(),
                         proceed=True,
@@ -556,7 +556,7 @@ class ServerRootResourceGET(_ManyResourcesGET):
             filter_ = None
             filter_exp = request_query_string.get("filter")
             if filter_exp is not None:
-                filter_, issues_ = parse_filter(filter_exp)
+                filter_, issues_ = parse_filter(filter_exp=filter_exp, schema=None, strict=False)
                 issues.merge(
                     issues=issues_,
                     location=("request", "query_string", "filter"),
@@ -564,9 +564,7 @@ class ServerRootResourceGET(_ManyResourcesGET):
 
             resources = response_body.get("resources", [])
             for i, resource in enumerate(resources):
-                if filter_ is not None and not filter_.match(
-                    data=resource, schema=None, strict=False
-                ):
+                if filter_ is not None and not filter_(resource):
                     issues.add(
                         issue=ValidationError.included_resource_does_not_match_filter(),
                         proceed=True,
