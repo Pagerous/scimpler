@@ -3,7 +3,7 @@ import base64
 import binascii
 import re
 from datetime import datetime
-from typing import Any, Type
+from typing import Any, Set, Type
 
 from ..error import ValidationError, ValidationIssues
 from . import validators
@@ -12,6 +12,7 @@ from . import validators
 class AttributeType(abc.ABC):
     TYPE: Type
     SCIM_NAME: str
+    COMPATIBLE_TYPES: Set[Type] = set()
 
     @classmethod
     def validate(cls, value: Any) -> ValidationIssues:
@@ -36,17 +37,19 @@ class Boolean(AttributeType):
 class Decimal(AttributeType):
     SCIM_NAME = "decimal"
     TYPE = float
+    COMPATIBLE_TYPES = {int}
 
     @classmethod
     def validate(cls, value: Any) -> ValidationIssues:
         if isinstance(value, int):
-            return ValidationIssues()
+            return Integer.validate(value)
         return super().validate(value)
 
 
 class Integer(AttributeType):
     SCIM_NAME = "integer"
     TYPE = int
+    COMPATIBLE_TYPES = {float}
 
     @classmethod
     def validate(cls, value: Any) -> ValidationIssues:
