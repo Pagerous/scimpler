@@ -26,6 +26,11 @@ class AttributeName:
     def __repr__(self) -> str:
         return self._original_value
 
+    def attr_equals(self, other: "AttributeName") -> bool:
+        if all([self.schema, other.schema]):
+            return self.full_attr == other.full_attr
+        return self.attr == other.attr
+
     @classmethod
     def parse(cls, attr: str) -> Optional["AttributeName"]:
         try:
@@ -50,6 +55,14 @@ class AttributeName:
     @property
     def sub_attr(self) -> str:
         return self._sub_attr
+
+    def extract(self, data: Dict[str, Any]) -> Optional[Any]:
+        value = data.get(self.full_attr) or data.get(self.attr)
+        if self.sub_attr:
+            if value is None or not isinstance(value, Dict):
+                return None
+            return value.get(self.sub_attr)
+        return value
 
 
 class AttributeMutability(str, Enum):

@@ -117,21 +117,10 @@ class Sorter:
         )
 
     def __call__(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        if not any(self._get_value(item) for item in data):
+        if not any(self._attr_name.extract(lower_dict_keys(item)) for item in data):
             return data
         key = self._attr_key if self._schema else self._attr_key_no_schema
         return sorted(data, key=key, reverse=not self._asc)
-
-    def _get_value(self, item: Dict[str, Any]) -> Optional[Any]:
-        item = lower_dict_keys(item)
-        value = item.get(self._attr_name.full_attr) or item.get(self._attr_name.attr)
-        if value is None:
-            return None
-        if self._attr_name.sub_attr:
-            if not isinstance(value, Dict):
-                return None
-            value = value.get(self._attr_name.sub_attr)
-        return value
 
     def _get_key(self, value):
         if not value:
@@ -147,7 +136,7 @@ class Sorter:
 
     def _attr_key(self, item):
         value = None
-        item_value = self._get_value(item)
+        item_value = self._attr_name.extract(lower_dict_keys(item))
         if item_value and self._attr.multi_valued:
             if isinstance(self._attr, ComplexAttribute):
                 for v in item_value:
@@ -162,7 +151,7 @@ class Sorter:
 
     def _attr_key_no_schema(self, item):
         value = None
-        item_value = self._get_value(item)
+        item_value = self._attr_name.extract(lower_dict_keys(item))
         if isinstance(item_value, List):
             for v in item_value:
                 if isinstance(v, Dict):
