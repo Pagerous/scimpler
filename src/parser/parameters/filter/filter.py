@@ -2,11 +2,12 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, TypeAlias, Union
 
-from src.parser.attributes.attributes import AttributeName, ComplexAttribute
+from src.parser.attributes.attributes import AttributeName
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter import operator as op
 from src.parser.parameters.filter.operator import MatchResult
 from src.parser.resource.schemas import Schema
+from src.parser.utils import lower_dict_keys
 
 _OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 _AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
@@ -130,14 +131,13 @@ class Filter:
                             expression=complex_attr_exp,
                         )
                     else:
-                        parsed_complex_sub_ops, issues_ = Filter._parse_operator(
-                            op_exp=sub_ops_exp,
-                        )
+                        parsed_complex_sub_ops, issues_ = Filter._parse_operator(op_exp=sub_ops_exp)
                         if not issues_.can_proceed():
                             operator = None
                         else:
                             operator = op.ComplexAttributeOperator(
-                                attr_name.full_attr, parsed_complex_sub_ops
+                                attr_name=attr_name,
+                                sub_operator=parsed_complex_sub_ops,
                             )
                         parsed_complex_ops[complex_attr_start] = _ParsedComplexAttributeOperator(
                             operator=operator,
@@ -472,10 +472,11 @@ class Filter:
 
             if attr_name.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_name=attr_name.full_attr, sub_operator=op_(attr_name.sub_attr)
+                    attr_name=AttributeName(attr_name.full_attr),
+                    sub_operator=op_(attr_name),
                 )
             else:
-                operator = op_(attr_name.full_attr)
+                operator = op_(attr_name)
             return operator, issues
 
         elif len(components) == 3:
@@ -530,11 +531,11 @@ class Filter:
 
             if attr_name.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_name=attr_name.full_attr,
-                    sub_operator=op_(attr_name.sub_attr, value),
+                    attr_name=AttributeName(attr_name.full_attr),
+                    sub_operator=op_(attr_name, value),
                 )
             else:
-                operator = op_(attr_name.full_attr, value)
+                operator = op_(attr_name, value)
             return operator, issues
 
         issues.add(
@@ -632,50 +633,10 @@ class Filter:
         return value, issues
 
     def __call__(self, data: Dict[str, Any]) -> MatchResult:
-        if isinstance(self._operator, op.AttributeOperator):
-            return self._match_attribute_operator(data)
-        if isinstance(self._operator, op.ComplexAttributeOperator):
-            return self._match_complex_attribute_operator(data)
-        if isinstance(self._operator, op.LogicalOperator):
-            return self._match_logical_operator(data)
-        return MatchResult.failed()
-
-    def _match_attribute_operator(self, data: Dict[str, Any]) -> MatchResult:
-        if self._operator.attr_name not in data:
-            if self._strict:
-                return MatchResult.failed()
-            return MatchResult.passed()
-
-        if self._schema is not None:
-            attr = self._schema.attributes.get(self._operator.attr_name)
-            if attr is None:
-                return MatchResult.failed()
-        else:
-            attr = None
-
-        return self._operator.match(data.get(self._operator.attr_name), attr)
-
-    def _match_complex_attribute_operator(self, data: Dict[str, Any]) -> MatchResult:
-        if self._operator.attr_name not in data:
-            if self._strict:
-                return MatchResult.failed()
-            return MatchResult.passed()
-
-        if self._schema is not None:
-            attr = self._schema.attributes.get(self._operator.attr_name)
-            if not isinstance(attr, ComplexAttribute):
-                return MatchResult.failed()
-        else:
-            attr = None
-
-        return self._operator.match(data.get(self._operator.attr_name), attr)
-
-    def _match_logical_operator(self, data: Dict[str, Any]) -> MatchResult:
-        if self._schema is not None:
-            attrs = self._schema.attributes
-        else:
-            attrs = None
-        return self._operator.match(data, attrs, self._strict)
+        data = lower_dict_keys(data)
+        if not isinstance(self._operator, op.LogicalOperator):
+            data = self._operator.attr_name.extract(data)
+        return self._operator.match(data, self._schema, self._strict)
 
     def to_dict(self):
         return self._to_dict(self._operator)
@@ -685,7 +646,7 @@ class Filter:
         if isinstance(operator, op.AttributeOperator):
             filter_dict = {
                 "op": operator.SCIM_OP,
-                "attr_name": operator.display_name,
+                "attr_name": operator.attr_name.sub_attr or operator.attr_name.full_attr,
             }
             if isinstance(operator, op.BinaryAttributeOperator):
                 filter_dict["value"] = operator.value
@@ -694,7 +655,7 @@ class Filter:
         if isinstance(operator, op.ComplexAttributeOperator):
             return {
                 "op": "complex",
-                "attr_name": operator.display_name,
+                "attr_name": operator.attr_name.sub_attr or operator.attr_name.full_attr,
                 "sub_op": Filter._to_dict(operator.sub_operator),
             }
 

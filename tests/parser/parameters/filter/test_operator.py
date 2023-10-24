@@ -1,9 +1,10 @@
 from datetime import datetime
+from typing import List
 
 import pytest
 
 from src.parser.attributes import type as at
-from src.parser.attributes.attributes import Attribute, ComplexAttribute
+from src.parser.attributes.attributes import Attribute, AttributeName, ComplexAttribute
 from src.parser.parameters.filter.operator import (
     And,
     ComplexAttributeOperator,
@@ -21,166 +22,218 @@ from src.parser.parameters.filter.operator import (
     Present,
     StartsWith,
 )
+from src.parser.resource.schemas import ResourceSchema
+
+
+class SchemaForTests(ResourceSchema):
+    def __init__(self):
+        super().__init__(
+            Attribute(name="int", type_=at.Integer),
+            Attribute(name="str", type_=at.String),
+            Attribute(name="str_cs", type_=at.String, case_exact=True),
+            Attribute(name="str_mv", type_=at.String, multi_valued=True),
+            Attribute(name="str_cs_mv", type_=at.String, case_exact=True, multi_valued=True),
+            Attribute(name="bool", type_=at.Boolean),
+            Attribute(name="datetime", type_=at.DateTime),
+            Attribute(name="decimal", type_=at.Decimal),
+            Attribute(name="binary", type_=at.Binary),
+            Attribute(name="external_ref", type_=at.ExternalReference),
+            Attribute(name="uri_ref", type_=at.URIReference),
+            Attribute(name="scim_ref", type_=at.SCIMReference),
+            ComplexAttribute(
+                name="c",
+                sub_attributes=[Attribute(name="value", type_=at.String)],
+            ),
+            ComplexAttribute(
+                name="c_mv",
+                sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
+                multi_valued=True,
+            ),
+            ComplexAttribute(
+                name="c2",
+                sub_attributes=[
+                    Attribute(name="str", type_=at.String),
+                    Attribute(name="int", type_=at.Integer),
+                    Attribute(name="bool", type_=at.Boolean),
+                ],
+            ),
+            ComplexAttribute(
+                name="c2_mv",
+                sub_attributes=[
+                    Attribute(name="str", type_=at.String),
+                    Attribute(name="int", type_=at.Integer),
+                    Attribute(name="bool", type_=at.Boolean),
+                ],
+                multi_valued=True,
+            ),
+        )
+
+    def __repr__(self) -> str:
+        return "SchemaForTests"
+
+    @property
+    def schemas(self) -> List[str]:
+        return ["schema:for:tests"]
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "attribute", "expected"),
+    ("value", "operator_value", "attr_name", "expected"),
     (
-        (1, 1, Attribute(name="my_attr", type_=at.Integer), True),
-        (1, 2, Attribute(name="my_attr", type_=at.Integer), False),
-        ("a", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
-        ("A", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), False),
-        (True, True, Attribute(name="my_attr", type_=at.Boolean), True),
-        (True, False, Attribute(name="my_attr", type_=at.Boolean), False),
+        (1, 1, AttributeName("int"), True),
+        (1, 2, AttributeName("int"), False),
+        ("a", "a", AttributeName("str_cs"), True),
+        ("A", "a", AttributeName("str_cs"), False),
+        (True, True, AttributeName("bool"), True),
+        (True, False, AttributeName("bool"), False),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             False,
         ),
-        (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
-        (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), False),
+        (3.14, 3.14, AttributeName("decimal"), True),
+        (3.14, 3.141, AttributeName("decimal"), False),
         (
             "YQ==",
             "YQ==",
-            Attribute(name="my_attr", type_=at.Binary),
+            AttributeName("binary"),
             True,
         ),
         (
             "YQ==",
             "Yg==",
-            Attribute(name="my_attr", type_=at.Binary),
+            AttributeName("binary"),
             False,
         ),
         (
             "https://www.example.com",
             "https://www.example.com",
-            Attribute(name="my_attr", type_=at.ExternalReference),
+            AttributeName("external_ref"),
             True,
         ),
         (
             "https://www.example.com",
             "https://www.bad_example.com",
-            Attribute(name="my_attr", type_=at.ExternalReference),
+            AttributeName("external_ref"),
             False,
         ),
         (
             "whatever/some/location/",
             "whatever/some/location/",
-            Attribute(name="my_attr", type_=at.URIReference),
+            AttributeName("uri_ref"),
             True,
         ),
         (
             "whatever/some/location/",
             "whatever/some/other/location/",
-            Attribute(name="my_attr", type_=at.URIReference),
+            AttributeName("uri_ref"),
             False,
         ),
         (
             "Users",
             "Users",
-            Attribute(name="my_attr", type_=at.SCIMReference),
+            AttributeName("scim_ref"),
             True,
         ),
         (
             "Users",
             "Groups",
-            Attribute(name="my_attr", type_=at.SCIMReference),
+            AttributeName("scim_ref"),
             False,
         ),
     ),
 )
-def test_equal_operator(value, operator_value, attribute, expected):
-    operator = Equal(attribute.name, operator_value)
+def test_equal_operator(value, operator_value, attr_name, expected):
+    operator = Equal(attr_name, operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "attribute", "expected"),
+    ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 1, Attribute(name="my_attr", type_=at.Integer), False),
-        (1, 2, Attribute(name="my_attr", type_=at.Integer), True),
-        ("a", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), False),
-        ("A", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
-        (True, True, Attribute(name="my_attr", type_=at.Boolean), False),
-        (True, False, Attribute(name="my_attr", type_=at.Boolean), True),
+        (1, 1, AttributeName("int"), False),
+        (1, 2, AttributeName("int"), True),
+        ("a", "a", AttributeName("str_cs"), False),
+        ("A", "a", AttributeName("str_cs"), True),
+        (True, True, AttributeName("bool"), False),
+        (True, False, AttributeName("bool"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
-        (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
-        (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), True),
+        (3.14, 3.14, AttributeName("decimal"), False),
+        (3.14, 3.141, AttributeName("decimal"), True),
         (
             "YQ==",
             "YQ==",
-            Attribute(name="my_attr", type_=at.Binary),
+            AttributeName("binary"),
             False,
         ),
         (
             "YQ==",
             "Yg==",
-            Attribute(name="my_attr", type_=at.Binary),
+            AttributeName("binary"),
             True,
         ),
         (
             "https://www.example.com",
             "https://www.example.com",
-            Attribute(name="my_attr", type_=at.ExternalReference),
+            AttributeName("external_ref"),
             False,
         ),
         (
             "https://www.example.com",
             "https://www.bad_example.com",
-            Attribute(name="my_attr", type_=at.ExternalReference),
+            AttributeName("external_ref"),
             True,
         ),
         (
             "whatever/some/location/",
             "whatever/some/location/",
-            Attribute(name="my_attr", type_=at.URIReference),
+            AttributeName("uri_ref"),
             False,
         ),
         (
             "whatever/some/location/",
             "whatever/some/other/location/",
-            Attribute(name="my_attr", type_=at.URIReference),
+            AttributeName("uri_ref"),
             True,
         ),
         (
             "Users",
             "Users",
-            Attribute(name="my_attr", type_=at.SCIMReference),
+            AttributeName("scim_ref"),
             False,
         ),
         (
             "Users",
             "Groups",
-            Attribute(name="my_attr", type_=at.SCIMReference),
+            AttributeName("scim_ref"),
             True,
         ),
     ),
 )
-def test_not_equal_operator(value, operator_value, attribute, expected):
-    operator = NotEqual(attribute.name, operator_value)
+def test_not_equal_operator(value, operator_value, attribute_name, expected):
+    operator = NotEqual(attribute_name, operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -208,10 +261,10 @@ def test_not_equal_operator(value, operator_value, attribute, expected):
         (3.14, 3.141, False),
     ),
 )
-def test_equal_operator_without_attribute(value, operator_value, expected):
-    operator = Equal("my_attr", operator_value)
+def test_equal_operator_without_schema(value, operator_value, expected):
+    operator = Equal(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
@@ -240,41 +293,41 @@ def test_equal_operator_without_attribute(value, operator_value, expected):
         (3.14, 3.141, True),
     ),
 )
-def test_equal_not_operator_without_attribute(value, operator_value, expected):
-    operator = NotEqual("my_attr", operator_value)
+def test_equal_not_operator_without_schema(value, operator_value, expected):
+    operator = NotEqual(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "attribute", "expected"),
+    ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 1, Attribute(name="my_attr", type_=at.Integer), False),
-        (2, 1, Attribute(name="my_attr", type_=at.Integer), True),
-        ("a", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), False),
-        ("a", "A", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
+        (1, 1, AttributeName("int"), False),
+        (2, 1, AttributeName("int"), True),
+        ("a", "a", AttributeName("str_cs"), False),
+        ("a", "A", AttributeName("str_cs"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
-        (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
-        (3.141, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
+        (3.14, 3.14, AttributeName("decimal"), False),
+        (3.141, 3.14, AttributeName("decimal"), True),
     ),
 )
-def test_greater_than_operator(value, operator_value, attribute, expected):
-    operator = GreaterThan(attribute.name, operator_value)
+def test_greater_than_operator(value, operator_value, attribute_name, expected):
+    operator = GreaterThan(attribute_name, operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -305,50 +358,50 @@ def test_greater_than_operator(value, operator_value, attribute, expected):
         (3.141, 3.14, True),
     ),
 )
-def test_greater_than_operator_without_attribute(value, operator_value, expected):
-    operator = GreaterThan("my_attr", operator_value)
+def test_greater_than_operator_without_schema(value, operator_value, expected):
+    operator = GreaterThan(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "attribute", "expected"),
+    ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 2, Attribute(name="my_attr", type_=at.Integer), False),
-        (1, 1, Attribute(name="my_attr", type_=at.Integer), True),
-        (2, 1, Attribute(name="my_attr", type_=at.Integer), True),
-        ("A", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), False),
-        ("a", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
-        ("a", "A", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
+        (1, 2, AttributeName("int"), False),
+        (1, 1, AttributeName("int"), True),
+        (2, 1, AttributeName("int"), True),
+        ("A", "a", AttributeName("str_cs"), False),
+        ("a", "a", AttributeName("str_cs"), True),
+        ("a", "A", AttributeName("str_cs"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
-        (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), False),
-        (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
-        (3.141, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
+        (3.14, 3.141, AttributeName("decimal"), False),
+        (3.14, 3.14, AttributeName("decimal"), True),
+        (3.141, 3.14, AttributeName("decimal"), True),
     ),
 )
-def test_greater_than_or_equal_operator(value, operator_value, attribute, expected):
-    operator = GreaterThanOrEqual(attribute.name, operator_value)
+def test_greater_than_or_equal_operator(value, operator_value, attribute_name, expected):
+    operator = GreaterThanOrEqual(attribute_name, operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -386,41 +439,41 @@ def test_greater_than_or_equal_operator(value, operator_value, attribute, expect
         (3.141, 3.14, True),
     ),
 )
-def test_greater_than_or_equal_operator_without_attribute(value, operator_value, expected):
-    operator = GreaterThanOrEqual("my_attr", operator_value)
+def test_greater_than_or_equal_operator_without_schema(value, operator_value, expected):
+    operator = GreaterThanOrEqual(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "attribute", "expected"),
+    ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 1, Attribute(name="my_attr", type_=at.Integer), False),
-        (1, 2, Attribute(name="my_attr", type_=at.Integer), True),
-        ("a", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), False),
-        ("A", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
+        (1, 1, AttributeName("int"), False),
+        (1, 2, AttributeName("int"), True),
+        ("a", "a", AttributeName("str_cs"), False),
+        ("A", "a", AttributeName("str_cs"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
-        (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
-        (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), True),
+        (3.14, 3.14, AttributeName("decimal"), False),
+        (3.14, 3.141, AttributeName("decimal"), True),
     ),
 )
-def test_lesser_than_operator(value, operator_value, attribute, expected):
-    operator = LesserThan(attribute.name, operator_value)
+def test_lesser_than_operator(value, operator_value, attribute_name, expected):
+    operator = LesserThan(attribute_name, operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -451,50 +504,50 @@ def test_lesser_than_operator(value, operator_value, attribute, expected):
         (3.14, 3.141, True),
     ),
 )
-def test_lesser_than_operator_without_attribute(value, operator_value, expected):
-    operator = LesserThan("my_attr", operator_value)
+def test_lesser_than_operator_without_schema(value, operator_value, expected):
+    operator = LesserThan(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "attribute", "expected"),
+    ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 2, Attribute(name="my_attr", type_=at.Integer), True),
-        (1, 1, Attribute(name="my_attr", type_=at.Integer), True),
-        (2, 1, Attribute(name="my_attr", type_=at.Integer), False),
-        ("A", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
-        ("a", "a", Attribute(name="my_attr", type_=at.String, case_exact=True), True),
-        ("a", "A", Attribute(name="my_attr", type_=at.String, case_exact=True), False),
+        (1, 2, AttributeName("int"), True),
+        (1, 1, AttributeName("int"), True),
+        (2, 1, AttributeName("int"), False),
+        ("A", "a", AttributeName("str_cs"), True),
+        ("a", "a", AttributeName("str_cs"), True),
+        ("a", "A", AttributeName("str_cs"), False),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            Attribute(name="my_attr", type_=at.DateTime),
+            AttributeName("datetime"),
             False,
         ),
-        (3.14, 3.141, Attribute(name="my_attr", type_=at.Decimal), True),
-        (3.14, 3.14, Attribute(name="my_attr", type_=at.Decimal), True),
-        (3.141, 3.14, Attribute(name="my_attr", type_=at.Decimal), False),
+        (3.14, 3.141, AttributeName("decimal"), True),
+        (3.14, 3.14, AttributeName("decimal"), True),
+        (3.141, 3.14, AttributeName("decimal"), False),
     ),
 )
-def test_lesser_than_or_equal_operator(value, operator_value, attribute, expected):
-    operator = LesserThanOrEqual(attribute.name, operator_value)
+def test_lesser_than_or_equal_operator(value, operator_value, attribute_name, expected):
+    operator = LesserThanOrEqual(attribute_name, operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -532,37 +585,34 @@ def test_lesser_than_or_equal_operator(value, operator_value, attribute, expecte
         (3.141, 3.1, False),
     ),
 )
-def test_lesser_than_or_equal_operator_without_attribute(value, operator_value, expected):
-    operator = LesserThanOrEqual("my_attr", operator_value)
+def test_lesser_than_or_equal_operator_without_schema(value, operator_value, expected):
+    operator = LesserThanOrEqual(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
 
 def test_binary_operator_does_not_match_if_non_matching_attribute_type():
-    attribute = Attribute(name="my_attr", type_=at.Integer)
-    operator = Equal(attr_name="my_attr", value="1")
+    operator = Equal(AttributeName("int"), "1")
 
-    match = operator.match(1, attribute)
+    match = operator.match(1, SchemaForTests())
 
     assert not match
 
 
-def test_binary_operator_does_not_check_attribute_name():
-    attribute = Attribute(name="my_attr", type_=at.Integer)
-    operator = Equal(attr_name="other_attr", value=1)
+def test_binary_operator_does_not_match_if_attr_missing_in_schema():
+    operator = Equal(AttributeName("other_int"), 1)
 
-    match = operator.match(1, attribute)
+    match = operator.match(1, SchemaForTests())
 
-    assert match
+    assert not match
 
 
 def test_binary_operator_does_not_match_if_not_supported_scim_type():
-    attribute = Attribute(name="my_attr", type_=at.SCIMReference)
-    operator = GreaterThan(attr_name="other_attr", value="whatever")
+    operator = GreaterThan(AttributeName("scim_ref"), chr(0))
 
-    match = operator.match("Users", attribute)
+    match = operator.match("Users", SchemaForTests())
 
     assert not match
 
@@ -582,10 +632,9 @@ def test_binary_operator_does_not_match_if_not_supported_scim_type():
     ),
 )
 def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expected):
-    attribute = Attribute(name="my_attr", type_=at.String, case_exact=False)
-    operator = operator_cls("my_attr", "A")
+    operator = operator_cls(AttributeName("str"), "A")
 
-    actual = operator.match("a", attribute)
+    actual = operator.match("a", SchemaForTests())
 
     assert actual == expected
 
@@ -600,10 +649,9 @@ def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expect
     ),
 )
 def test_contains_operator(value, operator_value, expected):
-    attribute = Attribute(name="my_attr", type_=at.String, case_exact=True)
-    operator = Contains("my_attr", operator_value)
+    operator = Contains(AttributeName("str_cs"), operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -621,10 +669,10 @@ def test_contains_operator(value, operator_value, expected):
         ("abc", "Bc", True),
     ),
 )
-def test_contains_operator_without_attribute(value, operator_value, expected):
-    operator = Contains("my_attr", operator_value)
+def test_contains_operator_without_schema(value, operator_value, expected):
+    operator = Contains(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
@@ -640,10 +688,9 @@ def test_contains_operator_without_attribute(value, operator_value, expected):
     ),
 )
 def test_starts_with_operator(value, operator_value, expected):
-    attribute = Attribute(name="my_attr", type_=at.String, case_exact=True)
-    operator = StartsWith("my_attr", operator_value)
+    operator = StartsWith(AttributeName("str_cs"), operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -660,10 +707,10 @@ def test_starts_with_operator(value, operator_value, expected):
         ("aBC", "ab", True),
     ),
 )
-def test_starts_with_operator_without_attribute(value, operator_value, expected):
-    operator = StartsWith("my_attr", operator_value)
+def test_starts_with_operator_without_schema(value, operator_value, expected):
+    operator = StartsWith(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
@@ -679,10 +726,9 @@ def test_starts_with_operator_without_attribute(value, operator_value, expected)
     ),
 )
 def test_ends_with_operator(value, operator_value, expected):
-    attribute = Attribute(name="my_attr", type_=at.String, case_exact=True)
-    operator = EndsWith("my_attr", operator_value)
+    operator = EndsWith(AttributeName("str_cs"), operator_value)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -699,71 +745,63 @@ def test_ends_with_operator(value, operator_value, expected):
         ("aBC", "bc", True),
     ),
 )
-def test_ends_with_operator_without_attribute(value, operator_value, expected):
-    operator = EndsWith("my_attr", operator_value)
+def test_ends_with_operator_without_schema(value, operator_value, expected):
+    operator = EndsWith(AttributeName("attr"), operator_value)
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
 
 def test_multi_value_attribute_is_matched_if_one_of_values_match():
-    attribute = Attribute(name="my_attr", type_=at.String, case_exact=True, multi_valued=True)
-    operator = Equal("my_attr", "abc")
+    operator = Equal(AttributeName("str_cs_mv"), "abc")
 
-    match = operator.match(["b", "c", "ab", "abc", "ca"], attribute)
+    match = operator.match(["b", "c", "ab", "abc", "ca"], SchemaForTests())
 
     assert match
 
 
-def test_multi_value_attribute_is_matched_if_one_of_values_match_without_attribute():
-    operator = Equal("my_attr", "abc")
+def test_multi_value_attribute_is_matched_if_one_of_values_match_without_schema():
+    operator = Equal(AttributeName("attr"), "abc")
 
-    match = operator.match(["b", "c", "ab", "abc", "ca"], None)
+    match = operator.match(["b", "c", "ab", "abc", "ca"])
 
     assert match
 
 
 def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_match():
-    attribute = Attribute(name="my_attr", type_=at.String, case_exact=False, multi_valued=True)
-    operator = Equal("my_attr", "abc")
+    operator = Equal(AttributeName("str_mv"), "abc")
 
-    match = operator.match(["b", "c", "ab", "ABc", "ca"], attribute)
+    match = operator.match(["b", "c", "ab", "ABc", "ca"], SchemaForTests())
 
     assert match
 
 
 @pytest.mark.parametrize(
-    ("value", "attribute", "expected"),
+    ("value", "attribute_name", "expected"),
     (
-        ("", Attribute(name="my_attr", type_=at.String), False),
-        ("abc", Attribute(name="my_attr", type_=at.String), True),
-        (None, Attribute(name="my_attr", type_=at.Boolean), False),
-        (False, Attribute(name="my_attr", type_=at.Boolean), True),
-        ([], Attribute(name="my_attr", type_=at.String, multi_valued=True), False),
+        ("", AttributeName("str"), False),
+        ("abc", AttributeName("str"), True),
+        (None, AttributeName("bool"), False),
+        (False, AttributeName("bool"), True),
+        ([], AttributeName("str_mv"), False),
         (
             ["a", "b", "c"],
-            Attribute(name="my_attr", type_=at.String, multi_valued=True),
+            AttributeName("str_mv"),
             True,
         ),
         (
             {
                 "value": "",
             },
-            ComplexAttribute(
-                name="my_attr",
-                sub_attributes=[Attribute(name="value", type_=at.String)],
-            ),
+            AttributeName("c"),
             False,
         ),
         (
             {
                 "value": "abc",
             },
-            ComplexAttribute(
-                name="my_attr",
-                sub_attributes=[Attribute(name="value", type_=at.String)],
-            ),
+            AttributeName("c"),
             False,  # only multivalued complex attributes can be matched
         ),
         (
@@ -775,11 +813,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
                     "value": "",
                 },
             ],
-            ComplexAttribute(
-                name="my_attr",
-                sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
-                multi_valued=True,
-            ),
+            AttributeName("c_mv"),
             False,
         ),
         (
@@ -791,19 +825,15 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
                     "value": "abc",
                 },
             ],
-            ComplexAttribute(
-                name="my_attr",
-                sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
-                multi_valued=True,
-            ),
+            AttributeName("c_mv"),
             True,
         ),
     ),
 )
-def test_present_operator(value, attribute, expected):
-    operator = Present("my_attr")
+def test_present_operator(value, attribute_name, expected):
+    operator = Present(attribute_name)
 
-    actual = operator.match(value, attribute)
+    actual = operator.match(value, SchemaForTests())
 
     assert actual == expected
 
@@ -823,336 +853,218 @@ def test_present_operator(value, attribute, expected):
         ([{"value": ""}, {"value": "abc"}], True),
     ),
 )
-def test_present_operator_without_attribute(value, expected):
-    operator = Present("my_attr")
+def test_present_operator_without_schema(value, expected):
+    operator = Present(AttributeName("attr"))
 
-    actual = operator.match(value, None)
+    actual = operator.match(value)
 
     assert actual == expected
 
 
-@pytest.mark.parametrize("use_attribute", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
 def test_complex_attribute_matches_binary_operator_if_one_of_values_matches(
-    use_attribute,
+    use_schema,
 ):
-    attribute = (
-        ComplexAttribute(
-            name="my_attr",
-            sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
-            multi_valued=True,
-        )
-        if use_attribute
-        else None
-    )
-    operator = StartsWith("my_attr", "abc")
+    schema = SchemaForTests() if use_schema else None
+    operator = StartsWith(AttributeName("c_mv"), "abc")
 
-    match = operator.match(
-        value=[{"value": "a"}, {"value": "bac"}, {"value": "abcd"}],
-        attr=attribute,
-    )
+    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "abcd"}], schema)
 
     assert match
 
 
-@pytest.mark.parametrize("use_attribute", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
 def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches(
-    use_attribute,
+    use_schema,
 ):
-    attribute = (
-        ComplexAttribute(
-            name="my_attr",
-            sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
-            multi_valued=True,
-        )
-        if use_attribute
-        else None
-    )
-    operator = StartsWith("my_attr", "abc")
+    schema = SchemaForTests() if use_schema else None
+    operator = StartsWith(AttributeName("c_mv"), "abc")
 
-    match = operator.match(
-        value=[{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}],
-        attr=attribute,
-    )
+    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}], schema)
 
     assert not match
 
 
 @pytest.mark.parametrize(
-    ("lt_attr_value", "le_attr_value", "expected"),
+    ("str_cs_value", "expected"),
     (
-        (1, 0, True),
-        (1, 2, False),
+        ("a", True),
+        ("b", False),
     ),
 )
-def test_and_operator_matches(lt_attr_value, le_attr_value, expected):
+def test_and_operator_matches(str_cs_value, expected):
     operator = And(
-        Equal("eq_attr", 1),
-        NotEqual("ne_attr", "2"),
-        StartsWith("sw_attr", "ab"),
-        EndsWith("ew_attr", "bc"),
+        Equal(AttributeName("int"), 1),
         And(
-            GreaterThan("gt_attr", 1),
-            GreaterThanOrEqual("ge_attr", 1),
+            GreaterThan(AttributeName("decimal"), 1.0),
+            NotEqual(AttributeName("str"), "1"),
         ),
         Or(
-            LesserThan("lt_attr", 1),
-            LesserThanOrEqual("le_attr", 1),
+            Equal(AttributeName("bool"), True),
+            StartsWith(AttributeName("str_cs"), "a"),
         ),
-        Contains("co_attr", "b"),
-        Present("pr_attr"),
     )
 
     actual = operator.match(
-        value={
-            "eq_attr": 1,
-            "ne_attr": "1",
-            "sw_attr": "abc",
-            "ew_attr": "abc",
-            "gt_attr": 2,
-            "ge_attr": 1,
-            "lt_attr": lt_attr_value,
-            "le_attr": le_attr_value,
-            "co_attr": "abc",
-            "pr_attr": "abc",
+        {
+            "int": 1,
+            "decimal": 1.1,
+            "str": "2",
+            "bool": False,
+            "str_cs": str_cs_value,
         },
-        attrs={  # noqa
-            "eq_attr": Attribute("eq_attr", type_=at.Integer),
-            "ne_attr": Attribute("ne_attr", type_=at.String),
-            "sw_attr": Attribute("sw_attr", type_=at.String),
-            "ew_attr": Attribute("ew_attr", type_=at.String),
-            "gt_attr": Attribute("gt_attr", type_=at.Integer),
-            "ge_attr": Attribute("ge_attr", type_=at.Integer),
-            "lt_attr": Attribute("lt_attr", type_=at.Integer),
-            "le_attr": Attribute("le_attr", type_=at.Integer),
-            "co_attr": Attribute("co_attr", type_=at.String),
-            "pr_attr": Attribute("pr_attr", type_=at.String),
-        },
+        SchemaForTests(),
     )
 
     assert actual == expected
 
 
 @pytest.mark.parametrize(
-    ("lt_attr_value", "le_attr_value", "expected"),
+    ("str_cs_value", "expected"),
     (
-        (1, 0, True),
-        (1, 2, False),
+        ("a", True),
+        ("b", False),
     ),
 )
-def test_or_operator_matches(lt_attr_value, le_attr_value, expected):
+def test_or_operator_matches(str_cs_value, expected):
     operator = Or(
-        Equal("eq_attr", 1),
-        NotEqual("ne_attr", "2"),
-        StartsWith("sw_attr", "ab"),
-        EndsWith("ew_attr", "bc"),
+        Equal(AttributeName("int"), 1),
         And(
-            GreaterThan("gt_attr", 1),
-            GreaterThanOrEqual("ge_attr", 1),
+            GreaterThan(AttributeName("decimal"), 1.0),  # TODO: should work for int 1 as well
+            NotEqual(AttributeName("str"), "1"),
         ),
         Or(
-            LesserThan("lt_attr", 1),
-            LesserThanOrEqual("le_attr", 1),
+            Equal(AttributeName("bool"), True),
+            StartsWith(AttributeName("str_cs"), "a"),
         ),
-        Contains("co_attr", "b"),
-        Present("pr_attr"),
     )
 
     actual = operator.match(
-        value={
-            "eq_attr": 2,
-            "ne_attr": "2",
-            "sw_attr": "cba",
-            "ew_attr": "cba",
-            "gt_attr": 1,
-            "ge_attr": 1,
-            "lt_attr": lt_attr_value,
-            "le_attr": le_attr_value,
-            "co_attr": "ccc",
-            "pr_attr": "",
+        {
+            "int": 2,
+            "decimal": 1.0,
+            "str": "1",
+            "bool": False,
+            "str_cs": str_cs_value,
         },
-        attrs={  # noqa
-            "eq_attr": Attribute("eq_attr", type_=at.Integer),
-            "ne_attr": Attribute("ne_attr", type_=at.String),
-            "sw_attr": Attribute("sw_attr", type_=at.String),
-            "ew_attr": Attribute("ew_attr", type_=at.String),
-            "gt_attr": Attribute("gt_attr", type_=at.Integer),
-            "ge_attr": Attribute("ge_attr", type_=at.Integer),
-            "lt_attr": Attribute("lt_attr", type_=at.Integer),
-            "le_attr": Attribute("le_attr", type_=at.Integer),
-            "co_attr": Attribute("co_attr", type_=at.String),
-            "pr_attr": Attribute("pr_attr", type_=at.String),
-        },
+        SchemaForTests(),
     )
 
     assert actual == expected
 
 
-@pytest.mark.parametrize("use_attr", (True, False))
-def test_complex_attribute_operator_matches_all_complex_sub_attrs(use_attr):
-    attribute = (
-        ComplexAttribute(
-            name="complex_attr",
-            sub_attributes=[
-                Attribute(name="sub_attr_1", type_=at.String),
-                Attribute(name="sub_attr_2", type_=at.Integer),
-                Attribute(name="sub_attr_3", type_=at.Boolean),
-            ],
-        )
-        if use_attr
-        else None
-    )
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_attribute_operator_matches_all_complex_sub_attrs(use_schema):
+    schema = SchemaForTests() if use_schema else None
     operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
+        attr_name=AttributeName("c2"),
         sub_operator=And(
-            Equal("sub_attr_1", "admin"),
-            GreaterThan("sub_attr_2", 18),
-            NotEqual("sub_attr_3", True),
+            Equal(AttributeName("c2.str"), "admin"),
+            GreaterThan(AttributeName("c2.int"), 18),
+            NotEqual(AttributeName("c2.bool"), True),
         ),
     )
 
-    match = operator.match(
-        value={"sub_attr_1": "admin", "sub_attr_2": 19, "sub_attr_3": False},
-        attr=attribute,
-    )
+    match = operator.match({"str": "admin", "int": 19, "bool": False}, schema)
 
     assert match
 
 
-@pytest.mark.parametrize("use_attr", (True, False))
-def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_attr):
-    attribute = (
-        ComplexAttribute(
-            name="complex_attr",
-            sub_attributes=[
-                Attribute(name="sub_attr_1", type_=at.String),
-                Attribute(name="sub_attr_2", type_=at.Integer),
-                Attribute(name="sub_attr_3", type_=at.Boolean),
-            ],
-        )
-        if use_attr
-        else None
-    )
-
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_schema):
+    schema = SchemaForTests() if use_schema else None
     operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
+        attr_name=AttributeName("c2"),
         sub_operator=Or(
-            Equal("sub_attr_1", "admin"),
-            GreaterThan("sub_attr_2", 18),
-            NotEqual("sub_attr_3", True),
+            Equal(AttributeName("c2.str"), "admin"),
+            GreaterThan(AttributeName("c2.int"), 18),
+            NotEqual(AttributeName("c2.bool"), True),
         ),
     )
 
-    match = operator.match(
-        value={"sub_attr_1": "user", "sub_attr_2": 18, "sub_attr_3": True},
-        attr=attribute,
-    )
+    match = operator.match({"str": "user", "int": 18, "bool": True}, schema)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_attr", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
 def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
-    use_attr,
+    use_schema,
 ):
-    attribute = (
-        ComplexAttribute(
-            name="complex_attr",
-            sub_attributes=[
-                Attribute(name="sub_attr_1", type_=at.String),
-                Attribute(name="sub_attr_2", type_=at.Integer),
-                Attribute(name="sub_attr_3", type_=at.Boolean),
-            ],
-            multi_valued=True,
-        )
-        if use_attr
-        else None
-    )
+    schema = SchemaForTests() if use_schema else None
     operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
+        attr_name=AttributeName("c2_mv"),
         sub_operator=And(
-            Equal("sub_attr_1", "admin"),
-            GreaterThan("sub_attr_2", 18),
-            NotEqual("sub_attr_3", True),
+            Equal(AttributeName("c2_mv.str"), "admin"),
+            GreaterThan(AttributeName("c2_mv.int"), 18),
+            NotEqual(AttributeName("c2_mv.bool"), True),
         ),
     )
 
     match = operator.match(
-        value=[
-            {"sub_attr_1": "admin", "sub_attr_2": 19, "sub_attr_3": False},
-            {"sub_attr_1": "user", "sub_attr_2": 18, "sub_attr_3": True},
-            {"sub_attr_1": "user", "sub_attr_2": 19, "sub_attr_3": False},
+        [
+            {"str": "admin", "int": 19, "bool": False},
+            {"str": "user", "int": 18, "bool": True},
+            {"str": "user", "int": 19, "bool": False},
         ],
-        attr=attribute,
+        schema,
     )
 
     assert match
 
 
-@pytest.mark.parametrize("use_attr", (True, False))
-def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(use_attr):
-    attribute = (
-        ComplexAttribute(
-            name="complex_attr",
-            sub_attributes=[
-                Attribute(name="sub_attr_1", type_=at.String),
-                Attribute(name="sub_attr_2", type_=at.Integer),
-                Attribute(name="sub_attr_3", type_=at.Boolean),
-            ],
-            multi_valued=True,
-        )
-        if use_attr
-        else None
-    )
-
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(use_schema):
+    schema = SchemaForTests() if use_schema else None
     operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
+        attr_name=AttributeName("c2_mv"),
         sub_operator=Or(
-            Equal("sub_attr_1", "admin"),
-            GreaterThan("sub_attr_2", 18),
-            NotEqual("sub_attr_3", True),
+            Equal(AttributeName("c2_mv.str"), "admin"),
+            GreaterThan(AttributeName("c2_mv.int"), 18),
+            NotEqual(AttributeName("c2_mv.bool"), True),
         ),
     )
 
     match = operator.match(
-        value=[
-            {"sub_attr_1": "user", "sub_attr_2": 16, "sub_attr_3": True},
-            {"sub_attr_1": "customer", "sub_attr_2": 18, "sub_attr_3": True},
-            {"sub_attr_1": "santa-claus", "sub_attr_2": 12, "sub_attr_3": True},
+        [
+            {"str": "user", "int": 16, "bool": True},
+            {"str": "customer", "int": 18, "bool": True},
+            {"str": "santa-claus", "int": 12, "bool": True},
         ],
-        attr=attribute,
+        schema,
     )
 
     assert not match
 
 
-@pytest.mark.parametrize("use_attr", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
 @pytest.mark.parametrize(
     ("value", "is_multivalued", "expected"),
     (
         (
-            {"sub_attr_1": "admin", "sub_attr_2": 19, "sub_attr_3": False},
+            {"str": "admin", "int": 19, "bool": False},
             False,
             True,
         ),
         (
-            {"sub_attr_1": "user", "sub_attr_2": 18, "sub_attr_3": True},
+            {"str": "user", "int": 18, "bool": True},
             False,
             False,
         ),
         (
             [
-                {"sub_attr_1": "admin", "sub_attr_2": 19, "sub_attr_3": False},
-                {"sub_attr_1": "user", "sub_attr_2": 18, "sub_attr_3": True},
-                {"sub_attr_1": "user", "sub_attr_2": 19, "sub_attr_3": False},
+                {"str": "admin", "int": 19, "bool": False},
+                {"str": "user", "int": 18, "bool": True},
+                {"str": "user", "int": 19, "bool": False},
             ],
             True,
             True,
         ),
         (
             [
-                {"sub_attr_1": "user", "sub_attr_2": 16, "sub_attr_3": True},
-                {"sub_attr_1": "customer", "sub_attr_2": 18, "sub_attr_3": True},
-                {"sub_attr_1": "santa-claus", "sub_attr_2": 12, "sub_attr_3": True},
+                {"str": "user", "int": 16, "bool": True},
+                {"str": "customer", "int": 18, "bool": True},
+                {"str": "santa-claus", "int": 12, "bool": True},
             ],
             True,
             False,
@@ -1160,264 +1072,301 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(us
     ),
 )
 def test_attribute_operator_matches_single_complex_sub_attr(
-    use_attr, value, is_multivalued, expected
+    use_schema, value, is_multivalued, expected
 ):
-    attribute = (
-        ComplexAttribute(
-            name="complex_attr",
-            sub_attributes=[
-                Attribute(name="sub_attr_1", type_=at.String),
-                Attribute(name="sub_attr_2", type_=at.Integer),
-                Attribute(name="sub_attr_3", type_=at.Boolean),
-            ],
-            multi_valued=is_multivalued,
+    schema = SchemaForTests() if use_schema else None
+    if is_multivalued:
+        operator = ComplexAttributeOperator(
+            attr_name=AttributeName("c2_mv"),
+            sub_operator=Equal(AttributeName("c2_mv.str"), "admin"),
         )
-        if use_attr
-        else None
-    )
+    else:
+        operator = ComplexAttributeOperator(
+            attr_name=AttributeName("c2"),
+            sub_operator=Equal(AttributeName("c2.str"), "admin"),
+        )
 
-    operator = ComplexAttributeOperator(
-        attr_name="complex_attr",
-        sub_operator=Equal("sub_attr_1", "admin"),
-    )
-
-    actual = operator.match(
-        value=value,
-        attr=attribute,
-    )
+    actual = operator.match(value, schema)
 
     assert actual == expected
 
 
-def test_binary_op_does_not_match_if_value_not_provided():
-    operator = Equal("my_attr", 2)
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_binary_op_returns_missing_data_if_no_value_provided_with_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = Equal(AttributeName("str"), "abc")
 
-    match = operator.match(value=None, attr=None)
+    match = operator.match(None, schema, True)
 
-    assert not match
+    assert match.status == MatchStatus.MISSING_DATA
 
 
-@pytest.mark.parametrize("use_attr", (True, False))
-def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict(use_attr):
-    attribute = (
-        ComplexAttribute(
-            sub_attributes=[Attribute("sub_attr", type_=at.Integer)],
-            name="my_attr",
-        )
-        if use_attr
-        else None
-    )
-    operator = ComplexAttributeOperator("my_attr", sub_operator=Equal("sub_attr", 1))
-    value = {"my_attr": {}}
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_binary_op_returns_matches_if_no_value_provided_without_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = Equal(AttributeName("str"), "abc")
 
-    match = operator.match(value=value, attr=attribute, strict=False)
+    match = operator.match(None, schema, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_attr", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = ComplexAttributeOperator(
+        attr_name=AttributeName("c"),
+        sub_operator=Equal(AttributeName("c.str"), "abc"),
+    )
+
+    match = operator.match({}, schema, False)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_schema", (True, False))
 def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict(
-    use_attr,
+    use_schema,
 ):
-    attribute = (
-        ComplexAttribute(
-            sub_attributes=[Attribute("sub_attr", type_=at.Integer)],
-            name="my_attr",
-        )
-        if use_attr
-        else None
+    schema = SchemaForTests() if use_schema else None
+    operator = ComplexAttributeOperator(
+        attr_name=AttributeName("c"),
+        sub_operator=Equal(AttributeName("c.str"), "abc"),
     )
-    operator = ComplexAttributeOperator("my_attr", sub_operator=Equal("sub_attr", 1))
-    value = {"my_attr": {}}
 
-    match = operator.match(value=value, attr=attribute, strict=True)
+    match = operator.match({}, schema, True)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict(use_attrs):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = Or(
+        Equal(AttributeName("int"), 1),
+        Equal(AttributeName("str"), "abc"),
     )
-    operator = Or(Equal("attr_1", 1), Equal("attr_2", 2))
-    value = {"attr_1": 2}
 
-    match = operator.match(value=value, attrs=attributes, strict=True)
+    match = operator.match({"int": 2}, schema, True)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_or_op_matches_if_any_sub_attr_matched_without_strict(use_attrs):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
+@pytest.mark.parametrize("strict", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_or_op_matches_if_any_sub_attr_matched(strict, use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = Or(
+        Equal(AttributeName("int"), 1),
+        Equal(AttributeName("str"), "abc"),
     )
-    operator = Or(Equal("attr_1", 1), Equal("attr_2", 2))
-    value = {"attr_1": 1}
 
-    match = operator.match(value=value, attrs=attributes, strict=False)
+    match = operator.match({"int": 1}, schema, strict)
 
     assert match
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_or_op_matches_if_any_sub_attr_matched_with_strict(use_attrs):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
-    )
-    operator = Or(Equal("attr_1", 1), Equal("attr_2", 2))
-    value = {"attr_1": 1}
-
-    match = operator.match(value=value, attrs=attributes, strict=True)
-
-    assert match
-
-
-@pytest.mark.parametrize("use_attrs", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
 def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict(
-    use_attrs,
+    use_schema,
 ):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
+    schema = SchemaForTests() if use_schema else None
+    operator = And(
+        Equal(AttributeName("int"), 1),
+        Equal(AttributeName("str"), "abc"),
     )
-    operator = And(Equal("attr_1", 1), Equal("attr_2", 2))
-    value = {"attr_1": 1}  # value for this attr is correct, but missing 'attr_2'
+    value = {"int": 1}  # value for this attr is correct, but missing 'str'
 
-    match = operator.match(value=value, attrs=attributes, strict=True)
+    match = operator.match(value, schema, True)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict(use_attrs):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = And(
+        Equal(AttributeName("int"), 1),
+        Equal(AttributeName("str"), "abc"),
     )
-    operator = And(Equal("attr_1", 1), Equal("attr_2", 2))
-    value = {"attr_1": 1, "attr_2": 3}
 
-    match = operator.match(value=value, attrs=attributes, strict=True)
+    match = operator.match({"int": 1, "str": "cba"}, schema, True)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict(use_attrs):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = And(
+        Equal(AttributeName("int"), 1),
+        Equal(
+            AttributeName("str"),
+            "abc",
+        ),
     )
-    operator = And(Equal("attr_1", 1), Equal("attr_2", 2))
-    value = {"attr_1": 1}
+    value = {"int": 1}  # value for this attr is correct, 'str' is missing, but no strict
 
-    match = operator.match(value=value, attrs=attributes, strict=False)
+    match = operator.match(value, schema, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict(use_attrs):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = Not(
+        Or(
+            Equal(AttributeName("int"), 1),
+            Equal(AttributeName("str"), "abc"),
+        ),
     )
-    operator = Not(Or(Equal("attr_1", 1), Equal("attr_2", 2)))
-    value = {"attr_1": 2}
 
-    match = operator.match(value=value, attrs=attributes, strict=False)
+    match = operator.match({"int": 2}, schema, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
 def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(
-    use_attrs,
+    use_schema,
 ):
-    attributes = (
-        {
-            "attr_1": Attribute("attr_1", type_=at.Integer),
-            "attr_2": Attribute("attr_2", type_=at.Integer),
-        }
-        if use_attrs
-        else None
+    schema = SchemaForTests() if use_schema else None
+    operator = Not(
+        Or(
+            Equal(AttributeName("int"), 1),
+            Equal(AttributeName("str"), "abc"),
+        ),
     )
-    operator = Not(Or(Equal("attr_1", 1), Equal("attr_2", 2)))
-    value = {"attr_1": 2}
 
-    match = operator.match(value=value, attrs=attributes, strict=True)
+    match = operator.match({"int": 2}, schema, True)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict(use_attrs):
-    attributes = {"attr": Attribute("attr", type_=at.Integer)} if use_attrs else None
-    operator = Not(Equal("attr", 1))
-    value = {}
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = Not(Equal(AttributeName("int"), 1))
 
-    match = operator.match(value=value, attrs=attributes, strict=False)
+    match = operator.match({}, schema, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_attrs", (True, False))
-def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict(use_attrs):
-    attributes = (
-        {
-            "attr_1": Attribute("attr", type_=at.Integer),
-        }
-        if use_attrs
-        else None
-    )
-    operator = Not(Equal("attr_1", 1))
-    value = {}
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = Not(Equal(AttributeName("int"), 1))
 
-    match = operator.match(value=value, attrs=attributes, strict=True)
+    match = operator.match({}, schema, True)
 
     assert not match
 
 
 def test_not_op_does_not_match_if_op_attr_not_in_attrs():
-    attributes = {
-        "attr": Attribute("attr", type_=at.Integer),
-    }
-    operator = Not(Equal("other_attr", 1))
-    value = {"other_attr": 2}
+    operator = Not(Equal(AttributeName("other_attr"), 1))
 
-    match = operator.match(value=value, attrs=attributes)
+    match = operator.match({"other_attr": 2}, SchemaForTests())
 
     assert not match
+
+
+@pytest.mark.parametrize("strict", (True, False))
+def test_not_op_matches_if_no_data_for_pr_sub_op_with_strict(strict):
+    operator = Not(Present(AttributeName("int")))
+
+    match = operator.match({}, SchemaForTests(), strict)
+
+    assert match
+
+
+@pytest.mark.parametrize("strict", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
+@pytest.mark.parametrize(("value", "expected"), ((1.0, True), (2.0, False)))
+def test_binary_attributes_allows_to_compare_int_with_decimal(strict, use_schema, value, expected):
+    schema = SchemaForTests() if use_schema else None
+    operator = Equal(AttributeName("decimal"), 1)
+
+    match = operator.match(value, schema, strict)
+
+    assert bool(match) is expected
+
+
+@pytest.mark.parametrize("strict", (True, False))
+@pytest.mark.parametrize("use_schema", (True, False))
+@pytest.mark.parametrize(("value", "expected"), ((1, True), (2, False)))
+def test_binary_attributes_allows_to_compare_decimal_with_int(strict, use_schema, value, expected):
+    schema = SchemaForTests() if use_schema else None
+    operator = Equal(AttributeName("int"), 1.0)
+
+    match = operator.match(value, schema, strict)
+
+    assert bool(match) is expected
+
+
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_op_can_be_used_with_logical_op(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = ComplexAttributeOperator(
+        attr_name=AttributeName("c2"),
+        sub_operator=And(Equal(AttributeName("int"), 1), Equal(AttributeName("str"), "abc")),
+    )
+
+    match = operator.match({"int": 1, "str": "abc"}, schema)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = ComplexAttributeOperator(
+        attr_name=AttributeName("c2"),
+        sub_operator=Or(Equal(AttributeName("int"), 1), Equal(AttributeName("str"), "abc")),
+    )
+
+    match = operator.match({"int": 1}, schema)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = ComplexAttributeOperator(
+        attr_name=AttributeName("c2"),
+        sub_operator=Or(Equal(AttributeName("int"), 1), Equal(AttributeName("str"), "abc")),
+    )
+
+    match = operator.match({}, schema)
+
+    assert not match
+
+
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_complex_op_used_with_or_op_matches_if_no_values_provided_without_strict(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = ComplexAttributeOperator(
+        attr_name=AttributeName("c2"),
+        sub_operator=Or(Equal(AttributeName("int"), 1), Equal(AttributeName("str"), "abc")),
+    )
+
+    match = operator.match({}, schema, False)
+
+    assert match
+
+
+@pytest.mark.parametrize("use_schema", (True, False))
+def test_multivalued_complex_op_can_be_used_with_logical_op(use_schema):
+    schema = SchemaForTests() if use_schema else None
+    operator = ComplexAttributeOperator(
+        attr_name=AttributeName("c2_mv"),
+        sub_operator=And(Equal(AttributeName("int"), 1), Equal(AttributeName("str"), "abc")),
+    )
+
+    match = operator.match(
+        [{"int": 2, "str": "abc"}, {"int": 1, "str": "cba"}, {"int": 1, "str": "abc"}], schema
+    )
+
+    assert match
