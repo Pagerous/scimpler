@@ -267,19 +267,21 @@ class Present(AttributeOperator):
         if schema is not None and schema.get_attr(self._attr_name) is None:
             return MatchResult.failed_no_attr()
 
-        match = False
-        attr = schema.get_attr(self._attr_name) if schema else None
         if schema is None:
             match = self._match_no_attr(value)
-        elif isinstance(attr, ComplexAttribute):
-            if isinstance(value, List):
-                match = any([item.get("value") for item in value])
-        elif isinstance(value, List):
-            match = any([bool(item) for item in value])
-        elif isinstance(value, str):
-            match = bool(value)
         else:
-            match = value is not None
+            attr = schema.get_attr(self._attr_name)
+            if isinstance(attr, ComplexAttribute):
+                if isinstance(value, List):
+                    match = any([item.get("value") for item in value])
+                else:
+                    match = False
+            elif isinstance(value, List):
+                match = any([bool(item) for item in value])
+            elif isinstance(value, str):
+                match = bool(value)
+            else:
+                match = value is not None
         return MatchResult.passed() if match else MatchResult.failed()
 
 
@@ -595,10 +597,7 @@ class ComplexAttributeOperator:
             ):
                 return MatchResult.failed()
 
-            if value is None:
-                value = [] if attr.multi_valued else {}
-        else:
-            value = value or {}
+        value = value or self._default_value(schema)
 
         if not isinstance(value, List):
             value = [value]
@@ -628,3 +627,10 @@ class ComplexAttributeOperator:
         if missing_data and not strict:
             return MatchResult.passed()
         return MatchResult.failed()
+
+    def _default_value(self, schema: Optional[Schema]):
+        if schema is not None:
+            attr = schema.get_attr(self._attr_name)
+            if attr and attr.multi_valued:
+                return []
+        return {}
