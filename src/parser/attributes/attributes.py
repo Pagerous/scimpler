@@ -96,6 +96,7 @@ class Attribute:
         self,
         name: str,
         type_: Type[at.AttributeType],
+        reference_types: Optional[Iterable[str]] = None,
         issuer: AttributeIssuer = AttributeIssuer.BOTH,
         required: bool = False,
         case_exact: bool = False,
@@ -109,6 +110,7 @@ class Attribute:
         self._name = name
         self._issuer = issuer
         self._type = type_
+        self._reference_types = list(reference_types or [])  # TODO validate applicability
         self._required = required
         self._case_exact = case_exact
         self._canonical_values = list(canonical_values) if canonical_values else canonical_values
@@ -133,6 +135,10 @@ class Attribute:
     @property
     def type(self) -> Type[at.AttributeType]:
         return self._type
+
+    @property
+    def reference_types(self) -> List[str]:
+        return self._reference_types
 
     @property
     def required(self) -> bool:
