@@ -1,6 +1,7 @@
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
+from src.parser.utils import lower_dict_keys
 
 
 @pytest.mark.parametrize(
@@ -56,3 +57,72 @@ def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
     attr_name = AttributeName.parse(input_)
 
     assert attr_name is None
+
+
+@pytest.mark.parametrize(
+    ("attr_name", "expected"),
+    (
+        (AttributeName(attr="id"), "2819c223-7f76-453a-919d-413861904646"),
+        (
+            AttributeName(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
+            "bjensen@example.com",
+        ),
+        (
+            AttributeName(attr="name", sub_attr="givenName"),
+            "Barbara",
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="name",
+                sub_attr="familyName",
+            ),
+            "Jensen",
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="name",
+                sub_attr="familyName",
+            ),
+            "Jensen",
+        ),
+        (
+            AttributeName(
+                attr="emails",
+                sub_attr="type",
+            ),
+            None,  # no support for complex, multivalued attrs
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                attr="employeeNumber",
+            ),
+            "701984",
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                attr="manager",
+                sub_attr="displayName",
+            ),
+            "John Smith",
+        ),
+        (
+            AttributeName(attr="employeeNumber"),
+            "701984",
+        ),
+        (
+            AttributeName(
+                attr="manager",
+                sub_attr="displayName",
+            ),
+            "John Smith",
+        ),
+    ),
+)
+def test_value_can_be_extracted(attr_name, expected, enterprise_user_data):
+    actual = attr_name.extract(lower_dict_keys(enterprise_user_data))
+
+    assert actual == expected

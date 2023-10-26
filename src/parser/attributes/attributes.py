@@ -5,7 +5,8 @@ from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Ty
 from src.parser.attributes import type as at
 from src.parser.error import ValidationError, ValidationIssues
 
-_ATTR_NAME_REGEX = re.compile(r"((?:[\w.-]+:)*)?(\w+(\.\w+)?)")
+_URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
+_ATTR_NAME_REGEX = re.compile(rf"({_URI_PREFIX.pattern})?(\w+(\.\w+)?)")
 
 
 class AttributeName:
@@ -77,7 +78,23 @@ class AttributeName:
         return self._sub_attr
 
     def extract(self, data: Dict[str, Any]) -> Optional[Any]:
+        is_extended = False
+        extended = data.get(self.schema)
+        if extended is not None:
+            is_extended = True
+            data = extended
+
         value = data.get(self.full_attr) or data.get(self.attr)
+
+        if value is None and not is_extended:
+            for k, v in data.items():
+                if not _URI_PREFIX.fullmatch(f"{k}:"):
+                    continue
+                potential_extended = data.get(k)
+                if isinstance(potential_extended, Dict) and self.attr in potential_extended:
+                    value = potential_extended.get(self.attr)
+                    break
+
         if self.sub_attr:
             if value is None or not isinstance(value, Dict):
                 return None
