@@ -41,6 +41,18 @@ def response_body():
                         "type": "home",
                     },
                 ],
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "employeeNumber": "1",
+                    "costCenter": "4130",
+                    "organization": "Universal Studios",
+                    "division": "Theme Park",
+                    "department": "Tour Operations",
+                    "manager": {
+                        "value": "26118915-6090-4610-87e4-49d8ca9f808d",
+                        "$ref": "../Users/26118915-6090-4610-87e4-49d8ca9f808d",
+                        "displayName": "Jan Kowalski",
+                    },
+                },
             },
             {
                 "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -70,6 +82,18 @@ def response_body():
                         "type": "home",
                     },
                 ],
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "employeeNumber": "2",
+                    "costCenter": "4130",
+                    "organization": "Universal Studios",
+                    "division": "Theme Park",
+                    "department": "Tour Operations",
+                    "manager": {
+                        "value": "26118915-6090-4610-87e4-49d8ca9f808d",
+                        "$ref": "../Users/26118915-6090-4610-87e4-49d8ca9f808d",
+                        "displayName": "John Smith",
+                    },
+                },
             },
         ],
     }
@@ -473,6 +497,43 @@ def test_case_sensitive_attributes_are_not_validated_for_server_root_endpoint(
 
 
 @pytest.mark.parametrize(
+    "attr_name",
+    (
+        "manager.displayName",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
+    ),
+)
+def test_fields_from_schema_extensions_are_checked_by_filter(
+    attr_name,
+    response_body,
+):
+    validator = ResourceTypeGET(USER)
+    expected_issues = {
+        "response": {
+            "body": {
+                "resources": {
+                    "0": {
+                        "_errors": [
+                            {
+                                "code": 25,
+                            }
+                        ]
+                    },
+                }
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        request_query_string={"filter": f'{attr_name} eq "John Smith"'},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
     "validator",
     (
         ResourceTypeGET(USER),
@@ -527,6 +588,29 @@ def test_sorting_is_checked_if_issues_for_not_related_resource_values(response_b
 
     issues = validator.validate_response(
         request_query_string={"sortBy": "name.familyName", "sortOrder": "descending"},
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    "attr_name",
+    (
+        "manager.displayName",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
+    ),
+)
+def test_sorting_is_checked_on_attributes_from_schema_extensions(
+    attr_name,
+    response_body,
+):
+    validator = ResourceTypeGET(USER)
+    expected = {"response": {"body": {"resources": {"_errors": [{"code": 26}]}}}}
+
+    issues = validator.validate_response(
+        request_query_string={"sortBy": attr_name, "sortOrder": "descending"},
         response_body=response_body,
         status_code=200,
     )
