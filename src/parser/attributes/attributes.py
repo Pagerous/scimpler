@@ -1,6 +1,6 @@
 import re
 from enum import Enum
-from typing import Any, Callable, Collection, Dict, Optional, Type
+from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Type
 
 from src.parser.attributes import type as at
 from src.parser.error import ValidationError, ValidationIssues
@@ -9,34 +9,54 @@ _ATTR_NAME_REGEX = re.compile(r"((?:[\w.-]+:)*)?(\w+(\.\w+)?)")
 
 
 class AttributeName:
-    def __init__(self, attr: str):
+    def __init__(self, schema: str = "", attr: str = "", sub_attr: str = ""):
+        schema, attr, sub_attr = schema.lower(), attr.lower(), sub_attr.lower()
+        attr_ = attr
+        if schema:
+            attr_ = f"{schema}:{attr_}"
+        if sub_attr:
+            attr_ += "." + sub_attr
+
         match = _ATTR_NAME_REGEX.fullmatch(attr)
         if not match:
-            raise ValueError(f"{attr!r} is not valid attribute name")
+            raise ValueError(f"{attr_!r} is not valid attribute name")
 
-        schema, attr_name = match.group(1), match.group(2)
-        self._schema = schema[:-1].lower() if schema else ""
-        if "." in attr_name:
-            self._attr, self._sub_attr = attr_name.split(".")
-        else:
-            self._attr, self._sub_attr = attr_name, ""
-        self._attr, self._sub_attr = self._attr.lower(), self._sub_attr.lower()
-        self._original_value = attr.lower()
+        self._schema = schema
+        self._attr = attr
+        self._sub_attr = sub_attr
+        self._repr = attr_
 
     def __repr__(self) -> str:
-        return self._original_value
+        return self._repr
 
-    def attr_equals(self, other: "AttributeName") -> bool:
-        if all([self.schema, other.schema]):
-            return self.full_attr == other.full_attr
-        return self.attr == other.attr
+    def __eq__(self, other):
+        if not isinstance(other, AttributeName):
+            return False
+
+        if all([self.schema, other.schema]) and self.schema != other.schema:
+            return False
+
+        if self.attr != other.attr:
+            return False
+
+        if self.sub_attr != other.sub_attr:
+            return False
+
+        return True
 
     @classmethod
     def parse(cls, attr: str) -> Optional["AttributeName"]:
-        try:
-            return cls(attr)
-        except ValueError:
+        match = _ATTR_NAME_REGEX.fullmatch(attr)
+        if not match:
             return None
+
+        schema, attr_name = match.group(1), match.group(2)
+        schema = schema[:-1].lower() if schema else ""
+        if "." in attr_name:
+            attr, sub_attr = attr_name.split(".")
+        else:
+            attr, sub_attr = attr_name, ""
+        return AttributeName(schema=schema, attr=attr, sub_attr=sub_attr)
 
     @property
     def schema(self) -> str:
