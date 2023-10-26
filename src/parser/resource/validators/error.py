@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from src.parser.error import ValidationError, ValidationIssues
-from src.parser.resource.schemas import ErrorSchema
+from src.parser.resource.schemas import ERROR
 from src.parser.resource.validators.validator import (
     EndpointValidator,
     EndpointValidatorGET,
@@ -12,7 +12,7 @@ from src.parser.resource.validators.validator import (
 
 class _Error(EndpointValidatorGET):
     def __init__(self):
-        super().__init__(ErrorSchema())
+        super().__init__(ERROR)
 
     @preprocess_request_validation
     def validate_request(

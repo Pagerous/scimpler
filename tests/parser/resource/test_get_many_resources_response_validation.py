@@ -1,6 +1,6 @@
 import pytest
 
-from src.parser.resource.schemas import UserSchema
+from src.parser.resource.schemas import USER
 from src.parser.resource.validators.resource import (
     ResourceTypeGET,
     ServerRootResourceGET,
@@ -78,8 +78,8 @@ def response_body():
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_body_is_required(validator):
@@ -97,8 +97,8 @@ def test_body_is_required(validator):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_correct_body_passes_validation(validator, response_body):
@@ -115,8 +115,8 @@ def test_correct_body_passes_validation(validator, response_body):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_missing_schemas_key_returns_error(validator, response_body):
@@ -134,7 +134,7 @@ def test_missing_schemas_key_returns_error(validator, response_body):
 
 
 def test_validation_errors_for_resources_attribute_can_be_returned(response_body):
-    validator = ResourceTypeGET(UserSchema())
+    validator = ResourceTypeGET(USER)
     response_body["Resources"][0]["userName"] = 123  # noqa
     response_body["Resources"][1]["userName"] = 123  # noqa
     expected_issues = {
@@ -161,8 +161,8 @@ def test_validation_errors_for_resources_attribute_can_be_returned(response_body
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_status_code_must_be_200(validator, response_body):
@@ -181,8 +181,8 @@ def test_status_code_must_be_200(validator, response_body):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_fails_if_more_resources_than_total_results(validator, response_body):
@@ -209,8 +209,8 @@ def test_fails_if_more_resources_than_total_results(validator, response_body):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_fails_if_less_resources_than_total_results_with_count_unspecified(
@@ -233,8 +233,8 @@ def test_fails_if_less_resources_than_total_results_with_count_unspecified(
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_fails_if_more_resources_than_specified_count(validator, response_body):
@@ -254,8 +254,8 @@ def test_fails_if_more_resources_than_specified_count(validator, response_body):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
@@ -286,8 +286,8 @@ def test_fails_if_start_index_and_items_per_page_are_missing_when_pagination(
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_fails_if_start_index_bigger_than_requested(validator, response_body):
@@ -316,8 +316,8 @@ def test_fails_if_start_index_bigger_than_requested(validator, response_body):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_fails_if_items_per_page_do_not_match_resources(validator, response_body):
@@ -353,7 +353,7 @@ def test_fails_if_items_per_page_do_not_match_resources(validator, response_body
     ),
 )
 def test_fails_if_output_resources_does_not_match_provided_filter(filter_exp, response_body):
-    validator = ResourceTypeGET(UserSchema())
+    validator = ResourceTypeGET(USER)
     expected_issues = {
         "response": {
             "body": {
@@ -382,7 +382,7 @@ def test_fails_if_output_resources_does_not_match_provided_filter(filter_exp, re
 def test_case_sensitive_attributes_are_validated_for_resource_type_endpoints(
     response_body,
 ):
-    validator = ResourceTypeGET(UserSchema())
+    validator = ResourceTypeGET(USER)
     expected_issues = {
         "response": {
             "body": {
@@ -425,7 +425,7 @@ def test_case_sensitive_attributes_are_validated_for_resource_type_endpoints(
 def test_fails_if_output_resources_does_not_match_provided_filter_for_root_endpoint(
     filter_exp, response_body
 ):
-    validator = ServerRootResourceGET([UserSchema()])
+    validator = ServerRootResourceGET([USER])
     expected_issues = {
         "response": {
             "body": {
@@ -461,7 +461,7 @@ def test_fails_if_output_resources_does_not_match_provided_filter_for_root_endpo
 def test_case_sensitive_attributes_are_not_validated_for_server_root_endpoint(
     response_body,
 ):
-    validator = ServerRootResourceGET([UserSchema()])
+    validator = ServerRootResourceGET([USER])
 
     issues = validator.validate_response(
         request_query_string={"filter": 'meta.resourceType eq "user"'},
@@ -475,8 +475,8 @@ def test_case_sensitive_attributes_are_not_validated_for_server_root_endpoint(
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(UserSchema()),
-        ServerRootResourceGET([UserSchema()]),
+        ResourceTypeGET(USER),
+        ServerRootResourceGET([USER]),
     ),
 )
 def test_fails_if_resources_are_not_sorted(validator, response_body):
@@ -492,7 +492,7 @@ def test_fails_if_resources_are_not_sorted(validator, response_body):
 
 
 def test_sorting_is_not_checked_if_issues_for_related_values(response_body):
-    validator = ResourceTypeGET(UserSchema())
+    validator = ResourceTypeGET(USER)
     response_body["Resources"][1]["name"]["familyName"] = 123  # noqa, bad type
     expected = {
         "response": {
@@ -510,7 +510,7 @@ def test_sorting_is_not_checked_if_issues_for_related_values(response_body):
 
 
 def test_sorting_is_checked_if_issues_for_not_related_resource_values(response_body):
-    validator = ResourceTypeGET(UserSchema())
+    validator = ResourceTypeGET(USER)
     response_body["Resources"][1]["name"]["givenName"] = 123  # noqa, bad type
     expected = {
         "response": {

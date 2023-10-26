@@ -77,6 +77,11 @@ class AttributeName:
     def sub_attr(self) -> str:
         return self._sub_attr
 
+    def top_level_equals(self, other: "AttributeName") -> bool:
+        if all([self.schema, other.schema]):
+            return self.full_attr == other.full_attr
+        return self.attr == other.attr
+
     def extract(self, data: Dict[str, Any]) -> Optional[Any]:
         is_extended = False
         extended = data.get(self.schema)

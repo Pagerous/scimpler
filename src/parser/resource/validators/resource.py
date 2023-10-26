@@ -4,7 +4,7 @@ from src.parser.attributes.attributes import AttributeName
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.sorter.sorter import Sorter
-from src.parser.resource.schemas import ListResponseSchema, ResourceSchema, Schema
+from src.parser.resource.schemas import LIST_RESPONSE, ResourceSchema, Schema
 from src.parser.resource.validators.validator import (
     EndpointValidator,
     EndpointValidatorGET,
@@ -169,10 +169,12 @@ class ResourceTypePOST(EndpointValidator):
                 proceed=False,
             )
         if issues.can_proceed(("request", "body")):
-            for attr_name, attr in self._schema.attributes.items():
+            for attr_name in self._schema.top_level_attr_names:
+                attr = self._schema.get_attr(attr_name)
+                value = attr_name.extract(body)
                 issues.merge(
-                    issues=attr.validate(body.get(attr_name), "REQUEST"),
-                    location=("request", "body", attr.name),
+                    issues=attr.validate(value, "REQUEST"),
+                    location=("request", "body", attr_name.attr),
                 )
         return issues
 
@@ -282,7 +284,9 @@ class _ManyResourcesGET(EndpointValidatorGET):
         if issues.can_proceed(("request", "query_string", "sortBy")):
             locations = []
             if schema:
-                attr = schema.get_attr(AttributeName(sorter.attr_name.full_attr))
+                attr = schema.get_attr(
+                    AttributeName(sorter.attr_name.schema, sorter.attr_name.attr)
+                )
                 if sorter.attr_name.sub_attr:
                     sub_attr = schema.get_attr(sorter.attr_name)
                     location = (attr.name, sub_attr.name)
@@ -438,7 +442,7 @@ class _ManyResourcesGET(EndpointValidatorGET):
 
 class ResourceTypeGET(_ManyResourcesGET):
     def __init__(self, resource_schema: Schema):
-        super().__init__(ListResponseSchema())
+        super().__init__(LIST_RESPONSE)
         self._resource_schema = resource_schema
 
     @preprocess_request_validation
@@ -487,9 +491,11 @@ class ResourceTypeGET(_ManyResourcesGET):
 
             resources = response_body.get("resources", [])
             for i, resource in enumerate(resources):
-                for attr_name, attr in self._resource_schema.attributes.items():
+                for attr_name in self._resource_schema.top_level_attr_names:
+                    attr = self._resource_schema.get_attr(attr_name)
+                    value = attr_name.extract(resource)
                     issues.merge(
-                        issues=attr.validate(resource.get(attr_name), "RESPONSE"),
+                        issues=attr.validate(value, "RESPONSE"),
                         location=(
                             "response",
                             "body",
@@ -515,7 +521,7 @@ class ResourceTypeGET(_ManyResourcesGET):
 
 class ServerRootResourceGET(_ManyResourcesGET):
     def __init__(self, resource_schemas: Iterable[Schema]):
-        super().__init__(ListResponseSchema())
+        super().__init__(LIST_RESPONSE)
         self._resource_schemas = resource_schemas
 
     @preprocess_request_validation

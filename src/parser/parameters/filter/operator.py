@@ -229,11 +229,13 @@ class AttributeOperator(abc.ABC):
 
     def with_parent(self, attr_name: AttributeName) -> "AttributeOperator":
         if self._attr_name.sub_attr:
-            if not self._attr_name.attr_equals(attr_name):
+            if not self._attr_name.top_level_equals(attr_name):
                 raise ValueError("operator has parent already")
             return self
         copy = deepcopy(self)
-        copy._attr_name = AttributeName(attr_name.full_attr + "." + self._attr_name.attr)
+        copy._attr_name = AttributeName(
+            schema=attr_name.schema, attr=attr_name.attr, sub_attr=self._attr_name.attr
+        )
         return copy
 
 
@@ -569,7 +571,7 @@ class ComplexAttributeOperator:
         return self._sub_operator
 
     def with_parent(self, attr_name: AttributeName) -> "ComplexAttributeOperator":
-        if self._attr_name.attr_equals(attr_name):
+        if self._attr_name.top_level_equals(attr_name):
             return self
         if self._attr_name.sub_attr:
             raise ValueError("operator has parent already")

@@ -98,10 +98,12 @@ class EndpointValidator(abc.ABC):
 
     def validate_schema(self, body: Dict[str, Any], direction: str) -> ValidationIssues:
         issues = ValidationIssues()
-        for attr_name, attr in self._schema.attributes.items():
+        for attr_name in self._schema.top_level_attr_names:
+            attr = self._schema.get_attr(attr_name)
+            value = attr_name.extract(body)
             issues.merge(
-                issues=attr.validate(body.get(attr_name), direction),
-                location=(attr.name,),
+                issues=attr.validate(value, direction),
+                location=(attr_name.attr,),
             )
         return issues
 

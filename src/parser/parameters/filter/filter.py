@@ -472,7 +472,7 @@ class Filter:
 
             if attr_name.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_name=AttributeName(attr_name.full_attr),
+                    attr_name=AttributeName(attr_name.schema, attr_name.attr),
                     sub_operator=op_(attr_name),
                 )
             else:
@@ -531,7 +531,7 @@ class Filter:
 
             if attr_name.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_name=AttributeName(attr_name.full_attr),
+                    attr_name=AttributeName(attr_name.schema, attr_name.attr),
                     sub_operator=op_(attr_name, value),
                 )
             else:

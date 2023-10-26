@@ -2,7 +2,7 @@ import pytest
 
 from src.parser.attributes.attributes import AttributeName
 from src.parser.parameters.sorter.sorter import Sorter
-from src.parser.resource.schemas import UserSchema
+from src.parser.resource.schemas import USER
 
 
 @pytest.mark.parametrize("use_schema", (True, False))
@@ -18,7 +18,7 @@ from src.parser.resource.schemas import UserSchema
     ),
 )
 def test_sorter_is_parsed(use_schema, sort_by):
-    schema = UserSchema() if use_schema else None
+    schema = USER if use_schema else None
     sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=schema)
 
     assert not issues
@@ -34,7 +34,7 @@ def test_sorter_is_parsed(use_schema, sort_by):
     ),
 )
 def test_sorter_parsing_fails_with_schema(sort_by, expected_issues):
-    sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=UserSchema())
+    sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=USER)
 
     assert sorter is None
     assert issues.to_dict() == expected_issues
@@ -56,26 +56,26 @@ def test_sorter_parsing_fails_without_schema(sort_by, expected_issues):
 
 def test_sorter_can_not_be_created_if_no_attr_in_schema():
     with pytest.raises(ValueError):
-        Sorter(AttributeName("non_existing.attr"), schema=UserSchema())
+        Sorter(AttributeName.parse("non_existing.attr"), schema=USER)
 
 
 def test_sorter_can_not_be_created_if_no_sub_attr_in_schema():
     with pytest.raises(ValueError):
-        Sorter(AttributeName("name.non_existing"), schema=UserSchema())
+        Sorter(AttributeName.parse("name.non_existing"), schema=USER)
 
 
 def test_sorter_can_not_be_created_if_complex_attr_is_not_multivalued():
     with pytest.raises(TypeError):
-        Sorter(AttributeName("name"), schema=UserSchema())
+        Sorter(AttributeName.parse("name"), schema=USER)
 
 
 def test_sorter_can_not_be_created_if_complex_multivalued_attr_has_no_primary_or_value_sub_attr():
     with pytest.raises(TypeError):
-        Sorter(AttributeName("addresses"), schema=UserSchema())
+        Sorter(AttributeName.parse("addresses"), schema=USER)
 
 
 def test_items_are_sorted_according_to_attr_value():
-    sorter = Sorter(AttributeName("userName"), schema=UserSchema(), asc=True)
+    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=True)
     values = [
         {
             "userName": "C",
@@ -111,7 +111,7 @@ def test_items_are_sorted_according_to_attr_value():
 
 
 def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttributeName("userName"), schema=UserSchema(), asc=True)
+    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=True)
     values = [
         {
             "urn:ietf:params:scim:schemas:core:2.0:User:userName": "C",
@@ -145,7 +145,7 @@ def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
 
 
 def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttributeName("userName"), schema=UserSchema(), asc=False)
+    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=False)
     values = [
         {
             "userName": "C",
@@ -180,8 +180,8 @@ def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
 
 @pytest.mark.parametrize("use_schema", (True, False))
 def test_original_order_is_preserved_if_no_values_for_all_items(use_schema):
-    schema = UserSchema() if use_schema else None
-    sorter = Sorter(AttributeName("userName"), schema=schema)
+    schema = USER if use_schema else None
+    sorter = Sorter(AttributeName.parse("userName"), schema=schema)
     values = [
         {
             "id": "2",
@@ -201,7 +201,7 @@ def test_original_order_is_preserved_if_no_values_for_all_items(use_schema):
 
 
 def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_attrs():
-    sorter = Sorter(AttributeName("some_attr"), schema=None, asc=True)
+    sorter = Sorter(AttributeName.parse("some_attr"), schema=None, asc=True)
     values = [
         {
             "some_attr": [7, 1, 9],
@@ -231,7 +231,7 @@ def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_
 
 
 def test_items_are_sorted_according_to_sub_attr_value():
-    sorter = Sorter(AttributeName("name.givenName"), schema=UserSchema(), asc=True)
+    sorter = Sorter(AttributeName.parse("name.givenName"), schema=USER, asc=True)
     values = [
         {
             "urn:ietf:params:scim:schemas:core:2.0:User:name": {"givenName": "C"},
@@ -267,7 +267,7 @@ def test_items_are_sorted_according_to_sub_attr_value():
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttributeName("name.givenName"), schema=UserSchema(), asc=True)
+    sorter = Sorter(AttributeName.parse("name.givenName"), schema=USER, asc=True)
     values = [
         {
             "name": {"givenName": "C"},
@@ -301,7 +301,7 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttributeName("name.givenName"), schema=UserSchema(), asc=False)
+    sorter = Sorter(AttributeName.parse("name.givenName"), schema=USER, asc=False)
     values = [
         {
             "name": {"givenName": "C"},
@@ -338,8 +338,8 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
 def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs(
     use_schema,
 ):
-    schema = UserSchema() if use_schema else None
-    sorter = Sorter(AttributeName("emails"), schema=schema, asc=True)
+    schema = USER if use_schema else None
+    sorter = Sorter(AttributeName.parse("emails"), schema=schema, asc=True)
     values = [
         {
             "id": "1",
@@ -387,7 +387,7 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
 
 
 def test_case_insensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttributeName("userName"), schema=UserSchema(), asc=True)
+    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=True)
     values = [
         {
             "userName": "C",
@@ -423,7 +423,7 @@ def test_case_insensitive_attributes_are_respected_if_schema_provided():
 
 
 def test_case_sensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttributeName("id"), schema=UserSchema(), asc=True)
+    sorter = Sorter(AttributeName.parse("id"), schema=USER, asc=True)
     values = [
         {
             "id": "a",
@@ -453,7 +453,7 @@ def test_case_sensitive_attributes_are_respected_if_schema_provided():
 
 
 def test_string_values_are_sorted_less_strictly_when_schema_not_provided():
-    sorter = Sorter(AttributeName("userName"), schema=None, asc=True, strict=False)
+    sorter = Sorter(AttributeName.parse("userName"), schema=None, asc=True, strict=False)
     values = [
         {
             "userName": "B",
@@ -497,7 +497,7 @@ def test_string_values_are_sorted_less_strictly_when_schema_not_provided():
 
 
 def test_string_values_are_sorted_strictly_when_schema_not_provided():
-    sorter = Sorter(AttributeName("userName"), schema=None, asc=True, strict=True)
+    sorter = Sorter(AttributeName.parse("userName"), schema=None, asc=True, strict=True)
     values = [
         {
             "userName": "C",

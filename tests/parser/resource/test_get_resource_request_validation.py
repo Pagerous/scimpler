@@ -1,12 +1,12 @@
 import pytest
 
-from src.parser.resource.schemas import UserSchema
+from src.parser.resource.schemas import USER
 from src.parser.resource.validators.resource import ResourceObjectGET
 
 
 @pytest.fixture
 def validator():
-    return ResourceObjectGET(UserSchema())
+    return ResourceObjectGET(USER)
 
 
 def test_body_is_ignored(validator):
