@@ -95,7 +95,7 @@ _manager__ref = Attribute(
 )
 
 _manager__display_name = Attribute(
-    name="$ref",
+    name="displayName",
     issuer=AttributeIssuer.BOTH,
     type_=at.String,
     multi_valued=False,
