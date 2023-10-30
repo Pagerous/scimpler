@@ -34,11 +34,12 @@ def test_correct_body_passes_validation(validator):
     assert not issues
 
 
-def test_missing_schemas_key_returns_error(validator):
-    expected_issues = {"request": {"body": {"schemas": {"_errors": [{"code": 1}]}}}}
+def test_bad_schema_is_discovered(validator):
+    expected_issues = {"request": {"body": {"schemas": {"_errors": [{"code": 20}]}}}}
 
     issues = validator.validate_request(
         body={
+            "schemas": ["bad:user:schema"],
             "userName": "bjensen",
             "externalId": "bjensen",
             "name": {

@@ -69,6 +69,20 @@ def test_correct_body_passes_validation(validator, request_body, response_body, 
     assert not issues
 
 
+def test_bad_schema_is_discovered(validator, request_body, response_body, response_headers):
+    response_body["schemas"] = ["bad:user:schema"]
+    expected_issues = {"response": {"body": {"schemas": {"_errors": [{"code": 20}]}}}}
+
+    issues = validator.validate_response(
+        request_body=request_body,
+        response_body=response_body,
+        response_headers=response_headers,
+        status_code=201,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_missing_schemas_key_returns_error(
     validator, request_body, response_body, response_headers
 ):

@@ -2,7 +2,7 @@ import abc
 from functools import wraps
 from typing import Any, Dict, List, Optional, TypeVar
 
-from src.parser.attributes.common import schemas as schemas_field
+from src.parser.attributes.common import schemas as schemas_attr
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.schemas import Schema
 from src.parser.utils import lower_dict_keys
@@ -107,29 +107,19 @@ class EndpointValidator(abc.ABC):
             )
         return issues
 
-    def validate_schemas_field(
-        self,
-        schemas_value: Optional[List[str]],
-        direction: str,
+    @staticmethod
+    def validate_schemas_value(
+        schemas_value: List[str],
+        schema: Schema,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        if schemas_value is None:
-            issues.add(
-                location=("schemas",),
-                issue=ValidationError.missing_required_attribute("schemas"),
-                proceed=False,
-            )
-        elif schemas_value != self._schema.schemas:
-            issues.add(
-                location=("schemas",),
-                issue=ValidationError.schemas_mismatch(repr(self._schema)),
-                proceed=False,
-            )
-        else:
-            issues.merge(
-                location=("schemas",),
-                issues=schemas_field.validate(schemas_value, direction),
-            )
+        for schema_value in schemas_value:
+            if schema_value.lower() not in schema.schemas:
+                issues.add(
+                    issue=ValidationError.schemas_mismatch(repr(schema)),
+                    proceed=True,
+                )
+                break
         return issues
 
 
@@ -158,11 +148,17 @@ class EndpointValidatorGET(EndpointValidator, abc.ABC):
                 location=("response", "body"),
                 proceed=False,
             )
-
         if issues.can_proceed(("response", "body")):
             issues.merge(
                 issues=self.validate_schema(body=response_body, direction="RESPONSE"),
                 location=("response", "body"),
             )
-
+        if issues.can_proceed(("response", "body", "schemas")):
+            issues.merge(
+                issues=self.validate_schemas_value(
+                    self._schema.get_attr_name(schemas_attr).extract(response_body),
+                    self._schema,
+                ),
+                location=("response", "body", "schemas"),
+            )
         return issues

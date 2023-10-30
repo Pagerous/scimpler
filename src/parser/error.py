@@ -58,6 +58,7 @@ class ValidationError:
         ),
         25: "resource included in the result, but does not match the filter",
         26: "resources are not sorted",
+        27: "unknown schema {schema!r}",
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -71,7 +72,7 @@ class ValidationError:
         111: "attribute {attribute!r} does not conform the rules",
         112: "bad comparison value {value!r}",
         113: "comparison value {value!r} is not compatible with {operator!r} operator",
-        200: "unknown sortBy attribute {attribute!r}",
+        200: "attribute {attribute!r} is not defined in {schema!r} schema",
         201: "complex attribute {attribute!r} is not multivalued",
         202: "complex attribute {attribute!r} does not contain 'primary' or 'value' sub-attribute",
     }
@@ -217,6 +218,10 @@ class ValidationError:
         return cls(code=26)
 
     @classmethod
+    def unknown_schema(cls, schema: str):
+        return cls(code=27, schema=schema)
+
+    @classmethod
     def no_closing_bracket(cls, bracket_position: int):
         return cls(code=100, bracket_position=bracket_position)
 
@@ -274,8 +279,8 @@ class ValidationError:
         return cls(code=113, value=value, operator=operator)
 
     @classmethod
-    def unknown_sort_by_attr(cls, attribute: str):
-        return cls(code=200, attribute=attribute)
+    def attr_not_in_schema(cls, attribute: str, schema: str):
+        return cls(code=200, attribute=attribute, schema=schema)
 
     @classmethod
     def complex_attr_is_not_multivalued(cls, attribute: str):

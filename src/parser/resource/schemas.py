@@ -1,6 +1,6 @@
 import abc
 from copy import deepcopy
-from typing import Dict, Iterable, List, Optional, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 from src.parser.attributes import common as common_attrs
 from src.parser.attributes import error as error_attrs
@@ -14,17 +14,16 @@ class Schema(abc.ABC):
     def __init__(self, schema: str, repr_: str, attrs: Iterable[Attribute]):
         self._top_level_attr_names: List[AttributeName] = []
         self._attr_names: List[AttributeName] = []
-        self._attrs = {}
-        for attr in attrs:
+        self._attrs: Dict[Tuple[str, str, str], Attribute] = {}
+        for attr in [common_attrs.schemas, *attrs]:
             attr_name = AttributeName(schema, attr.name)
-            self._top_level_attr_names.append(attr_name)
+            self._attrs[schema, attr.name, ""] = attr
             self._attr_names.append(attr_name)
+            self._top_level_attr_names.append(attr_name)
             if isinstance(attr, ComplexAttribute):
-                self._attr_names.extend(
-                    [AttributeName(schema, attr.name, sub_attr) for sub_attr in attr.sub_attributes]
-                )
-            self._attrs[attr.name] = attr
-
+                for sub_attr_name, sub_attr in attr.sub_attributes.items():
+                    self._attrs[schema, attr.name, sub_attr_name] = sub_attr
+                    self._attr_names.append(AttributeName(schema, attr.name, sub_attr_name))
         self._repr = repr_
         self._schema = schema
 
@@ -33,7 +32,7 @@ class Schema(abc.ABC):
         return self._top_level_attr_names
 
     @property
-    def attr_names(self) -> List[AttributeName]:
+    def all_attr_names(self) -> List[AttributeName]:
         return self._attr_names
 
     @property
@@ -43,18 +42,28 @@ class Schema(abc.ABC):
     def __repr__(self) -> str:
         return self._repr
 
+    def get_attr_name(self, attr: Attribute):
+        for (schema, attr_name, sub_attr_name), attr_obj in self._attrs.items():
+            if attr_obj == attr:
+                return AttributeName(schema, attr_name, sub_attr_name)
+        raise ValueError(f"no attribute {attr} in schema")
+
     def get_attr(
         self,
         attr_name: AttributeName,
     ) -> Optional[Union[Attribute, ComplexAttribute]]:
-        if attr_name.schema and attr_name.schema not in map(str.lower, self.schemas):
+        if (
+            attr_name.schema
+            and attr_name.schema not in self.schemas
+            or attr_name not in self._attr_names
+        ):
             return None
-        if attr_name not in self._attr_names:
-            return None
-        attr = self._attrs[attr_name.attr]
-        if isinstance(attr, ComplexAttribute) and attr_name.sub_attr:
-            return attr.sub_attributes[attr_name.sub_attr]
-        return attr
+
+        for (schema, attr, sub_attr), attr_obj in self._attrs.items():
+            if AttributeName(schema, attr, sub_attr) == attr_name:
+                return attr_obj
+
+        return None
 
 
 class ResourceSchema(Schema, abc.ABC):
@@ -63,7 +72,6 @@ class ResourceSchema(Schema, abc.ABC):
             schema=schema,
             repr_=repr_,
             attrs=[
-                common_attrs.schemas,
                 common_attrs.id_,
                 common_attrs.external_id,
                 common_attrs.meta,
@@ -86,15 +94,15 @@ class ResourceSchema(Schema, abc.ABC):
         copy._schema_extensions[extension.schema] = required
         for attr in extension.attrs:
             attr_name = AttributeName(extension.schema, attr.name)
+            copy._attrs[extension.schema, attr.name, ""] = attr
+            copy._attr_names.append(attr_name)
             copy._top_level_attr_names.append(attr_name)
-            to_extend = [attr_name]
             if isinstance(attr, ComplexAttribute):
-                to_extend += [
-                    AttributeName(extension.schema, attr.name, sub_attr)
-                    for sub_attr in attr.sub_attributes
-                ]
-            copy._attr_names.extend(to_extend)
-        copy._attrs.update({attr.name: attr for attr in extension.attrs})
+                for sub_attr_name, sub_attr in attr.sub_attributes.items():
+                    copy._attrs[(extension.schema, attr.name, sub_attr_name)] = sub_attr
+                    copy._attr_names.append(
+                        AttributeName(extension.schema, attr.name, sub_attr_name)
+                    )
         return copy
 
 
@@ -116,7 +124,6 @@ LIST_RESPONSE = Schema(
     schema="urn:ietf:params:scim:api:messages:2.0:listresponse",
     repr_="ListResponse",
     attrs=[
-        common_attrs.schemas,
         query_result_attrs.total_results,
         query_result_attrs.start_index,
         query_result_attrs.items_per_page,
@@ -127,7 +134,6 @@ ERROR = Schema(
     schema="urn:ietf:params:scim:api:messages:2.0:error",
     repr_="Error",
     attrs=[
-        common_attrs.schemas,
         error_attrs.status,
         error_attrs.scim_type,
         error_attrs.detail,

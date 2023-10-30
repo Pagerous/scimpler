@@ -4,16 +4,6 @@ from src.parser.resource.validators.error import ErrorGET
 
 
 @pytest.fixture
-def request_body():
-    return None
-
-
-@pytest.fixture
-def response_headers():
-    return {"Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646"}
-
-
-@pytest.fixture
 def response_body():
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
@@ -28,9 +18,8 @@ def validator():
     return ErrorGET()
 
 
-def test_correct_error_body_passes_validation(validator, request_body, response_body):
+def test_correct_error_body_passes_validation(validator, response_body):
     issues = validator.validate_response(
-        request_body=request_body,
         response_body=response_body,
         status_code=400,
     )
@@ -38,7 +27,7 @@ def test_correct_error_body_passes_validation(validator, request_body, response_
     assert not issues
 
 
-def test_error_status_should_be_equal_to_http_status(validator, request_body, response_body):
+def test_error_status_should_be_equal_to_http_status(validator, response_body):
     response_body["status"] = "401"
     expected_issues = {
         "response": {
@@ -48,7 +37,6 @@ def test_error_status_should_be_equal_to_http_status(validator, request_body, re
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
         response_body=response_body,
         status_code=400,
     )
@@ -56,7 +44,7 @@ def test_error_status_should_be_equal_to_http_status(validator, request_body, re
     assert issues.to_dict() == expected_issues
 
 
-def test_error_status_must_be_in_valid_range(validator, request_body, response_body):
+def test_error_status_must_be_in_valid_range(validator, response_body):
     response_body["status"] = "600"
     expected_issues = {
         "response": {
@@ -66,7 +54,6 @@ def test_error_status_must_be_in_valid_range(validator, request_body, response_b
     }
 
     issues = validator.validate_response(
-        request_body=request_body,
         response_body=response_body,
         status_code=600,
     )

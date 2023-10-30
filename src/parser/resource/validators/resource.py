@@ -1,6 +1,7 @@
 from typing import Any, Dict, Iterable, List, Optional
 
 from src.parser.attributes.attributes import AttributeName
+from src.parser.attributes.common import schemas
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.sorter.sorter import Sorter
@@ -176,6 +177,15 @@ class ResourceTypePOST(EndpointValidator):
                     issues=attr.validate(value, "REQUEST"),
                     location=("request", "body", attr_name.attr),
                 )
+        if issues.can_proceed(("request", "body", "schemas")):
+            issues.merge(
+                issues=self.validate_schemas_value(
+                    self._schema.get_attr_name(schemas).extract(body),
+                    self._schema,
+                ),
+                location=("request", "body", "schemas"),
+            )
+
         return issues
 
     @preprocess_response_validation
@@ -214,6 +224,15 @@ class ResourceTypePOST(EndpointValidator):
                 response_body=response_body,
                 response_headers=response_headers,
                 is_location_header_optional=False,
+            )
+
+        if issues.can_proceed(("response", "body", "schemas")):
+            issues.merge(
+                issues=self.validate_schemas_value(
+                    self._schema.get_attr_name(schemas).extract(response_body),
+                    self._schema,
+                ),
+                location=("response", "body", "schemas"),
             )
 
         return issues
@@ -510,6 +529,14 @@ class ResourceTypeGET(_ManyResourcesGET):
                         proceed=True,
                         location=("response", "body", "resources", i),
                     )
+                schemas_location = ("response", "body", "resources", i, "schemas")
+                if issues.can_proceed(schemas_location):
+                    schemas_value = self._resource_schema.get_attr_name(schemas).extract(resource)
+                    if schemas_value is not None:
+                        issues.merge(
+                            issues=self.validate_schemas_value(schemas_value, self._resource_schema),
+                            location=schemas_location,
+                        )
             self._validate_resources_sorted(
                 issues=issues,
                 request_query_string=request_query_string,
@@ -568,6 +595,9 @@ class ServerRootResourceGET(_ManyResourcesGET):
                     location=("request", "query_string", "filter"),
                 )
 
+            all_schemas = []
+            for schema in self._resource_schemas:
+                all_schemas.extend(schema.schemas)
             resources = response_body.get("resources", [])
             for i, resource in enumerate(resources):
                 if filter_ is not None and not filter_(resource):
@@ -576,10 +606,22 @@ class ServerRootResourceGET(_ManyResourcesGET):
                         proceed=True,
                         location=("response", "body", "resources", i),
                     )
+                schemas_location = ("response", "body", "resources", i, "schemas")
+                if issues.can_proceed(schemas_location):
+                    schemas_value = AttributeName(attr="schemas").extract(resource)
+                    for schema_value in schemas_value:
+                        if schema_value.lower() not in all_schemas:
+                            issues.add(
+                                issue=ValidationError.unknown_schema(schema_value),
+                                proceed=True,
+                                location=schemas_location,
+                            )
+
             self._validate_resources_sorted(
                 issues=issues,
                 request_query_string=request_query_string,
                 resources=resources,
                 schema=None,
             )
+
         return issues

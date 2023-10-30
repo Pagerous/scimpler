@@ -616,3 +616,33 @@ def test_sorting_is_checked_on_attributes_from_schema_extensions(
     )
 
     assert issues.to_dict() == expected
+
+
+def test_bad_schema_in_resources_is_discovered(response_body):
+    validator = ResourceTypeGET(USER)
+    response_body["Resources"][1]["schemas"] = ["bad:user:schema"]
+    expected_issues = {
+        "response": {"body": {"resources": {"1": {"schemas": {"_errors": [{"code": 20}]}}}}}
+    }
+
+    issues = validator.validate_response(
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_unknown_schema_in_resources_root_endpoint_is_discovered(response_body):
+    validator = ServerRootResourceGET([USER])
+    response_body["Resources"][1]["schemas"] = ["bad:user:schema"]
+    expected_issues = {
+        "response": {"body": {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}}
+    }
+
+    issues = validator.validate_response(
+        response_body=response_body,
+        status_code=200,
+    )
+
+    assert issues.to_dict() == expected_issues
