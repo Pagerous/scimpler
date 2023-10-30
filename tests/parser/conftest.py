@@ -10,7 +10,7 @@ def enterprise_user_data():
         ],
         "id": "2819c223-7f76-453a-919d-413861904646",
         "externalId": "701984",
-        "userName": "bjensen@example.com",
+        "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen@example.com",
         "name": {
             "formatted": "Ms. Barbara J Jensen, III",
             "familyName": "Jensen",
@@ -117,7 +117,7 @@ def enterprise_user_data():
                 "displayName": "John Smith",
             },
         },
-        "meta": {
+        "urn:ietf:params:scim:schemas:core:2.0:User:meta": {
             "resourceType": "User",
             "created": "2010-01-23T04:56:22Z",
             "lastModified": "2011-05-13T04:42:34Z",

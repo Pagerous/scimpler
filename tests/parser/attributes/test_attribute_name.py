@@ -68,6 +68,14 @@ def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
             "bjensen@example.com",
         ),
         (
+            AttributeName(attr="userName"),
+            "bjensen@example.com",
+        ),
+        (
+            AttributeName(attr="meta", sub_attr="resourceType"),
+            "User",
+        ),
+        (
             AttributeName(attr="name", sub_attr="givenName"),
             "Barbara",
         ),

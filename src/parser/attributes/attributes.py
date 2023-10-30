@@ -5,12 +5,16 @@ from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Ty
 from src.parser.attributes import type as at
 from src.parser.error import ValidationError, ValidationIssues
 
+_ATTR_NAME = re.compile(r"\w+")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
-_ATTR_NAME_REGEX = re.compile(rf"({_URI_PREFIX.pattern})?(\w+(\.\w+)?)")
+_FULL_ATTR_NAME_REGEX = re.compile(rf"({_URI_PREFIX.pattern})?(\w+(\.\w+)?)")
 
 
 class AttributeName:
     def __init__(self, schema: str = "", attr: str = "", sub_attr: str = ""):
+        if not _ATTR_NAME.fullmatch(attr):
+            raise ValueError(f"{attr!r} is not valid attr name")
+
         schema, attr, sub_attr = schema.lower(), attr.lower(), sub_attr.lower()
         attr_ = attr
         if schema:
@@ -18,9 +22,8 @@ class AttributeName:
         if sub_attr:
             attr_ += "." + sub_attr
 
-        match = _ATTR_NAME_REGEX.fullmatch(attr)
-        if not match:
-            raise ValueError(f"{attr_!r} is not valid attribute name")
+        if not _FULL_ATTR_NAME_REGEX.fullmatch(attr):
+            raise ValueError(f"{attr_!r} is not valid attr / sub-attr name")
 
         self._schema = schema
         self._attr = attr
@@ -47,7 +50,7 @@ class AttributeName:
 
     @classmethod
     def parse(cls, attr: str) -> Optional["AttributeName"]:
-        match = _ATTR_NAME_REGEX.fullmatch(attr)
+        match = _FULL_ATTR_NAME_REGEX.fullmatch(attr)
         if not match:
             return None
 
@@ -83,22 +86,26 @@ class AttributeName:
         return self.attr == other.attr
 
     def extract(self, data: Dict[str, Any]) -> Optional[Any]:
-        is_extended = False
-        extended = data.get(self.schema)
-        if extended is not None:
-            is_extended = True
-            data = extended
+        used_extension = False
+        if self.schema:
+            extended = data.get(self.schema)
+            if extended is not None:
+                used_extension = True
+                data = extended
 
         value = data.get(self.full_attr) or data.get(self.attr)
 
-        if value is None and not is_extended:
+        if value is None:
             for k, v in data.items():
-                if not _URI_PREFIX.fullmatch(f"{k}:"):
-                    continue
-                potential_extended = data.get(k)
-                if isinstance(potential_extended, Dict) and self.attr in potential_extended:
-                    value = potential_extended.get(self.attr)
+                parsed = AttributeName.parse(k)
+                if parsed and self.top_level_equals(parsed) and not parsed.sub_attr:
+                    value = v
                     break
+                elif not used_extension and _URI_PREFIX.fullmatch(f"{k}:"):
+                    potential_extended = data.get(k)
+                    if isinstance(potential_extended, Dict) and self.attr in potential_extended:
+                        value = potential_extended.get(self.attr)
+                        break
 
         if self.sub_attr:
             if value is None or not isinstance(value, Dict):
