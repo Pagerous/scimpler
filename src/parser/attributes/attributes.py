@@ -217,6 +217,30 @@ class Attribute:
     def uniqueness(self) -> AttributeUniqueness:
         return self._uniqueness
 
+    def __repr__(self) -> str:
+        return f"Attribute(name={self._name}, type={self._type.__name__})"
+
+    def __eq__(self, other):
+        if not isinstance(other, Attribute):
+            return False
+
+        return all(
+            [
+                self._name.lower() == other._name.lower(),
+                self._issuer == other._issuer,
+                self._type is other._type,
+                self._reference_types == other._reference_types,
+                self._required == other._required,
+                self._case_exact == other._case_exact,
+                self._canonical_values == other._canonical_values,
+                self._multi_valued == other._multi_valued,
+                self._mutability == other._mutability,
+                self._returned == other._returned,
+                self._uniqueness == other._uniqueness,
+                self._validators == other._validators,
+            ]
+        )
+
     def validate(self, value: Any, direction: str) -> ValidationIssues:
         issues = ValidationIssues()
         if value is None:
