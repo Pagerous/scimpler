@@ -343,12 +343,14 @@ class ComplexAttribute(Attribute):
                 for attr_name, attr in self._sub_attributes.items():
                     issues.merge(
                         location=(i, attr.name),
-                        issues=attr.validate(item.get(attr_name), direction),
+                        issues=attr.validate(
+                            AttributeName(attr=attr_name).extract(item), direction
+                        ),  # TODO: use AttributeName in constructor
                     )
         else:
             for attr_name, attr in self._sub_attributes.items():
                 issues.merge(
                     location=(attr.name,),
-                    issues=attr.validate(value.get(attr_name), direction),
+                    issues=attr.validate(AttributeName(attr=attr_name).extract(value), direction),
                 )
         return issues
