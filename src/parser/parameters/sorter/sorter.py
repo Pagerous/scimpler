@@ -4,7 +4,6 @@ from src.parser.attributes import type as at
 from src.parser.attributes.attributes import AttributeName, ComplexAttribute
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.schemas import Schema
-from src.parser.utils import lower_dict_keys
 
 
 class AlwaysLastKey:
@@ -117,7 +116,7 @@ class Sorter:
         )
 
     def __call__(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        if not any(self._attr_name.extract(lower_dict_keys(item)) for item in data):
+        if not any(self._attr_name.extract(item) for item in data):
             return data
         key = self._attr_key if self._schema else self._attr_key_no_schema
         return sorted(data, key=key, reverse=not self._asc)
@@ -136,7 +135,7 @@ class Sorter:
 
     def _attr_key(self, item):
         value = None
-        item_value = self._attr_name.extract(lower_dict_keys(item))
+        item_value = self._attr_name.extract(item)
         if item_value and self._attr.multi_valued:
             if isinstance(self._attr, ComplexAttribute):
                 for v in item_value:
@@ -151,7 +150,7 @@ class Sorter:
 
     def _attr_key_no_schema(self, item):
         value = None
-        item_value = self._attr_name.extract(lower_dict_keys(item))
+        item_value = self._attr_name.extract(item)
         if isinstance(item_value, List):
             for v in item_value:
                 if isinstance(v, Dict):

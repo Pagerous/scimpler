@@ -7,7 +7,6 @@ from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter import operator as op
 from src.parser.parameters.filter.operator import MatchResult
 from src.parser.resource.schemas import Schema
-from src.parser.utils import lower_dict_keys
 
 _OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 _AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
@@ -633,7 +632,6 @@ class Filter:
         return value, issues
 
     def __call__(self, data: Dict[str, Any]) -> MatchResult:
-        data = lower_dict_keys(data)
         if not isinstance(self._operator, op.LogicalOperator):
             data = self._operator.attr_name.extract(data)
         return self._operator.match(data, self._schema, self._strict)
