@@ -5,9 +5,9 @@ from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Ty
 from src.parser.attributes import type as at
 from src.parser.error import ValidationError, ValidationIssues
 
-_ATTR_NAME = re.compile(r"\w+")
+_ATTR_NAME = re.compile(r"(\w+|\$ref)")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
-_FULL_ATTR_NAME_REGEX = re.compile(rf"({_URI_PREFIX.pattern})?(\w+(\.\w+)?)")
+_FULL_ATTR_NAME_REGEX = re.compile(rf"({_URI_PREFIX.pattern})?({_ATTR_NAME.pattern}(\.\w+)?)")
 
 
 class AttributeName:
