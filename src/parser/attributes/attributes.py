@@ -86,32 +86,45 @@ class AttributeName:
         return self.attr == other.attr
 
     def extract(self, data: Dict[str, Any]) -> Optional[Any]:
+        top_value = None
         used_extension = False
-        if self.schema:
-            extended = data.get(self.schema)
-            if extended is not None:
+        for k, v in data.items():
+            k_lower = k.lower()
+            if k_lower == self.schema:
                 used_extension = True
-                data = extended
+                top_value = v
+                break
+            if k_lower in {self.full_attr, self.attr}:
+                top_value = v
+                break
+            k_parsed = AttributeName.parse(k)
+            if k_parsed and self.top_level_equals(k_parsed):
+                top_value = v
+                break
+            if (
+                _URI_PREFIX.fullmatch(f"{k}:")
+                and isinstance(v, Dict)
+                and self.attr in map(str.lower, v)
+            ):
+                used_extension = True
+                top_value = v
+                break
 
-        value = data.get(self.full_attr) or data.get(self.attr)
-
-        if value is None:
-            for k, v in data.items():
-                parsed = AttributeName.parse(k)
-                if parsed and self.top_level_equals(parsed) and not parsed.sub_attr:
-                    value = v
+        if used_extension and isinstance(top_value, Dict):
+            for k, v in top_value.items():
+                if k.lower() == self.attr:
+                    top_value = v
                     break
-                elif not used_extension and _URI_PREFIX.fullmatch(f"{k}:"):
-                    potential_extended = data.get(k)
-                    if isinstance(potential_extended, Dict) and self.attr in potential_extended:
-                        value = potential_extended.get(self.attr)
-                        break
 
-        if self.sub_attr:
-            if value is None or not isinstance(value, Dict):
-                return None
-            return value.get(self.sub_attr)
-        return value
+        if not self.sub_attr:
+            return top_value
+
+        if isinstance(top_value, Dict):
+            for k, v in top_value.items():
+                if k.lower() == self.sub_attr:
+                    return v
+
+        return None
 
 
 class AttributeMutability(str, Enum):
