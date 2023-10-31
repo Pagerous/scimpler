@@ -1,7 +1,6 @@
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
-from src.parser.utils import lower_dict_keys
 
 
 @pytest.mark.parametrize(
@@ -131,6 +130,6 @@ def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
     ),
 )
 def test_value_can_be_extracted(attr_name, expected, enterprise_user_data):
-    actual = attr_name.extract(lower_dict_keys(enterprise_user_data))
+    actual = attr_name.extract(enterprise_user_data)
 
     assert actual == expected

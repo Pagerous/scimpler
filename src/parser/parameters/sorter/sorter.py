@@ -91,7 +91,7 @@ class Sorter:
             attr = schema.get_attr(attr_name)
             if attr is None:
                 issues.add(
-                    issue=ValidationError.unknown_sort_by_attr(str(attr_name)),
+                    issue=ValidationError.attr_not_in_schema(str(attr_name), repr(schema)),
                     proceed=False,
                 )
             if not issues.can_proceed():

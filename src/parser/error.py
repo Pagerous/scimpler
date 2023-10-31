@@ -36,7 +36,7 @@ class ValidationError:
             "({body_status}) must match"
         ),
         14: "value must be one of: {expected_values}, but provided '{provided}'",
-        15: "missing {missing}",
+        15: "missing",
         16: (
             "HTTP response status for method '{method}' must be '{expected}', "
             "but provided '{provided}'"
@@ -152,8 +152,8 @@ class ValidationError:
         return cls(code=14, expected_values=expected_values, provided=provided)
 
     @classmethod
-    def missing(cls, missing: Any):
-        return cls(code=15, missing=missing)
+    def missing(cls):
+        return cls(code=15)
 
     @classmethod
     def bad_status_code(cls, method: str, expected: int, provided: int):
