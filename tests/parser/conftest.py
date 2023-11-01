@@ -1,5 +1,9 @@
 import pytest
 
+from src.parser.attributes import type as at
+from src.parser.attributes.attributes import Attribute, ComplexAttribute
+from src.parser.resource.schemas import ResourceSchema
+
 
 @pytest.fixture
 def enterprise_user_data():
@@ -125,3 +129,49 @@ def enterprise_user_data():
             "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
         },
     }
+
+
+SCHEMA_FOR_TESTS = ResourceSchema(
+    schema="schema:for:tests",
+    repr_="SchemaForTests",
+    attrs=[
+        Attribute(name="int", type_=at.Integer),
+        Attribute(name="str", type_=at.String),
+        Attribute(name="str_cs", type_=at.String, case_exact=True),
+        Attribute(name="str_mv", type_=at.String, multi_valued=True),
+        Attribute(name="str_cs_mv", type_=at.String, case_exact=True, multi_valued=True),
+        Attribute(name="bool", type_=at.Boolean),
+        Attribute(name="datetime", type_=at.DateTime),
+        Attribute(name="decimal", type_=at.Decimal),
+        Attribute(name="binary", type_=at.Binary),
+        Attribute(name="external_ref", type_=at.ExternalReference),
+        Attribute(name="uri_ref", type_=at.URIReference),
+        Attribute(name="scim_ref", type_=at.SCIMReference),
+        ComplexAttribute(
+            name="c",
+            sub_attributes=[Attribute(name="value", type_=at.String)],
+        ),
+        ComplexAttribute(
+            name="c_mv",
+            sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
+            multi_valued=True,
+        ),
+        ComplexAttribute(
+            name="c2",
+            sub_attributes=[
+                Attribute(name="str", type_=at.String),
+                Attribute(name="int", type_=at.Integer),
+                Attribute(name="bool", type_=at.Boolean),
+            ],
+        ),
+        ComplexAttribute(
+            name="c2_mv",
+            sub_attributes=[
+                Attribute(name="str", type_=at.String),
+                Attribute(name="int", type_=at.Integer),
+                Attribute(name="bool", type_=at.Boolean),
+            ],
+            multi_valued=True,
+        ),
+    ],
+)

@@ -3,9 +3,9 @@ import pytest
 from src.parser.attributes.attributes import AttributeName
 from src.parser.parameters.sorter import Sorter
 from src.parser.resource.schemas import USER
+from tests.parser.conftest import SCHEMA_FOR_TESTS
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
 @pytest.mark.parametrize(
     "sort_by",
     (
@@ -17,65 +17,23 @@ from src.parser.resource.schemas import USER
         "urn:ietf:params:scim:schemas:core:2.0:User:emails",
     ),
 )
-def test_sorter_is_parsed(use_schema, sort_by):
-    schema = USER if use_schema else None
-    sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=schema)
+def test_sorter_is_parsed(sort_by):
+    sorter, issues = Sorter.parse(by=sort_by)
 
     assert not issues
     assert sorter is not None
 
 
-@pytest.mark.parametrize(
-    ("sort_by", "expected_issues"),
-    (
-        ("bad.attr.name", {"_errors": [{"code": 111}]}),
-        ("non_existing.attr", {"_errors": [{"code": 200}]}),
-        ("name", {"_errors": [{"code": 201}, {"code": 202}]}),
-    ),
-)
-def test_sorter_parsing_fails_with_schema(sort_by, expected_issues):
-    sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=USER)
+def test_sorter_parsing_fails_with_schema():
+    expected = {"_errors": [{"code": 111}]}
+    sorter, issues = Sorter.parse(by="bad.attr.name")
 
     assert sorter is None
-    assert issues.to_dict() == expected_issues
-
-
-@pytest.mark.parametrize(
-    ("sort_by", "expected_issues"),
-    (
-        ("bad.attr.name", {"_errors": [{"code": 111}]}),
-        ("non_existing.attr", {}),
-        ("name", {}),
-    ),
-)
-def test_sorter_parsing_fails_without_schema(sort_by, expected_issues):
-    sorter, issues = Sorter.parse(by=sort_by, asc=True, schema=None)
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_sorter_can_not_be_created_if_no_attr_in_schema():
-    with pytest.raises(ValueError):
-        Sorter(AttributeName.parse("non_existing.attr"), schema=USER)
-
-
-def test_sorter_can_not_be_created_if_no_sub_attr_in_schema():
-    with pytest.raises(ValueError):
-        Sorter(AttributeName.parse("name.non_existing"), schema=USER)
-
-
-def test_sorter_can_not_be_created_if_complex_attr_is_not_multivalued():
-    with pytest.raises(TypeError):
-        Sorter(AttributeName.parse("name"), schema=USER)
-
-
-def test_sorter_can_not_be_created_if_complex_multivalued_attr_has_no_primary_or_value_sub_attr():
-    with pytest.raises(TypeError):
-        Sorter(AttributeName.parse("addresses"), schema=USER)
+    assert issues.to_dict() == expected
 
 
 def test_items_are_sorted_according_to_attr_value():
-    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=True)
+    sorter = Sorter(AttributeName.parse("userName"), asc=True)
     values = [
         {
             "userName": "C",
@@ -105,13 +63,13 @@ def test_items_are_sorted_according_to_attr_value():
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=True)
+    sorter = Sorter(AttributeName.parse("userName"), asc=True)
     values = [
         {
             "urn:ietf:params:scim:schemas:core:2.0:User:userName": "C",
@@ -139,13 +97,13 @@ def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=False)
+    sorter = Sorter(AttributeName.parse("userName"), asc=False)
     values = [
         {
             "userName": "C",
@@ -173,15 +131,13 @@ def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_original_order_is_preserved_if_no_values_for_all_items(use_schema):
-    schema = USER if use_schema else None
-    sorter = Sorter(AttributeName.parse("userName"), schema=schema)
+def test_original_order_is_preserved_if_no_values_for_all_items():
+    sorter = Sorter(AttributeName.parse("userName"))
     values = [
         {
             "id": "2",
@@ -195,43 +151,43 @@ def test_original_order_is_preserved_if_no_values_for_all_items(use_schema):
     ]
     expected = values
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
 def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_attrs():
-    sorter = Sorter(AttributeName.parse("some_attr"), schema=None, asc=True)
+    sorter = Sorter(AttributeName.parse("str_mv"), asc=True)
     values = [
         {
-            "some_attr": [7, 1, 9],
+            "str_mv": [7, 1, 9],
         },
         {
-            "some_attr": [1, 8, 2],
+            "str_mv": [1, 8, 2],
         },
         {
-            "some_attr": [4, 3, 6],
+            "str_mv": [4, 3, 6],
         },
     ]
     expected = [
         {
-            "some_attr": [1, 8, 2],
+            "str_mv": [1, 8, 2],
         },
         {
-            "some_attr": [4, 3, 6],
+            "str_mv": [4, 3, 6],
         },
         {
-            "some_attr": [7, 1, 9],
+            "str_mv": [7, 1, 9],
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=SCHEMA_FOR_TESTS)
 
     assert actual == expected
 
 
 def test_items_are_sorted_according_to_sub_attr_value():
-    sorter = Sorter(AttributeName.parse("name.givenName"), schema=USER, asc=True)
+    sorter = Sorter(AttributeName.parse("name.givenName"), asc=True)
     values = [
         {
             "urn:ietf:params:scim:schemas:core:2.0:User:name": {"givenName": "C"},
@@ -261,13 +217,13 @@ def test_items_are_sorted_according_to_sub_attr_value():
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttributeName.parse("name.givenName"), schema=USER, asc=True)
+    sorter = Sorter(AttributeName.parse("name.givenName"), asc=True)
     values = [
         {
             "name": {"givenName": "C"},
@@ -295,13 +251,13 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttributeName.parse("name.givenName"), schema=USER, asc=False)
+    sorter = Sorter(AttributeName.parse("name.givenName"), asc=False)
     values = [
         {
             "name": {"givenName": "C"},
@@ -329,17 +285,13 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs(
-    use_schema,
-):
-    schema = USER if use_schema else None
-    sorter = Sorter(AttributeName.parse("emails"), schema=schema, asc=True)
+def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs():
+    sorter = Sorter(AttributeName(attr="emails"), asc=True)
     values = [
         {
             "id": "1",
@@ -381,13 +333,13 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
 def test_case_insensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttributeName.parse("userName"), schema=USER, asc=True)
+    sorter = Sorter(AttributeName.parse("userName"), asc=True)
     values = [
         {
             "userName": "C",
@@ -417,13 +369,13 @@ def test_case_insensitive_attributes_are_respected_if_schema_provided():
         },
     ]
 
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected
 
 
 def test_case_sensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttributeName.parse("id"), schema=USER, asc=True)
+    sorter = Sorter(AttributeName.parse("id"), asc=True)
     values = [
         {
             "id": "a",
@@ -447,86 +399,6 @@ def test_case_sensitive_attributes_are_respected_if_schema_provided():
         },
     ]
 
-    actual = sorter(values)
-
-    assert actual == expected
-
-
-def test_string_values_are_sorted_less_strictly_when_schema_not_provided():
-    sorter = Sorter(AttributeName.parse("userName"), schema=None, asc=True, strict=False)
-    values = [
-        {
-            "userName": "B",
-            "id": "2",
-        },
-        {
-            "userName": "aa",
-            "id": 4,
-        },
-        {
-            "userName": "a",
-            "id": "3",
-        },
-        {
-            "userName": "A",
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "userName": "B",
-            "id": "2",
-        },
-        {
-            "userName": "a",
-            "id": "3",
-        },
-        {
-            "userName": "A",
-            "id": "1",
-        },
-        {
-            "userName": "aa",
-            "id": 4,
-        },
-    ]
-
-    actual = sorter(values)
-
-    assert actual == expected
-
-
-def test_string_values_are_sorted_strictly_when_schema_not_provided():
-    sorter = Sorter(AttributeName.parse("userName"), schema=None, asc=True, strict=True)
-    values = [
-        {
-            "userName": "C",
-            "id": "2",
-        },
-        {
-            "userName": "aa",
-            "id": "3",
-        },
-        {
-            "userName": "A",
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "userName": "A",
-            "id": "1",
-        },
-        {
-            "userName": "C",
-            "id": "2",
-        },
-        {
-            "userName": "aa",
-            "id": "3",
-        },
-    ]
-
-    actual = sorter(values)
+    actual = sorter(values, schema=USER)
 
     assert actual == expected

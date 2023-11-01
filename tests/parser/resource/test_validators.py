@@ -699,20 +699,14 @@ def test_validate_resources_schema__resources_with_bad_type_are_not_validated(li
 
 
 @pytest.mark.parametrize(
-    ("query_string", "schema", "expected"),
+    ("query_string", "expected"),
     (
-        ({"sortBy": "userName"}, USER, {}),
-        ({"sortBy": "userName"}, None, {}),
-        ({}, USER, {}),
-        ({}, None, {}),
-        ([], USER, {}),
-        ([], None, {}),
-        ({"sortBy": "non.existing"}, USER, {"_errors": [{"code": 200}]}),
-        ({"sortBy": "non.existing"}, None, {}),
+        ({"sortBy": "userName"}, {}),
+        ({"sortBy": "bad^attr"}, {"_errors": [{"code": 111}]}),
     ),
 )
-def test_validate_request_sorting(query_string, schema, expected):
-    issues = validate_request_sorting(query_string, schema)
+def test_validate_request_sorting(query_string, expected):
+    issues = validate_request_sorting(query_string)
 
     assert issues.to_dict() == expected
 
@@ -877,58 +871,54 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
 @pytest.mark.parametrize(
     "sorter",
     (
-        Sorter(AttributeName(attr="name", sub_attr="familyName"), USER, asc=False, strict=False),
-        Sorter(
-            AttributeName(attr="manager", sub_attr="displayName"), USER, asc=False, strict=False
-        ),
+        Sorter(AttributeName(attr="name", sub_attr="familyName"), asc=False),
+        Sorter(AttributeName(attr="manager", sub_attr="displayName"), asc=False),
         Sorter(
             AttributeName(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="manager",
                 sub_attr="displayName",
             ),
-            USER,
             asc=False,
-            strict=False,
         ),
     ),
 )
 def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
     expected = {"resources": {"_errors": [{"code": 26}]}}
 
-    issues = validate_resources_sorted(sorter, list_user_data)
+    issues = validate_resources_sorted(sorter, list_user_data, [USER])
 
     assert issues.to_dict() == expected
 
 
 def test_validate_resources_sorted__skips_if_errors_during_sorting(list_user_data):
     sorter = Sorter(
-        AttributeName(attr="name", sub_attr="familyName"), USER, asc=False, strict=False
+        AttributeName(attr="name", sub_attr="familyName"),
+        asc=False,
     )
     list_user_data["Resources"][0]["name"]["familyName"] = 123  # noqa; can't compare int to str
 
-    issues = validate_resources_sorted(sorter, list_user_data)
+    issues = validate_resources_sorted(sorter, list_user_data, [USER])
 
     assert issues.to_dict() == {}
 
 
 def test_validate_resources_sorted__skips_if_bad_body_type():
     sorter = Sorter(
-        AttributeName(attr="name", sub_attr="familyName"), USER, asc=False, strict=False
+        AttributeName(attr="name", sub_attr="familyName"),
+        asc=False,
     )
 
-    issues = validate_resources_sorted(sorter, None)
+    issues = validate_resources_sorted(sorter, None, [USER])
 
     assert issues.to_dict() == {}
 
 
 def test_validate_resources_sorted__skips_if_bad_resources_type(list_user_data):
-    sorter = Sorter(
-        AttributeName(attr="name", sub_attr="familyName"), USER, asc=False, strict=False
-    )
+    sorter = Sorter(AttributeName(attr="name", sub_attr="familyName"), asc=False)
     list_user_data["Resources"] = {1: 2}  # noqa
 
-    issues = validate_resources_sorted(sorter, list_user_data)
+    issues = validate_resources_sorted(sorter, list_user_data, [USER])
 
     assert issues.to_dict() == {}
 
@@ -1005,7 +995,7 @@ def test_correct_resource_type_get_response_passes_validation(list_user_data):
         start_index=1,
         count=2,
         filter_=Filter(Present(AttributeName(attr="username"))),
-        sorter=Sorter(AttributeName(attr="userName"), USER, True, False),
+        sorter=Sorter(AttributeName(attr="userName"), True),
     )
 
     assert issues.to_dict() == {}
@@ -1020,7 +1010,7 @@ def test_correct_server_root_resource_get_response_passes_validation(list_user_d
         start_index=1,
         count=2,
         filter_=Filter(Present(AttributeName(attr="username"))),
-        sorter=Sorter(AttributeName(attr="userName"), None, True, False),
+        sorter=Sorter(AttributeName(attr="userName"), True),
     )
 
     assert issues.to_dict() == {}

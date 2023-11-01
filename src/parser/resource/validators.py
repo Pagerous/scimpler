@@ -359,10 +359,7 @@ class ResourceTypePOST:
         return issues
 
 
-def validate_request_sorting(
-    query_string: Any,
-    schema: Optional[Schema],
-) -> ValidationIssues:
+def validate_request_sorting(query_string: Any) -> ValidationIssues:
     issues = ValidationIssues()
     if not isinstance(query_string, Dict):
         return issues
@@ -375,12 +372,7 @@ def validate_request_sorting(
     if sort_order not in ["ascending", "descending"]:
         pass  # TODO add warning here
 
-    _, issues_ = Sorter.parse(
-        by=sort_by,
-        schema=schema,
-        asc=sort_order == "ascending",
-        strict=True,
-    )
+    _, issues_ = Sorter.parse(by=sort_by, asc=sort_order == "ascending")
     return issues_
 
 
@@ -399,6 +391,7 @@ def validate_request_filtering(query_string: Any) -> ValidationIssues:
 def validate_resources_sorted(
     sorter: Sorter,
     body: Any,
+    schemas: Sequence[Schema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     if not isinstance(body, Dict):
@@ -408,8 +401,15 @@ def validate_resources_sorted(
     if not isinstance(resources, List):
         return issues
 
+    schema = schemas[0] if len(schemas) == 1 else None
+
     try:
-        if resources != sorter(resources):
+        if schema is None:
+            schema = [infer_schema_from_data(resource, schemas) for resource in resources]
+            if not (schema and all(schema)):
+                return issues
+
+        if resources != sorter(resources, schema=schema):
             issues.add(
                 issue=ValidationError.resources_not_sorted(),
                 proceed=True,
@@ -748,7 +748,7 @@ class ResourceTypeGET:
             )
         if sorter is not None:
             issues.merge(
-                issues=validate_resources_sorted(sorter, body),
+                issues=validate_resources_sorted(sorter, body, [self._resource_schema]),
                 location=body_location,
             )
         return issues
@@ -848,7 +848,7 @@ class ServerRootResourceGET:
             )
         if sorter is not None:
             issues.merge(
-                issues=validate_resources_sorted(sorter, body),
+                issues=validate_resources_sorted(sorter, body, self._resource_schemas),
                 location=body_location,
             )
         return issues

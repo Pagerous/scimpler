@@ -2,8 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from src.parser.attributes import type as at
-from src.parser.attributes.attributes import Attribute, AttributeName, ComplexAttribute
+from src.parser.attributes.attributes import AttributeName
 from src.parser.parameters.filter.operator import (
     And,
     ComplexAttributeOperator,
@@ -21,52 +20,7 @@ from src.parser.parameters.filter.operator import (
     Present,
     StartsWith,
 )
-from src.parser.resource.schemas import ResourceSchema
-
-SCHEMA_FOR_TESTS = ResourceSchema(
-    schema="schema:for:tests",
-    repr_="SchemaForTests",
-    attrs=[
-        Attribute(name="int", type_=at.Integer),
-        Attribute(name="str", type_=at.String),
-        Attribute(name="str_cs", type_=at.String, case_exact=True),
-        Attribute(name="str_mv", type_=at.String, multi_valued=True),
-        Attribute(name="str_cs_mv", type_=at.String, case_exact=True, multi_valued=True),
-        Attribute(name="bool", type_=at.Boolean),
-        Attribute(name="datetime", type_=at.DateTime),
-        Attribute(name="decimal", type_=at.Decimal),
-        Attribute(name="binary", type_=at.Binary),
-        Attribute(name="external_ref", type_=at.ExternalReference),
-        Attribute(name="uri_ref", type_=at.URIReference),
-        Attribute(name="scim_ref", type_=at.SCIMReference),
-        ComplexAttribute(
-            name="c",
-            sub_attributes=[Attribute(name="value", type_=at.String)],
-        ),
-        ComplexAttribute(
-            name="c_mv",
-            sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
-            multi_valued=True,
-        ),
-        ComplexAttribute(
-            name="c2",
-            sub_attributes=[
-                Attribute(name="str", type_=at.String),
-                Attribute(name="int", type_=at.Integer),
-                Attribute(name="bool", type_=at.Boolean),
-            ],
-        ),
-        ComplexAttribute(
-            name="c2_mv",
-            sub_attributes=[
-                Attribute(name="str", type_=at.String),
-                Attribute(name="int", type_=at.Integer),
-                Attribute(name="bool", type_=at.Boolean),
-            ],
-            multi_valued=True,
-        ),
-    ],
-)
+from tests.parser.conftest import SCHEMA_FOR_TESTS
 
 
 @pytest.mark.parametrize(

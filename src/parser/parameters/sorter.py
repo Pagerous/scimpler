@@ -1,7 +1,13 @@
-from typing import Any, Dict, List, Optional, Tuple
+import functools
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.parser.attributes import type as at
-from src.parser.attributes.attributes import AttributeName, ComplexAttribute, extract
+from src.parser.attributes.attributes import (
+    Attribute,
+    AttributeName,
+    ComplexAttribute,
+    extract,
+)
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.resource.schemas import Schema
 
@@ -14,67 +20,37 @@ class AlwaysLastKey:
         return True
 
 
-class NonStrictStringKey:
-    def __init__(self, value: str):
+class StringKey:
+    def __init__(self, value: str, attr: Attribute):
         self._value = value
+        self._attr = attr
 
     def __lt__(self, other):
-        if isinstance(other, NonStrictStringKey):
-            other = other._value
+        if not isinstance(other, StringKey):
+            if isinstance(other, AlwaysLastKey):
+                return True
+            raise TypeError(
+                f"'<' not supported between instances of 'StringKey' and '{type(other).__name__}'"
+            )
 
-        if self._value < other and self._value.lower() < other.lower():
-            return True
-        return False
+        if self._attr.case_exact or other._attr.case_exact:
+            return self._value < other._value
 
-    def __gt__(self, other):
-        if isinstance(other, NonStrictStringKey):
-            other = other._value
-
-        if self._value > other and self._value.lower() > other.lower():
-            return True
-        return False
+        return self._value.lower() < other._value.lower()
 
 
 class Sorter:
-    def __init__(
-        self,
-        attr_name: AttributeName,
-        schema: Optional[Schema],
-        asc: bool = True,
-        strict: bool = True,
-    ):
-        attr = None
-        if schema is not None:
-            attr = schema.get_attr(attr_name)
-            if attr is None:
-                raise ValueError(f"attribute {attr!r} not specified in schema {schema!r}")
-            if isinstance(attr, ComplexAttribute):
-                if not attr.multi_valued:
-                    raise TypeError(f"complex attribute {attr!r} must be multivalued")
-                if "primary" not in attr.sub_attributes or "value" not in attr.sub_attributes:
-                    raise TypeError(
-                        f"complex attribute must contain 'primary' and 'value'"
-                        f"sub-attributes for sorting"
-                    )
+    def __init__(self, attr_name: AttributeName, asc: bool = True):
         self._attr_name = attr_name
-        self._attr = attr
-        self._schema = schema
         self._asc = asc
         self._default_value = AlwaysLastKey()
-        self._strict = strict
 
     @property
     def attr_name(self) -> AttributeName:
         return self._attr_name
 
     @classmethod
-    def parse(
-        cls,
-        by: str,
-        asc: bool = True,
-        schema: Optional[Schema] = None,
-        strict: bool = True,
-    ) -> Tuple[Optional["Sorter"], ValidationIssues]:
+    def parse(cls, by: str, asc: bool = True) -> Tuple[Optional["Sorter"], ValidationIssues]:
         issues = ValidationIssues()
         attr_name = AttributeName.parse(by)
         if attr_name is None:
@@ -86,80 +62,59 @@ class Sorter:
         if not issues.can_proceed():
             return None, issues
 
-        if schema is not None:
-            attr = schema.get_attr(attr_name)
-            if attr is None:
-                issues.add(
-                    issue=ValidationError.attr_not_in_schema(str(attr_name), repr(schema)),
-                    proceed=False,
-                )
-            if not issues.can_proceed():
-                return None, issues
-
-            if isinstance(attr, ComplexAttribute):
-                if not attr.multi_valued:
-                    issues.add(
-                        issue=ValidationError.complex_attr_is_not_multivalued(by),
-                        proceed=False,
-                    )
-                if "primary" not in attr.sub_attributes or "value" not in attr.sub_attributes:
-                    issues.add(
-                        issue=ValidationError.complex_attr_does_not_contain_primary_sub_attr(by),
-                        proceed=False,
-                    )
-                if not issues.can_proceed():
-                    return None, issues
-
         return (
-            Sorter(attr_name=attr_name, schema=schema, asc=asc, strict=strict),
+            Sorter(attr_name=attr_name, asc=asc),
             issues,
         )
 
-    def __call__(self, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def __call__(
+        self,
+        data: List[Dict[str, Any]],
+        schema: Union[Schema, List[Schema]],
+    ) -> List[Dict[str, Any]]:
         if not any(extract(self._attr_name, item) for item in data):
             return data
-        key = self._attr_key if self._schema else self._attr_key_no_schema
+
+        if isinstance(schema, Schema):
+            key = functools.partial(self._attr_key, schema=schema)
+        else:
+            key = self._attr_key_many_schemas(data, schema)
+
         return sorted(data, key=key, reverse=not self._asc)
 
-    def _get_key(self, value):
-        if not value:
+    def _get_key(self, value: Any, attr: Optional[Attribute]):
+        if not value or attr is None:
             return self._default_value
 
         if not isinstance(value, str):
             return value
 
-        if self._attr is not None and self._attr.type == at.String and not self._attr.case_exact:
-            return value.lower()
+        if attr.type is not at.String:
+            return self._default_value
 
-        return value if self._strict else NonStrictStringKey(value)
+        return StringKey(value, attr)
 
-    def _attr_key(self, item):
+    def _attr_key_many_schemas(self, data: List[Dict[str, Any]], schemas: Sequence[Schema]):
+        def attr_key(item):
+            schema = schemas[data.index(item)]
+            return self._attr_key(item, schema)
+
+        return attr_key
+
+    def _attr_key(self, item: Dict[str, Any], schema: Schema):
+        attr = schema.get_attr(self._attr_name)
         value = None
-        item_value = extract(self._attr_name, item)
-        if item_value and self._attr.multi_valued:
-            if isinstance(self._attr, ComplexAttribute):
-                for v in item_value:
-                    if v.get("primary"):
-                        value = v.get("value")
-                        break
-            else:
-                value = item_value[0]
-        else:
-            value = item_value
-        return self._get_key(value)
-
-    def _attr_key_no_schema(self, item):
-        value = None
-        item_value = extract(self._attr_name, item)
-        if isinstance(item_value, List):
-            for v in item_value:
-                if isinstance(v, Dict):
-                    if v.get("primary") and v.get("value"):
-                        value = v.get("value")
-                        break
+        if attr is not None:
+            item_value = extract(self._attr_name, item)
+            if item_value and attr.multi_valued:
+                if isinstance(attr, ComplexAttribute):
+                    for v in item_value:
+                        if v.get("primary"):
+                            attr = attr.sub_attributes.get("value")
+                            value = v.get("value")
+                            break
                 else:
-                    value = self._get_key(v)
-                    break
-        else:
-            value = item_value
-        return self._get_key(value)
+                    value = item_value[0]
+            else:
+                value = item_value
+        return self._get_key(value, attr)
