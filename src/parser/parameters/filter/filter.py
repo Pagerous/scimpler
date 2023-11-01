@@ -67,15 +67,11 @@ class _ParsedGroupOperator:
 
 
 class Filter:
-    def __init__(self, operator: _ParsedOperator, schema: Optional[Schema], strict: bool = True):
+    def __init__(self, operator: _ParsedOperator):
         self._operator = operator
-        self._schema = schema
-        self._strict = strict
 
     @classmethod
-    def parse(
-        cls, filter_exp: str, schema: Optional[Schema] = None, strict: bool = True
-    ) -> Tuple[Optional["Filter"], ValidationIssues]:
+    def parse(cls, filter_exp: str) -> Tuple[Optional["Filter"], ValidationIssues]:
         issues = ValidationIssues()
         bracket_open_index = None
         complex_attr_name = ""
@@ -176,7 +172,7 @@ class Filter:
         issues.merge(issues=issues_)
         if not issues.can_proceed():
             return None, issues
-        return cls(parsed_op, schema=schema, strict=strict), issues
+        return cls(parsed_op), issues
 
     @staticmethod
     def _parse_operator(
@@ -631,10 +627,12 @@ class Filter:
                 )
         return value, issues
 
-    def __call__(self, data: Dict[str, Any]) -> MatchResult:
+    def __call__(
+        self, data: Dict[str, Any], schema: Optional[Schema] = None, strict: bool = True
+    ) -> MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
             data = extract(self._operator.attr_name, data)
-        return self._operator.match(data, self._schema, self._strict)
+        return self._operator.match(data, schema, strict)
 
     def to_dict(self):
         return self._to_dict(self._operator)

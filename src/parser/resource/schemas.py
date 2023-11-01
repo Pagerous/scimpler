@@ -39,6 +39,10 @@ class Schema(abc.ABC):
     def schemas(self) -> List[str]:
         return [self._schema]
 
+    @property
+    def schema(self) -> str:
+        return self._schema
+
     def __repr__(self) -> str:
         return self._repr
 

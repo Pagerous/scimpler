@@ -4,13 +4,14 @@ from src.parser.attributes.attributes import AttributeName
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.filter.operator import Present
 from src.parser.parameters.sorter.sorter import Sorter
-from src.parser.resource.schemas import USER
+from src.parser.resource.schemas import ERROR, USER
 from src.parser.resource.validators import (
     Error,
     ResourceObjectGET,
     ResourceTypeGET,
     ResourceTypePOST,
     ServerRootResourceGET,
+    infer_schema_from_data,
     validate_body_existence,
     validate_body_schema,
     validate_body_type,
@@ -679,7 +680,7 @@ def test_validate_request_sorting(query_string, schema, expected):
     ),
 )
 def test_validate_request_filtering(query_string, expected):
-    issues = validate_request_filtering(query_string, USER, False)
+    issues = validate_request_filtering(query_string)
 
     assert issues.to_dict() == expected
 
@@ -693,7 +694,7 @@ def test_validate_request_filtering(query_string, expected):
     ),
 )
 def test_validate_resources_filtered(filter_exp, list_user_data):
-    filter_, _ = Filter.parse(filter_exp, USER, False)
+    filter_, _ = Filter.parse(filter_exp)
     expected = {
         "resources": {
             "0": {
@@ -706,24 +707,24 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_)
+    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
 
     assert issues.to_dict() == expected
 
 
 def test_validate_resources_filtered__skips_if_bad_body_type():
-    filter_, _ = Filter.parse("userName pr", USER, False)
+    filter_, _ = Filter.parse("userName pr")
 
-    issues = validate_resources_filtered(None, filter_)
+    issues = validate_resources_filtered(None, filter_, USER, False)
 
     assert issues.to_dict() == {}
 
 
 def test_validate_resources_filtered__skips_if_bad_resources_type(list_user_data):
-    filter_, _ = Filter.parse("userName pr", USER, False)
+    filter_, _ = Filter.parse("userName pr")
     list_user_data["Resources"] = {1: 2}  # noqa
 
-    issues = validate_resources_filtered(list_user_data, filter_)
+    issues = validate_resources_filtered(list_user_data, filter_, USER, False)
 
     assert issues.to_dict() == {}
 
@@ -737,16 +738,16 @@ def test_validate_resources_filtered__skips_if_bad_resources_type(list_user_data
     ),
 )
 def test_validate_resources_filtered__ignores_resources_with_bad_type(filter_exp, list_user_data):
-    filter_, _ = Filter.parse(filter_exp, USER, False)
+    filter_, _ = Filter.parse(filter_exp)
     list_user_data["Resources"][0] = []  # noqa
 
-    issues = validate_resources_filtered(list_user_data, filter_)
+    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
 
     assert issues.to_dict() == {}
 
 
 def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
-    filter_, _ = Filter.parse('meta.resourcetype eq "user"', USER, False)  # "user", not "User"
+    filter_, _ = Filter.parse('meta.resourcetype eq "user"')  # "user", not "User"
     expected = {
         "resources": {
             "0": {
@@ -766,7 +767,34 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_)
+    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
+
+    assert issues.to_dict() == expected
+
+
+def test_validate_resources_filtered__infers_correct_schema_from_data(list_user_data):
+    filter_, _ = Filter.parse('meta.resourcetype eq "user"')
+    # should figure out 'User' schema, for which 'meta.resourcetype' is case-sensitive
+    expected = {
+        "resources": {
+            "0": {
+                "_errors": [
+                    {
+                        "code": 25,
+                    }
+                ]
+            },
+            "1": {
+                "_errors": [
+                    {
+                        "code": 25,
+                    }
+                ]
+            },
+        }
+    }
+
+    issues = validate_resources_filtered(list_user_data, filter_, [USER, ERROR], False)
 
     assert issues.to_dict() == expected
 
@@ -782,7 +810,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
     attr_name,
     list_user_data,
 ):
-    filter_, _ = Filter.parse(f'{attr_name} eq "John Smith"', USER, False)
+    filter_, _ = Filter.parse(f'{attr_name} eq "John Smith"')
     expected = {
         "resources": {
             "0": {
@@ -795,7 +823,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_)
+    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
 
     assert issues.to_dict() == expected
 
@@ -893,6 +921,17 @@ def test_validate_resources_schemas_field_for_unknown_schema__unknown_schemas_ar
     assert issues.to_dict() == expected_issues
 
 
+def test_validate_resources_schemas_field_for_unknown_schema__infers_correct_schema_from_data(
+    list_user_data,
+):
+    list_user_data["Resources"][1]["schemas"] = ["bad:user:schema"]
+    expected_issues = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
+
+    issues = validate_resources_schemas_field_for_unknown_schema(list_user_data, [USER, ERROR])
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_validate_resources_schemas_field_for_unknown_schema__skips_if_bad_body_type():
     issues = validate_resources_schemas_field_for_unknown_schema(None, [USER])
 
@@ -922,7 +961,7 @@ def test_validate_resources_schemas_field_for_unknown_schema__resources_with_bad
 def test_correct_error_response_passes_validation(error_data):
     validator = Error()
 
-    issues = validator.validate_response(status_code=400, response_body=error_data)
+    issues = validator.validate_response(status_code=400, body=error_data)
 
     assert issues.to_dict() == {}
 
@@ -932,8 +971,8 @@ def test_correct_resource_object_get_response_passes_validation(user_data):
 
     issues = validator.validate_response(
         status_code=200,
-        response_body=user_data,
-        response_headers={"Location": user_data["meta"]["location"]},
+        body=user_data,
+        headers={"Location": user_data["meta"]["location"]},
     )
 
     assert issues.to_dict() == {}
@@ -952,8 +991,8 @@ def test_correct_resource_type_post_response_passes_validation(user_data):
 
     issues = validator.validate_response(
         status_code=201,
-        response_body=user_data,
-        response_headers={"Location": user_data["meta"]["location"]},
+        body=user_data,
+        headers={"Location": user_data["meta"]["location"]},
     )
 
     assert issues.to_dict() == {}
@@ -964,10 +1003,10 @@ def test_correct_resource_type_get_response_passes_validation(list_user_data):
 
     issues = validator.validate_response(
         status_code=200,
-        response_body=list_user_data,
+        body=list_user_data,
         start_index=1,
         count=2,
-        filter_=Filter(Present(AttributeName(attr="username")), USER, False),
+        filter_=Filter(Present(AttributeName(attr="username"))),
         sorter=Sorter(AttributeName(attr="userName"), USER, True, False),
     )
 
@@ -979,11 +1018,50 @@ def test_correct_server_root_resource_get_response_passes_validation(list_user_d
 
     issues = validator.validate_response(
         status_code=200,
-        response_body=list_user_data,
+        body=list_user_data,
         start_index=1,
         count=2,
-        filter_=Filter(Present(AttributeName(attr="username")), None, False),
+        filter_=Filter(Present(AttributeName(attr="username"))),
         sorter=Sorter(AttributeName(attr="userName"), None, True, False),
     )
 
     assert issues.to_dict() == {}
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    (
+        (
+            {
+                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                "userName": "bjensen",
+            },
+            USER,
+        ),
+        (
+            {
+                "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
+            },
+            USER,
+        ),
+        (
+            {
+                "userName": "bjensen",
+            },
+            None,
+        ),
+        (
+            # extensions are ignored
+            {
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "employeeNumber": "2",
+                }
+            },
+            None,
+        ),
+    ),
+)
+def test_infer_schema_from_data(data, expected):
+    actual = infer_schema_from_data(data, [USER])
+
+    assert actual == expected
