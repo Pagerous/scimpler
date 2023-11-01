@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, TypeAlias, Union
 
-from src.parser.attributes.attributes import AttributeName
+from src.parser.attributes.attributes import AttributeName, extract
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter import operator as op
 from src.parser.parameters.filter.operator import MatchResult
@@ -633,7 +633,7 @@ class Filter:
 
     def __call__(self, data: Dict[str, Any]) -> MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
-            data = self._operator.attr_name.extract(data)
+            data = extract(self._operator.attr_name, data)
         return self._operator.match(data, self._schema, self._strict)
 
     def to_dict(self):

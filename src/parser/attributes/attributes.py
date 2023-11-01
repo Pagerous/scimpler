@@ -1,6 +1,16 @@
 import re
 from enum import Enum
-from typing import Any, Callable, Collection, Dict, Iterable, List, Optional, Type
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Type,
+    Union,
+)
 
 from src.parser.attributes import type as at
 from src.parser.error import ValidationError, ValidationIssues
@@ -85,46 +95,52 @@ class AttributeName:
             return self.full_attr == other.full_attr
         return self.attr == other.attr
 
-    def extract(self, data: Dict[str, Any]) -> Optional[Any]:
-        top_value = None
-        used_extension = False
-        for k, v in data.items():
-            k_lower = k.lower()
-            if k_lower == self.schema:
-                used_extension = True
-                top_value = v
-                break
-            if k_lower in {self.full_attr, self.attr}:
-                top_value = v
-                break
-            k_parsed = AttributeName.parse(k)
-            if k_parsed and self.top_level_equals(k_parsed):
-                top_value = v
-                break
-            if (
-                _URI_PREFIX.fullmatch(f"{k}:")
-                and isinstance(v, Dict)
-                and self.attr in map(str.lower, v)
-            ):
-                used_extension = True
+
+def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optional[Any]:
+    if isinstance(attr_name, str):
+        attr_name = AttributeName.parse(attr_name)
+        if attr_name is None:
+            return None
+
+    top_value = None
+    used_extension = False
+    for k, v in data.items():
+        k_lower = k.lower()
+        if k_lower == attr_name.schema:
+            used_extension = True
+            top_value = v
+            break
+        if k_lower in [attr_name.full_attr, attr_name.attr]:
+            top_value = v
+            break
+        k_parsed = AttributeName.parse(k)
+        if k_parsed and attr_name.top_level_equals(k_parsed):
+            top_value = v
+            break
+        if (
+            _URI_PREFIX.fullmatch(f"{k}:")
+            and isinstance(v, Dict)
+            and attr_name.attr in map(str.lower, v)
+        ):
+            used_extension = True
+            top_value = v
+            break
+
+    if used_extension and isinstance(top_value, Dict):
+        for k, v in top_value.items():
+            if k.lower() == attr_name.attr:
                 top_value = v
                 break
 
-        if used_extension and isinstance(top_value, Dict):
-            for k, v in top_value.items():
-                if k.lower() == self.attr:
-                    top_value = v
-                    break
+    if not attr_name.sub_attr:
+        return top_value
 
-        if not self.sub_attr:
-            return top_value
+    if isinstance(top_value, Dict):
+        for k, v in top_value.items():
+            if k.lower() == attr_name.sub_attr:
+                return v
 
-        if isinstance(top_value, Dict):
-            for k, v in top_value.items():
-                if k.lower() == self.sub_attr:
-                    return v
-
-        return None
+    return None
 
 
 class AttributeMutability(str, Enum):
@@ -344,13 +360,13 @@ class ComplexAttribute(Attribute):
                     issues.merge(
                         location=(i, attr.name),
                         issues=attr.validate(
-                            AttributeName(attr=attr_name).extract(item), direction
+                            extract(attr_name, item), direction
                         ),  # TODO: use AttributeName in constructor
                     )
         else:
             for attr_name, attr in self._sub_attributes.items():
                 issues.merge(
                     location=(attr.name,),
-                    issues=attr.validate(AttributeName(attr=attr_name).extract(value), direction),
+                    issues=attr.validate(extract(attr_name, value), direction),
                 )
         return issues

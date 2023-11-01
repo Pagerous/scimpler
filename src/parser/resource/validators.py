@@ -1,6 +1,6 @@
 from typing import Any, Dict, Iterable, List, Optional
 
-from src.parser.attributes.attributes import AttributeName
+from src.parser.attributes.attributes import extract
 from src.parser.attributes.common import schemas as schemas_attr
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter.filter import Filter
@@ -42,7 +42,7 @@ def validate_body_schema(
 
     for attr_name in schema.top_level_attr_names:
         attr = schema.get_attr(attr_name)
-        value = attr_name.extract(body)
+        value = extract(attr_name, body)
         issues.merge(
             issues=attr.validate(value, direction),
             location=(attr_name.attr,),
@@ -58,7 +58,7 @@ def validate_schemas_field(
     if not isinstance(body, Dict):
         return issues
 
-    schemas_value = schema.get_attr_name(schemas_attr).extract(body)
+    schemas_value = extract(schema.get_attr_name(schemas_attr), body)
     if not isinstance(schemas_value, List):
         return issues
 
@@ -167,7 +167,7 @@ def validate_resource_location_consistency(
     if not isinstance(body, Dict) or not isinstance(headers, Dict):
         return issues
 
-    meta_location = AttributeName(attr="meta", sub_attr="location").extract(body)
+    meta_location = extract("meta.location", body)
     if meta_location != headers.get("Location"):
         issues.add(
             issue=ValidationError.values_must_match(
@@ -213,7 +213,7 @@ def validate_resource_type_consistency(
     if not isinstance(body, Dict):
         return issues
 
-    resource_type = AttributeName(attr="meta", sub_attr="resourcetype").extract(body)
+    resource_type = extract("meta.resourceType", body)
     if isinstance(resource_type, str) and resource_type != repr(schema):
         issues.add(
             issue=ValidationError.resource_type_mismatch(
@@ -394,7 +394,7 @@ def validate_resources_sorted(
     if not isinstance(response_body, Dict):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body) or []
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
@@ -418,11 +418,11 @@ def validate_number_of_resources(
     if not isinstance(response_body, Dict):
         return issues
 
-    total_results = AttributeName(attr="totalresults").extract(response_body)
+    total_results = extract("totalresults", response_body)
     if not isinstance(total_results, int):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body) or []
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
@@ -468,24 +468,24 @@ def validate_pagination_info(
     if not isinstance(response_body, Dict):
         return issues
 
-    total_results = AttributeName(attr="totalresults").extract(response_body)
+    total_results = extract("totalresults", response_body)
     if not isinstance(total_results, int):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body) or []
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
     n_resources = len(resources)
     is_pagination = (count or 0) > 0 and total_results > n_resources
     if is_pagination:
-        if AttributeName(attr="startindex").extract(response_body) is None:
+        if extract("startindex", response_body) is None:
             issues.add(
                 issue=ValidationError.missing_required_attribute("startindex"),
                 location=("startindex",),
                 proceed=False,
             )
-        if AttributeName(attr="itemsperpage").extract(response_body) is None:
+        if extract("itemsperpage", response_body) is None:
             issues.add(
                 issue=ValidationError.missing_required_attribute("itemsperpage"),
                 location=("itemsperpage",),
@@ -503,7 +503,7 @@ def validate_start_index_consistency(
     if not isinstance(response_body, Dict):
         return issues
 
-    start_index_body = AttributeName(attr="startindex").extract(response_body)
+    start_index_body = extract("startindex", response_body)
     if not isinstance(start_index_body, int):
         return issues
 
@@ -530,11 +530,11 @@ def validate_items_per_page_consistency(
     if not isinstance(response_body, Dict):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body)
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
-    items_per_page = AttributeName(attr="itemsperpage").extract(response_body)
+    items_per_page = extract("itemsperpage", response_body)
     if not isinstance(items_per_page, int):
         return issues
 
@@ -566,7 +566,7 @@ def validate_resources_schema(
     if not isinstance(response_body, Dict):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body)
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
@@ -576,7 +576,7 @@ def validate_resources_schema(
 
         for attr_name in schema.top_level_attr_names:
             attr = schema.get_attr(attr_name)
-            value = attr_name.extract(resource)
+            value = extract(attr_name, resource)
             issues.merge(
                 issues=attr.validate(value, "RESPONSE"),
                 location=("resources", i, attr.name),
@@ -589,7 +589,7 @@ def validate_resources_filtered(response_body: Any, filter_: Filter) -> Validati
     if not isinstance(response_body, Dict):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body) or []
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
@@ -612,7 +612,7 @@ def validate_resources_schemas_field(response_body: Any, schema: Schema):
     if not isinstance(response_body, Dict):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body)
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
@@ -722,7 +722,7 @@ def validate_resources_schemas_field_for_unknown_schema(
     if not isinstance(response_body, Dict):
         return issues
 
-    resources = AttributeName(attr="resources").extract(response_body) or []
+    resources = extract("resources", response_body)
     if not isinstance(resources, List):
         return issues
 
@@ -735,7 +735,7 @@ def validate_resources_schemas_field_for_unknown_schema(
             continue
 
         try:
-            schemas_value = AttributeName(attr="schemas").extract(resource)
+            schemas_value = extract("schemas", resource)
             for schema_value in schemas_value:
                 if schema_value.lower() not in all_schemas:
                     issues.add(

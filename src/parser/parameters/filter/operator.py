@@ -18,7 +18,12 @@ from typing import (
 )
 
 from src.parser.attributes import type as at
-from src.parser.attributes.attributes import Attribute, AttributeName, ComplexAttribute
+from src.parser.attributes.attributes import (
+    Attribute,
+    AttributeName,
+    ComplexAttribute,
+    extract,
+)
 from src.parser.resource.schemas import Schema
 
 
@@ -107,7 +112,7 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
             if isinstance(sub_operator, LogicalOperator):
                 yield sub_operator.match(value, schema, strict)
             else:
-                yield sub_operator.match(sub_operator.attr_name.extract(value), schema, strict)
+                yield sub_operator.match(extract(sub_operator.attr_name, value), schema, strict)
 
     def with_parent(self, attr_name: AttributeName) -> "MultiOperandLogicalOperator":
         copy = deepcopy(self)
@@ -192,7 +197,7 @@ class Not(LogicalOperator):
             return MatchResult.failed()
 
         match = self._sub_operator.match(
-            self._sub_operator.attr_name.extract(value), schema, strict=True
+            extract(self._sub_operator.attr_name, value), schema, strict=True
         )
         if (
             match.status == MatchStatus.FAILED
@@ -606,7 +611,7 @@ class ComplexAttributeOperator:
         if isinstance(self._sub_operator, AttributeOperator):
             has_value = False
             for item in value:
-                item_value = self._sub_operator.attr_name.extract(item)
+                item_value = extract(self._sub_operator.attr_name, item)
                 if item_value is not None:
                     has_value = True
                 match = self._sub_operator.match(item_value, schema, strict)
