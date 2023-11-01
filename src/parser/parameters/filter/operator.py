@@ -85,8 +85,8 @@ class LogicalOperator(abc.ABC):
     @abc.abstractmethod
     def match(
         self,
-        value: Optional[Dict[str, Any]] = None,
-        schema: Optional[Schema] = None,
+        value: Optional[Dict[str, Any]],
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
         ...
@@ -106,7 +106,7 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         return self._sub_operators
 
     def _collect_matches(
-        self, value: Dict[str, Any], schema: Optional[Schema] = None, strict: bool = True
+        self, value: Dict[str, Any], schema: Schema, strict: bool = True
     ) -> Generator[MatchResult, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
@@ -127,8 +127,8 @@ class And(MultiOperandLogicalOperator):
 
     def match(
         self,
-        value: Optional[Dict[str, Any]] = None,
-        schema: Optional[Schema] = None,
+        value: Optional[Dict[str, Any]],
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -148,8 +148,8 @@ class Or(MultiOperandLogicalOperator):
 
     def match(
         self,
-        value: Optional[Dict[str, Any]] = None,
-        schema: Optional[Schema] = None,
+        value: Optional[Dict[str, Any]],
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -181,8 +181,8 @@ class Not(LogicalOperator):
 
     def match(
         self,
-        value: Optional[Dict[str, Any]] = None,
-        schema: Optional[Schema] = None,
+        value: Optional[Dict[str, Any]],
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -226,8 +226,8 @@ class AttributeOperator(abc.ABC):
     @abc.abstractmethod
     def match(
         self,
-        value: Optional[Any] = None,
-        schema: Optional[Schema] = None,
+        value: Any,
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
         ...
@@ -247,46 +247,27 @@ class AttributeOperator(abc.ABC):
 class Present(AttributeOperator):
     SCIM_OP = "pr"
 
-    @staticmethod
-    def _match_no_attr(value: Any) -> bool:
-        if isinstance(value, List):
-            for item in value:
-                if isinstance(item, dict):
-                    if bool(item.get("value")):
-                        return True
-                elif bool(item):
-                    return True
-            return False
-        if isinstance(value, Dict):
-            return False
-        if isinstance(value, str):
-            return bool(value)
-        return value is not None
-
     def match(
         self,
-        value: Optional[Any] = None,
-        schema: Optional[Schema] = None,
+        value: Optional[Any],
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
-        if schema is not None and schema.get_attr(self._attr_name) is None:
+        attr = schema.get_attr(self._attr_name)
+        if attr is None:
             return MatchResult.failed_no_attr()
 
-        if schema is None:
-            match = self._match_no_attr(value)
-        else:
-            attr = schema.get_attr(self._attr_name)
-            if isinstance(attr, ComplexAttribute):
-                if isinstance(value, List):
-                    match = any([item.get("value") for item in value])
-                else:
-                    match = False
-            elif isinstance(value, List):
-                match = any([bool(item) for item in value])
-            elif isinstance(value, str):
-                match = bool(value)
+        if isinstance(attr, ComplexAttribute):
+            if isinstance(value, List):
+                match = any([item.get("value") for item in value])
             else:
-                match = value is not None
+                match = False
+        elif isinstance(value, List):
+            match = any([bool(item) for item in value])
+        elif isinstance(value, str):
+            match = bool(value)
+        else:
+            match = value is not None
         return MatchResult.passed() if match else MatchResult.failed()
 
 
@@ -309,41 +290,6 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     @property
     def value(self) -> T2:
         return self._value
-
-    def _get_values_for_comparison_no_attribute(
-        self, value: Any
-    ) -> Optional[List[Tuple[Any, Any]]]:
-        if not isinstance(value, List):
-            value = [value]
-
-        value_ = []
-        for item in value:
-            if isinstance(item, Dict):
-                item_value = item.get("value")
-                if item_value is not None and (
-                    isinstance(item_value, type(self.value))
-                    or {type(item_value), type(self.value)} == {int, float}
-                ):
-                    value_.append(item_value)
-            elif not isinstance(item, type(self.value)) and (
-                {type(item), type(self.value)} != {int, float}
-            ):
-                return None
-            else:
-                value_.append(item)
-        value = value_
-
-        if isinstance(self.value, str):
-            try:
-                op_value = datetime.fromisoformat(self.value)
-                return [(datetime.fromisoformat(item), op_value) for item in value]
-            except ValueError:
-                value_ = []
-                for item in value:
-                    value_.extend([(item.lower(), self.value.lower()), (item, self.value)])
-                return value_
-
-        return [(item, self.value) for item in value]
 
     def _get_values_for_comparison(
         self, value: Any, attr: Attribute
@@ -394,11 +340,12 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Optional[Any] = None,
-        schema: Optional[Schema] = None,
+        value: Optional[Any],
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
-        if schema is not None and schema.get_attr(self._attr_name) is None:
+        attr = schema.get_attr(self._attr_name)
+        if attr is None:
             return MatchResult.failed_no_attr()
 
         if value is None:
@@ -406,10 +353,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
                 return MatchResult.passed()
             return MatchResult.missing_data()
 
-        if schema is None:
-            values = self._get_values_for_comparison_no_attribute(value)
-        else:
-            values = self._get_values_for_comparison(value, schema.get_attr(self.attr_name))
+        values = self._get_values_for_comparison(value, attr)
 
         if values is None:
             return MatchResult.failed()
@@ -586,23 +530,22 @@ class ComplexAttributeOperator:
 
     def match(
         self,
-        value: Optional[Union[List[Dict[str, Any]], Dict[str, Any]]] = None,
-        schema: Optional[Schema] = None,
+        value: Optional[Union[List[Dict[str, Any]], Dict[str, Any]]],
+        schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
-        if schema is not None:
-            attr = schema.get_attr(self._attr_name)
-            if attr is None:
-                return MatchResult.failed_no_attr()
-            if (
-                attr.multi_valued
-                and not isinstance(value, List)
-                or not attr.multi_valued
-                and isinstance(value, List)
-            ):
-                return MatchResult.failed()
+        attr = schema.get_attr(self._attr_name)
+        if attr is None:
+            return MatchResult.failed_no_attr()
+        if (
+            attr.multi_valued
+            and not isinstance(value, List)
+            or not attr.multi_valued
+            and isinstance(value, List)
+        ):
+            return MatchResult.failed()
 
-        value = value or self._default_value(schema)
+        value = value or ([] if attr.multi_valued else {})
 
         if not isinstance(value, List):
             value = [value]
@@ -632,10 +575,3 @@ class ComplexAttributeOperator:
         if missing_data and not strict:
             return MatchResult.passed()
         return MatchResult.failed()
-
-    def _default_value(self, schema: Optional[Schema]):
-        if schema is not None:
-            attr = schema.get_attr(self._attr_name)
-            if attr and attr.multi_valued:
-                return []
-        return {}

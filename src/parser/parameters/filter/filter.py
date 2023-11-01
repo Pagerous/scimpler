@@ -627,9 +627,7 @@ class Filter:
                 )
         return value, issues
 
-    def __call__(
-        self, data: Dict[str, Any], schema: Optional[Schema] = None, strict: bool = True
-    ) -> MatchResult:
+    def __call__(self, data: Dict[str, Any], schema: Schema, strict: bool = True) -> MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
             data = extract(self._operator.attr_name, data)
         return self._operator.match(data, schema, strict)

@@ -28,7 +28,6 @@ from src.parser.resource.validators import (
     validate_resources_filtered,
     validate_resources_schema,
     validate_resources_schemas_field,
-    validate_resources_schemas_field_for_unknown_schema,
     validate_resources_sorted,
     validate_schemas_field,
     validate_start_index_consistency,
@@ -660,19 +659,19 @@ def test_validate_resources_schema__fails_for_bad_resource_schema(list_user_data
         }
     }
 
-    issues = validate_resources_schema(list_user_data, USER)
+    issues = validate_resources_schema(list_user_data, [USER])
 
     assert issues.to_dict() == expected
 
 
 def test_validate_resources_schema__succeeds_for_correct_data(list_user_data):
-    issues = validate_resources_schema(list_user_data, USER)
+    issues = validate_resources_schema(list_user_data, [USER])
 
     assert issues.to_dict() == {}
 
 
 def test_validate_resources_schema__skips_if_bad_body_type():
-    issues = validate_resources_schema(None, USER)
+    issues = validate_resources_schema(None, [USER])
 
     assert issues.to_dict() == {}
 
@@ -694,7 +693,7 @@ def test_validate_resources_schema__resources_with_bad_type_are_not_validated(li
         }
     }
 
-    issues = validate_resources_schema(list_user_data, USER)
+    issues = validate_resources_schema(list_user_data, [USER])
 
     assert issues.to_dict() == expected
 
@@ -938,13 +937,13 @@ def test_validate_resources_schemas_field__bad_schemas_is_discovered(list_user_d
     list_user_data["Resources"][1]["schemas"].append("bad:user:schema")
     expected = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
 
-    issues = validate_resources_schemas_field(list_user_data, USER)
+    issues = validate_resources_schemas_field(list_user_data, [USER])
 
     assert issues.to_dict() == expected
 
 
 def test_validate_resources_schemas_field__skips_if_bad_body_type():
-    issues = validate_resources_schemas_field(None, USER)
+    issues = validate_resources_schemas_field(None, [USER])
 
     assert issues.to_dict() == {}
 
@@ -953,56 +952,6 @@ def test_validate_resources_schemas_field__skips_if_bad_resources_type(list_user
     list_user_data["Resources"] = {1: 2}  # noqa
 
     issues = validate_resources_schemas_field(list_user_data, USER)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_schemas_field_for_unknown_schema__unknown_schemas_are_detected(
-    list_user_data,
-):
-    list_user_data["Resources"][1]["schemas"] = ["bad:user:schema"]
-    expected_issues = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
-
-    issues = validate_resources_schemas_field_for_unknown_schema(list_user_data, [USER])
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_validate_resources_schemas_field_for_unknown_schema__infers_correct_schema_from_data(
-    list_user_data,
-):
-    list_user_data["Resources"][1]["schemas"] = ["bad:user:schema"]
-    # code 27 because no schema is inferred from [1] resource and "bad:user:schema" is generally
-    # unknown for all provided schemas
-    expected_issues = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
-
-    issues = validate_resources_schemas_field_for_unknown_schema(list_user_data, [USER, ERROR])
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_validate_resources_schemas_field_for_unknown_schema__skips_if_bad_body_type():
-    issues = validate_resources_schemas_field_for_unknown_schema(None, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_schemas_field_for_unknown_schema__skips_if_bad_resources_type(
-    list_user_data,
-):
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_resources_schemas_field_for_unknown_schema(list_user_data, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_schemas_field_for_unknown_schema__resources_with_bad_type_are_ignored(
-    list_user_data,
-):
-    list_user_data["Resources"][1]["schemas"] = 123  # noqa
-
-    issues = validate_resources_schemas_field_for_unknown_schema(list_user_data, [USER])
 
     assert issues.to_dict() == {}
 
@@ -1088,10 +1037,11 @@ def test_correct_server_root_resource_get_response_passes_validation(list_user_d
             USER,
         ),
         (
+            # only "schemas" attribute is used
             {
                 "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
             },
-            USER,
+            None,
         ),
         (
             {

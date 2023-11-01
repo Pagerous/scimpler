@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Sequence
 
-from src.parser.attributes.attributes import AttributeName, extract
+from src.parser.attributes.attributes import extract
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.sorter import Sorter
@@ -71,7 +71,7 @@ def validate_schemas_field(
 
         elif schema_value not in schema.schemas and not mismatch:
             issues.add(
-                issue=ValidationError.unknown_schema(schema_value),
+                issue=ValidationError.unknown_schema(),
                 proceed=True,
                 location=("schemas",),
             )
@@ -568,9 +568,9 @@ def validate_items_per_page_consistency(
     return issues
 
 
-def validate_resources_schema(  # TODO: introduce schema inference here
+def validate_resources_schema(
     body: Any,
-    schema: Schema,
+    schemas: Sequence[Schema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     if not isinstance(body, Dict):
@@ -580,8 +580,16 @@ def validate_resources_schema(  # TODO: introduce schema inference here
     if not isinstance(resources, List):
         return issues
 
+    schema = schemas[0] if len(schemas) == 1 else None
+
     for i, resource in enumerate(resources):
         if not isinstance(resource, Dict):
+            continue
+
+        if schema is None:
+            schema = infer_schema_from_data(resource, schemas)
+
+        if schema is None:
             continue
 
         for attr_name in schema.top_level_attr_names:
@@ -611,8 +619,11 @@ def validate_resources_filtered(
         if not isinstance(resource, Dict):
             continue
 
-        if schema is None and schemas:
+        if schema is None:
             schema = infer_schema_from_data(resource, schemas)
+
+        if schema is None:
+            continue
 
         if not filter_(resource, schema, strict):
             issues.add(
@@ -623,7 +634,7 @@ def validate_resources_filtered(
     return issues
 
 
-def validate_resources_schemas_field(body: Any, schema: Schema):
+def validate_resources_schemas_field(body: Any, schemas: Sequence[Schema]):
     issues = ValidationIssues()
 
     if not isinstance(body, Dict):
@@ -633,11 +644,23 @@ def validate_resources_schemas_field(body: Any, schema: Schema):
     if not isinstance(resources, List):
         return issues
 
+    schema = schemas[0] if len(schemas) == 1 else None
+
     for i, resource in enumerate(resources):
-        issues.merge(
-            issues=validate_schemas_field(resource, schema),
-            location=("resources", i),
-        )
+        if schema is None:
+            schema = infer_schema_from_data(resource, schemas)
+
+        if schema is None:
+            issues.add(
+                issue=ValidationError.unknown_schema(),
+                proceed=True,
+                location=("resources", i),
+            )
+        else:
+            issues.merge(
+                issues=validate_schemas_field(resource, schema),
+                location=("resources", i),
+            )
     return issues
 
 
@@ -711,7 +734,11 @@ class ResourceTypeGET:
             location=body_location,
         )
         issues.merge(
-            issues=validate_resources_schema(body, self._resource_schema),
+            issues=validate_resources_schemas_field(body, [self._resource_schema]),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_resources_schema(body, [self._resource_schema]),
             location=body_location,
         )
         if filter_ is not None:
@@ -719,58 +746,12 @@ class ResourceTypeGET:
                 issues=validate_resources_filtered(body, filter_, [self._resource_schema], False),
                 location=body_location,
             )
-        issues.merge(
-            issues=validate_resources_schemas_field(body, self._resource_schema),
-            location=body_location,
-        )
         if sorter is not None:
             issues.merge(
                 issues=validate_resources_sorted(sorter, body),
                 location=body_location,
             )
         return issues
-
-
-def validate_resources_schemas_field_for_unknown_schema(
-    body: Any,
-    schemas: Sequence[Schema],
-):
-    issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
-    resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
-    all_schemas = []
-    for schema in schemas:
-        all_schemas.extend(schema.schemas)
-
-    for i, resource in enumerate(resources):
-        if not isinstance(resource, Dict):
-            continue
-
-        inferred_schema = infer_schema_from_data(resource, schemas)
-        if inferred_schema:
-            issues.merge(
-                issues=validate_schemas_field(resource, inferred_schema),
-                location=("resources", i),
-            )
-        else:
-            try:
-                schemas_value = extract("schemas", resource)
-                for schema_value in schemas_value:
-                    if schema_value.lower() not in all_schemas:
-                        issues.add(
-                            issue=ValidationError.unknown_schema(schema_value),
-                            proceed=True,
-                            location=("resources", i, "schemas"),
-                        )
-            except (TypeError, AttributeError):
-                pass
-
-    return issues
 
 
 def infer_schema_from_data(data: Dict[str, Any], schemas: Sequence[Schema]) -> Optional[Schema]:
@@ -780,21 +761,6 @@ def infer_schema_from_data(data: Dict[str, Any], schemas: Sequence[Schema]) -> O
         for schema in schemas:
             if not schemas_value.difference(set(schema.schemas)):
                 return schema
-
-    schemas_in_data = set()
-    for key in data:
-        parsed = AttributeName.parse(key)
-        if parsed.schema:
-            # For example, "urn:ietf:params:scim:api:messages:2.0:Error" will be parsed as
-            # schema="urn:ietf:params:scim:api:messages:2.0", attr="Error".
-            # This is way need to add it like below.
-            schemas_in_data.add(parsed.schema)
-            schemas_in_data.add(parsed.schema + ":" + parsed.attr)
-
-    for schema in schemas:
-        if schema.schema in schemas_in_data:
-            return schema
-
     return None
 
 
@@ -867,17 +833,19 @@ class ServerRootResourceGET:
             issues=validate_items_per_page_consistency(body),
             location=body_location,
         )
+        issues.merge(
+            issues=validate_resources_schemas_field(body, self._resource_schemas),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_resources_schema(body, self._resource_schemas),
+            location=body_location,
+        )
         if filter_ is not None:
             issues.merge(
                 issues=validate_resources_filtered(body, filter_, self._resource_schemas, False),
                 location=body_location,
             )
-        issues.merge(
-            issues=validate_resources_schemas_field_for_unknown_schema(
-                body, self._resource_schemas
-            ),
-            location=body_location,
-        )
         if sorter is not None:
             issues.merge(
                 issues=validate_resources_sorted(sorter, body),

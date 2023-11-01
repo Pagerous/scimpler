@@ -75,7 +75,7 @@ class AttributePresenceChecker:
     def __call__(self, data: Dict[str, Any], direction: str) -> ValidationIssues:
         issues = ValidationIssues()
         if self._schema is None:
-            return issues
+            raise ValueError("schema is required to check attribute presence")
 
         for attr_name in self._schema.all_attr_names:
             value = extract(attr_name, data)

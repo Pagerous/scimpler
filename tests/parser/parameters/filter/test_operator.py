@@ -232,69 +232,6 @@ def test_not_equal_operator(value, operator_value, attribute_name, expected):
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        (1, 1, True),
-        (1, 2, False),
-        ("a", "a", True),
-        ("A", "a", True),
-        (True, True, True),
-        (True, False, False),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            False,
-        ),
-        (3.14, 3.14, True),
-        (3.14, 3.141, False),
-    ),
-)
-def test_equal_operator_without_schema(value, operator_value, expected):
-    operator = Equal(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        (1, 1, False),
-        (1, 2, True),
-        ("a", "a", False),
-        ("A", "a", True),
-        ("a", "b", True),
-        (True, True, False),
-        (True, False, True),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            False,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            True,
-        ),
-        (3.14, 3.14, False),
-        (3.14, 3.141, True),
-    ),
-)
-def test_equal_not_operator_without_schema(value, operator_value, expected):
-    operator = NotEqual(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
     ("value", "operator_value", "attribute_name", "expected"),
     (
         (1, 1, AttributeName.parse("int"), False),
@@ -321,40 +258,6 @@ def test_greater_than_operator(value, operator_value, attribute_name, expected):
     operator = GreaterThan(attribute_name, operator_value)
 
     actual = operator.match(value, SCHEMA_FOR_TESTS)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        (1, 1, False),
-        (2, 1, True),
-        ("a", "a", False),
-        ("a", "A", True),
-        ("A", "a", False),
-        ("b", "a", True),
-        ("B", "a", True),
-        ("a", "b", False),
-        ("a", "B", True),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            False,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True,
-        ),
-        (3.14, 3.14, False),
-        (3.141, 3.14, True),
-    ),
-)
-def test_greater_than_operator_without_schema(value, operator_value, expected):
-    operator = GreaterThan(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
 
     assert actual == expected
 
@@ -400,47 +303,6 @@ def test_greater_than_or_equal_operator(value, operator_value, attribute_name, e
 
 
 @pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        (1, 2, False),
-        (1, 1, True),
-        (2, 1, True),
-        ("a", "a", True),
-        ("a", "A", True),
-        ("A", "a", True),
-        ("b", "a", True),
-        ("B", "a", True),
-        ("a", "b", False),
-        ("a", "B", True),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            False,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True,
-        ),
-        (3.14, 3.141, False),
-        (3.14, 3.14, True),
-        (3.141, 3.14, True),
-    ),
-)
-def test_greater_than_or_equal_operator_without_schema(value, operator_value, expected):
-    operator = GreaterThanOrEqual(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
     ("value", "operator_value", "attribute_name", "expected"),
     (
         (1, 1, AttributeName.parse("int"), False),
@@ -467,40 +329,6 @@ def test_lesser_than_operator(value, operator_value, attribute_name, expected):
     operator = LesserThan(attribute_name, operator_value)
 
     actual = operator.match(value, SCHEMA_FOR_TESTS)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        (1, 1, False),
-        (1, 2, True),
-        ("a", "a", False),
-        ("a", "A", False),
-        ("A", "a", True),
-        ("b", "a", False),
-        ("B", "a", True),
-        ("a", "b", True),
-        ("a", "B", True),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            False,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            True,
-        ),
-        (3.14, 3.14, False),
-        (3.14, 3.141, True),
-    ),
-)
-def test_lesser_than_operator_without_schema(value, operator_value, expected):
-    operator = LesserThan(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
 
     assert actual == expected
 
@@ -541,47 +369,6 @@ def test_lesser_than_or_equal_operator(value, operator_value, attribute_name, ex
     operator = LesserThanOrEqual(attribute_name, operator_value)
 
     actual = operator.match(value, SCHEMA_FOR_TESTS)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        (1, 2, True),
-        (1, 1, True),
-        (2, 1, False),
-        ("a", "a", True),
-        ("a", "A", True),
-        ("A", "a", True),
-        ("b", "a", False),
-        ("B", "a", True),
-        ("a", "b", True),
-        ("a", "B", True),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            True,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            True,
-        ),
-        (
-            datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            False,
-        ),
-        (3.14, 3.141, True),
-        (3.14, 3.14, True),
-        (3.141, 3.1, False),
-    ),
-)
-def test_lesser_than_or_equal_operator_without_schema(value, operator_value, expected):
-    operator = LesserThanOrEqual(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
 
     assert actual == expected
 
@@ -653,27 +440,6 @@ def test_contains_operator(value, operator_value, expected):
     ("value", "operator_value", "expected"),
     (
         ("abc", "ab", True),
-        ("abc", "bc", True),
-        ("abc", "cd", False),
-        ("ab", "abc", False),
-        ("Abc", "ab", True),
-        ("aBC", "bc", True),
-        ("abc", "aB", True),
-        ("abc", "Bc", True),
-    ),
-)
-def test_contains_operator_without_schema(value, operator_value, expected):
-    operator = Contains(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        ("abc", "ab", True),
         ("abc", "bc", False),
         ("abc", "cd", False),
         ("ab", "abc", False),
@@ -684,26 +450,6 @@ def test_starts_with_operator(value, operator_value, expected):
     operator = StartsWith(AttributeName.parse("str_cs"), operator_value)
 
     actual = operator.match(value, SCHEMA_FOR_TESTS)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        ("abc", "ab", True),
-        ("abc", "bc", False),
-        ("abc", "cd", False),
-        ("ab", "abc", False),
-        ("ab", "", True),
-        ("abc", "Ab", True),
-        ("aBC", "ab", True),
-    ),
-)
-def test_starts_with_operator_without_schema(value, operator_value, expected):
-    operator = StartsWith(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
 
     assert actual == expected
 
@@ -726,38 +472,10 @@ def test_ends_with_operator(value, operator_value, expected):
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    ("value", "operator_value", "expected"),
-    (
-        ("abc", "ab", False),
-        ("abc", "bc", True),
-        ("abc", "cd", False),
-        ("ab", "abc", False),
-        ("ab", "", True),
-        ("abc", "bC", True),
-        ("aBC", "bc", True),
-    ),
-)
-def test_ends_with_operator_without_schema(value, operator_value, expected):
-    operator = EndsWith(AttributeName.parse("attr"), operator_value)
-
-    actual = operator.match(value)
-
-    assert actual == expected
-
-
 def test_multi_value_attribute_is_matched_if_one_of_values_match():
     operator = Equal(AttributeName.parse("str_cs_mv"), "abc")
 
     match = operator.match(["b", "c", "ab", "abc", "ca"], SCHEMA_FOR_TESTS)
-
-    assert match
-
-
-def test_multi_value_attribute_is_matched_if_one_of_values_match_without_schema():
-    operator = Equal(AttributeName.parse("attr"), "abc")
-
-    match = operator.match(["b", "c", "ab", "abc", "ca"])
 
     assert match
 
@@ -831,49 +549,18 @@ def test_present_operator(value, attribute_name, expected):
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    (
-        ("", False),
-        ("abc", True),
-        (None, False),
-        (False, True),
-        ([], False),
-        (["a", "b", "c"], True),
-        ({"value": ""}, False),
-        ({"value": "abc"}, False),  # only multivalued complex attributes can be matched
-        ([{"value": ""}, {"value": ""}], False),
-        ([{"value": ""}, {"value": "abc"}], True),
-    ),
-)
-def test_present_operator_without_schema(value, expected):
-    operator = Present(AttributeName.parse("attr"))
-
-    actual = operator.match(value)
-
-    assert actual == expected
-
-
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_attribute_matches_binary_operator_if_one_of_values_matches(
-    use_schema,
-):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_attribute_matches_binary_operator_if_one_of_values_matches():
     operator = StartsWith(AttributeName.parse("c_mv"), "abc")
 
-    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "abcd"}], schema)
+    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "abcd"}], SCHEMA_FOR_TESTS)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches(
-    use_schema,
-):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches():
     operator = StartsWith(AttributeName.parse("c_mv"), "abc")
 
-    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}], schema)
+    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}], SCHEMA_FOR_TESTS)
 
     assert not match
 
@@ -946,9 +633,7 @@ def test_or_operator_matches(str_cs_value, expected):
     assert actual == expected
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_attribute_operator_matches_all_complex_sub_attrs(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_attribute_operator_matches_all_complex_sub_attrs():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2"),
         sub_operator=And(
@@ -958,14 +643,12 @@ def test_complex_attribute_operator_matches_all_complex_sub_attrs(use_schema):
         ),
     )
 
-    match = operator.match({"str": "admin", "int": 19, "bool": False}, schema)
+    match = operator.match({"str": "admin", "int": 19, "bool": False}, SCHEMA_FOR_TESTS)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2"),
         sub_operator=Or(
@@ -975,16 +658,12 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(use_sch
         ),
     )
 
-    match = operator.match({"str": "user", "int": 18, "bool": True}, schema)
+    match = operator.match({"str": "user", "int": 18, "bool": True}, SCHEMA_FOR_TESTS)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
-    use_schema,
-):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2_mv"),
         sub_operator=And(
@@ -1000,15 +679,13 @@ def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
             {"str": "user", "int": 18, "bool": True},
             {"str": "user", "int": 19, "bool": False},
         ],
-        schema,
+        SCHEMA_FOR_TESTS,
     )
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2_mv"),
         sub_operator=Or(
@@ -1024,13 +701,12 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(us
             {"str": "customer", "int": 18, "bool": True},
             {"str": "santa-claus", "int": 12, "bool": True},
         ],
-        schema,
+        SCHEMA_FOR_TESTS,
     )
 
     assert not match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
 @pytest.mark.parametrize(
     ("value", "is_multivalued", "expected"),
     (
@@ -1064,10 +740,7 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(us
         ),
     ),
 )
-def test_attribute_operator_matches_single_complex_sub_attr(
-    use_schema, value, is_multivalued, expected
-):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalued, expected):
     if is_multivalued:
         operator = ComplexAttributeOperator(
             attr_name=AttributeName.parse("c2_mv"),
@@ -1079,118 +752,96 @@ def test_attribute_operator_matches_single_complex_sub_attr(
             sub_operator=Equal(AttributeName.parse("c2.str"), "admin"),
         )
 
-    actual = operator.match(value, schema)
+    actual = operator.match(value, SCHEMA_FOR_TESTS)
 
     assert actual == expected
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_binary_op_returns_missing_data_if_no_value_provided_with_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_binary_op_returns_missing_data_if_no_value_provided_with_strict():
     operator = Equal(AttributeName.parse("str"), "abc")
 
-    match = operator.match(None, schema, True)
+    match = operator.match(None, SCHEMA_FOR_TESTS, True)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_binary_op_returns_matches_if_no_value_provided_without_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_binary_op_returns_matches_if_no_value_provided_without_strict():
     operator = Equal(AttributeName.parse("str"), "abc")
 
-    match = operator.match(None, schema, False)
+    match = operator.match(None, SCHEMA_FOR_TESTS, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c"),
         sub_operator=Equal(AttributeName.parse("c.str"), "abc"),
     )
 
-    match = operator.match({}, schema, False)
+    match = operator.match({}, SCHEMA_FOR_TESTS, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict(
-    use_schema,
-):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c"),
         sub_operator=Equal(AttributeName.parse("c.str"), "abc"),
     )
 
-    match = operator.match({}, schema, True)
+    match = operator.match({}, SCHEMA_FOR_TESTS, True)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict():
     operator = Or(
         Equal(AttributeName.parse("int"), 1),
         Equal(AttributeName.parse("str"), "abc"),
     )
 
-    match = operator.match({"int": 2}, schema, True)
+    match = operator.match({"int": 2}, SCHEMA_FOR_TESTS, True)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
 @pytest.mark.parametrize("strict", (True, False))
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_or_op_matches_if_any_sub_attr_matched(strict, use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_or_op_matches_if_any_sub_attr_matched(strict):
     operator = Or(
         Equal(AttributeName.parse("int"), 1),
         Equal(AttributeName.parse("str"), "abc"),
     )
 
-    match = operator.match({"int": 1}, schema, strict)
+    match = operator.match({"int": 1}, SCHEMA_FOR_TESTS, strict)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict(
-    use_schema,
-):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict():
     operator = And(
         Equal(AttributeName.parse("int"), 1),
         Equal(AttributeName.parse("str"), "abc"),
     )
     value = {"int": 1}  # value for this attr is correct, but missing 'str'
 
-    match = operator.match(value, schema, True)
+    match = operator.match(value, SCHEMA_FOR_TESTS, True)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict():
     operator = And(
         Equal(AttributeName.parse("int"), 1),
         Equal(AttributeName.parse("str"), "abc"),
     )
 
-    match = operator.match({"int": 1, "str": "cba"}, schema, True)
+    match = operator.match({"int": 1, "str": "cba"}, SCHEMA_FOR_TESTS, True)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict():
     operator = And(
         Equal(AttributeName.parse("int"), 1),
         Equal(
@@ -1200,14 +851,12 @@ def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict(use_schema
     )
     value = {"int": 1}  # value for this attr is correct, 'str' is missing, but no strict
 
-    match = operator.match(value, schema, False)
+    match = operator.match(value, SCHEMA_FOR_TESTS, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict():
     operator = Not(
         Or(
             Equal(AttributeName.parse("int"), 1),
@@ -1215,16 +864,12 @@ def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict(use_s
         ),
     )
 
-    match = operator.match({"int": 2}, schema, False)
+    match = operator.match({"int": 2}, SCHEMA_FOR_TESTS, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(
-    use_schema,
-):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict():
     operator = Not(
         Or(
             Equal(AttributeName.parse("int"), 1),
@@ -1232,27 +877,23 @@ def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict(
         ),
     )
 
-    match = operator.match({"int": 2}, schema, True)
+    match = operator.match({"int": 2}, SCHEMA_FOR_TESTS, True)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict():
     operator = Not(Equal(AttributeName.parse("int"), 1))
 
-    match = operator.match({}, schema, False)
+    match = operator.match({}, SCHEMA_FOR_TESTS, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict():
     operator = Not(Equal(AttributeName.parse("int"), 1))
 
-    match = operator.match({}, schema, True)
+    match = operator.match({}, SCHEMA_FOR_TESTS, True)
 
     assert not match
 
@@ -1275,32 +916,26 @@ def test_not_op_matches_if_no_data_for_pr_sub_op_with_strict(strict):
 
 
 @pytest.mark.parametrize("strict", (True, False))
-@pytest.mark.parametrize("use_schema", (True, False))
 @pytest.mark.parametrize(("value", "expected"), ((1.0, True), (2.0, False)))
-def test_binary_attributes_allows_to_compare_int_with_decimal(strict, use_schema, value, expected):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_binary_attributes_allows_to_compare_int_with_decimal(strict, value, expected):
     operator = Equal(AttributeName.parse("decimal"), 1)
 
-    match = operator.match(value, schema, strict)
+    match = operator.match(value, SCHEMA_FOR_TESTS, strict)
 
     assert bool(match) is expected
 
 
 @pytest.mark.parametrize("strict", (True, False))
-@pytest.mark.parametrize("use_schema", (True, False))
 @pytest.mark.parametrize(("value", "expected"), ((1, True), (2, False)))
-def test_binary_attributes_allows_to_compare_decimal_with_int(strict, use_schema, value, expected):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_binary_attributes_allows_to_compare_decimal_with_int(strict, value, expected):
     operator = Equal(AttributeName.parse("int"), 1.0)
 
-    match = operator.match(value, schema, strict)
+    match = operator.match(value, SCHEMA_FOR_TESTS, strict)
 
     assert bool(match) is expected
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_op_can_be_used_with_logical_op(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_op_can_be_used_with_logical_op():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2"),
         sub_operator=And(
@@ -1308,14 +943,12 @@ def test_complex_op_can_be_used_with_logical_op(use_schema):
         ),
     )
 
-    match = operator.match({"int": 1, "str": "abc"}, schema)
+    match = operator.match({"int": 1, "str": "abc"}, SCHEMA_FOR_TESTS)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2"),
         sub_operator=Or(
@@ -1323,14 +956,12 @@ def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches(use
         ),
     )
 
-    match = operator.match({"int": 1}, schema)
+    match = operator.match({"int": 1}, SCHEMA_FOR_TESTS)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2"),
         sub_operator=Or(
@@ -1338,14 +969,12 @@ def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided(use_sch
         ),
     )
 
-    match = operator.match({}, schema)
+    match = operator.match({}, SCHEMA_FOR_TESTS)
 
     assert not match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_complex_op_used_with_or_op_matches_if_no_values_provided_without_strict(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_complex_op_used_with_or_op_matches_if_no_values_provided_without_strict():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2"),
         sub_operator=Or(
@@ -1353,14 +982,12 @@ def test_complex_op_used_with_or_op_matches_if_no_values_provided_without_strict
         ),
     )
 
-    match = operator.match({}, schema, False)
+    match = operator.match({}, SCHEMA_FOR_TESTS, False)
 
     assert match
 
 
-@pytest.mark.parametrize("use_schema", (True, False))
-def test_multivalued_complex_op_can_be_used_with_logical_op(use_schema):
-    schema = SCHEMA_FOR_TESTS if use_schema else None
+def test_multivalued_complex_op_can_be_used_with_logical_op():
     operator = ComplexAttributeOperator(
         attr_name=AttributeName.parse("c2_mv"),
         sub_operator=And(
@@ -1369,7 +996,8 @@ def test_multivalued_complex_op_can_be_used_with_logical_op(use_schema):
     )
 
     match = operator.match(
-        [{"int": 2, "str": "abc"}, {"int": 1, "str": "cba"}, {"int": 1, "str": "abc"}], schema
+        [{"int": 2, "str": "abc"}, {"int": 1, "str": "cba"}, {"int": 1, "str": "abc"}],
+        SCHEMA_FOR_TESTS,
     )
 
     assert match
