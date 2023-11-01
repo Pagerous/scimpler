@@ -39,7 +39,10 @@ from src.parser.resource.validators import (
 @pytest.fixture
 def user_data():
     return {
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "schemas": [
+            "urn:ietf:params:scim:schemas:core:2.0:User",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+        ],
         "id": "2819c223-7f76-453a-919d-413861904646",
         "externalId": "bjensen",
         "meta": {
@@ -57,6 +60,18 @@ def user_data():
         "userName": "bjensen",
         "phoneNumbers": [{"value": "555-555-8377", "type": "work"}],
         "emails": [{"value": "bjensen@example.com", "type": "work"}],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+            "employeeNumber": "1",
+            "costCenter": "4130",
+            "organization": "Universal Studios",
+            "division": "Theme Park",
+            "department": "Tour Operations",
+            "manager": {
+                "value": "26118915-6090-4610-87e4-49d8ca9f808d",
+                "$ref": "../Users/26118915-6090-4610-87e4-49d8ca9f808d",
+                "displayName": "Jan Kowalski",
+            },
+        },
     }
 
 
@@ -77,7 +92,10 @@ def list_user_data():
         "totalResults": 2,
         "Resources": [
             {
-                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                "schemas": [
+                    "urn:ietf:params:scim:schemas:core:2.0:User",
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                ],
                 "id": "2819c223-7f76-453a-919d-413861904646",
                 "externalId": "bjensen",
                 "meta": {
@@ -118,7 +136,10 @@ def list_user_data():
                 },
             },
             {
-                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                "schemas": [
+                    "urn:ietf:params:scim:schemas:core:2.0:User",
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                ],
                 "id": "2819c223-7f76-453a-919d-413861904645",
                 "externalId": "bjensen",
                 "meta": {
@@ -228,8 +249,35 @@ def test_validate_schemas_field__skips_if_bad_schemas_type(user_data):
 
 
 def test_validate_schemas_field__fails_if_non_matching_schema(user_data):
+    user_data["schemas"].append("bad:user:schema")
+    expected = {"schemas": {"_errors": [{"code": 27}]}}
+
+    issues = validate_schemas_field(user_data, USER)
+
+    assert issues.to_dict() == expected
+
+
+def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data):
+    user_data["schemas"] = ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
+    expected = {"schemas": {"_errors": [{"code": 28}]}}
+
+    issues = validate_schemas_field(user_data, USER)
+
+    assert issues.to_dict() == expected
+
+
+def test_validate_schemas_field__fails_if_extension_schema_is_missing(user_data):
+    user_data["schemas"] = ["urn:ietf:params:scim:schemas:core:2.0:User"]
+    expected = {"schemas": {"_errors": [{"code": 29}]}}
+
+    issues = validate_schemas_field(user_data, USER)
+
+    assert issues.to_dict() == expected
+
+
+def test_validate_schemas_field__multiple_errors(user_data):
     user_data["schemas"] = ["bad:user:schema"]
-    expected = {"schemas": {"_errors": [{"code": 20}]}}
+    expected = {"schemas": {"_errors": [{"code": 27}, {"code": 28}, {"code": 29}]}}
 
     issues = validate_schemas_field(user_data, USER)
 
@@ -237,9 +285,8 @@ def test_validate_schemas_field__fails_if_non_matching_schema(user_data):
 
 
 def test_validate_schemas_field__skips_schema_items_with_bad_type(user_data):
-    # 123 will raise 'AttributeError' which is caught
-    user_data["schemas"] = [123, "bad:user:schema"]
-    expected = {"schemas": {"_errors": [{"code": 20}]}}
+    user_data["schemas"].extend([123, "bad:user:schema"])
+    expected = {"schemas": {"_errors": [{"code": 27}]}}
 
     issues = validate_schemas_field(user_data, USER)
 
@@ -888,8 +935,8 @@ def test_validate_resources_sorted__skips_if_bad_resources_type(list_user_data):
 
 
 def test_validate_resources_schemas_field__bad_schemas_is_discovered(list_user_data):
-    list_user_data["Resources"][1]["schemas"] = ["bad:user:schema"]
-    expected = {"resources": {"1": {"schemas": {"_errors": [{"code": 20}]}}}}
+    list_user_data["Resources"][1]["schemas"].append("bad:user:schema")
+    expected = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
 
     issues = validate_resources_schemas_field(list_user_data, USER)
 
@@ -925,6 +972,8 @@ def test_validate_resources_schemas_field_for_unknown_schema__infers_correct_sch
     list_user_data,
 ):
     list_user_data["Resources"][1]["schemas"] = ["bad:user:schema"]
+    # code 27 because no schema is inferred from [1] resource and "bad:user:schema" is generally
+    # unknown for all provided schemas
     expected_issues = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
 
     issues = validate_resources_schemas_field_for_unknown_schema(list_user_data, [USER, ERROR])

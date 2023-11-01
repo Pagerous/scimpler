@@ -1,7 +1,6 @@
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.parser.attributes.attributes import AttributeName, extract
-from src.parser.attributes.common import schemas as schemas_attr
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.sorter.sorter import Sorter
@@ -57,22 +56,39 @@ def validate_schemas_field(
     issues = ValidationIssues()
     if not isinstance(body, Dict):
         return issues
+    body = {k: v for k, v in body.items() if isinstance(k, str)}
 
-    schemas_value = extract(schema.get_attr_name(schemas_attr), body)
+    schemas_value = extract("schemas", body)
     if not isinstance(schemas_value, List):
         return issues
 
+    schemas_value = {item.lower() for item in schemas_value if isinstance(item, str)}
+
+    main_schema_included = False
+    mismatch = False
     for schema_value in schemas_value:
-        try:
-            if schema_value.lower() not in schema.schemas:
-                issues.add(
-                    issue=ValidationError.schemas_mismatch(repr(schema)),
-                    proceed=True,
-                    location=(schemas_attr.name,),
-                )
-                break
-        except AttributeError:
-            pass
+        if schema_value == schema.schema:
+            main_schema_included = True
+
+        elif schema_value not in schema.schemas and not mismatch:
+            issues.add(
+                issue=ValidationError.unknown_schema(schema_value),
+                proceed=True,
+                location=("schemas",),
+            )
+            mismatch = True
+
+    if not main_schema_included:
+        issues.add(issue=ValidationError.missing_main_schema(), proceed=True, location=("schemas",))
+
+    for k, v in body.items():
+        k_lower = k.lower()
+        if k_lower in schema.schemas and k_lower not in schemas_value:
+            issues.add(
+                issue=ValidationError.missing_schema_extension(k),
+                proceed=True,
+                location=("schemas",),
+            )
     return issues
 
 
@@ -737,21 +753,24 @@ def validate_resources_schemas_field_for_unknown_schema(
         if not isinstance(resource, Dict):
             continue
 
-        try:
-            schemas_value = extract("schemas", resource)
-            for schema_value in schemas_value:
-                inferred_schema = infer_schema_from_data(resource, schemas)
-                if (
-                    inferred_schema is not None
-                    and schema_value.lower() not in inferred_schema.schemas
-                ) or schema_value.lower() not in all_schemas:
-                    issues.add(
-                        issue=ValidationError.unknown_schema(schema_value),
-                        proceed=True,
-                        location=("resources", i, "schemas"),
-                    )
-        except (TypeError, AttributeError):
-            pass
+        inferred_schema = infer_schema_from_data(resource, schemas)
+        if inferred_schema:
+            issues.merge(
+                issues=validate_schemas_field(resource, inferred_schema),
+                location=("resources", i),
+            )
+        else:
+            try:
+                schemas_value = extract("schemas", resource)
+                for schema_value in schemas_value:
+                    if schema_value.lower() not in all_schemas:
+                        issues.add(
+                            issue=ValidationError.unknown_schema(schema_value),
+                            proceed=True,
+                            location=("resources", i, "schemas"),
+                        )
+            except (TypeError, AttributeError):
+                pass
 
     return issues
 

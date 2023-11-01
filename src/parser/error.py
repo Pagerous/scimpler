@@ -59,6 +59,8 @@ class ValidationError:
         25: "resource included in the result, but does not match the filter",
         26: "resources are not sorted",
         27: "unknown schema {schema!r}",
+        28: "main schema not included",
+        29: "extension {extension!r} is missing",
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -176,7 +178,7 @@ class ValidationError:
         return cls(code=19, attr_name=attr_name)
 
     @classmethod
-    def schemas_mismatch(cls, resource_type: str):
+    def bad_schema(cls, resource_type: str):  # TODO: remove it
         return cls(code=20, resource_type=resource_type)
 
     @classmethod
@@ -220,6 +222,14 @@ class ValidationError:
     @classmethod
     def unknown_schema(cls, schema: str):
         return cls(code=27, schema=schema)
+
+    @classmethod
+    def missing_main_schema(cls):
+        return cls(code=28)
+
+    @classmethod
+    def missing_schema_extension(cls, extension: str):
+        return cls(code=29, extension=extension)
 
     @classmethod
     def no_closing_bracket(cls, bracket_position: int):
