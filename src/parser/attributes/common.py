@@ -2,7 +2,6 @@ from ..attributes import type as at
 from ..error import ValidationError, ValidationIssues
 from .attributes import (
     Attribute,
-    AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
@@ -22,7 +21,6 @@ def bulk_id_validator(value) -> ValidationIssues:
 
 schemas = Attribute(
     name="schemas",
-    issuer=AttributeIssuer.BOTH,
     type_=at.URIReference,
     required=True,
     case_exact=True,
@@ -35,7 +33,6 @@ schemas = Attribute(
 
 id_ = Attribute(
     name="id",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.String,
     required=True,
     case_exact=True,
@@ -48,7 +45,6 @@ id_ = Attribute(
 
 external_id = Attribute(
     name="externalId",
-    issuer=AttributeIssuer.PROVISIONING_CLIENT,
     type_=at.String,
     required=False,
     case_exact=True,
@@ -60,7 +56,6 @@ external_id = Attribute(
 
 _meta__resource_type = Attribute(
     name="resourceType",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.String,
     required=False,
     case_exact=True,
@@ -72,7 +67,6 @@ _meta__resource_type = Attribute(
 
 _meta__created = Attribute(
     name="created",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.DateTime,
     required=False,
     case_exact=False,
@@ -84,7 +78,6 @@ _meta__created = Attribute(
 
 _meta__last_modified = Attribute(
     name="lastModified",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.DateTime,
     required=False,
     case_exact=False,
@@ -97,7 +90,6 @@ _meta__last_modified = Attribute(
 # TODO: make sure it has the same value as the "Content-Location" HTTP response header
 _meta__location = Attribute(
     name="location",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.URIReference,
     required=False,
     case_exact=False,
@@ -110,7 +102,6 @@ _meta__location = Attribute(
 # TODO: make sure it has the same value as the "ETag" HTTP response header
 _meta__version = Attribute(
     name="location",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.String,
     required=False,
     case_exact=True,
@@ -130,7 +121,6 @@ meta = ComplexAttribute(
         _meta__version,
     ],
     name="meta",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     required=False,
     case_exact=True,
     multi_valued=False,

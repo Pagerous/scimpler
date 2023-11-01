@@ -3,7 +3,7 @@ import pytest
 from src.parser.attributes.attributes import AttributeName
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.filter.operator import Present
-from src.parser.parameters.sorter.sorter import Sorter
+from src.parser.parameters.sorter import Sorter
 from src.parser.resource.schemas import ERROR, USER
 from src.parser.resource.validators import (
     Error,
@@ -202,7 +202,7 @@ def test_validate_body_type(body, expected):
 
 
 def test_validate_body_schema__succeeds_for_correct_data(user_data):
-    issues = validate_body_schema("RESPONSE", user_data, USER)
+    issues = validate_body_schema(user_data, USER)
 
     assert issues.to_dict() == {}
 
@@ -229,7 +229,7 @@ def test_validate_body_schema__fails_for_incorrect_data(user_data):
         },
     }
 
-    issues = validate_body_schema("RESPONSE", user_data, USER)
+    issues = validate_body_schema(user_data, USER)
 
     assert issues.to_dict() == expected
 

@@ -46,12 +46,6 @@ class Schema(abc.ABC):
     def __repr__(self) -> str:
         return self._repr
 
-    def get_attr_name(self, attr: Attribute):
-        for (schema, attr_name, sub_attr_name), attr_obj in self._attrs.items():
-            if attr_obj == attr:
-                return AttributeName(schema, attr_name, sub_attr_name)
-        raise ValueError(f"no attribute {attr} in schema")
-
     def get_attr(
         self,
         attr_name: AttributeName,

@@ -1,7 +1,6 @@
 from ..attributes import type as at
 from .attributes import (
     Attribute,
-    AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
@@ -10,7 +9,6 @@ from .attributes import (
 
 employee_number = Attribute(
     name="employeeNumber",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -22,7 +20,6 @@ employee_number = Attribute(
 
 cost_center = Attribute(
     name="costCenter",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -34,7 +31,6 @@ cost_center = Attribute(
 
 organization = Attribute(
     name="organization",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -46,7 +42,6 @@ organization = Attribute(
 
 division = Attribute(
     name="division",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -58,7 +53,6 @@ division = Attribute(
 
 department = Attribute(
     name="department",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -71,7 +65,6 @@ department = Attribute(
 
 _manager__value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     multi_valued=False,
     required=False,
@@ -83,7 +76,6 @@ _manager__value = Attribute(
 
 _manager__ref = Attribute(
     name="$ref",
-    issuer=AttributeIssuer.BOTH,
     type_=at.SCIMReference,
     reference_types=["User"],
     multi_valued=False,
@@ -96,7 +88,6 @@ _manager__ref = Attribute(
 
 _manager__display_name = Attribute(
     name="displayName",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     multi_valued=False,
     required=False,
@@ -113,7 +104,6 @@ manager = ComplexAttribute(
         _manager__display_name,
     ],
     name="manager",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,

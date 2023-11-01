@@ -3,7 +3,6 @@ from src.parser.attributes.validators import validate_single_primary_value
 from ..attributes import type as at
 from .attributes import (
     Attribute,
-    AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
@@ -12,7 +11,6 @@ from .attributes import (
 
 user_name = Attribute(
     name="userName",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=True,
     case_exact=False,
@@ -24,7 +22,6 @@ user_name = Attribute(
 
 _name__formatted = Attribute(
     name="formatted",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -36,7 +33,6 @@ _name__formatted = Attribute(
 
 _name__family_name = Attribute(
     name="familyName",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -48,7 +44,6 @@ _name__family_name = Attribute(
 
 _name__given_name = Attribute(
     name="givenName",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -60,7 +55,6 @@ _name__given_name = Attribute(
 
 _name__middle_name = Attribute(
     name="middleName",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -72,7 +66,6 @@ _name__middle_name = Attribute(
 
 _name__honorific_prefix = Attribute(
     name="honorificPrefix",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -84,7 +77,6 @@ _name__honorific_prefix = Attribute(
 
 _name__honorific_suffix = Attribute(
     name="honorificSuffix",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -105,7 +97,6 @@ name = ComplexAttribute(
         _name__honorific_suffix,
     ],
     name="name",
-    issuer=AttributeIssuer.BOTH,
     case_exact=False,
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
@@ -116,7 +107,6 @@ name = ComplexAttribute(
 # TODO: warn if 'displayName' does not match any of: 'userName', 'name' (any of its sub-attributes)
 display_name = Attribute(
     name="displayName",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -129,7 +119,6 @@ display_name = Attribute(
 # TODO: warn if 'nickName' is equal to 'username'
 nick_name = Attribute(
     name="nickName",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -141,7 +130,6 @@ nick_name = Attribute(
 
 profile_url = Attribute(
     name="profileUrl",
-    issuer=AttributeIssuer.BOTH,
     type_=at.ExternalReference,
     required=False,
     case_exact=False,
@@ -153,7 +141,6 @@ profile_url = Attribute(
 
 title = Attribute(
     name="title",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -165,7 +152,6 @@ title = Attribute(
 
 user_type = Attribute(
     name="userType",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -178,7 +164,6 @@ user_type = Attribute(
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
 preferred_language = Attribute(
     name="preferredLanguage",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -191,7 +176,6 @@ preferred_language = Attribute(
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
 locale = Attribute(
     name="locale",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -204,7 +188,6 @@ locale = Attribute(
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc6557 ("Olson")
 timezone = Attribute(
     name="locale",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -216,7 +199,6 @@ timezone = Attribute(
 
 active = Attribute(
     name="locale",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -229,7 +211,6 @@ active = Attribute(
 # TODO: make password preparation according to https://www.rfc-editor.org/rfc/rfc7644#section-7.8
 password = Attribute(
     name="password",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -241,7 +222,6 @@ password = Attribute(
 
 _email_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -253,7 +233,6 @@ _email_value = Attribute(
 
 _email_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -265,7 +244,6 @@ _email_display = Attribute(
 
 _email_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -278,7 +256,6 @@ _email_type = Attribute(
 
 _email_primary = Attribute(
     name="primary",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -296,7 +273,6 @@ emails = ComplexAttribute(
         _email_primary,
     ],
     name="emails",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -309,7 +285,6 @@ emails = ComplexAttribute(
 # TODO: make proper validation (warn) according to RFC3966 https://datatracker.ietf.org/doc/html/rfc3966
 _phone_number_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -321,7 +296,6 @@ _phone_number_value = Attribute(
 
 _phone_number_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -333,7 +307,6 @@ _phone_number_display = Attribute(
 
 _phone_number_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -346,7 +319,6 @@ _phone_number_type = Attribute(
 
 _phone_number_primary = Attribute(
     name="primary",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -364,7 +336,6 @@ phone_numbers = ComplexAttribute(
         _phone_number_primary,
     ],
     name="phoneNumbers",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -377,7 +348,6 @@ phone_numbers = ComplexAttribute(
 # TODO: warn if value contain whitespaces and isn't lowercase
 _ims_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -389,7 +359,6 @@ _ims_value = Attribute(
 
 _ims_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -402,7 +371,6 @@ _ims_display = Attribute(
 # no canonical values included, as those presented in RFC 7643 are obsolete and does not contain modern tools
 _ims_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -414,7 +382,6 @@ _ims_type = Attribute(
 
 _ims_primary = Attribute(
     name="primary",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -432,7 +399,6 @@ ims = ComplexAttribute(
         _ims_primary,
     ],
     name="ims",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -444,7 +410,6 @@ ims = ComplexAttribute(
 
 _photos_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.ExternalReference,
     required=False,
     case_exact=False,
@@ -456,7 +421,6 @@ _photos_value = Attribute(
 
 _photos_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -468,7 +432,6 @@ _photos_display = Attribute(
 
 _photos_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -481,7 +444,6 @@ _photos_type = Attribute(
 
 _photos_primary = Attribute(
     name="primary",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -499,7 +461,6 @@ photos = ComplexAttribute(
         _photos_primary,
     ],
     name="photos",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -511,7 +472,6 @@ photos = ComplexAttribute(
 
 _addresses_formatted = Attribute(
     name="formatted",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -523,7 +483,6 @@ _addresses_formatted = Attribute(
 
 _addresses_street_address = Attribute(
     name="streetAddress",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -535,7 +494,6 @@ _addresses_street_address = Attribute(
 
 _addresses_locality = Attribute(
     name="locality",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -547,7 +505,6 @@ _addresses_locality = Attribute(
 
 _addresses_region = Attribute(
     name="region",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -559,7 +516,6 @@ _addresses_region = Attribute(
 
 _addresses_postal_code = Attribute(
     name="postalCode",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -572,7 +528,6 @@ _addresses_postal_code = Attribute(
 # TODO: validate according to ISO 3166-1 "alpha-2"
 _addresses_country = Attribute(
     name="country",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -584,7 +539,6 @@ _addresses_country = Attribute(
 
 _addresses_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -606,7 +560,6 @@ addresses = ComplexAttribute(
         _addresses_type,
     ],
     name="addresses",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -618,7 +571,6 @@ addresses = ComplexAttribute(
 # TODO: make validation of correct group id here
 _groups_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -630,7 +582,6 @@ _groups_value = Attribute(
 
 _groups_ref = Attribute(
     name="$ref",
-    issuer=AttributeIssuer.BOTH,
     type_=at.SCIMReference,
     required=False,
     case_exact=False,
@@ -642,7 +593,6 @@ _groups_ref = Attribute(
 
 _groups_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -654,7 +604,6 @@ _groups_display = Attribute(
 
 _groups_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -673,7 +622,6 @@ groups = ComplexAttribute(
         _groups_type,
     ],
     name="groups",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -684,7 +632,6 @@ groups = ComplexAttribute(
 
 _entitlements_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -696,7 +643,6 @@ _entitlements_value = Attribute(
 
 _entitlements_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -708,7 +654,6 @@ _entitlements_display = Attribute(
 
 _entitlements_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -720,7 +665,6 @@ _entitlements_type = Attribute(
 
 _entitlements_primary = Attribute(
     name="primary",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -738,7 +682,6 @@ entitlements = ComplexAttribute(
         _entitlements_primary,
     ],
     name="entitlements",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -750,7 +693,6 @@ entitlements = ComplexAttribute(
 
 _roles_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -762,7 +704,6 @@ _roles_value = Attribute(
 
 _roles_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -774,7 +715,6 @@ _roles_display = Attribute(
 
 _roles_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -786,7 +726,6 @@ _roles_type = Attribute(
 
 _roles_primary = Attribute(
     name="primary",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -804,7 +743,6 @@ roles = ComplexAttribute(
         _roles_primary,
     ],
     name="roles",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,
@@ -816,7 +754,6 @@ roles = ComplexAttribute(
 
 _x509_certificates_value = Attribute(
     name="value",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Binary,
     required=False,
     case_exact=False,
@@ -828,7 +765,6 @@ _x509_certificates_value = Attribute(
 
 _x509_certificates_display = Attribute(
     name="display",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -840,7 +776,6 @@ _x509_certificates_display = Attribute(
 
 _x509_certificates_type = Attribute(
     name="type",
-    issuer=AttributeIssuer.BOTH,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -852,7 +787,6 @@ _x509_certificates_type = Attribute(
 
 _x509_certificates_primary = Attribute(
     name="primary",
-    issuer=AttributeIssuer.BOTH,
     type_=at.Boolean,
     required=False,
     case_exact=False,
@@ -870,7 +804,6 @@ x509_certificates = ComplexAttribute(
         _x509_certificates_primary,
     ],
     name="x509_certificates",
-    issuer=AttributeIssuer.BOTH,
     required=False,
     case_exact=False,
     multi_valued=True,

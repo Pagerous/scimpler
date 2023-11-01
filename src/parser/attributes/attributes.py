@@ -150,12 +150,6 @@ class AttributeMutability(str, Enum):
     IMMUTABLE = "immutable"
 
 
-class AttributeIssuer(str, Enum):
-    SERVICE_PROVIDER = "SERVICE_PROVIDER"
-    PROVISIONING_CLIENT = "PROVISIONING_CLIENT"
-    BOTH = "BOTH"
-
-
 class AttributeReturn(str, Enum):
     DEFAULT = "default"
     ALWAYS = "always"
@@ -175,7 +169,6 @@ class Attribute:
         name: str,
         type_: Type[at.AttributeType],
         reference_types: Optional[Iterable[str]] = None,
-        issuer: AttributeIssuer = AttributeIssuer.BOTH,
         required: bool = False,
         case_exact: bool = False,
         multi_valued: bool = False,
@@ -186,7 +179,6 @@ class Attribute:
         validators: Optional[Collection[Callable[[Any], ValidationIssues]]] = None,
     ):
         self._name = name
-        self._issuer = issuer
         self._type = type_
         self._reference_types = list(reference_types or [])  # TODO validate applicability
         self._required = required
@@ -205,10 +197,6 @@ class Attribute:
     @property
     def display_name(self) -> str:
         return self._name
-
-    @property
-    def issuer(self) -> AttributeIssuer:
-        return self._issuer
 
     @property
     def type(self) -> Type[at.AttributeType]:
@@ -256,7 +244,6 @@ class Attribute:
         return all(
             [
                 self._name.lower() == other._name.lower(),
-                self._issuer == other._issuer,
                 self._type is other._type,
                 self._reference_types == other._reference_types,
                 self._required == other._required,
@@ -270,27 +257,10 @@ class Attribute:
             ]
         )
 
-    def validate(self, value: Any, direction: str) -> ValidationIssues:
+    def validate(self, value: Any) -> ValidationIssues:
         issues = ValidationIssues()
         if value is None:
-            if (
-                not self._required
-                or (direction == "REQUEST" and self.issuer == AttributeIssuer.SERVICE_PROVIDER)
-                or (direction == "RESPONSE" and self._returned == AttributeReturn.NEVER)
-            ):
-                return issues
-            issues.add(
-                issue=ValidationError.missing_required_attribute(self._name),
-                proceed=False,
-            )
             return issues
-        else:
-            if direction == "RESPONSE" and self._returned == AttributeReturn.NEVER:
-                issues.add(
-                    issue=ValidationError.returned_restricted_attribute(self._name),
-                    proceed=False,
-                )
-                return issues
 
         if self._multi_valued:
             if not isinstance(value, (list, tuple)):
@@ -323,7 +293,6 @@ class ComplexAttribute(Attribute):
         self,
         sub_attributes: Collection[Attribute],
         name: str,
-        issuer: AttributeIssuer = AttributeIssuer.BOTH,
         required: bool = False,
         case_exact: bool = False,
         multi_valued: bool = False,
@@ -334,7 +303,6 @@ class ComplexAttribute(Attribute):
     ):
         super().__init__(
             name=name,
-            issuer=issuer,
             type_=at.Complex,
             required=required,
             case_exact=case_exact,
@@ -350,8 +318,8 @@ class ComplexAttribute(Attribute):
     def sub_attributes(self) -> Dict[str, Attribute]:
         return self._sub_attributes
 
-    def validate(self, value: Any, direction: str) -> ValidationIssues:
-        issues = super().validate(value, direction)
+    def validate(self, value: Any) -> ValidationIssues:
+        issues = super().validate(value)
         if not issues.can_proceed() or value is None:
             return issues
         if self.multi_valued:
@@ -360,13 +328,13 @@ class ComplexAttribute(Attribute):
                     issues.merge(
                         location=(i, attr.name),
                         issues=attr.validate(
-                            extract(attr_name, item), direction
+                            extract(attr_name, item)
                         ),  # TODO: use AttributeName in constructor
                     )
         else:
             for attr_name, attr in self._sub_attributes.items():
                 issues.merge(
                     location=(attr.name,),
-                    issues=attr.validate(extract(attr_name, value), direction),
+                    issues=attr.validate(extract(attr_name, value)),
                 )
         return issues

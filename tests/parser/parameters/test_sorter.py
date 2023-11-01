@@ -1,7 +1,7 @@
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
-from src.parser.parameters.sorter.sorter import Sorter
+from src.parser.parameters.sorter import Sorter
 from src.parser.resource.schemas import USER
 
 

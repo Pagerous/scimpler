@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from src.parser.attributes.attributes import AttributeName, extract
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.parameters.filter.filter import Filter
-from src.parser.parameters.sorter.sorter import Sorter
+from src.parser.parameters.sorter import Sorter
 from src.parser.resource.schemas import ERROR, LIST_RESPONSE, ResourceSchema, Schema
 
 
@@ -31,7 +31,6 @@ def validate_body_type(body: Any) -> ValidationIssues:
 
 
 def validate_body_schema(
-    direction: str,
     body: Any,
     schema: Schema,
 ) -> ValidationIssues:
@@ -43,7 +42,7 @@ def validate_body_schema(
         attr = schema.get_attr(attr_name)
         value = extract(attr_name, body)
         issues.merge(
-            issues=attr.validate(value, direction),
+            issues=attr.validate(value),
             location=(attr_name.attr,),
         )
     return issues
@@ -113,7 +112,7 @@ class Error:
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_schema("RESPONSE", body, self._schema),
+            issues=validate_body_schema(body, self._schema),
             location=body_location,
         )
         issues.merge(
@@ -264,7 +263,7 @@ class ResourceObjectGET:
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_schema("RESPONSE", body, self._schema),
+            issues=validate_body_schema(body, self._schema),
             location=body_location,
         )
         issues.merge(
@@ -299,7 +298,6 @@ class ResourceTypePOST:
         body: Optional[Dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        direction = "REQUEST"
         body_location = ("request", "body")
         issues.merge(
             issues=validate_body_existence(body),
@@ -310,7 +308,7 @@ class ResourceTypePOST:
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_schema(direction, body, self._schema),
+            issues=validate_body_schema(body, self._schema),
             location=body_location,
         )
         issues.merge(
@@ -336,7 +334,7 @@ class ResourceTypePOST:
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_schema("RESPONSE", body, self._schema),
+            issues=validate_body_schema(body, self._schema),
             location=body_location,
         )
         issues.merge(
@@ -570,7 +568,7 @@ def validate_items_per_page_consistency(
     return issues
 
 
-def validate_resources_schema(
+def validate_resources_schema(  # TODO: introduce schema inference here
     body: Any,
     schema: Schema,
 ) -> ValidationIssues:
@@ -590,7 +588,7 @@ def validate_resources_schema(
             attr = schema.get_attr(attr_name)
             value = extract(attr_name, resource)
             issues.merge(
-                issues=attr.validate(value, "RESPONSE"),
+                issues=attr.validate(value),
                 location=("resources", i, attr.name),
             )
     return issues
@@ -685,7 +683,7 @@ class ResourceTypeGET:
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_schema("RESPONSE", body, self._schema),
+            issues=validate_body_schema(body, self._schema),
             location=body_location,
         )
         issues.merge(
@@ -842,7 +840,7 @@ class ServerRootResourceGET:
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_schema("RESPONSE", body, self._schema),
+            issues=validate_body_schema(body, self._schema),
             location=body_location,
         )
         issues.merge(

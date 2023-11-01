@@ -3,7 +3,6 @@ from src.parser.attributes import type as at
 from ..error import ValidationError, ValidationIssues
 from .attributes import (
     Attribute,
-    AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
@@ -51,7 +50,6 @@ def validate_error_scim_type(value: str) -> ValidationIssues:
 
 status = Attribute(
     name="status",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.String,
     required=True,
     case_exact=False,
@@ -65,7 +63,6 @@ status = Attribute(
 
 scim_type = Attribute(
     name="scimType",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.String,
     required=False,
     case_exact=False,
@@ -78,7 +75,6 @@ scim_type = Attribute(
 
 detail = Attribute(
     name="detail",
-    issuer=AttributeIssuer.SERVICE_PROVIDER,
     type_=at.String,
     required=False,
     case_exact=False,

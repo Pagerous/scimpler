@@ -46,7 +46,7 @@ class ValidationError:
             "but provided '{provided}'"
         ),
         18: "expected type '{expected_type}', got '{provided_type}' instead",
-        19: "attribute '{attr_name}' should never be returned",
+        19: "should never be returned",
         20: "provided 'schemas' do not correspond to the resource {resource_type!r}",
         21: "too many results, must {must}",
         22: "total results ({total_results}) do not match number of resources ({n_resources})",
@@ -86,7 +86,7 @@ class ValidationError:
         self._location: Optional[str] = None
 
     @classmethod
-    def missing_required_attribute(cls, attr_name):
+    def missing_required_attribute(cls, attr_name):  # TODO: remove it
         return cls(code=1, attr_name=attr_name)
 
     @classmethod
@@ -174,8 +174,8 @@ class ValidationError:
         )
 
     @classmethod
-    def returned_restricted_attribute(cls, attr_name: str):
-        return cls(code=19, attr_name=attr_name)
+    def restricted_or_not_requested(cls):
+        return cls(code=19)
 
     @classmethod
     def bad_schema(cls, resource_type: str):  # TODO: remove it
