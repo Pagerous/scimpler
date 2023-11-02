@@ -61,6 +61,7 @@ class ValidationError:
         27: "unknown schema",
         28: "main schema not included",
         29: "extension {extension!r} is missing",
+        30: "can not be used together with {other!r}",
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -230,6 +231,10 @@ class ValidationError:
     @classmethod
     def missing_schema_extension(cls, extension: str):
         return cls(code=29, extension=extension)
+
+    @classmethod
+    def can_not_be_used_together(cls, other: str):
+        return cls(code=30, other=other)
 
     @classmethod
     def no_closing_bracket(cls, bracket_position: int):

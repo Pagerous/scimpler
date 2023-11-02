@@ -1,6 +1,7 @@
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
+from src.parser.parameters.attributes_presence import AttributePresenceChecker
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.filter.operator import Present
 from src.parser.parameters.sorter import Sorter
@@ -22,9 +23,11 @@ from src.parser.resource.validators import (
     validate_pagination_info,
     validate_request_filtering,
     validate_request_sorting,
+    validate_requested_attributes,
     validate_resource_location_consistency,
     validate_resource_location_in_header,
     validate_resource_type_consistency,
+    validate_resources_attribute_presence,
     validate_resources_filtered,
     validate_resources_schema,
     validate_resources_schemas_field,
@@ -714,6 +717,36 @@ def test_validate_request_sorting(query_string, expected):
 @pytest.mark.parametrize(
     ("query_string", "expected"),
     (
+        ({"attributes": "userName"}, {}),
+        ({"excludeAttributes": "userName"}, {}),
+        (
+            {"attributes": "userName", "excludeAttributes": "name"},
+            {
+                "attributes": {"_errors": [{"code": 30}]},
+                "excludeAttributes": {"_errors": [{"code": 30}]},
+            },
+        ),
+        ({}, {}),
+        (None, {}),
+        (
+            {"attributes": ["userName", "bad^attr"]},
+            {"attributes": {"bad^attr": {"_errors": [{"code": 111}]}}},
+        ),
+        (
+            {"excludeAttributes": ["userName", "bad^attr"]},
+            {"excludeAttributes": {"bad^attr": {"_errors": [{"code": 111}]}}},
+        ),
+    ),
+)
+def test_validate_requested_attributes(query_string, expected):
+    issues = validate_requested_attributes(query_string)
+
+    assert issues.to_dict() == expected
+
+
+@pytest.mark.parametrize(
+    ("query_string", "expected"),
+    (
         ({"filter": 'userName eq "bjensen"'}, {}),
         ({}, {}),
         ({"filter": "username hey 10"}, {"_errors": [{"code": 105}]}),
@@ -923,6 +956,80 @@ def test_validate_resources_sorted__skips_if_bad_resources_type(list_user_data):
     assert issues.to_dict() == {}
 
 
+def test_validate_resources_attribute_presence__skips_if_bad_body_type():
+    checker = AttributePresenceChecker()
+
+    issues = validate_resources_attribute_presence(checker, None, [USER])
+
+    assert issues.to_dict() == {}
+
+
+def test_validate_resources_attribute_presence__skips_if_bad_resources_type(list_user_data):
+    checker = AttributePresenceChecker()
+    list_user_data["Resources"] = {1: 2}  # noqa
+
+    issues = validate_resources_attribute_presence(checker, None, [USER])
+
+    assert issues.to_dict() == {}
+
+
+def test_validate_resources_attribute_presence__fails_if_requested_attribute_not_excluded(
+    list_user_data,
+):
+    checker = AttributePresenceChecker(attr_names=[AttributeName(attr="name")], include=False)
+    expected = {
+        "resources": {
+            "0": {
+                "name": {
+                    "_errors": [
+                        {
+                            "code": 19,
+                        }
+                    ]
+                }
+            },
+            "1": {
+                "name": {
+                    "_errors": [
+                        {
+                            "code": 19,
+                        }
+                    ]
+                }
+            },
+        }
+    }
+
+    issues = validate_resources_attribute_presence(checker, list_user_data, [USER])
+
+    assert issues.to_dict() == expected
+
+
+@pytest.mark.parametrize("invalid_resource", ([1, 2, 3], {1: 2, 3: 4}))
+def test_validate_resources_attribute_presence__invalid_resources_are_skipped(
+    invalid_resource, list_user_data
+):
+    checker = AttributePresenceChecker(attr_names=[AttributeName(attr="name")], include=False)
+    list_user_data["Resources"][0] = invalid_resource  # noqa
+    expected = {
+        "resources": {
+            "1": {
+                "name": {
+                    "_errors": [
+                        {
+                            "code": 19,
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    issues = validate_resources_attribute_presence(checker, list_user_data, [USER])
+
+    assert issues.to_dict() == expected
+
+
 def test_validate_resources_schemas_field__bad_schemas_is_discovered(list_user_data):
     list_user_data["Resources"][1]["schemas"].append("bad:user:schema")
     expected = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
@@ -988,6 +1095,8 @@ def test_correct_resource_type_post_response_passes_validation(user_data):
 
 def test_correct_resource_type_get_response_passes_validation(list_user_data):
     validator = ResourceTypeGET(USER)
+    list_user_data["Resources"][0].pop("name")
+    list_user_data["Resources"][1].pop("name")
 
     issues = validator.validate_response(
         status_code=200,
@@ -996,6 +1105,9 @@ def test_correct_resource_type_get_response_passes_validation(list_user_data):
         count=2,
         filter_=Filter(Present(AttributeName(attr="username"))),
         sorter=Sorter(AttributeName(attr="userName"), True),
+        presence_checker=AttributePresenceChecker(
+            attr_names=[AttributeName(attr="name")], include=False
+        ),
     )
 
     assert issues.to_dict() == {}
@@ -1003,6 +1115,8 @@ def test_correct_resource_type_get_response_passes_validation(list_user_data):
 
 def test_correct_server_root_resource_get_response_passes_validation(list_user_data):
     validator = ServerRootResourceGET([USER])
+    list_user_data["Resources"][0].pop("name")
+    list_user_data["Resources"][1].pop("name")
 
     issues = validator.validate_response(
         status_code=200,
@@ -1011,6 +1125,9 @@ def test_correct_server_root_resource_get_response_passes_validation(list_user_d
         count=2,
         filter_=Filter(Present(AttributeName(attr="username"))),
         sorter=Sorter(AttributeName(attr="userName"), True),
+        presence_checker=AttributePresenceChecker(
+            attr_names=[AttributeName(attr="name")], include=False
+        ),
     )
 
     assert issues.to_dict() == {}

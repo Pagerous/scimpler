@@ -6,18 +6,14 @@ from src.parser.resource.schemas import USER
 
 
 @pytest.mark.parametrize(
-    ("attr_names", "schema", "expected"),
+    ("attr_names", "expected"),
     (
-        (["username"], USER, {}),
-        (["username", "name.familyname"], USER, {}),
-        (["bad^attr"], None, {"bad^attr": {"_errors": [{"code": 111}]}}),
-        (["bad^attr"], USER, {"bad^attr": {"_errors": [{"code": 111}, {"code": 200}]}}),
-        (["non.existing"], USER, {"non": {"existing": {"_errors": [{"code": 200}]}}}),
-        (["non.existing"], None, {}),
+        (["username", "name.familyname"], {}),
+        (["bad^attr"], {"bad^attr": {"_errors": [{"code": 111}]}}),
     ),
 )
-def test_attribute_presence_checker_parsing(attr_names, schema, expected):
-    _, issues = AttributePresenceChecker.parse(attr_names, include=True, schema=schema)
+def test_attribute_presence_checker_parsing(attr_names, expected):
+    _, issues = AttributePresenceChecker.parse(attr_names, include=True)
 
     assert issues.to_dict() == expected
 
@@ -25,7 +21,7 @@ def test_attribute_presence_checker_parsing(attr_names, schema, expected):
 def test_presence_checker_fails_if_returned_attribute_that_never_should_be_returned(
     enterprise_user_data,
 ):
-    checker = AttributePresenceChecker(schema=USER)
+    checker = AttributePresenceChecker()
     enterprise_user_data["password"] = "1234"
     expected = {
         "password": {
@@ -37,23 +33,23 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
         }
     }
 
-    issues = checker(enterprise_user_data, "RESPONSE")
+    issues = checker(enterprise_user_data, USER, "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_restricted_attributes_can_be_sent_with_request(enterprise_user_data):
-    checker = AttributePresenceChecker(schema=USER)
+    checker = AttributePresenceChecker()
     enterprise_user_data["password"] = "1234"
 
-    issues = checker(enterprise_user_data, "REQUEST")
+    issues = checker(enterprise_user_data, USER, "REQUEST")
 
     assert issues.to_dict() == {}
 
 
 def test_presence_checker_fails_if_returned_attribute_that_was_not_requested():
     checker = AttributePresenceChecker(
-        [AttributeName(attr="name", sub_attr="familyName")], include=False, schema=USER
+        [AttributeName(attr="name", sub_attr="familyName")], include=False
     )
     data = {
         "id": "1",
@@ -76,13 +72,13 @@ def test_presence_checker_fails_if_returned_attribute_that_was_not_requested():
         }
     }
 
-    issues = checker(data, "RESPONSE")
+    issues = checker(data, USER, "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_returned():
-    checker = AttributePresenceChecker(schema=USER)
+    checker = AttributePresenceChecker()
 
     expected = {
         "id": {
@@ -101,13 +97,13 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
         },
     }
 
-    issues = checker({}, "RESPONSE")
+    issues = checker({}, USER, "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_if_not_provided_requested_required_attribute():
-    checker = AttributePresenceChecker([AttributeName(attr="username")], include=True, schema=USER)
+    checker = AttributePresenceChecker([AttributeName(attr="username")], include=True)
     data = {
         "id": "1",
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -122,20 +118,20 @@ def test_presence_checker_fails_if_not_provided_requested_required_attribute():
         },
     }
 
-    issues = checker(data, "RESPONSE")
+    issues = checker(data, USER, "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
     checker = AttributePresenceChecker(
-        [AttributeName(attr="name", sub_attr="familyname")], include=True, schema=USER
+        [AttributeName(attr="name", sub_attr="familyname")], include=True
     )
     data = {
         "id": "1",
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
     }
 
-    issues = checker(data, "RESPONSE")
+    issues = checker(data, USER, "RESPONSE")
 
     assert issues.to_dict() == {}

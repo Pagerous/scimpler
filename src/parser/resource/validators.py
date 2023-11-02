@@ -2,6 +2,7 @@ from typing import Any, Dict, List, Optional, Sequence
 
 from src.parser.attributes.attributes import extract
 from src.parser.error import ValidationError, ValidationIssues
+from src.parser.parameters.attributes_presence import AttributePresenceChecker
 from src.parser.parameters.filter.filter import Filter
 from src.parser.parameters.sorter import Sorter
 from src.parser.resource.schemas import ERROR, LIST_RESPONSE, ResourceSchema, Schema
@@ -121,6 +122,10 @@ class Error:
         )
         issues.merge(issues=validate_error_status_code_consistency(body, status_code))
         issues.merge(issues=validate_error_status_code(status_code))
+        issues.merge(
+            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
+            location=body_location,
+        )
         return issues
 
 
@@ -285,6 +290,10 @@ class ResourceObjectGET:
             issues=validate_status_code(200, status_code),
             location=("response", "status"),
         )
+        issues.merge(
+            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
+            location=body_location,
+        )
         return issues
 
 
@@ -313,6 +322,10 @@ class ResourceTypePOST:
         )
         issues.merge(
             issues=validate_schemas_field(body, self._schema),
+            location=body_location,
+        )
+        issues.merge(
+            issues=AttributePresenceChecker()(body, self._schema, "REQUEST"),
             location=body_location,
         )
         return issues
@@ -356,6 +369,10 @@ class ResourceTypePOST:
             issues=validate_schemas_field(body, self._schema),
             location=body_location,
         )
+        issues.merge(
+            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
+            location=body_location,
+        )
         return issues
 
 
@@ -388,6 +405,41 @@ def validate_request_filtering(query_string: Any) -> ValidationIssues:
     return issues
 
 
+def validate_requested_attributes(query_string: Any) -> ValidationIssues:
+    issues = ValidationIssues()
+    if not isinstance(query_string, Dict):
+        return issues
+
+    to_include = query_string.get("attributes", [])
+    if to_include and isinstance(to_include, str):
+        to_include = to_include.split(",")
+    to_exclude = query_string.get("excludeAttributes", [])
+    if to_exclude and isinstance(to_exclude, str):
+        to_exclude = to_exclude.split(",")
+
+    if not isinstance(to_include, List) or not isinstance(to_exclude, List):
+        return issues
+
+    if to_include and to_exclude:
+        issues.add(
+            issue=ValidationError.can_not_be_used_together("excludeAttributes"),
+            proceed=False,
+            location=("attributes",),
+        )
+        issues.add(
+            issue=ValidationError.can_not_be_used_together("attributes"),
+            proceed=False,
+            location=("excludeAttributes",),
+        )
+        return issues
+
+    attr_names = to_include or to_exclude
+    include = None if not any([to_include, to_exclude]) else bool(to_include)
+    _, issues_ = AttributePresenceChecker.parse(attr_names, include)
+    issues.merge(issues=issues_, location=("attributes" if include else "excludeAttributes",))
+    return issues
+
+
 def validate_resources_sorted(
     sorter: Sorter,
     body: Any,
@@ -416,6 +468,39 @@ def validate_resources_sorted(
             )
     except:  # noqa; error due to bad resources schema
         pass
+    return issues
+
+
+def validate_resources_attribute_presence(
+    presence_checker: AttributePresenceChecker,
+    body: Any,
+    schemas: Sequence[Schema],
+) -> ValidationIssues:
+    issues = ValidationIssues()
+    if not isinstance(body, Dict):
+        return issues
+
+    resources = extract("resources", body)
+    if not isinstance(resources, List):
+        return issues
+
+    schema = schemas[0] if len(schemas) == 1 else None
+
+    for i, resource in enumerate(resources):
+        try:
+            if schema is None:
+                schema = infer_schema_from_data(resource, schemas)
+
+            if schema is None:
+                continue
+
+            issues.merge(
+                issues=presence_checker(resource, schema, "RESPONSE"),
+                location=("resources", i),
+            )
+        except (AttributeError, TypeError):
+            pass
+
     return issues
 
 
@@ -673,6 +758,10 @@ def _validate_resources_get_request(query_string: Any) -> ValidationIssues:
         issues=validate_request_sorting(query_string),
         location=("request", "query_string", "sortby"),
     )
+    issues.merge(
+        issues=validate_requested_attributes(query_string),
+        location=("request", "query_string"),
+    )
     return issues
 
 
@@ -685,6 +774,7 @@ def _validate_resources_get_response(
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
+    presence_checker: Optional[AttributePresenceChecker] = None,
 ):
     issues = ValidationIssues()
     body_location = ("response", "body")
@@ -742,6 +832,12 @@ def _validate_resources_get_response(
             issues=validate_resources_sorted(sorter, body, resource_schemas),
             location=body_location,
         )
+    if presence_checker is None:
+        presence_checker = AttributePresenceChecker()
+    issues.merge(
+        issues=validate_resources_attribute_presence(presence_checker, body, resource_schemas),
+        location=body_location,
+    )
     return issues
 
 
@@ -763,6 +859,7 @@ class ResourceTypeGET:
         count: Optional[int] = None,
         filter_: Optional[Filter] = None,
         sorter: Optional[Sorter] = None,
+        presence_checker: Optional[AttributePresenceChecker] = None,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
             list_schema=self._schema,
@@ -773,6 +870,7 @@ class ResourceTypeGET:
             count=count,
             filter_=filter_,
             sorter=sorter,
+            presence_checker=presence_checker,
         )
 
 
@@ -804,6 +902,7 @@ class ServerRootResourceGET:
         count: Optional[int] = None,
         filter_: Optional[Filter] = None,
         sorter: Optional[Sorter] = None,
+        presence_checker: Optional[AttributePresenceChecker] = None,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
             list_schema=self._schema,
@@ -814,4 +913,5 @@ class ServerRootResourceGET:
             count=count,
             filter_=filter_,
             sorter=sorter,
+            presence_checker=presence_checker,
         )
