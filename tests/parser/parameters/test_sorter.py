@@ -402,3 +402,23 @@ def test_case_sensitive_attributes_are_respected_if_schema_provided():
     actual = sorter(values, schema=USER)
 
     assert actual == expected
+
+
+def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_case_sensitive():
+    sorter = Sorter(AttributeName.parse("userName"), asc=False)
+    values = [{"userName": "A"}, {"userName": "a"}, {"userName": "B"}]
+    schemas = [SCHEMA_FOR_TESTS, USER, USER]
+    expected = [{"userName": "B"}, {"userName": "a"}, {"userName": "A"}]
+
+    actual = sorter(values, schemas)
+
+    assert actual == expected
+
+
+def test_fails_if_different_value_types():
+    sorter = Sorter(AttributeName.parse("title"), asc=False)
+    values = [{"title": 1}, {"title": "a"}]
+    schemas = [SCHEMA_FOR_TESTS, USER]
+
+    with pytest.raises(TypeError):
+        sorter(values, schemas)
