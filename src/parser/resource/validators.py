@@ -403,12 +403,11 @@ def validate_resources_sorted(
 
     schema = schemas[0] if len(schemas) == 1 else None
 
+    if schema is None:
+        schema = [infer_schema_from_data(resource, schemas) for resource in resources]
+        if not (schema and all(schema)):
+            return issues
     try:
-        if schema is None:
-            schema = [infer_schema_from_data(resource, schemas) for resource in resources]
-            if not (schema and all(schema)):
-                return issues
-
         if resources != sorter(resources, schema=schema):
             issues.add(
                 issue=ValidationError.resources_not_sorted(),
@@ -664,26 +663,96 @@ def validate_resources_schemas_field(body: Any, schemas: Sequence[Schema]):
     return issues
 
 
+def _validate_resources_get_request(query_string: Any) -> ValidationIssues:
+    issues = ValidationIssues()
+    issues.merge(
+        issues=validate_request_filtering(query_string),
+        location=("request", "query_string", "filter"),
+    )
+    issues.merge(
+        issues=validate_request_sorting(query_string),
+        location=("request", "query_string", "sortby"),
+    )
+    return issues
+
+
+def _validate_resources_get_response(
+    list_schema: Schema,
+    resource_schemas: Sequence[Schema],
+    status_code: int,
+    body: Optional[Dict[str, Any]] = None,
+    start_index: int = 1,
+    count: Optional[int] = None,
+    filter_: Optional[Filter] = None,
+    sorter: Optional[Sorter] = None,
+):
+    issues = ValidationIssues()
+    body_location = ("response", "body")
+    issues.merge(
+        issues=validate_body_existence(body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_body_type(body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_body_schema(body, list_schema),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_schemas_field(body, list_schema),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_status_code(200, status_code),
+        location=("response", "status"),
+    )
+    issues.merge(
+        issues=validate_number_of_resources(count, body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_pagination_info(count, body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_start_index_consistency(start_index, body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_items_per_page_consistency(body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_resources_schemas_field(body, resource_schemas),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_resources_schema(body, resource_schemas),
+        location=body_location,
+    )
+    if filter_ is not None:
+        issues.merge(
+            issues=validate_resources_filtered(body, filter_, resource_schemas, False),
+            location=body_location,
+        )
+    if sorter is not None:
+        issues.merge(
+            issues=validate_resources_sorted(sorter, body, resource_schemas),
+            location=body_location,
+        )
+    return issues
+
+
 class ResourceTypeGET:
     def __init__(self, resource_schema: Schema):
         self._schema = LIST_RESPONSE
         self._resource_schema = resource_schema
 
-    def validate_request(
-        self,
-        *,
-        query_string: Any,
-    ) -> ValidationIssues:
-        issues = ValidationIssues()
-        issues.merge(
-            issues=validate_request_filtering(query_string),
-            location=("request", "query_string", "filter"),
-        )
-        issues.merge(
-            issues=validate_request_sorting(query_string, self._resource_schema),
-            location=("request", "query_string", "sortby"),
-        )
-        return issues
+    @staticmethod
+    def validate_request(*, query_string: Any) -> ValidationIssues:
+        return _validate_resources_get_request(query_string)
 
     def validate_response(
         self,
@@ -695,63 +764,16 @@ class ResourceTypeGET:
         filter_: Optional[Filter] = None,
         sorter: Optional[Sorter] = None,
     ) -> ValidationIssues:
-        issues = ValidationIssues()
-        body_location = ("response", "body")
-        issues.merge(
-            issues=validate_body_existence(body),
-            location=body_location,
+        return _validate_resources_get_response(
+            list_schema=self._schema,
+            resource_schemas=[self._resource_schema],
+            status_code=status_code,
+            body=body,
+            start_index=start_index,
+            count=count,
+            filter_=filter_,
+            sorter=sorter,
         )
-        issues.merge(
-            issues=validate_body_type(body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_body_schema(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_schemas_field(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_status_code(200, status_code),
-            location=("response", "status"),
-        )
-        issues.merge(
-            issues=validate_number_of_resources(count, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_pagination_info(count, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_start_index_consistency(start_index, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_items_per_page_consistency(body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resources_schemas_field(body, [self._resource_schema]),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resources_schema(body, [self._resource_schema]),
-            location=body_location,
-        )
-        if filter_ is not None:
-            issues.merge(
-                issues=validate_resources_filtered(body, filter_, [self._resource_schema], False),
-                location=body_location,
-            )
-        if sorter is not None:
-            issues.merge(
-                issues=validate_resources_sorted(sorter, body, [self._resource_schema]),
-                location=body_location,
-            )
-        return issues
 
 
 def infer_schema_from_data(data: Dict[str, Any], schemas: Sequence[Schema]) -> Optional[Schema]:
@@ -769,21 +791,9 @@ class ServerRootResourceGET:
         self._schema = LIST_RESPONSE
         self._resource_schemas = resource_schemas
 
-    def validate_request(
-        self,
-        *,
-        query_string: Optional[Dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        issues = ValidationIssues()
-        issues.merge(
-            issues=validate_request_filtering(query_string),
-            location=("request", "query_string", "filter"),
-        )
-        issues.merge(
-            issues=validate_request_sorting(query_string, None),
-            location=("request", "query_string", "sortby"),
-        )
-        return issues
+    @staticmethod
+    def validate_request(*, query_string: Any) -> ValidationIssues:
+        return _validate_resources_get_request(query_string)
 
     def validate_response(
         self,
@@ -795,60 +805,13 @@ class ServerRootResourceGET:
         filter_: Optional[Filter] = None,
         sorter: Optional[Sorter] = None,
     ) -> ValidationIssues:
-        issues = ValidationIssues()
-        body_location = ("response", "body")
-        issues.merge(
-            issues=validate_body_existence(body),
-            location=body_location,
+        return _validate_resources_get_response(
+            list_schema=self._schema,
+            resource_schemas=self._resource_schemas,
+            status_code=status_code,
+            body=body,
+            start_index=start_index,
+            count=count,
+            filter_=filter_,
+            sorter=sorter,
         )
-        issues.merge(
-            issues=validate_body_type(body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_body_schema(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_schemas_field(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_status_code(200, status_code),
-            location=("response", "status"),
-        )
-        issues.merge(
-            issues=validate_number_of_resources(count, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_pagination_info(count, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_start_index_consistency(start_index, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_items_per_page_consistency(body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resources_schemas_field(body, self._resource_schemas),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resources_schema(body, self._resource_schemas),
-            location=body_location,
-        )
-        if filter_ is not None:
-            issues.merge(
-                issues=validate_resources_filtered(body, filter_, self._resource_schemas, False),
-                location=body_location,
-            )
-        if sorter is not None:
-            issues.merge(
-                issues=validate_resources_sorted(sorter, body, self._resource_schemas),
-                location=body_location,
-            )
-        return issues

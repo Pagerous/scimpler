@@ -173,5 +173,7 @@ SCHEMA_FOR_TESTS = ResourceSchema(
             ],
             multi_valued=True,
         ),
+        Attribute(name="userName", type_=at.String, case_exact=True),
+        Attribute(name="title", type_=at.Integer),
     ],
 )
