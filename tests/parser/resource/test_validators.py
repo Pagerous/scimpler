@@ -1,16 +1,16 @@
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
-from src.parser.parameters.attributes_presence import AttributePresenceChecker
-from src.parser.parameters.filter.filter import Filter
-from src.parser.parameters.filter.operator import Present
-from src.parser.parameters.sorter import Sorter
+from src.parser.attributes_presence import AttributePresenceChecker
+from src.parser.filter.filter import Filter
+from src.parser.filter.operator import Present
 from src.parser.resource.schemas import ERROR, USER
 from src.parser.resource.validators import (
     Error,
     ResourceObjectGET,
     ResourceTypeGET,
     ResourceTypePOST,
+    SearchRequestPOST,
     ServerRootResourceGET,
     infer_schema_from_data,
     validate_body_existence,
@@ -36,6 +36,7 @@ from src.parser.resource.validators import (
     validate_start_index_consistency,
     validate_status_code,
 )
+from src.parser.sorter import Sorter
 
 
 @pytest.fixture
@@ -1053,6 +1054,46 @@ def test_validate_resources_schemas_field__skips_if_bad_resources_type(list_user
     assert issues.to_dict() == {}
 
 
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    (
+        (
+            {
+                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                "userName": "bjensen",
+            },
+            USER,
+        ),
+        (
+            # only "schemas" attribute is used
+            {
+                "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
+            },
+            None,
+        ),
+        (
+            {
+                "userName": "bjensen",
+            },
+            None,
+        ),
+        (
+            # extensions are ignored
+            {
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "employeeNumber": "2",
+                }
+            },
+            None,
+        ),
+    ),
+)
+def test_infer_schema_from_data(data, expected):
+    actual = infer_schema_from_data(data, [USER])
+
+    assert actual == expected
+
+
 def test_correct_error_response_passes_validation(error_data):
     validator = Error()
 
@@ -1093,8 +1134,8 @@ def test_correct_resource_type_post_response_passes_validation(user_data):
     assert issues.to_dict() == {}
 
 
-def test_correct_resource_type_get_response_passes_validation(list_user_data):
-    validator = ResourceTypeGET(USER)
+@pytest.mark.parametrize("validator", (ResourceTypeGET(USER), SearchRequestPOST([USER])))
+def test_correct_list_response_passes_validation(validator, list_user_data):
     list_user_data["Resources"][0].pop("name")
     list_user_data["Resources"][1].pop("name")
 
@@ -1133,41 +1174,18 @@ def test_correct_server_root_resource_get_response_passes_validation(list_user_d
     assert issues.to_dict() == {}
 
 
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    (
-        (
-            {
-                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-                "userName": "bjensen",
-            },
-            USER,
-        ),
-        (
-            # only "schemas" attribute is used
-            {
-                "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
-            },
-            None,
-        ),
-        (
-            {
-                "userName": "bjensen",
-            },
-            None,
-        ),
-        (
-            # extensions are ignored
-            {
-                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-                    "employeeNumber": "2",
-                }
-            },
-            None,
-        ),
-    ),
-)
-def test_infer_schema_from_data(data, expected):
-    actual = infer_schema_from_data(data, [USER])
+def test_correct_search_request_passes_validation():
+    validator = SearchRequestPOST([USER])
 
-    assert actual == expected
+    issues = validator.validate_request(
+        body={
+            "attributes": ["userName", "name"],
+            "filter": 'userName eq "bjensen"',
+            "sortBy": "name.familyName",
+            "sortOrder": "descending",
+            "startIndex": 2,
+            "count": 10,
+        }
+    )
+
+    assert issues.to_dict() == {}

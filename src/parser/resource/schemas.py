@@ -63,3 +63,17 @@ USER = ResourceSchema(
         user_attrs.x509_certificates,
     ],
 ).with_extension(USER_ENTERPRISE_EXTENSION, required=True)
+
+SEARCH_REQUEST = Schema(
+    schema="urn:ietf:params:scim:api:messages:2.0:searchrequest",
+    repr_="SearchRequest",
+    attrs=[
+        search_request_attrs.attributes,
+        search_request_attrs.exclude_attributes,
+        search_request_attrs.filter_,
+        search_request_attrs.sort_by,
+        search_request_attrs.sort_order,
+        search_request_attrs.start_index,
+        search_request_attrs.count,
+    ],
+)

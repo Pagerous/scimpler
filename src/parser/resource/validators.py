@@ -1,11 +1,17 @@
 from typing import Any, Dict, List, Optional, Sequence
 
 from src.parser.attributes.attributes import extract
+from src.parser.attributes_presence import AttributePresenceChecker
 from src.parser.error import ValidationError, ValidationIssues
-from src.parser.parameters.attributes_presence import AttributePresenceChecker
-from src.parser.parameters.filter.filter import Filter
-from src.parser.parameters.sorter import Sorter
-from src.parser.resource.schemas import ERROR, LIST_RESPONSE, ResourceSchema, Schema
+from src.parser.filter.filter import Filter
+from src.parser.resource.schemas import (
+    ERROR,
+    LIST_RESPONSE,
+    SEARCH_REQUEST,
+    ResourceSchema,
+    Schema,
+)
+from src.parser.sorter import Sorter
 
 
 def validate_body_existence(body: Any) -> ValidationIssues:
@@ -766,7 +772,7 @@ def _validate_resources_get_request(query_string: Any) -> ValidationIssues:
 
 
 def _validate_resources_get_response(
-    list_schema: Schema,
+    list_response_schema: Schema,
     resource_schemas: Sequence[Schema],
     status_code: int,
     body: Optional[Dict[str, Any]] = None,
@@ -787,11 +793,11 @@ def _validate_resources_get_response(
         location=body_location,
     )
     issues.merge(
-        issues=validate_body_schema(body, list_schema),
+        issues=validate_body_schema(body, list_response_schema),
         location=body_location,
     )
     issues.merge(
-        issues=validate_schemas_field(body, list_schema),
+        issues=validate_schemas_field(body, list_response_schema),
         location=body_location,
     )
     issues.merge(
@@ -862,7 +868,7 @@ class ResourceTypeGET:
         presence_checker: Optional[AttributePresenceChecker] = None,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
-            list_schema=self._schema,
+            list_response_schema=self._schema,
             resource_schemas=[self._resource_schema],
             status_code=status_code,
             body=body,
@@ -905,7 +911,54 @@ class ServerRootResourceGET:
         presence_checker: Optional[AttributePresenceChecker] = None,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
-            list_schema=self._schema,
+            list_response_schema=self._schema,
+            resource_schemas=self._resource_schemas,
+            status_code=status_code,
+            body=body,
+            start_index=start_index,
+            count=count,
+            filter_=filter_,
+            sorter=sorter,
+            presence_checker=presence_checker,
+        )
+
+
+class SearchRequestPOST:
+    def __init__(self, resource_schemas: Sequence[Schema]):
+        self._schema = SEARCH_REQUEST
+        self._list_response_schema = LIST_RESPONSE
+        self._resource_schemas = resource_schemas
+
+    def validate_request(self, *, body: Any) -> ValidationIssues:
+        issues = ValidationIssues()
+        body_location = ("response", "body")
+        issues.merge(
+            issues=validate_body_existence(body),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_body_type(body),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_body_schema(body, self._schema),
+            location=body_location,
+        )
+        return issues
+
+    def validate_response(
+        self,
+        *,
+        status_code: int,
+        body: Optional[Dict[str, Any]] = None,
+        start_index: int = 1,
+        count: Optional[int] = None,
+        filter_: Optional[Filter] = None,
+        sorter: Optional[Sorter] = None,
+        presence_checker: Optional[AttributePresenceChecker] = None,
+    ) -> ValidationIssues:
+        return _validate_resources_get_response(
+            list_response_schema=self._list_response_schema,
             resource_schemas=self._resource_schemas,
             status_code=status_code,
             body=body,
