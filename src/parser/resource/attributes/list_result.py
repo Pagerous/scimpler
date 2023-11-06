@@ -1,5 +1,5 @@
-from ..attributes import type as at
-from .attributes import Attribute
+from src.parser.attributes import type as at
+from src.parser.attributes.attributes import Attribute
 
 total_results = Attribute(
     name="totalResults",

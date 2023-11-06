@@ -9,7 +9,7 @@ from src.parser.attributes.attributes import (
     extract,
 )
 from src.parser.error import ValidationError, ValidationIssues
-from src.parser.resource.schemas import Schema
+from src.parser.schemas import Schema
 
 
 class AlwaysLastKey:

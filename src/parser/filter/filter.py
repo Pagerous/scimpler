@@ -4,9 +4,9 @@ from typing import Any, Dict, List, Optional, Tuple, TypeAlias, Union
 
 from src.parser.attributes.attributes import AttributeName, extract
 from src.parser.error import ValidationError, ValidationIssues
-from src.parser.parameters.filter import operator as op
-from src.parser.parameters.filter.operator import MatchResult
-from src.parser.resource.schemas import Schema
+from src.parser.filter import operator as op
+from src.parser.filter.operator import MatchResult
+from src.parser.schemas import Schema
 
 _OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 _AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)

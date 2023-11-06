@@ -1,5 +1,5 @@
-from ..attributes import type as at
-from .attributes import (
+from src.parser.attributes import type as at
+from src.parser.attributes.attributes import (
     Attribute,
     AttributeMutability,
     AttributeReturn,

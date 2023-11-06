@@ -2,7 +2,7 @@ from typing import Any, Dict, Iterable, Optional, Tuple
 
 from src.parser.attributes.attributes import AttributeName, AttributeReturn, extract
 from src.parser.error import ValidationError, ValidationIssues
-from src.parser.resource.schemas import Schema
+from src.parser.schemas import Schema
 
 
 class AttributePresenceChecker:

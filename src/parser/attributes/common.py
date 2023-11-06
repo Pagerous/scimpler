@@ -1,12 +1,12 @@
-from ..attributes import type as at
-from ..error import ValidationError, ValidationIssues
-from .attributes import (
+from src.parser.attributes import type as at
+from src.parser.attributes.attributes import (
     Attribute,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
     ComplexAttribute,
 )
+from src.parser.error import ValidationError, ValidationIssues
 
 
 def bulk_id_validator(value) -> ValidationIssues:

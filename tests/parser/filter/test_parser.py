@@ -1,6 +1,6 @@
 import pytest
 
-from src.parser.parameters.filter.filter import Filter
+from src.parser.filter.filter import Filter
 
 
 @pytest.mark.parametrize(

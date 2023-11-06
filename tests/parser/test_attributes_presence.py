@@ -1,7 +1,7 @@
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
-from src.parser.parameters.attributes_presence import AttributePresenceChecker
+from src.parser.attributes_presence import AttributePresenceChecker
 from src.parser.resource.schemas import USER
 
 

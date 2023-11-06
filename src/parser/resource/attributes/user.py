@@ -1,13 +1,12 @@
-from src.parser.attributes.validators import validate_single_primary_value
-
-from ..attributes import type as at
-from .attributes import (
+from src.parser.attributes import type as at
+from src.parser.attributes.attributes import (
     Attribute,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
     ComplexAttribute,
 )
+from src.parser.attributes.validators import validate_single_primary_value
 
 user_name = Attribute(
     name="userName",

@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
-from src.parser.parameters.filter.operator import (
+from src.parser.filter.operator import (
     And,
     ComplexAttributeOperator,
     Contains,

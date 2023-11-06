@@ -1,12 +1,11 @@
 from src.parser.attributes import type as at
-
-from ..error import ValidationError, ValidationIssues
-from .attributes import (
+from src.parser.attributes.attributes import (
     Attribute,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
 )
+from src.parser.error import ValidationError, ValidationIssues
 
 
 def validate_error_status(value: str) -> ValidationIssues:

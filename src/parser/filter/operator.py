@@ -24,7 +24,7 @@ from src.parser.attributes.attributes import (
     ComplexAttribute,
     extract,
 )
-from src.parser.resource.schemas import Schema
+from src.parser.schemas import Schema
 
 
 class MatchStatus(Enum):

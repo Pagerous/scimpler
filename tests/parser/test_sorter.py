@@ -1,8 +1,8 @@
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
-from src.parser.parameters.sorter import Sorter
 from src.parser.resource.schemas import USER
+from src.parser.sorter import Sorter
 from tests.parser.conftest import SCHEMA_FOR_TESTS
 
 
