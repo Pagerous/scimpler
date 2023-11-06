@@ -276,15 +276,20 @@ class Attribute:
                 )
                 if self._canonical_values is not None and item not in self._canonical_values:
                     pass  # TODO: warn about non-canonical value
+                for validator in self._validators:
+                    try:
+                        issues.merge(issues=validator(item), location=(i,))
+                    except:  # noqa: only validation procedures that finished matter
+                        pass
         else:
             issues.merge(issues=self._type.validate(value))
             if self._canonical_values is not None and value not in self._canonical_values:
                 pass  # TODO: warn about non-canonical value
-        for validator in self._validators:
-            try:
-                issues.merge(issues=validator(value))
-            except:  # noqa: not interested in exceptions, only validation procedures that finished matter
-                pass
+            for validator in self._validators:
+                try:
+                    issues.merge(issues=validator(value))
+                except:  # noqa: only validation procedures that finished matter
+                    pass
         return issues
 
 
