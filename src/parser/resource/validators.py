@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Sequence
 
-from src.parser.attributes.attributes import extract
+from src.parser.attributes.attributes import AttributeIssuer, extract
 from src.parser.attributes_presence import AttributePresenceChecker
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.filter.filter import Filter
@@ -306,6 +306,12 @@ class ResourceObjectGET:
 class ResourceTypePOST:
     def __init__(self, schema: ResourceSchema):
         self._schema = schema
+        required_to_ignore = []
+        for attr_name in self._schema.all_attr_names:
+            attr = self._schema.get_attr(attr_name)
+            if attr.required and attr.issuer == AttributeIssuer.SERVER:
+                required_to_ignore.append(attr_name)
+        self._required_to_ignore = required_to_ignore
 
     def validate_request(
         self,
@@ -331,7 +337,9 @@ class ResourceTypePOST:
             location=body_location,
         )
         issues.merge(
-            issues=AttributePresenceChecker()(body, self._schema, "REQUEST"),
+            issues=AttributePresenceChecker(ignore_required=self._required_to_ignore)(
+                body, self._schema, "REQUEST"
+            ),
             location=body_location,
         )
         return issues

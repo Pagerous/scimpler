@@ -163,12 +163,19 @@ class AttributeUniqueness(str, Enum):
     GLOBAL = "global"
 
 
+class AttributeIssuer(Enum):
+    SERVER = "SERVER"
+    CLIENT = "CLIENT"
+    NOT_SPECIFIED = "NOT_SPECIFIED"
+
+
 class Attribute:
     def __init__(
         self,
         name: str,
         type_: Type[at.AttributeType],
         reference_types: Optional[Iterable[str]] = None,
+        issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
         required: bool = False,
         case_exact: bool = False,
         multi_valued: bool = False,
@@ -181,6 +188,7 @@ class Attribute:
         self._name = name
         self._type = type_
         self._reference_types = list(reference_types or [])  # TODO validate applicability
+        self._issuer = issuer
         self._required = required
         self._case_exact = case_exact
         self._canonical_values = list(canonical_values) if canonical_values else canonical_values
@@ -205,6 +213,10 @@ class Attribute:
     @property
     def reference_types(self) -> List[str]:
         return self._reference_types
+
+    @property
+    def issuer(self) -> AttributeIssuer:
+        return self._issuer
 
     @property
     def required(self) -> bool:
@@ -299,6 +311,7 @@ class ComplexAttribute(Attribute):
         sub_attributes: Collection[Attribute],
         name: str,
         required: bool = False,
+        issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
         case_exact: bool = False,
         multi_valued: bool = False,
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
@@ -309,6 +322,7 @@ class ComplexAttribute(Attribute):
         super().__init__(
             name=name,
             type_=at.Complex,
+            issuer=issuer,
             required=required,
             case_exact=case_exact,
             multi_valued=multi_valued,

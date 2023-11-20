@@ -1116,6 +1116,8 @@ def test_correct_resource_object_get_response_passes_validation(user_data):
 
 def test_correct_resource_type_post_request_passes_validation(user_data):
     validator = ResourceTypePOST(USER)
+    user_data.pop("id")
+    user_data.pop("meta")
 
     issues = validator.validate_request(body=user_data)
 

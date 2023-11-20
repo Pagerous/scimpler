@@ -10,10 +10,11 @@ class AttributePresenceChecker:
         self,
         attr_names: Optional[Iterable[AttributeName]] = None,
         include: Optional[bool] = None,
+        ignore_required: Optional[Iterable[AttributeName]] = None,
     ):
-        attr_names = list(attr_names or [])
-        self._attr_names = attr_names
+        self._attr_names = list(attr_names or [])
         self._include = include
+        self._ignore_required = list(ignore_required or [])
 
     @classmethod
     def parse(
@@ -77,6 +78,7 @@ class AttributePresenceChecker:
                 if attr.required and (
                     (attr_name in self._attr_names and self._include is True)
                     or (direction == "RESPONSE" and attr.returned == AttributeReturn.ALWAYS)
+                    or (self._ignore_required and attr_name not in self._ignore_required)
                 ):
                     issues.add(
                         issue=ValidationError.missing(),
