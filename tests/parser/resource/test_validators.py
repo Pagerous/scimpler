@@ -8,6 +8,7 @@ from src.parser.resource.schemas import ERROR, USER
 from src.parser.resource.validators import (
     Error,
     ResourceObjectGET,
+    ResourceObjectPUT,
     ResourceTypeGET,
     ResourceTypePOST,
     SearchRequestPOST,
@@ -1120,6 +1121,28 @@ def test_correct_resource_type_post_request_passes_validation(user_data):
     user_data.pop("meta")
 
     issues = validator.validate_request(body=user_data)
+
+    assert issues.to_dict() == {}
+
+
+def test_correct_resource_object_put_request_passes_validation(user_data):
+    validator = ResourceObjectPUT(USER)
+    user_data.pop("id")
+    user_data.pop("meta")
+
+    issues = validator.validate_request(body=user_data)
+
+    assert issues.to_dict() == {}
+
+
+def test_correct_resource_object_put_response_passes_validation(user_data):
+    validator = ResourceObjectPUT(USER)
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=user_data,
+        headers={"Location": user_data["meta"]["location"]},
+    )
 
     assert issues.to_dict() == {}
 

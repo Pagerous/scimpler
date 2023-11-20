@@ -252,6 +252,89 @@ def validate_resource_type_consistency(
     return issues
 
 
+def validate_resource_input(
+    schema: ResourceSchema, body: Optional[Dict[str, Any]] = None
+) -> ValidationIssues:
+    issues = ValidationIssues()
+    body_location = ("request", "body")
+    issues.merge(
+        issues=validate_body_existence(body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_body_type(body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_body_schema(body, schema),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_schemas_field(body, schema),
+        location=body_location,
+    )
+    required_to_ignore = []
+    for attr_name in schema.all_attr_names:
+        attr = schema.get_attr(attr_name)
+        if attr.required and attr.issuer == AttributeIssuer.SERVER:
+            required_to_ignore.append(attr_name)
+    issues.merge(
+        issues=AttributePresenceChecker(ignore_required=required_to_ignore)(
+            body, schema, "REQUEST"
+        ),
+        location=body_location,
+    )
+    return issues
+
+
+def validate_resource_output(
+    schema: ResourceSchema,
+    location_header_required: bool,
+    expected_status_code: int,
+    status_code: int,
+    body: Optional[Dict[str, Any]] = None,
+    headers: Optional[Dict[str, Any]] = None,
+):
+    issues = ValidationIssues()
+    body_location = ("response", "body")
+    issues.merge(
+        issues=validate_body_existence(body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_body_type(body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_body_schema(body, schema),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_schemas_field(body, schema),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_resource_location_in_header(headers, location_header_required),
+        location=("response", "headers"),
+    )
+    issues.merge(
+        issues=validate_resource_type_consistency(body, schema),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_resource_location_consistency(body, headers),
+    )
+    issues.merge(
+        issues=validate_status_code(expected_status_code, status_code),
+        location=("response", "status"),
+    )
+    issues.merge(
+        issues=AttributePresenceChecker()(body, schema, "RESPONSE"),
+        location=body_location,
+    )
+    return issues
+
+
 class ResourceObjectGET:
     def __init__(self, schema: ResourceSchema):
         self._schema = schema
@@ -263,44 +346,42 @@ class ResourceObjectGET:
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
     ) -> ValidationIssues:
-        issues = ValidationIssues()
-        body_location = ("response", "body")
-        issues.merge(
-            issues=validate_body_existence(body),
-            location=body_location,
+        return validate_resource_output(
+            schema=self._schema,
+            location_header_required=True,
+            expected_status_code=200,
+            status_code=status_code,
+            body=body,
+            headers=headers,
         )
-        issues.merge(
-            issues=validate_body_type(body),
-            location=body_location,
+
+
+class ResourceObjectPUT:
+    def __init__(self, schema: ResourceSchema):
+        self._schema = schema
+
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        return validate_resource_input(self._schema, body)
+
+    def validate_response(
+        self,
+        *,
+        status_code: int,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        return validate_resource_output(
+            schema=self._schema,
+            location_header_required=False,
+            expected_status_code=200,
+            status_code=status_code,
+            body=body,
+            headers=headers,
         )
-        issues.merge(
-            issues=validate_body_schema(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_schemas_field(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resource_location_in_header(headers, False),
-            location=("response", "headers"),
-        )
-        issues.merge(
-            issues=validate_resource_type_consistency(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resource_location_consistency(body, headers),
-        )
-        issues.merge(
-            issues=validate_status_code(200, status_code),
-            location=("response", "status"),
-        )
-        issues.merge(
-            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
-            location=body_location,
-        )
-        return issues
 
 
 class ResourceTypePOST:
@@ -318,31 +399,7 @@ class ResourceTypePOST:
         *,
         body: Optional[Dict[str, Any]] = None,
     ) -> ValidationIssues:
-        issues = ValidationIssues()
-        body_location = ("request", "body")
-        issues.merge(
-            issues=validate_body_existence(body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_body_type(body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_body_schema(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_schemas_field(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=AttributePresenceChecker(ignore_required=self._required_to_ignore)(
-                body, self._schema, "REQUEST"
-            ),
-            location=body_location,
-        )
-        return issues
+        return validate_resource_input(self._schema, body)
 
     def validate_response(
         self,
@@ -355,39 +412,14 @@ class ResourceTypePOST:
         if not body:
             return issues  # TODO: warn missing response body
 
-        body_location = ("response", "body")
-        issues.merge(
-            issues=validate_body_type(body),
-            location=body_location,
+        return validate_resource_output(
+            schema=self._schema,
+            location_header_required=True,
+            expected_status_code=201,
+            status_code=status_code,
+            body=body,
+            headers=headers,
         )
-        issues.merge(
-            issues=validate_body_schema(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resource_location_in_header(headers, True),
-            location=("response", "headers"),
-        )
-        issues.merge(
-            issues=validate_resource_type_consistency(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_resource_location_consistency(body, headers),
-        )
-        issues.merge(
-            issues=validate_status_code(201, status_code),
-            location=("response", "status"),
-        )
-        issues.merge(
-            issues=validate_schemas_field(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
-            location=body_location,
-        )
-        return issues
 
 
 def validate_request_sorting(query_string: Any) -> ValidationIssues:
