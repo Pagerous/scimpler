@@ -42,10 +42,7 @@ class Schema(abc.ABC):
     def __repr__(self) -> str:
         return self._repr
 
-    def get_attr(
-        self,
-        attr_name: AttributeName,
-    ) -> Optional[Union[Attribute, ComplexAttribute]]:
+    def get_attr(self, attr_name: AttributeName) -> Optional[Union[Attribute, ComplexAttribute]]:
         if (
             attr_name.schema
             and attr_name.schema not in self.schemas
@@ -78,6 +75,10 @@ class ResourceSchema(Schema, abc.ABC):
     def schemas(self) -> List[str]:
         return ["urn:ietf:params:scim:schemas:core:2.0:user"] + list(self._schema_extensions)
 
+    @property
+    def schema_extensions(self) -> List[str]:
+        return list(self._schema_extensions)
+
     def with_extension(
         self, extension: "SchemaExtension", required: bool = False
     ) -> "ResourceSchema":
@@ -102,7 +103,7 @@ class ResourceSchema(Schema, abc.ABC):
 
 class SchemaExtension:
     def __init__(self, schema: str, attrs: Iterable[Attribute]):
-        self._schema = schema
+        self._schema = schema.lower()
         self._attrs = list(attrs)
 
     @property

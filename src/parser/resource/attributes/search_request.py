@@ -1,17 +1,32 @@
+from typing import List, Optional, Tuple
+
 from src.parser.attributes import type as at
 from src.parser.attributes.attributes import Attribute, AttributeName
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.filter.filter import Filter
 
 
-def validate_attr_name(value: str) -> ValidationIssues:
+def parse_attr_name(value: str) -> Tuple[Optional[AttributeName], ValidationIssues]:
     issues = ValidationIssues()
-    if AttributeName.parse(value) is None:
+    parsed = AttributeName.parse(value)
+    if parsed is None:
         issues.add(
             issue=ValidationError.bad_attribute_name(str(value)),
             proceed=False,
         )
-    return issues
+    return parsed, issues
+
+
+def parse_attr_name_multi(
+    value: List[str],
+) -> Tuple[List[Optional[AttributeName]], ValidationIssues]:
+    issues = ValidationIssues()
+    parsed = []
+    for i, item in enumerate(value):
+        parsed_item, issues_ = parse_attr_name(item)
+        issues.merge(issues=issues_, location=(i,))
+        parsed.append(parsed_item)
+    return parsed, issues
 
 
 attributes = Attribute(
@@ -20,7 +35,7 @@ attributes = Attribute(
     required=False,
     case_exact=False,
     multi_valued=True,
-    validators=[validate_attr_name],
+    parsers=[parse_attr_name_multi],
 )
 
 
@@ -30,19 +45,19 @@ exclude_attributes = Attribute(
     required=False,
     case_exact=False,
     multi_valued=True,
-    validators=[validate_attr_name],
+    parsers=[parse_attr_name_multi],
 )
 
 
-def validate_filter(value: str):
-    return Filter.parse(value)[1]
+def parse_filter(value: str) -> Tuple[Optional[Filter], ValidationIssues]:
+    return Filter.parse(value)
 
 
 filter_ = Attribute(
     name="filter",
     type_=at.String,
     required=False,
-    validators=[validate_filter],
+    parsers=[parse_filter],
 )
 
 
@@ -50,7 +65,7 @@ sort_by = Attribute(
     name="sortBy",
     type_=at.String,
     required=False,
-    validators=[validate_attr_name],
+    parsers=[parse_attr_name],
 )
 
 

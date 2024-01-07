@@ -278,7 +278,8 @@ emails = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_single_primary_value],
+    parsers=[validate_single_primary_value],
+    dumpers=[validate_single_primary_value],
 )
 
 # TODO: make proper validation (warn) according to RFC3966 https://datatracker.ietf.org/doc/html/rfc3966
@@ -341,7 +342,8 @@ phone_numbers = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_single_primary_value],
+    parsers=[validate_single_primary_value],
+    dumpers=[validate_single_primary_value],
 )
 
 # TODO: warn if value contain whitespaces and isn't lowercase
@@ -404,7 +406,8 @@ ims = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_single_primary_value],
+    parsers=[validate_single_primary_value],
+    dumpers=[validate_single_primary_value],
 )
 
 _photos_value = Attribute(
@@ -466,7 +469,8 @@ photos = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_single_primary_value],
+    parsers=[validate_single_primary_value],
+    dumpers=[validate_single_primary_value],
 )
 
 _addresses_formatted = Attribute(
@@ -687,7 +691,8 @@ entitlements = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_single_primary_value],
+    parsers=[validate_single_primary_value],
+    dumpers=[validate_single_primary_value],
 )
 
 _roles_value = Attribute(
@@ -748,7 +753,8 @@ roles = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_single_primary_value],
+    parsers=[validate_single_primary_value],
+    dumpers=[validate_single_primary_value],
 )
 
 _x509_certificates_value = Attribute(
@@ -809,5 +815,6 @@ x509_certificates = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_single_primary_value],
+    parsers=[validate_single_primary_value],
+    dumpers=[validate_single_primary_value],
 )

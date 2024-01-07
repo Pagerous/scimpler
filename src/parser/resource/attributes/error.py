@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 from src.parser.attributes import type as at
 from src.parser.attributes.attributes import (
     Attribute,
@@ -8,7 +10,7 @@ from src.parser.attributes.attributes import (
 from src.parser.error import ValidationError, ValidationIssues
 
 
-def validate_error_status(value: str) -> ValidationIssues:
+def parse_error_status(value: str) -> Tuple[Optional[int], ValidationIssues]:
     issues = ValidationIssues()
     try:
         value = int(value)
@@ -17,15 +19,16 @@ def validate_error_status(value: str) -> ValidationIssues:
             issue=ValidationError.bad_error_status(value),
             proceed=False,
         )
+        return None, issues
     if not 300 <= value < 600:
         issues.add(
             issue=ValidationError.bad_error_status(value),
-            proceed=False,
+            proceed=True,
         )
-    return issues
+    return value, issues
 
 
-def validate_error_scim_type(value: str) -> ValidationIssues:
+def validate_error_scim_type(value: str) -> Tuple[Optional[str], ValidationIssues]:
     scim_types = [
         "invalidFilter",
         "tooMany",
@@ -44,7 +47,8 @@ def validate_error_scim_type(value: str) -> ValidationIssues:
             issue=ValidationError.must_be_one_of(scim_types, value),
             proceed=False,
         )
-    return issues
+        return None, issues
+    return value, issues
 
 
 status = Attribute(
@@ -56,7 +60,7 @@ status = Attribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_error_status],
+    parsers=[parse_error_status],
 )
 
 
@@ -69,7 +73,8 @@ scim_type = Attribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,
-    validators=[validate_error_scim_type],
+    parsers=[validate_error_scim_type],
+    dumpers=[validate_error_scim_type],
 )
 
 detail = Attribute(

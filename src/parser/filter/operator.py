@@ -97,12 +97,12 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         self,
         *sub_operators: Union["LogicalOperator", "AttributeOperator", "ComplexAttribute"],
     ):
-        self._sub_operators = sub_operators
+        self._sub_operators = list(sub_operators)
 
     @property
     def sub_operators(
         self,
-    ) -> Tuple[Union["LogicalOperator", "AttributeOperator", "ComplexAttribute"]]:
+    ) -> List[Union["LogicalOperator", "AttributeOperator", "ComplexAttribute"]]:
         return self._sub_operators
 
     def _collect_matches(
@@ -303,7 +303,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
                 return None
 
             if (
-                not isinstance(self.value, value_sub_attr.type.TYPE)
+                not isinstance(self.value, value_sub_attr.type.PARSE_TYPE)
                 and type(self.value) not in value_sub_attr.type.COMPATIBLE_TYPES
             ):
                 return None
@@ -315,7 +315,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         else:
             if (
-                not isinstance(self.value, attr.type.TYPE)
+                not isinstance(self.value, attr.type.PARSE_TYPE)
                 and type(self.value) not in attr.type.COMPATIBLE_TYPES
             ):
                 return None

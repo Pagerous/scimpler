@@ -8,6 +8,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Tuple,
     Type,
     Union,
 )
@@ -148,7 +149,7 @@ def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optio
         if (
             _URI_PREFIX.fullmatch(f"{k}:")
             and isinstance(v, Dict)
-            and attr_name.attr in map(str.lower, v)
+            and attr_name.attr in map(lambda x: x.lower(), v)
         ):
             used_extension = True
             top_value = v
@@ -211,7 +212,8 @@ class Attribute:
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        validators: Optional[Collection[Callable[[Any], ValidationIssues]]] = None,
+        parsers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
+        dumpers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
     ):
         self._name = name
         self._type = type_
@@ -224,7 +226,8 @@ class Attribute:
         self._mutability = mutability
         self._returned = returned
         self._uniqueness = uniqueness
-        self._validators = validators or []
+        self._parsers = parsers or []
+        self._dumpers = dumpers or []
 
     @property
     def name(self) -> str:
@@ -293,14 +296,15 @@ class Attribute:
                 self._mutability == other._mutability,
                 self._returned == other._returned,
                 self._uniqueness == other._uniqueness,
-                self._validators == other._validators,
+                self._parsers == other._parsers,
+                self._dumpers == other._dumpers,
             ]
         )
 
-    def validate(self, value: Any) -> ValidationIssues:
+    def _process(self, value: Any, method, postprocessors) -> Tuple[Any, ValidationIssues]:
         issues = ValidationIssues()
         if value is None:
-            return issues
+            return value, issues
 
         if self._multi_valued:
             if not isinstance(value, (list, tuple)):
@@ -308,29 +312,41 @@ class Attribute:
                     issue=ValidationError.bad_multivalued_attribute_type(type(value)),
                     proceed=False,
                 )
-                return issues
+                return None, issues
+            parsed = []
             for i, item in enumerate(value):
-                issues.merge(
-                    location=(i,),
-                    issues=self._type.validate(item),
-                )
+                item, issues_ = method(item)
+                issues.merge(location=(i,), issues=issues_)
                 if self._canonical_values is not None and item not in self._canonical_values:
                     pass  # TODO: warn about non-canonical value
-                for validator in self._validators:
-                    try:
-                        issues.merge(issues=validator(item), location=(i,))
-                    except:  # noqa: only validation procedures that finished matter
-                        pass
+                parsed.append(item)
         else:
-            issues.merge(issues=self._type.validate(value))
-            if self._canonical_values is not None and value not in self._canonical_values:
+            parsed, issues_ = method(value)
+            issues.merge(issues=issues_)
+            if self._canonical_values is not None and parsed not in self._canonical_values:
                 pass  # TODO: warn about non-canonical value
-            for validator in self._validators:
-                try:
-                    issues.merge(issues=validator(value))
-                except:  # noqa: only validation procedures that finished matter
-                    pass
-        return issues
+
+        for postprocessor in postprocessors:
+            try:
+                parsed, issues_ = postprocessor(parsed)
+                issues.merge(issues=issues_)
+            except:  # noqa: only validation procedures that finished matter
+                parsed = None
+        return parsed, issues
+
+    def parse(self, value: Any) -> Tuple[Any, ValidationIssues]:
+        return self._process(
+            value=value,
+            method=self._type.parse,
+            postprocessors=self._parsers,
+        )
+
+    def dump(self, value: Any) -> Tuple[Any, ValidationIssues]:
+        return self._process(
+            value=value,
+            method=self._type.dump,
+            postprocessors=self._dumpers,
+        )
 
 
 class ComplexAttribute(Attribute):
@@ -345,7 +361,8 @@ class ComplexAttribute(Attribute):
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        validators: Optional[Collection[Callable[[Any], ValidationIssues]]] = None,
+        parsers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
+        dumpers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
     ):
         super().__init__(
             name=name,
@@ -357,7 +374,8 @@ class ComplexAttribute(Attribute):
             mutability=mutability,
             returned=returned,
             uniqueness=uniqueness,
-            validators=validators,
+            parsers=parsers,
+            dumpers=dumpers,
         )
         self._sub_attributes: Dict[str, Attribute] = {attr.name: attr for attr in sub_attributes}
 
@@ -365,23 +383,32 @@ class ComplexAttribute(Attribute):
     def sub_attributes(self) -> Dict[str, Attribute]:
         return self._sub_attributes
 
-    def validate(self, value: Any) -> ValidationIssues:
-        issues = super().validate(value)
+    def _process_complex(self, value: Any, method: str) -> Tuple[Any, ValidationIssues]:
+        value, issues = getattr(super(), method)(value)
         if not issues.can_proceed() or value is None:
-            return issues
+            return value, issues
         if self.multi_valued:
+            parsed = []
             for i, item in enumerate(value):
+                parsed_item = {}
                 for attr_name, attr in self._sub_attributes.items():
-                    issues.merge(
-                        location=(i, attr.name),
-                        issues=attr.validate(
-                            extract(attr_name, item)
-                        ),  # TODO: use AttributeName in constructor
-                    )
+                    parsed_attr, issues_ = getattr(attr, method)(extract(attr_name, item))
+                    issues.merge(location=(i, attr.name), issues=issues_)
+                    parsed_item[attr.name] = parsed_attr
+                parsed.append(parsed_item)
         else:
+            parsed = {}
             for attr_name, attr in self._sub_attributes.items():
+                parsed_attr, issues_ = getattr(attr, method)(extract(attr_name, value))
                 issues.merge(
                     location=(attr.name,),
-                    issues=attr.validate(extract(attr_name, value)),
+                    issues=issues_,
                 )
-        return issues
+                parsed[attr.name] = parsed_attr
+        return parsed, issues
+
+    def parse(self, value: Any) -> Tuple[Optional[Union[Dict, List[Dict]]], ValidationIssues]:
+        return self._process_complex(value, "parse")
+
+    def dump(self, value: Any) -> Tuple[Optional[Union[Dict, List[Dict]]], ValidationIssues]:
+        return self._process_complex(value, "dump")

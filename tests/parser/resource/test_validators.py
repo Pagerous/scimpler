@@ -1,3 +1,6 @@
+from copy import deepcopy
+from datetime import datetime
+
 import pytest
 
 from src.parser.attributes.attributes import AttributeName
@@ -13,24 +16,24 @@ from src.parser.resource.validators import (
     ResourceTypePOST,
     SearchRequestPOST,
     ServerRootResourceGET,
+    dump_resources,
     infer_schema_from_data,
-    validate_body_existence,
-    validate_body_schema,
-    validate_body_type,
+    parse_body,
+    parse_request_filtering,
+    parse_request_sorting,
+    parse_requested_attributes,
+    validate_dict_type,
     validate_error_status_code,
     validate_error_status_code_consistency,
+    validate_existence,
     validate_items_per_page_consistency,
     validate_number_of_resources,
     validate_pagination_info,
-    validate_request_filtering,
-    validate_request_sorting,
-    validate_requested_attributes,
     validate_resource_location_consistency,
     validate_resource_location_in_header,
     validate_resource_type_consistency,
     validate_resources_attribute_presence,
     validate_resources_filtered,
-    validate_resources_schema,
     validate_resources_schemas_field,
     validate_resources_sorted,
     validate_schemas_field,
@@ -41,7 +44,7 @@ from src.parser.sorter import Sorter
 
 
 @pytest.fixture
-def user_data():
+def user_data_dump():
     return {
         "schemas": [
             "urn:ietf:params:scim:schemas:core:2.0:User",
@@ -51,8 +54,8 @@ def user_data():
         "externalId": "bjensen",
         "meta": {
             "resourceType": "User",
-            "created": "2011-08-01T18:29:49.793Z",
-            "lastModified": "2011-08-01T18:29:49.793Z",
+            "created": datetime(2011, 8, 1, 18, 29, 49),
+            "lastModified": datetime(2011, 8, 1, 18, 29, 49),
             "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
             "version": r"W\/\"f250dd84f0671c3\"",
         },
@@ -80,6 +83,14 @@ def user_data():
 
 
 @pytest.fixture
+def user_data_parse(user_data_dump):
+    data = deepcopy(user_data_dump)
+    data["meta"]["created"] = user_data_dump["meta"]["created"].isoformat()
+    data["meta"]["lastModified"] = user_data_dump["meta"]["lastModified"].isoformat()
+    return data
+
+
+@pytest.fixture
 def error_data():
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
@@ -104,8 +115,8 @@ def list_user_data():
                 "externalId": "bjensen",
                 "meta": {
                     "resourceType": "User",
-                    "created": "2011-08-01T18:29:49.793Z",
-                    "lastModified": "2011-08-01T18:29:49.793Z",
+                    "created": datetime(2011, 8, 1, 18, 29, 49),
+                    "lastModified": datetime(2011, 8, 1, 18, 29, 49),
                     "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
                     "version": r"W\/\"f250dd84f0671c3\"",
                 },
@@ -148,8 +159,8 @@ def list_user_data():
                 "externalId": "bjensen",
                 "meta": {
                     "resourceType": "User",
-                    "created": "2011-08-01T18:29:49.793Z",
-                    "lastModified": "2011-08-01T18:29:49.793Z",
+                    "created": datetime(2011, 8, 1, 18, 29, 49),
+                    "lastModified": datetime(2011, 8, 1, 18, 29, 49),
                     "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
                     "version": r"W\/\"f250dd84f0671c3\"",
                 },
@@ -191,7 +202,7 @@ def list_user_data():
     ("body", "expected"), (({}, {}), (None, {"_errors": [{"code": 15}]}), ({"a": 1, "b": 2}, {}))
 )
 def test_validate_body_existence(body, expected):
-    issues = validate_body_existence(body)
+    issues = validate_existence(body)
 
     assert issues.to_dict() == expected
 
@@ -200,20 +211,20 @@ def test_validate_body_existence(body, expected):
     ("body", "expected"), (({}, {}), ([], {"_errors": [{"code": 18}]}), ({"a": 1, "b": 2}, {}))
 )
 def test_validate_body_type(body, expected):
-    issues = validate_body_type(body)
+    issues = validate_dict_type(body)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_body_schema__succeeds_for_correct_data(user_data):
-    issues = validate_body_schema(user_data, USER)
+def test_parse_body__succeeds_for_correct_data(user_data_parse):
+    body, issues = parse_body(user_data_parse, USER)
 
     assert issues.to_dict() == {}
 
 
-def test_validate_body_schema__fails_for_incorrect_data(user_data):
-    user_data["userName"] = 123  # noqa
-    user_data["name"]["givenName"] = 123  # noqa
+def test_parse_body__fails_for_incorrect_data(user_data_parse):
+    user_data_parse["userName"] = 123  # noqa
+    user_data_parse["name"]["givenName"] = 123  # noqa
     expected = {
         "username": {
             "_errors": [
@@ -233,66 +244,58 @@ def test_validate_body_schema__fails_for_incorrect_data(user_data):
         },
     }
 
-    issues = validate_body_schema(user_data, USER)
+    body, issues = parse_body(user_data_parse, USER)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_schemas_field__succeeds_for_correct_data(user_data):
-    issues = validate_schemas_field(user_data, USER)
+def test_validate_schemas_field__succeeds_for_correct_data(user_data_dump):
+    issues = validate_schemas_field(user_data_dump, USER)
 
     assert issues.to_dict() == {}
 
 
-def test_validate_schemas_field__skips_if_bad_schemas_type(user_data):
-    user_data["schemas"] = 123  # noqa
-
-    issues = validate_schemas_field(user_data, USER)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_schemas_field__fails_if_non_matching_schema(user_data):
-    user_data["schemas"].append("bad:user:schema")
+def test_validate_schemas_field__fails_if_non_matching_schema(user_data_dump):
+    user_data_dump["schemas"].append("bad:user:schema")
     expected = {"schemas": {"_errors": [{"code": 27}]}}
 
-    issues = validate_schemas_field(user_data, USER)
+    issues = validate_schemas_field(user_data_dump, USER)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data):
-    user_data["schemas"] = ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
+def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data_dump):
+    user_data_dump["schemas"] = ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
     expected = {"schemas": {"_errors": [{"code": 28}]}}
 
-    issues = validate_schemas_field(user_data, USER)
+    issues = validate_schemas_field(user_data_dump, USER)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_schemas_field__fails_if_extension_schema_is_missing(user_data):
-    user_data["schemas"] = ["urn:ietf:params:scim:schemas:core:2.0:User"]
+def test_validate_schemas_field__fails_if_extension_schema_is_missing(user_data_dump):
+    user_data_dump["schemas"] = ["urn:ietf:params:scim:schemas:core:2.0:User"]
     expected = {"schemas": {"_errors": [{"code": 29}]}}
 
-    issues = validate_schemas_field(user_data, USER)
+    issues = validate_schemas_field(user_data_dump, USER)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_schemas_field__multiple_errors(user_data):
-    user_data["schemas"] = ["bad:user:schema"]
+def test_validate_schemas_field__multiple_errors(user_data_dump):
+    user_data_dump["schemas"] = ["bad:user:schema"]
     expected = {"schemas": {"_errors": [{"code": 27}, {"code": 28}, {"code": 29}]}}
 
-    issues = validate_schemas_field(user_data, USER)
+    issues = validate_schemas_field(user_data_dump, USER)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_schemas_field__skips_schema_items_with_bad_type(user_data):
-    user_data["schemas"].extend([123, "bad:user:schema"])
+def test_validate_schemas_field__skips_schema_items_with_bad_type(user_data_dump):
+    user_data_dump["schemas"].extend([123, "bad:user:schema"])
     expected = {"schemas": {"_errors": [{"code": 27}]}}
 
-    issues = validate_schemas_field(user_data, USER)
+    issues = validate_schemas_field(user_data_dump, USER)
 
     assert issues.to_dict() == expected
 
@@ -352,7 +355,7 @@ def test_validate_resource_location_in_header(headers, header_required, expected
     assert issues.to_dict() == expected
 
 
-def test_validate_resource_location_consistency__fails_if_no_consistency(user_data):
+def test_validate_resource_location_consistency__fails_if_no_consistency(user_data_dump):
     headers = {"Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904647"}
     expected = {
         "response": {
@@ -379,28 +382,15 @@ def test_validate_resource_location_consistency__fails_if_no_consistency(user_da
         }
     }
 
-    issues = validate_resource_location_consistency(user_data, headers)
+    issues = validate_resource_location_consistency(user_data_dump, headers)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_resource_location_consistency__skips_if_body_not_dict():
-    headers = {"Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904647"}
-    issues = validate_resource_location_consistency(None, headers)
+def test_validate_resource_location_consistency__succeeds_if_consistency(user_data_dump):
+    headers = {"Location": user_data_dump["meta"]["location"]}
 
-    assert issues.to_dict() == {}
-
-
-def test_validate_resource_location_consistency__skips_if_headers_not_dict(user_data):
-    issues = validate_resource_location_consistency(user_data, None)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resource_location_consistency__succeeds_if_consistency(user_data):
-    headers = {"Location": user_data["meta"]["location"]}
-
-    issues = validate_resource_location_consistency(user_data, headers)
+    issues = validate_resource_location_consistency(user_data_dump, headers)
 
     assert issues.to_dict() == {}
 
@@ -415,8 +405,8 @@ def test_validate_status_code(status_code, expected):
     assert issues.to_dict() == expected
 
 
-def test_validate_resource_type_consistency__fails_if_no_consistency(user_data):
-    user_data["meta"]["resourceType"] = "Group"
+def test_validate_resource_type_consistency__fails_if_no_consistency(user_data_dump):
+    user_data_dump["meta"]["resourceType"] = "Group"
     expected = {
         "meta": {
             "resourcetype": {
@@ -429,19 +419,13 @@ def test_validate_resource_type_consistency__fails_if_no_consistency(user_data):
         }
     }
 
-    issues = validate_resource_type_consistency(user_data, USER)
+    issues = validate_resource_type_consistency(user_data_dump, USER)
 
     assert issues.to_dict() == expected
 
 
-def test_validate_resource_type_consistency__skips_if_bad_body():
-    issues = validate_resource_type_consistency(None, USER)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resource_type_consistency__succeeds_if_consistency(user_data):
-    issues = validate_resource_type_consistency(user_data, USER)
+def test_validate_resource_type_consistency__succeeds_if_consistency(user_data_dump):
+    issues = validate_resource_type_consistency(user_data_dump, USER)
 
     assert issues.to_dict() == {}
 
@@ -487,32 +471,6 @@ def test_validate_number_of_resources__succeeds_if_correct_number_of_resources(
     assert issues.to_dict() == {}
 
 
-def test_validate_number_of_resources__skips_if_bad_body_type():
-    count = 1
-
-    issues = validate_number_of_resources(count, None)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_number_of_resources__skips_if_bad_total_results_type(list_user_data):
-    count = 1
-    list_user_data["totalResults"] = "2"  # noqa
-
-    issues = validate_number_of_resources(count, list_user_data)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_number_of_resources__fails_if_bad_resources_type(list_user_data):
-    count = 1
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_number_of_resources(count, list_user_data)
-
-    assert issues.to_dict() == {}
-
-
 def test_validate_pagination_info__fails_if_start_index_is_missing_when_pagination(list_user_data):
     count = 2
     list_user_data["itemsPerPage"] = 1
@@ -552,32 +510,6 @@ def test_validate_pagination_info__correct_data_when_pagination(list_user_data):
     assert issues.to_dict() == {}
 
 
-def test_validate_pagination_info__skips_if_bad_body_type():
-    count = 1
-
-    issues = validate_pagination_info(count, None)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_pagination_info__skips_if_bad_total_results_type(list_user_data):
-    count = 1
-    list_user_data["totalResults"] = "2"  # noqa
-
-    issues = validate_pagination_info(count, list_user_data)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_pagination_info__fails_if_bad_resources_type(list_user_data):
-    count = 1
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_pagination_info(count, list_user_data)
-
-    assert issues.to_dict() == {}
-
-
 def test_validate_start_index_consistency__fails_if_start_index_bigger_than_requested(
     list_user_data,
 ):
@@ -597,23 +529,6 @@ def test_validate_start_index_consistency__fails_if_start_index_bigger_than_requ
 def test_validate_start_index_consistency__succeeds_if_correct_data(list_user_data):
     start_index = 1
     list_user_data["startIndex"] = 1
-
-    issues = validate_start_index_consistency(start_index, list_user_data)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_start_index_consistency__skips_if_bad_body_type():
-    start_index = 1
-
-    issues = validate_start_index_consistency(start_index, None)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_start_index_consistency__skips_if_bad_start_index_type(list_user_data):
-    start_index = 1
-    list_user_data["startIndex"] = "123"
 
     issues = validate_start_index_consistency(start_index, list_user_data)
 
@@ -640,65 +555,38 @@ def test_validate_items_per_page_consistency__succeeds_if_correct_data(list_user
     assert issues.to_dict() == {}
 
 
-def test_validate_items_per_page__skips_if_bad_body_type():
-    issues = validate_items_per_page_consistency(None)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_items_per_page__skips_if_bad_items_per_page_type(list_user_data):
-    list_user_data["itemsPerPage"] = "123"
-
-    issues = validate_items_per_page_consistency(list_user_data)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_schema__fails_for_bad_resource_schema(list_user_data):
+def test_dump_resources__fails_for_bad_resource_schema(list_user_data):
     list_user_data["Resources"][0]["userName"] = 123  # noqa
     list_user_data["Resources"][1]["userName"] = 123  # noqa
     expected = {
         "resources": {
-            "0": {"username": {"_errors": [{"code": 2}]}},
-            "1": {"username": {"_errors": [{"code": 2}]}},
+            "0": {"username": {"_errors": [{"code": 31}]}},
+            "1": {"username": {"_errors": [{"code": 31}]}},
         }
     }
 
-    issues = validate_resources_schema(list_user_data, [USER])
+    body, issues = dump_resources(list_user_data, [USER, USER])
 
     assert issues.to_dict() == expected
 
 
-def test_validate_resources_schema__succeeds_for_correct_data(list_user_data):
-    issues = validate_resources_schema(list_user_data, [USER])
+def test_dump_resources__succeeds_for_correct_data(list_user_data):
+    body, issues = dump_resources(list_user_data, [USER])
 
     assert issues.to_dict() == {}
 
 
-def test_validate_resources_schema__skips_if_bad_body_type():
-    issues = validate_resources_schema(None, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_schema__skips_if_bad_resources_type(list_user_data):
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_resources_schema(list_user_data, USER)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_schema__resources_with_bad_type_are_not_validated(list_user_data):
+def test_dump_resources__resources_with_bad_type_are_reported(list_user_data):
     list_user_data["Resources"][0] = []  # noqa
     list_user_data["Resources"][1]["userName"] = 123  # noqa
     expected = {
         "resources": {
-            "1": {"username": {"_errors": [{"code": 2}]}},
+            "0": {"_errors": [{"code": 18}]},
+            "1": {"username": {"_errors": [{"code": 31}]}},
         }
     }
 
-    issues = validate_resources_schema(list_user_data, [USER])
+    body, issues = dump_resources(list_user_data, [USER, USER])
 
     assert issues.to_dict() == expected
 
@@ -711,7 +599,7 @@ def test_validate_resources_schema__resources_with_bad_type_are_not_validated(li
     ),
 )
 def test_validate_request_sorting(query_string, expected):
-    issues = validate_request_sorting(query_string)
+    _, issues = parse_request_sorting(query_string)
 
     assert issues.to_dict() == expected
 
@@ -729,7 +617,6 @@ def test_validate_request_sorting(query_string, expected):
             },
         ),
         ({}, {}),
-        (None, {}),
         (
             {"attributes": ["userName", "bad^attr"]},
             {"attributes": {"bad^attr": {"_errors": [{"code": 111}]}}},
@@ -741,7 +628,7 @@ def test_validate_request_sorting(query_string, expected):
     ),
 )
 def test_validate_requested_attributes(query_string, expected):
-    issues = validate_requested_attributes(query_string)
+    _, issues = parse_requested_attributes(query_string)
 
     assert issues.to_dict() == expected
 
@@ -755,7 +642,7 @@ def test_validate_requested_attributes(query_string, expected):
     ),
 )
 def test_validate_request_filtering(query_string, expected):
-    issues = validate_request_filtering(query_string)
+    _, issues = parse_request_filtering(query_string)
 
     assert issues.to_dict() == expected
 
@@ -787,40 +674,6 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
     assert issues.to_dict() == expected
 
 
-def test_validate_resources_filtered__skips_if_bad_body_type():
-    filter_, _ = Filter.parse("userName pr")
-
-    issues = validate_resources_filtered(None, filter_, USER, False)
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_filtered__skips_if_bad_resources_type(list_user_data):
-    filter_, _ = Filter.parse("userName pr")
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_resources_filtered(list_user_data, filter_, USER, False)
-
-    assert issues.to_dict() == {}
-
-
-@pytest.mark.parametrize(
-    "filter_exp",
-    (
-        'emails[value eq "sven@example.com"]',
-        'emails eq "sven@example.com"',
-        'name.familyName eq "Sven"',
-    ),
-)
-def test_validate_resources_filtered__ignores_resources_with_bad_type(filter_exp, list_user_data):
-    filter_, _ = Filter.parse(filter_exp)
-    list_user_data["Resources"][0] = []  # noqa
-
-    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
-
-    assert issues.to_dict() == {}
-
-
 def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
     filter_, _ = Filter.parse('meta.resourcetype eq "user"')  # "user", not "User"
     expected = {
@@ -842,7 +695,7 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
+    issues = validate_resources_filtered(list_user_data, filter_, [USER, USER], False)
 
     assert issues.to_dict() == expected
 
@@ -921,58 +774,9 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
 def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
     expected = {"resources": {"_errors": [{"code": 26}]}}
 
-    issues = validate_resources_sorted(sorter, list_user_data, [USER])
+    issues = validate_resources_sorted(sorter, list_user_data, [USER, USER])
 
     assert issues.to_dict() == expected
-
-
-def test_validate_resources_sorted__skips_if_errors_during_sorting(list_user_data):
-    sorter = Sorter(
-        AttributeName(attr="name", sub_attr="familyName"),
-        asc=False,
-    )
-    list_user_data["Resources"][0]["name"]["familyName"] = 123  # noqa; can't compare int to str
-
-    issues = validate_resources_sorted(sorter, list_user_data, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_sorted__skips_if_bad_body_type():
-    sorter = Sorter(
-        AttributeName(attr="name", sub_attr="familyName"),
-        asc=False,
-    )
-
-    issues = validate_resources_sorted(sorter, None, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_sorted__skips_if_bad_resources_type(list_user_data):
-    sorter = Sorter(AttributeName(attr="name", sub_attr="familyName"), asc=False)
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_resources_sorted(sorter, list_user_data, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_attribute_presence__skips_if_bad_body_type():
-    checker = AttributePresenceChecker()
-
-    issues = validate_resources_attribute_presence(checker, None, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_attribute_presence__skips_if_bad_resources_type(list_user_data):
-    checker = AttributePresenceChecker()
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_resources_attribute_presence(checker, None, [USER])
-
-    assert issues.to_dict() == {}
 
 
 def test_validate_resources_attribute_presence__fails_if_requested_attribute_not_excluded(
@@ -1002,7 +806,7 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
         }
     }
 
-    issues = validate_resources_attribute_presence(checker, list_user_data, [USER])
+    issues = validate_resources_attribute_presence(checker, list_user_data, [USER, USER])
 
     assert issues.to_dict() == expected
 
@@ -1027,7 +831,7 @@ def test_validate_resources_attribute_presence__invalid_resources_are_skipped(
         }
     }
 
-    issues = validate_resources_attribute_presence(checker, list_user_data, [USER])
+    issues = validate_resources_attribute_presence(checker, list_user_data, [USER, USER])
 
     assert issues.to_dict() == expected
 
@@ -1036,23 +840,9 @@ def test_validate_resources_schemas_field__bad_schemas_is_discovered(list_user_d
     list_user_data["Resources"][1]["schemas"].append("bad:user:schema")
     expected = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
 
-    issues = validate_resources_schemas_field(list_user_data, [USER])
+    issues = validate_resources_schemas_field(list_user_data, [USER, USER])
 
     assert issues.to_dict() == expected
-
-
-def test_validate_resources_schemas_field__skips_if_bad_body_type():
-    issues = validate_resources_schemas_field(None, [USER])
-
-    assert issues.to_dict() == {}
-
-
-def test_validate_resources_schemas_field__skips_if_bad_resources_type(list_user_data):
-    list_user_data["Resources"] = {1: 2}  # noqa
-
-    issues = validate_resources_schemas_field(list_user_data, USER)
-
-    assert issues.to_dict() == {}
 
 
 @pytest.mark.parametrize(
@@ -1098,73 +888,84 @@ def test_infer_schema_from_data(data, expected):
 def test_correct_error_response_passes_validation(error_data):
     validator = Error()
 
-    issues = validator.validate_response(status_code=400, body=error_data)
+    data, issues = validator.dump_response(status_code=400, body=error_data)
 
     assert issues.to_dict() == {}
+    assert data.body is not None
 
 
-def test_correct_resource_object_get_response_passes_validation(user_data):
+def test_correct_resource_object_get_response_passes_validation(user_data_dump):
     validator = ResourceObjectGET(USER)
 
-    issues = validator.validate_response(
+    data, issues = validator.dump_response(
         status_code=200,
-        body=user_data,
-        headers={"Location": user_data["meta"]["location"]},
+        body=user_data_dump,
+        headers={"Location": user_data_dump["meta"]["location"]},
     )
 
     assert issues.to_dict() == {}
+    assert data.body is not None
+    assert data.headers is not None
 
 
-def test_correct_resource_type_post_request_passes_validation(user_data):
+def test_correct_resource_type_post_request_passes_validation(user_data_dump):
     validator = ResourceTypePOST(USER)
-    user_data.pop("id")
-    user_data.pop("meta")
+    user_data_dump.pop("id")
+    user_data_dump.pop("meta")
 
-    issues = validator.validate_request(body=user_data)
-
-    assert issues.to_dict() == {}
-
-
-def test_correct_resource_object_put_request_passes_validation(user_data):
-    validator = ResourceObjectPUT(USER)
-    user_data.pop("id")
-    user_data.pop("meta")
-
-    issues = validator.validate_request(body=user_data)
+    data, issues = validator.parse_request(body=user_data_dump)
 
     assert issues.to_dict() == {}
+    assert data.body is not None
 
 
-def test_correct_resource_object_put_response_passes_validation(user_data):
+def test_correct_resource_object_put_request_passes_validation(user_data_dump):
+    validator = ResourceObjectPUT(USER)
+    user_data_dump.pop("id")
+    user_data_dump.pop("meta")
+
+    data, issues = validator.parse_request(body=user_data_dump)
+
+    assert issues.to_dict() == {}
+    assert data.body is not None
+
+
+def test_correct_resource_object_put_response_passes_validation(user_data_dump):
     validator = ResourceObjectPUT(USER)
 
-    issues = validator.validate_response(
+    data, issues = validator.dump_response(
         status_code=200,
-        body=user_data,
-        headers={"Location": user_data["meta"]["location"]},
+        body=user_data_dump,
+        headers={"Location": user_data_dump["meta"]["location"]},
     )
 
     assert issues.to_dict() == {}
+    assert data.body is not None
+    assert data.headers is not None
 
 
-def test_correct_resource_type_post_response_passes_validation(user_data):
+def test_correct_resource_type_post_response_passes_validation(user_data_dump):
     validator = ResourceTypePOST(USER)
 
-    issues = validator.validate_response(
+    data, issues = validator.dump_response(
         status_code=201,
-        body=user_data,
-        headers={"Location": user_data["meta"]["location"]},
+        body=user_data_dump,
+        headers={"Location": user_data_dump["meta"]["location"]},
     )
 
     assert issues.to_dict() == {}
+    assert data.body is not None
+    assert data.headers is not None
 
 
-@pytest.mark.parametrize("validator", (ResourceTypeGET(USER), SearchRequestPOST([USER])))
+@pytest.mark.parametrize(
+    "validator", (ResourceTypeGET(USER), ServerRootResourceGET([USER]), SearchRequestPOST([USER]))
+)
 def test_correct_list_response_passes_validation(validator, list_user_data):
     list_user_data["Resources"][0].pop("name")
     list_user_data["Resources"][1].pop("name")
 
-    issues = validator.validate_response(
+    data, issues = validator.dump_response(
         status_code=200,
         body=list_user_data,
         start_index=1,
@@ -1177,32 +978,13 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
     )
 
     assert issues.to_dict() == {}
-
-
-def test_correct_server_root_resource_get_response_passes_validation(list_user_data):
-    validator = ServerRootResourceGET([USER])
-    list_user_data["Resources"][0].pop("name")
-    list_user_data["Resources"][1].pop("name")
-
-    issues = validator.validate_response(
-        status_code=200,
-        body=list_user_data,
-        start_index=1,
-        count=2,
-        filter_=Filter(Present(AttributeName(attr="username"))),
-        sorter=Sorter(AttributeName(attr="userName"), True),
-        presence_checker=AttributePresenceChecker(
-            attr_names=[AttributeName(attr="name")], include=False
-        ),
-    )
-
-    assert issues.to_dict() == {}
+    assert data.body is not None
 
 
 def test_correct_search_request_passes_validation():
     validator = SearchRequestPOST([USER])
 
-    issues = validator.validate_request(
+    data, issues = validator.parse_request(
         body={
             "attributes": ["userName", "name"],
             "filter": 'userName eq "bjensen"',
@@ -1214,3 +996,15 @@ def test_correct_search_request_passes_validation():
     )
 
     assert issues.to_dict() == {}
+    assert data.body["attributes"][0].attr == "username"
+    assert data.body["attributes"][1].attr == "name"
+    assert data.body["filter"].to_dict() == {
+        "op": "eq",
+        "attr_name": "username",
+        "value": "bjensen",
+    }
+    assert data.body["sortby"].attr == "name"
+    assert data.body["sortby"].sub_attr == "familyname"
+    assert data.body["sortorder"] == "descending"
+    assert data.body["startindex"] == 2
+    assert data.body["count"] == 10

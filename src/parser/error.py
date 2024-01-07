@@ -6,14 +6,14 @@ class ValidationError:
     _message_for_code = {
         1: "attribute '{attr_name}' is required",
         2: (
-            "expected type for SCIM '{scim_type}' is '{expected_type}', "
+            "expected type for parsing SCIM '{scim_type}' is '{expected_type}', "
             "got '{provided_type}' instead"
         ),
         3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
         4: "SCIM '{scim_type}' should be encoded as a valid xsd:dateTime",
         5: (
-            "SCIM '{scim_type}' can contain the values of these types only: {allowed_types}, "
-            "but got '{provided_type}' instead"
+            "SCIM '{scim_type}' can contain the values of these types only when parsing: "
+            "{allowed_types}, but got '{provided_type}' instead"
         ),
         6: (
             "multi-valued attribute should be of type 'list' or 'tuple', "
@@ -62,6 +62,14 @@ class ValidationError:
         28: "main schema not included",
         29: "extension {extension!r} is missing",
         30: "can not be used together with {other!r}",
+        31: (  # TODO: change code to 3
+            "expected type for dumping SCIM '{scim_type}' is '{expected_type}', "
+            "got '{provided_type}' instead"
+        ),
+        32: (  # TODO: change code to 6
+            "SCIM '{scim_type}' can contain the values of these types only when dumping: "
+            "{allowed_types}, but got '{provided_type}' instead"
+        ),
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -91,7 +99,7 @@ class ValidationError:
         return cls(code=1, attr_name=attr_name)
 
     @classmethod
-    def bad_scim_type(cls, scim_type: str, expected_type: Type, provided_type: Type):
+    def bad_scim_parse_type(cls, scim_type: str, expected_type: Type, provided_type: Type):
         return cls(
             code=2,
             scim_type=scim_type,
@@ -108,7 +116,7 @@ class ValidationError:
         return cls(code=4, scim_type=scim_type)
 
     @classmethod
-    def bad_sub_attribute_type(
+    def bad_sub_attribute_parse_type(
         cls, scim_type: str, allowed_types: Collection[Type], provided_type: Type
     ):
         return cls(
@@ -237,6 +245,26 @@ class ValidationError:
         return cls(code=30, other=other)
 
     @classmethod
+    def bad_scim_dump_type(cls, scim_type: str, expected_type: Type, provided_type: Type):
+        return cls(
+            code=31,
+            scim_type=scim_type,
+            expected_type=expected_type.__name__,
+            provided_type=provided_type.__name__,
+        )
+
+    @classmethod
+    def bad_sub_attribute_dump_type(
+        cls, scim_type: str, allowed_types: Collection[Type], provided_type: Type
+    ):
+        return cls(
+            code=32,
+            scim_type=scim_type,
+            allowed_types=sorted({type_.__name__ for type_ in allowed_types}),
+            provided_type=provided_type.__name__,
+        )
+
+    @classmethod
     def no_closing_bracket(cls, bracket_position: int):
         return cls(code=100, bracket_position=bracket_position)
 
@@ -359,6 +387,17 @@ class ValidationIssues:
             if location in self._stop_proceeding:
                 return False
         return True
+
+    def has_issues(self, *locations: Collection[str]) -> bool:
+        if not locations:
+            locations = [tuple()]
+
+        for location in locations:
+            for issue_location in self._issues:
+                if issue_location[: len(location)] == location:
+                    return True
+
+        return False
 
     def to_dict(self, msg: bool = False, ctx: bool = False):
         output = {}

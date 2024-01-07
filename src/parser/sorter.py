@@ -70,7 +70,7 @@ class Sorter:
     def __call__(
         self,
         data: List[Dict[str, Any]],
-        schema: Union[Schema, List[Schema]],
+        schema: Union[Schema, Sequence[Schema]],
     ) -> List[Dict[str, Any]]:
         if not any(extract(self._attr_name, item) for item in data):
             return data

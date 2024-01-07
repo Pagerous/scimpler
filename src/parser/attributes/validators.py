@@ -1,10 +1,10 @@
-from typing import Collection
+from typing import Collection, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
 from src.parser.error import ValidationError, ValidationIssues
 
 
-def validate_absolute_url(value: str) -> ValidationIssues:
+def validate_absolute_url(value: str) -> Tuple[Optional[str], ValidationIssues]:
     issues = ValidationIssues()
     try:
         result = urlparse(value)
@@ -14,15 +14,19 @@ def validate_absolute_url(value: str) -> ValidationIssues:
                 issue=ValidationError.bad_url(value),
                 proceed=False,
             )
+            return None, issues
     except ValueError:
         issues.add(
             issue=ValidationError.bad_url(value),
             proceed=False,
         )
-    return issues
+        return None, issues
+    return value, issues
 
 
-def validate_single_primary_value(value: Collection[dict]) -> ValidationIssues:
+def validate_single_primary_value(
+    value: Collection[Dict],
+) -> Tuple[Optional[List[Dict]], ValidationIssues]:
     issues = ValidationIssues()
     primary_entries = set()
     for i, item in enumerate(value):
@@ -34,4 +38,4 @@ def validate_single_primary_value(value: Collection[dict]) -> ValidationIssues:
             proceed=True,
         )
     # TODO: warn if a given type-value pair appears more than once
-    return issues
+    return list(value), issues

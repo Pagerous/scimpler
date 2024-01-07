@@ -1,3 +1,5 @@
+from typing import Any, Tuple
+
 from src.parser.attributes import type as at
 from src.parser.attributes.attributes import (
     Attribute,
@@ -10,14 +12,15 @@ from src.parser.attributes.attributes import (
 from src.parser.error import ValidationError, ValidationIssues
 
 
-def bulk_id_validator(value) -> ValidationIssues:
+def bulk_id_validator(value) -> Tuple[Any, ValidationIssues]:
     issues = ValidationIssues()
     if "bulkId" in value:
         issues.add(
             issue=ValidationError.reserved_keyword("bulkId"),
             proceed=False,
         )
-    return issues
+        return None, issues
+    return value, issues
 
 
 schemas = Attribute(
@@ -42,7 +45,8 @@ id_ = Attribute(
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.SERVER,
-    validators=[bulk_id_validator],
+    parsers=[bulk_id_validator],
+    dumpers=[bulk_id_validator],
 )
 
 external_id = Attribute(

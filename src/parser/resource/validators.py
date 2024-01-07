@@ -1,6 +1,13 @@
-from typing import Any, Dict, List, Optional, Sequence
+from dataclasses import dataclass
+from functools import wraps
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-from src.parser.attributes.attributes import AttributeIssuer, extract
+from src.parser.attributes.attributes import (
+    AttributeIssuer,
+    ComplexAttribute,
+    extract,
+    insert,
+)
 from src.parser.attributes_presence import AttributePresenceChecker
 from src.parser.error import ValidationError, ValidationIssues
 from src.parser.filter.filter import Filter
@@ -14,9 +21,59 @@ from src.parser.resource.schemas import (
 from src.parser.sorter import Sorter
 
 
-def validate_body_existence(body: Any) -> ValidationIssues:
+@dataclass
+class RequestData:
+    headers: Optional[Dict[str, Any]]
+    query_string: Optional[Dict[str, Any]]
+    body: Optional[Dict[str, Any]]
+
+
+@dataclass
+class ResponseData:
+    headers: Optional[Dict[str, Any]]
+    body: Optional[Dict[str, Any]]
+
+
+def skip_if_bad_data(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> ValidationIssues():
+        try:
+            return func(*args, **kwargs)
+        except (TypeError, AttributeError, IndexError, ValueError):
+            return ValidationIssues()
+
+    return wrapper
+
+
+def filter_unknown_fields(schema: Schema, data: Dict[str, Any]) -> Dict[str, Any]:
+    output = {}
+    for attr_name in schema.all_attr_names:
+        value = extract(attr_name, data)
+        if value is None:
+            continue
+
+        output_insert = output
+        if (
+            attr_name.schema
+            and isinstance(schema, ResourceSchema)
+            and attr_name.schema in schema.schema_extensions
+        ):
+            if attr_name.schema not in output_insert:
+                output[attr_name.schema] = {}
+            output_insert = output[attr_name.schema]
+
+        if attr_name.sub_attr:
+            if attr_name.attr not in output_insert:
+                output_insert[attr_name.attr] = {}
+            output_insert[attr_name.attr][attr_name.sub_attr] = value
+        elif not isinstance(schema.get_attr(attr_name), ComplexAttribute):
+            output_insert[attr_name.attr] = value
+    return output
+
+
+def validate_existence(data: Any) -> ValidationIssues:
     issues = ValidationIssues()
-    if body is None:
+    if data is None:
         issues.add(
             issue=ValidationError.missing(),
             proceed=False,
@@ -24,52 +81,64 @@ def validate_body_existence(body: Any) -> ValidationIssues:
     return issues
 
 
-def validate_body_type(body: Any) -> ValidationIssues:
+def validate_dict_type(data: Any) -> ValidationIssues:
     issues = ValidationIssues()
-    if body is None:
+    if data is None:
         return issues
 
-    if not isinstance(body, dict):
+    if not isinstance(data, dict):
         issues.add(
-            issue=ValidationError.bad_type(dict, type(body)),
+            issue=ValidationError.bad_type(dict, type(data)),
             proceed=False,
         )
     return issues
 
 
-def validate_body_schema(
-    body: Any,
-    schema: Schema,
-) -> ValidationIssues:
+def _process_body(
+    body: Dict[str, Any],
+    schema: Union[Schema, ResourceSchema],
+    method: str,
+) -> Tuple[Dict[str, Any], ValidationIssues]:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
+    processed = {}
     for attr_name in schema.top_level_attr_names:
         attr = schema.get_attr(attr_name)
         value = extract(attr_name, body)
+        value, issues_ = getattr(attr, method)(value)
         issues.merge(
-            issues=attr.validate(value),
+            issues=issues_,
             location=(attr_name.attr,),
         )
-    return issues
+        extension = (
+            isinstance(schema, ResourceSchema) and attr_name.schema in schema.schema_extensions
+        )
+        insert(processed, attr_name, value, extension)
+    return processed, issues
 
 
+def parse_body(
+    body: Dict[str, Any],
+    schema: Union[Schema, ResourceSchema],
+) -> Tuple[Dict[str, Any], ValidationIssues]:
+    return _process_body(body, schema, "parse")
+
+
+def dump_body(
+    body: Dict[str, Any],
+    schema: Union[Schema, ResourceSchema],
+) -> Tuple[Dict[str, Any], ValidationIssues]:
+    return _process_body(body, schema, "dump")
+
+
+@skip_if_bad_data
 def validate_schemas_field(
-    body: Any,
+    body: Dict[str, Any],
     schema: Schema,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
     body = {k: v for k, v in body.items() if isinstance(k, str)}
-
     schemas_value = extract("schemas", body)
-    if not isinstance(schemas_value, List):
-        return issues
-
     schemas_value = {item.lower() for item in schemas_value if isinstance(item, str)}
-
     main_schema_included = False
     mismatch = False
     for schema_value in schemas_value:
@@ -102,47 +171,48 @@ class Error:
     def __init__(self):
         self._schema = ERROR
 
-    def validate_response(
-        self,
-        *,
-        status_code: int,
-        body: Any,
-    ) -> ValidationIssues:
+    def dump_response(
+        self, *, status_code: int, body: Any = None, headers: Any = None
+    ) -> Tuple[ResponseData, ValidationIssues]:
         issues = ValidationIssues()
         body_location = ("response", "body")
         issues.merge(
-            issues=validate_body_existence(body),
+            issues=validate_existence(body),
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_type(body),
+            issues=validate_dict_type(body),
             location=body_location,
         )
-        issues.merge(
-            issues=validate_body_schema(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_schemas_field(body, self._schema),
-            location=body_location,
-        )
-        issues.merge(issues=validate_error_status_code_consistency(body, status_code))
-        issues.merge(issues=validate_error_status_code(status_code))
-        issues.merge(
-            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
-            location=body_location,
-        )
-        return issues
+        if issues.can_proceed(body_location):
+            body, issues_ = dump_body(body, self._schema)
+            issues.merge(
+                issues=issues_,
+                location=body_location,
+            )
+            issues.merge(
+                issues=validate_schemas_field(body, self._schema),
+                location=body_location,
+            )
+            issues.merge(issues=validate_error_status_code_consistency(body, status_code))
+            issues.merge(issues=validate_error_status_code(status_code))
+            issues.merge(
+                issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
+                location=body_location,
+            )
+        if not issues.has_issues(body_location):
+            body = filter_unknown_fields(self._schema, body)
+        else:
+            body = None
+        return ResponseData(headers=headers, body=body), issues
 
 
+@skip_if_bad_data
 def validate_error_status_code_consistency(
     body: Dict[str, Any],
     status_code: int,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     status_in_body = body.get("status")
     if str(status_code) != status_in_body:
         issues.add(
@@ -158,6 +228,7 @@ def validate_error_status_code_consistency(
     return issues
 
 
+@skip_if_bad_data
 def validate_error_status_code(status_code: int) -> ValidationIssues:
     issues = ValidationIssues()
     if not 200 <= status_code < 600:
@@ -169,6 +240,7 @@ def validate_error_status_code(status_code: int) -> ValidationIssues:
     return issues
 
 
+@skip_if_bad_data
 def validate_resource_location_in_header(
     headers: Any,
     header_required: bool,
@@ -185,14 +257,12 @@ def validate_resource_location_in_header(
     return issues
 
 
+@skip_if_bad_data
 def validate_resource_location_consistency(
-    body: Any,
-    headers: Any,
+    body: Dict[str, Any],
+    headers: Dict[str, Any],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict) or not isinstance(headers, Dict):
-        return issues
-
     meta_location = extract("meta.location", body)
     if meta_location != headers.get("Location"):
         issues.add(
@@ -214,6 +284,7 @@ def validate_resource_location_consistency(
     return issues
 
 
+@skip_if_bad_data
 def validate_status_code(
     expected_status_code: int,
     actual_status_code: int,
@@ -231,14 +302,12 @@ def validate_status_code(
     return issues
 
 
+@skip_if_bad_data
 def validate_resource_type_consistency(
     body: Any,
     schema: ResourceSchema,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     resource_type = extract("meta.resourceType", body)
     if isinstance(resource_type, str) and resource_type != repr(schema):
         issues.add(
@@ -252,101 +321,113 @@ def validate_resource_type_consistency(
     return issues
 
 
-def validate_resource_input(
-    schema: ResourceSchema, body: Optional[Dict[str, Any]] = None
-) -> ValidationIssues:
+def parse_resource_input(
+    schema: ResourceSchema, body: Any = None, headers: Any = None, query_string: Any = None
+) -> Tuple[RequestData, ValidationIssues]:
     issues = ValidationIssues()
     body_location = ("request", "body")
     issues.merge(
-        issues=validate_body_existence(body),
+        issues=validate_existence(body),
         location=body_location,
     )
     issues.merge(
-        issues=validate_body_type(body),
+        issues=validate_dict_type(body),
         location=body_location,
     )
-    issues.merge(
-        issues=validate_body_schema(body, schema),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_schemas_field(body, schema),
-        location=body_location,
-    )
-    required_to_ignore = []
-    for attr_name in schema.all_attr_names:
-        attr = schema.get_attr(attr_name)
-        if attr.required and attr.issuer == AttributeIssuer.SERVER:
-            required_to_ignore.append(attr_name)
-    issues.merge(
-        issues=AttributePresenceChecker(ignore_required=required_to_ignore)(
-            body, schema, "REQUEST"
-        ),
-        location=body_location,
-    )
-    return issues
+    if issues.can_proceed(body_location):
+        body, issues_ = parse_body(body, schema)
+        issues.merge(
+            issues=issues_,
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_schemas_field(body, schema),
+            location=body_location,
+        )
+        required_to_ignore = []
+        for attr_name in schema.all_attr_names:
+            attr = schema.get_attr(attr_name)
+            if attr.required and attr.issuer == AttributeIssuer.SERVER:
+                required_to_ignore.append(attr_name)
+        issues.merge(
+            issues=AttributePresenceChecker(ignore_required=required_to_ignore)(
+                body, schema, "REQUEST"
+            ),
+            location=body_location,
+        )
+    if not issues.has_issues(body_location):
+        body = filter_unknown_fields(schema, body)
+    else:
+        body = None
+    return RequestData(headers=headers, query_string=query_string, body=body), issues
 
 
-def validate_resource_output(
+def dump_resource_output(
     schema: ResourceSchema,
     location_header_required: bool,
     expected_status_code: int,
     status_code: int,
-    body: Optional[Dict[str, Any]] = None,
-    headers: Optional[Dict[str, Any]] = None,
-):
+    body: Any = None,
+    headers: Any = None,
+) -> Tuple[ResponseData, ValidationIssues]:
     issues = ValidationIssues()
     body_location = ("response", "body")
     issues.merge(
-        issues=validate_body_existence(body),
+        issues=validate_existence(body),
         location=body_location,
     )
     issues.merge(
-        issues=validate_body_type(body),
+        issues=validate_dict_type(body),
         location=body_location,
     )
-    issues.merge(
-        issues=validate_body_schema(body, schema),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_schemas_field(body, schema),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_resource_location_in_header(headers, location_header_required),
-        location=("response", "headers"),
-    )
-    issues.merge(
-        issues=validate_resource_type_consistency(body, schema),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_resource_location_consistency(body, headers),
-    )
-    issues.merge(
-        issues=validate_status_code(expected_status_code, status_code),
-        location=("response", "status"),
-    )
-    issues.merge(
-        issues=AttributePresenceChecker()(body, schema, "RESPONSE"),
-        location=body_location,
-    )
-    return issues
+    if issues.can_proceed(body_location):
+        body, issues_ = dump_body(body, schema)
+        issues.merge(
+            issues=issues_,
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_schemas_field(body, schema),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_resource_location_in_header(headers, location_header_required),
+            location=("response", "headers"),
+        )
+        issues.merge(
+            issues=validate_resource_type_consistency(body, schema),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_resource_location_consistency(body, headers),
+        )
+        issues.merge(
+            issues=validate_status_code(expected_status_code, status_code),
+            location=("response", "status"),
+        )
+        issues.merge(
+            issues=AttributePresenceChecker()(body, schema, "RESPONSE"),
+            location=body_location,
+        )
+    if not issues.has_issues(body_location):
+        body = filter_unknown_fields(schema, body)
+    else:
+        body = None
+    return ResponseData(headers=headers, body=body), issues
 
 
 class ResourceObjectGET:
     def __init__(self, schema: ResourceSchema):
         self._schema = schema
 
-    def validate_response(
+    def dump_response(
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        return validate_resource_output(
+        body: Any = None,
+        headers: Any = None,
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        return dump_resource_output(
             schema=self._schema,
             location_header_required=True,
             expected_status_code=200,
@@ -360,21 +441,19 @@ class ResourceObjectPUT:
     def __init__(self, schema: ResourceSchema):
         self._schema = schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[Dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        return validate_resource_input(self._schema, body)
+    def parse_request(
+        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        return parse_resource_input(self._schema, body, headers, query_string)
 
-    def validate_response(
+    def dump_response(
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        return validate_resource_output(
+        body: Any = None,
+        headers: Any = None,
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        return dump_resource_output(
             schema=self._schema,
             location_header_required=False,
             expected_status_code=200,
@@ -387,32 +466,20 @@ class ResourceObjectPUT:
 class ResourceTypePOST:
     def __init__(self, schema: ResourceSchema):
         self._schema = schema
-        required_to_ignore = []
-        for attr_name in self._schema.all_attr_names:
-            attr = self._schema.get_attr(attr_name)
-            if attr.required and attr.issuer == AttributeIssuer.SERVER:
-                required_to_ignore.append(attr_name)
-        self._required_to_ignore = required_to_ignore
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[Dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        return validate_resource_input(self._schema, body)
+    def parse_request(
+        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        return parse_resource_input(self._schema, body, headers, query_string)
 
-    def validate_response(
-        self,
-        *,
-        status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def dump_response(
+        self, *, status_code: int, body: Any = None, headers: Any = None
+    ) -> Tuple[ResponseData, ValidationIssues]:
         issues = ValidationIssues()
         if not body:
-            return issues  # TODO: warn missing response body
+            return ResponseData(headers=headers, body=None), issues  # TODO: warn missing body
 
-        return validate_resource_output(
+        return dump_resource_output(
             schema=self._schema,
             location_header_required=True,
             expected_status_code=201,
@@ -422,40 +489,42 @@ class ResourceTypePOST:
         )
 
 
-def validate_request_sorting(query_string: Any) -> ValidationIssues:
+def parse_request_sorting(query_string: Dict) -> Tuple[Optional[Sorter], ValidationIssues]:
     issues = ValidationIssues()
-    if not isinstance(query_string, Dict):
-        return issues
 
     sort_by = query_string.get("sortBy")
     if not isinstance(sort_by, str):
-        return issues
+        if sort_by is not None:
+            issues.add(
+                issue=ValidationError.bad_type(str, type(sort_by)),
+                proceed=False,
+            )
+        return None, issues
 
     sort_order = query_string.get("sortOrder", "ascending")
     if sort_order not in ["ascending", "descending"]:
         pass  # TODO add warning here
 
-    _, issues_ = Sorter.parse(by=sort_by, asc=sort_order == "ascending")
-    return issues_
+    return Sorter.parse(by=sort_by, asc=sort_order == "ascending")
 
 
-def validate_request_filtering(query_string: Any) -> ValidationIssues:
+def parse_request_filtering(query_string: Dict) -> Tuple[Optional[Filter], ValidationIssues]:
     issues = ValidationIssues()
-    if not isinstance(query_string, Dict):
-        return issues
-
     filter_exp = query_string.get("filter")
-    if isinstance(filter_exp, str):
-        _, issues_ = Filter.parse(filter_exp)
-        issues = issues_
-    return issues
+    if not isinstance(filter_exp, str):
+        if filter_exp is not None:
+            issues.add(
+                issue=ValidationError.bad_type(str, type(filter_exp)),
+                proceed=False,
+            )
+        return None, issues
+    return Filter.parse(filter_exp)
 
 
-def validate_requested_attributes(query_string: Any) -> ValidationIssues:
+def parse_requested_attributes(
+    query_string: Any,
+) -> Tuple[Optional[AttributePresenceChecker], ValidationIssues]:
     issues = ValidationIssues()
-    if not isinstance(query_string, Dict):
-        return issues
-
     to_include = query_string.get("attributes", [])
     if to_include and isinstance(to_include, str):
         to_include = to_include.split(",")
@@ -464,7 +533,7 @@ def validate_requested_attributes(query_string: Any) -> ValidationIssues:
         to_exclude = to_exclude.split(",")
 
     if not isinstance(to_include, List) or not isinstance(to_exclude, List):
-        return issues
+        return None, issues
 
     if to_include and to_exclude:
         issues.add(
@@ -477,95 +546,59 @@ def validate_requested_attributes(query_string: Any) -> ValidationIssues:
             proceed=False,
             location=("excludeAttributes",),
         )
-        return issues
+        return None, issues
 
     attr_names = to_include or to_exclude
     include = None if not any([to_include, to_exclude]) else bool(to_include)
-    _, issues_ = AttributePresenceChecker.parse(attr_names, include)
+    checker, issues_ = AttributePresenceChecker.parse(attr_names, include)
     issues.merge(issues=issues_, location=("attributes" if include else "excludeAttributes",))
-    return issues
+    return checker, issues
 
 
+@skip_if_bad_data
 def validate_resources_sorted(
     sorter: Sorter,
     body: Any,
     schemas: Sequence[Schema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
-    schema = schemas[0] if len(schemas) == 1 else None
-
-    if schema is None:
-        schema = [infer_schema_from_data(resource, schemas) for resource in resources]
-        if not (schema and all(schema)):
-            return issues
-    try:
-        if resources != sorter(resources, schema=schema):
-            issues.add(
-                issue=ValidationError.resources_not_sorted(),
-                proceed=True,
-                location=("resources",),
-            )
-    except:  # noqa; error due to bad resources schema
-        pass
+    if resources != sorter(resources, schema=schemas):
+        issues.add(
+            issue=ValidationError.resources_not_sorted(),
+            proceed=True,
+            location=("resources",),
+        )
     return issues
 
 
+@skip_if_bad_data
 def validate_resources_attribute_presence(
     presence_checker: AttributePresenceChecker,
     body: Any,
     schemas: Sequence[Schema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
-    schema = schemas[0] if len(schemas) == 1 else None
-
-    for i, resource in enumerate(resources):
+    for i, (resource, schema) in enumerate(zip(resources, schemas)):
         try:
-            if schema is None:
-                schema = infer_schema_from_data(resource, schemas)
-
-            if schema is None:
-                continue
-
             issues.merge(
                 issues=presence_checker(resource, schema, "RESPONSE"),
                 location=("resources", i),
             )
         except (AttributeError, TypeError):
             pass
-
     return issues
 
 
+@skip_if_bad_data
 def validate_number_of_resources(
     count: Optional[int],
     body: Any,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     total_results = extract("totalresults", body)
-    if not isinstance(total_results, int):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
     n_resources = len(resources)
     if total_results < n_resources:
         issues.add(
@@ -600,22 +633,14 @@ def validate_number_of_resources(
     return issues
 
 
+@skip_if_bad_data
 def validate_pagination_info(
     count: Optional[int],
-    body: Any,
+    body: Dict[str, Any],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     total_results = extract("totalresults", body)
-    if not isinstance(total_results, int):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
     n_resources = len(resources)
     is_pagination = (count or 0) > 0 and total_results > n_resources
     if is_pagination:
@@ -634,19 +659,13 @@ def validate_pagination_info(
     return issues
 
 
+@skip_if_bad_data
 def validate_start_index_consistency(
     start_index: int,
     body: Any,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-
-    if not isinstance(body, Dict):
-        return issues
-
     start_index_body = extract("startindex", body)
-    if not isinstance(start_index_body, int):
-        return issues
-
     if start_index_body > start_index:
         issues.add(
             issue=ValidationError.response_value_does_not_correspond_to_parameter(
@@ -662,35 +681,28 @@ def validate_start_index_consistency(
     return issues
 
 
+@skip_if_bad_data
 def validate_items_per_page_consistency(
     body: Any,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-
-    if not isinstance(body, Dict):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
     items_per_page = extract("itemsperpage", body)
     if not isinstance(items_per_page, int):
         return issues
 
     n_resources = len(resources)
-
     if items_per_page != n_resources:
         issues.add(
             issue=ValidationError.values_must_match(
-                value_1="itemsperpage", value_2="numer of Resources"
+                value_1="itemsperpage", value_2="number of Resources"
             ),
             location=("itemsperpage",),
             proceed=True,
         )
         issues.add(
             issue=ValidationError.values_must_match(
-                value_1="itemsperpage", value_2="numer of Resources"
+                value_1="itemsperpage", value_2="number of Resources"
             ),
             location=("resources",),
             proceed=True,
@@ -698,63 +710,47 @@ def validate_items_per_page_consistency(
     return issues
 
 
-def validate_resources_schema(
-    body: Any,
+def dump_resources(
+    body: Dict[str, Any],
     schemas: Sequence[Schema],
-) -> ValidationIssues:
+) -> Tuple[Dict, ValidationIssues]:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
-    schema = schemas[0] if len(schemas) == 1 else None
-
-    for i, resource in enumerate(resources):
+    dumped_resources = []
+    for i, (resource, schema) in enumerate(zip(resources, schemas)):
         if not isinstance(resource, Dict):
+            issues.add(
+                issue=ValidationError.bad_type(dict, type(resource)),
+                location=("resources", i),
+                proceed=False,
+            )
             continue
 
-        if schema is None:
-            schema = infer_schema_from_data(resource, schemas)
-
-        if schema is None:
-            continue
-
+        dumped_resource = {}
         for attr_name in schema.top_level_attr_names:
             attr = schema.get_attr(attr_name)
             value = extract(attr_name, resource)
+            value, issues_ = attr.dump(value)
             issues.merge(
-                issues=attr.validate(value),
+                issues=issues_,
                 location=("resources", i, attr.name),
             )
-    return issues
+            extension = (
+                isinstance(schema, ResourceSchema) and attr_name.schema in schema.schema_extensions
+            )
+            insert(dumped_resource, attr_name, value, extension=extension)
+        dumped_resources.append(dumped_resource)
+    insert(body, "resources", dumped_resources)
+    return body, issues
 
 
+@skip_if_bad_data
 def validate_resources_filtered(
     body: Any, filter_: Filter, schemas: Sequence[Schema], strict: bool
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if not isinstance(body, Dict):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
-    schema = schemas[0] if len(schemas) == 1 else None
-
-    for i, resource in enumerate(resources):
-        if not isinstance(resource, Dict):
-            continue
-
-        if schema is None:
-            schema = infer_schema_from_data(resource, schemas)
-
-        if schema is None:
-            continue
-
+    for i, (resource, schema) in enumerate(zip(resources, schemas)):
         if not filter_(resource, schema, strict):
             issues.add(
                 issue=ValidationError.included_resource_does_not_match_filter(),
@@ -764,22 +760,11 @@ def validate_resources_filtered(
     return issues
 
 
+@skip_if_bad_data
 def validate_resources_schemas_field(body: Any, schemas: Sequence[Schema]):
     issues = ValidationIssues()
-
-    if not isinstance(body, Dict):
-        return issues
-
     resources = extract("resources", body)
-    if not isinstance(resources, List):
-        return issues
-
-    schema = schemas[0] if len(schemas) == 1 else None
-
-    for i, resource in enumerate(resources):
-        if schema is None:
-            schema = infer_schema_from_data(resource, schemas)
-
+    for i, (resource, schema) in enumerate(zip(resources, schemas)):
         if schema is None:
             issues.add(
                 issue=ValidationError.unknown_schema(),
@@ -794,97 +779,166 @@ def validate_resources_schemas_field(body: Any, schemas: Sequence[Schema]):
     return issues
 
 
-def _validate_resources_get_request(query_string: Any) -> ValidationIssues:
+def _get_schemas_for_resources(
+    data: Dict[str, Any], available_schemas: Sequence[Schema]
+) -> Optional[List[Schema]]:
+    resources = extract("resources", data)
+    schemas = []
+    n_schemas = len(available_schemas)
+    for resource in resources:
+        if n_schemas == 1:
+            schemas.append(available_schemas[0])
+        else:
+            schemas.append(infer_schema_from_data(resource, available_schemas))
+    return schemas
+
+
+def _parse_resources_get_request(
+    body: Any = None, headers: Any = None, query_string: Any = None
+) -> Tuple[RequestData, ValidationIssues]:
     issues = ValidationIssues()
-    issues.merge(
-        issues=validate_request_filtering(query_string),
-        location=("request", "query_string", "filter"),
-    )
-    issues.merge(
-        issues=validate_request_sorting(query_string),
-        location=("request", "query_string", "sortby"),
-    )
-    issues.merge(
-        issues=validate_requested_attributes(query_string),
-        location=("request", "query_string"),
-    )
-    return issues
+    issues.merge(issues=validate_dict_type(query_string), location=("request", "query_string"))
+    if isinstance(query_string, Dict):
+        filter_, issues_ = parse_request_filtering(query_string)
+        query_string["filter"] = filter_
+        issues.merge(
+            issues=issues_,
+            location=("request", "query_string", "filter"),
+        )
+
+        sorter, issues_ = parse_request_sorting(query_string)
+        query_string["sorter"] = sorter
+        issues.merge(
+            issues=issues_,
+            location=("request", "query_string", "sortby"),
+        )
+
+        checker, issues_ = parse_requested_attributes(query_string)
+        query_string["checker"] = checker
+        issues.merge(
+            issues=issues_,
+            location=("request", "query_string"),
+        )
+
+        count = query_string.get("count")
+        if count is not None:
+            try:
+                query_string["count"] = int(count)
+            except ValueError:
+                issues.add(
+                    issue=ValidationError.bad_type(expected_type=int, provided_type=type(count)),
+                    location=("request", "query_string", "count"),
+                    proceed=False,
+                )
+
+        start_index = query_string.get("startIndex")
+        if start_index is not None:
+            try:
+                query_string["startIndex"] = int(start_index)
+            except ValueError:
+                issues.add(
+                    issue=ValidationError.bad_type(
+                        expected_type=int, provided_type=type(start_index)
+                    ),
+                    location=("request", "query_string", "startIndex"),
+                    proceed=False,
+                )
+    return RequestData(headers=headers, query_string=query_string, body=body), issues
 
 
-def _validate_resources_get_response(
+def _dump_resources_get_response(
     list_response_schema: Schema,
     resource_schemas: Sequence[Schema],
     status_code: int,
-    body: Optional[Dict[str, Any]] = None,
+    body: Any = None,
+    headers: Any = None,
     start_index: int = 1,
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
     presence_checker: Optional[AttributePresenceChecker] = None,
-):
+) -> Tuple[ResponseData, ValidationIssues]:
     issues = ValidationIssues()
     body_location = ("response", "body")
     issues.merge(
-        issues=validate_body_existence(body),
+        issues=validate_existence(body),
         location=body_location,
     )
     issues.merge(
-        issues=validate_body_type(body),
+        issues=validate_dict_type(body),
         location=body_location,
     )
-    issues.merge(
-        issues=validate_body_schema(body, list_response_schema),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_schemas_field(body, list_response_schema),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_status_code(200, status_code),
-        location=("response", "status"),
-    )
-    issues.merge(
-        issues=validate_number_of_resources(count, body),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_pagination_info(count, body),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_start_index_consistency(start_index, body),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_items_per_page_consistency(body),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_resources_schemas_field(body, resource_schemas),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_resources_schema(body, resource_schemas),
-        location=body_location,
-    )
-    if filter_ is not None:
+    if issues.can_proceed(body_location):
+        resources = extract("resources", body)
+        body, issues_ = dump_body(body, list_response_schema)
+        body["resources"] = resources
         issues.merge(
-            issues=validate_resources_filtered(body, filter_, resource_schemas, False),
+            issues=issues_,
             location=body_location,
         )
-    if sorter is not None:
         issues.merge(
-            issues=validate_resources_sorted(sorter, body, resource_schemas),
+            issues=validate_schemas_field(body, list_response_schema),
             location=body_location,
         )
-    if presence_checker is None:
-        presence_checker = AttributePresenceChecker()
-    issues.merge(
-        issues=validate_resources_attribute_presence(presence_checker, body, resource_schemas),
-        location=body_location,
-    )
-    return issues
+        issues.merge(
+            issues=validate_status_code(200, status_code),
+            location=("response", "status"),
+        )
+        issues.merge(
+            issues=validate_number_of_resources(count, body),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_pagination_info(count, body),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_start_index_consistency(start_index, body),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_items_per_page_consistency(body),
+            location=body_location,
+        )
+        resource_schemas = _get_schemas_for_resources(body, resource_schemas)
+        if resource_schemas is not None:
+            issues.merge(
+                issues=validate_resources_schemas_field(body, resource_schemas),
+                location=body_location,
+            )
+            body, issues_ = dump_resources(body, resource_schemas)
+            issues.merge(
+                issues=issues_,
+                location=body_location,
+            )
+            if filter_ is not None:
+                issues.merge(
+                    issues=validate_resources_filtered(body, filter_, resource_schemas, False),
+                    location=body_location,
+                )
+            if sorter is not None:
+                issues.merge(
+                    issues=validate_resources_sorted(sorter, body, resource_schemas),
+                    location=body_location,
+                )
+            if presence_checker is None:
+                presence_checker = AttributePresenceChecker()
+            issues.merge(
+                issues=validate_resources_attribute_presence(
+                    presence_checker, body, resource_schemas
+                ),
+                location=body_location,
+            )
+    if not issues.has_issues(body_location):
+        resources = extract("resources", body)
+        body = filter_unknown_fields(list_response_schema, body)
+        body["resources"] = [
+            filter_unknown_fields(schema, resource)
+            for schema, resource in zip(resource_schemas, resources)
+        ]
+    else:
+        body = None
+    return ResponseData(headers=headers, body=body), issues
 
 
 class ResourceTypeGET:
@@ -892,26 +946,29 @@ class ResourceTypeGET:
         self._schema = LIST_RESPONSE
         self._resource_schema = resource_schema
 
-    @staticmethod
-    def validate_request(*, query_string: Any) -> ValidationIssues:
-        return _validate_resources_get_request(query_string)
+    def parse_request(  # noqa
+        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        return _parse_resources_get_request(body, headers, query_string)
 
-    def validate_response(
+    def dump_response(
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
+        body: Any = None,
+        headers: Any = None,
         start_index: int = 1,
         count: Optional[int] = None,
         filter_: Optional[Filter] = None,
         sorter: Optional[Sorter] = None,
         presence_checker: Optional[AttributePresenceChecker] = None,
-    ) -> ValidationIssues:
-        return _validate_resources_get_response(
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        return _dump_resources_get_response(
             list_response_schema=self._schema,
             resource_schemas=[self._resource_schema],
             status_code=status_code,
             body=body,
+            headers=headers,
             start_index=start_index,
             count=count,
             filter_=filter_,
@@ -935,26 +992,29 @@ class ServerRootResourceGET:
         self._schema = LIST_RESPONSE
         self._resource_schemas = resource_schemas
 
-    @staticmethod
-    def validate_request(*, query_string: Any) -> ValidationIssues:
-        return _validate_resources_get_request(query_string)
+    def parse_request(  # noqa
+        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        return _parse_resources_get_request(body, headers, query_string)
 
-    def validate_response(
+    def dump_response(
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
+        body: Any = None,
+        headers: Any = None,
         start_index: int = 1,
         count: Optional[int] = None,
         filter_: Optional[Filter] = None,
         sorter: Optional[Sorter] = None,
         presence_checker: Optional[AttributePresenceChecker] = None,
-    ) -> ValidationIssues:
-        return _validate_resources_get_response(
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        return _dump_resources_get_response(
             list_response_schema=self._schema,
             resource_schemas=self._resource_schemas,
             status_code=status_code,
             body=body,
+            headers=headers,
             start_index=start_index,
             count=count,
             filter_=filter_,
@@ -969,39 +1029,49 @@ class SearchRequestPOST:
         self._list_response_schema = LIST_RESPONSE
         self._resource_schemas = resource_schemas
 
-    def validate_request(self, *, body: Any) -> ValidationIssues:
+    def parse_request(
+        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
         issues = ValidationIssues()
-        body_location = ("response", "body")
+        body_location = ("request", "body")
         issues.merge(
-            issues=validate_body_existence(body),
+            issues=validate_existence(body),
             location=body_location,
         )
         issues.merge(
-            issues=validate_body_type(body),
+            issues=validate_dict_type(body),
             location=body_location,
         )
-        issues.merge(
-            issues=validate_body_schema(body, self._schema),
-            location=body_location,
-        )
-        return issues
+        if issues.can_proceed(body_location):
+            body, issues_ = parse_body(body, self._schema)
+            issues.merge(
+                issues=issues_,
+                location=body_location,
+            )
+        if not issues.has_issues(body_location):
+            body = filter_unknown_fields(self._schema, body)
+        else:
+            body = None
+        return RequestData(headers=headers, query_string=query_string, body=body), issues
 
-    def validate_response(
+    def dump_response(
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
+        body: Any = None,
+        headers: Any = None,
         start_index: int = 1,
         count: Optional[int] = None,
         filter_: Optional[Filter] = None,
         sorter: Optional[Sorter] = None,
         presence_checker: Optional[AttributePresenceChecker] = None,
-    ) -> ValidationIssues:
-        return _validate_resources_get_response(
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        return _dump_resources_get_response(
             list_response_schema=self._list_response_schema,
             resource_schemas=self._resource_schemas,
             status_code=status_code,
             body=body,
+            headers=headers,
             start_index=start_index,
             count=count,
             filter_=filter_,
