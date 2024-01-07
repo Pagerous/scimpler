@@ -96,6 +96,34 @@ class AttributeName:
         return self.attr == other.attr
 
 
+def insert(
+    data: Dict, attr_name: Union[str, AttributeName], value: Any, extension: bool = False
+) -> None:
+    if isinstance(attr_name, str):
+        attr_name = AttributeName.parse(attr_name)
+        if attr_name is None:
+            return None
+
+    if extension:
+        if attr_name.schema is None:
+            raise ValueError("extended attribute names must contain schema")
+        if attr_name.schema not in data:
+            data[attr_name.schema] = {}
+        if attr_name.sub_attr:
+            if attr_name.attr not in data[attr_name.schema]:
+                data[attr_name.schema][attr_name.attr] = {}
+            data[attr_name.schema][attr_name.attr][attr_name.sub_attr] = value
+        else:
+            data[attr_name.schema][attr_name.attr] = value
+    else:
+        if attr_name.sub_attr:
+            if attr_name.attr not in data:
+                data[attr_name.attr] = {}
+            data[attr_name.attr][attr_name.sub_attr] = value
+        else:
+            data[attr_name.attr] = value
+
+
 def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optional[Any]:
     if isinstance(attr_name, str):
         attr_name = AttributeName.parse(attr_name)

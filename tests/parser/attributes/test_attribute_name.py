@@ -1,6 +1,6 @@
 import pytest
 
-from src.parser.attributes.attributes import AttributeName, extract
+from src.parser.attributes.attributes import AttributeName, extract, insert
 
 
 @pytest.mark.parametrize(
@@ -133,3 +133,77 @@ def test_value_can_be_extracted(attr_name, expected, enterprise_user_data):
     actual = extract(attr_name, enterprise_user_data)
 
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    ("attr_name", "value", "extension", "expected"),
+    (
+        (
+            AttributeName(attr="id"),
+            "2819c223-7f76-453a-919d-413861904646",
+            False,
+            {"id": "2819c223-7f76-453a-919d-413861904646"},
+        ),
+        (
+            AttributeName(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
+            "bjensen@example.com",
+            False,
+            {"username": "bjensen@example.com"},
+        ),
+        (
+            AttributeName(attr="userName"),
+            "bjensen@example.com",
+            False,
+            {"username": "bjensen@example.com"},
+        ),
+        (
+            AttributeName(attr="meta", sub_attr="resourceType"),
+            "User",
+            False,
+            {"meta": {"resourcetype": "User"}},
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="meta",
+                sub_attr="resourceType",
+            ),
+            "User",
+            False,
+            {"meta": {"resourcetype": "User"}},
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                attr="employeeNumber",
+            ),
+            "701984",
+            True,
+            {
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:user": {
+                    "employeenumber": "701984"
+                }
+            },
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                attr="manager",
+                sub_attr="displayName",
+            ),
+            "John Smith",
+            True,
+            {
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:user": {
+                    "manager": {"displayname": "John Smith"}
+                }
+            },
+        ),
+    ),
+)
+def test_value_can_be_inserted(attr_name, value, extension, expected):
+    data = {}
+
+    insert(data, attr_name, value, extension)
+
+    assert data == expected
