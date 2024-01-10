@@ -4,6 +4,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.attributes.attributes import (
     AttributeIssuer,
+    AttributeMutability,
+    AttributeName,
     ComplexAttribute,
     extract,
     insert,
@@ -45,9 +47,17 @@ def skip_if_bad_data(func):
     return wrapper
 
 
-def filter_unknown_fields(schema: Schema, data: Dict[str, Any]) -> Dict[str, Any]:
+def filter_unknown_fields(
+    schema: Schema,
+    data: Dict[str, Any],
+    drop_fields: Optional[Sequence[AttributeName]] = None,
+) -> Dict[str, Any]:
+    drop_fields = drop_fields or []
     output = {}
     for attr_name in schema.all_attr_names:
+        if attr_name in drop_fields:
+            continue
+
         value = extract(attr_name, data)
         if value is None:
             continue
@@ -322,7 +332,12 @@ def validate_resource_type_consistency(
 
 
 def parse_resource_input(
-    schema: ResourceSchema, body: Any = None, headers: Any = None, query_string: Any = None
+    schema: ResourceSchema,
+    body: Any = None,
+    headers: Any = None,
+    query_string: Any = None,
+    required_attrs_to_ignore: Optional[Sequence[AttributeName]] = None,
+    drop_fields: Optional[Sequence[AttributeName]] = None,
 ) -> Tuple[RequestData, ValidationIssues]:
     issues = ValidationIssues()
     body_location = ("request", "body")
@@ -344,19 +359,14 @@ def parse_resource_input(
             issues=validate_schemas_field(body, schema),
             location=body_location,
         )
-        required_to_ignore = []
-        for attr_name in schema.all_attr_names:
-            attr = schema.get_attr(attr_name)
-            if attr.required and attr.issuer == AttributeIssuer.SERVER:
-                required_to_ignore.append(attr_name)
         issues.merge(
-            issues=AttributePresenceChecker(ignore_required=required_to_ignore)(
+            issues=AttributePresenceChecker(ignore_required=required_attrs_to_ignore)(
                 body, schema, "REQUEST"
             ),
             location=body_location,
         )
     if not issues.has_issues(body_location):
-        body = filter_unknown_fields(schema, body)
+        body = filter_unknown_fields(schema, body, drop_fields)
     else:
         body = None
     return RequestData(headers=headers, query_string=query_string, body=body), issues
@@ -444,7 +454,19 @@ class ResourceObjectPUT:
     def parse_request(
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
-        return parse_resource_input(self._schema, body, headers, query_string)
+        drop_fields = []
+        for attr_name in self._schema.all_attr_names:
+            attr = self._schema.get_attr(attr_name)
+            if attr.mutability == AttributeMutability.READ_ONLY:
+                drop_fields.append(attr_name)
+
+        return parse_resource_input(
+            schema=self._schema,
+            body=body,
+            headers=headers,
+            query_string=query_string,
+            drop_fields=drop_fields,
+        )
 
     def dump_response(
         self,
@@ -470,7 +492,12 @@ class ResourceTypePOST:
     def parse_request(
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
-        return parse_resource_input(self._schema, body, headers, query_string)
+        required_to_ignore = []
+        for attr_name in self._schema.all_attr_names:
+            attr = self._schema.get_attr(attr_name)
+            if attr.required and attr.issuer == AttributeIssuer.SERVER:
+                required_to_ignore.append(attr_name)
+        return parse_resource_input(self._schema, body, headers, query_string, required_to_ignore)
 
     def dump_response(
         self, *, status_code: int, body: Any = None, headers: Any = None

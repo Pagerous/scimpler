@@ -908,26 +908,47 @@ def test_correct_resource_object_get_response_passes_validation(user_data_dump):
     assert data.headers is not None
 
 
-def test_correct_resource_type_post_request_passes_validation(user_data_dump):
+def test_correct_resource_type_post_request_passes_validation(user_data_parse):
     validator = ResourceTypePOST(USER)
-    user_data_dump.pop("id")
-    user_data_dump.pop("meta")
+    user_data_parse.pop("id")
+    user_data_parse.pop("meta")
 
-    data, issues = validator.parse_request(body=user_data_dump)
+    data, issues = validator.parse_request(body=user_data_parse)
 
     assert issues.to_dict() == {}
     assert data.body is not None
 
 
-def test_correct_resource_object_put_request_passes_validation(user_data_dump):
+def test_correct_resource_object_put_request_passes_validation(user_data_parse):
     validator = ResourceObjectPUT(USER)
-    user_data_dump.pop("id")
-    user_data_dump.pop("meta")
+    user_data_parse.pop("meta")
 
-    data, issues = validator.parse_request(body=user_data_dump)
+    data, issues = validator.parse_request(body=user_data_parse)
 
     assert issues.to_dict() == {}
     assert data.body is not None
+
+
+def test_resource_object_put_request__fails_when_missing_required_field(user_data_parse):
+    validator = ResourceObjectPUT(USER)
+    user_data_parse.pop("id")  # required
+    user_data_parse.pop("meta")
+    expected_issues = {"request": {"body": {"id": {"_errors": [{"code": 15}]}}}}
+
+    data, issues = validator.parse_request(body=user_data_parse)
+
+    assert issues.to_dict() == expected_issues
+    assert data.body is None
+
+
+def test_resource_object_put_request__not_required_read_only_fields_are_ignored(user_data_parse):
+    # data contains 'meta'
+    validator = ResourceObjectPUT(USER)
+
+    data, issues = validator.parse_request(body=user_data_parse)
+
+    assert issues.to_dict() == {}
+    assert "meta" not in data.body
 
 
 def test_correct_resource_object_put_response_passes_validation(user_data_dump):
