@@ -78,7 +78,7 @@ class AttributePresenceChecker:
                 if attr.required and (
                     (attr_name in self._attr_names and self._include is True)
                     or (direction == "RESPONSE" and attr.returned == AttributeReturn.ALWAYS)
-                    or (self._ignore_required and attr_name not in self._ignore_required)
+                    or attr_name not in self._ignore_required
                 ):
                     issues.add(
                         issue=ValidationError.missing(),

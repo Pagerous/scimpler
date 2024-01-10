@@ -95,6 +95,13 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
                 }
             ]
         },
+        "username": {
+            "_errors": [
+                {
+                    "code": 15,
+                }
+            ]
+        }
     }
 
     issues = checker({}, USER, "RESPONSE")
@@ -130,6 +137,7 @@ def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
     data = {
         "id": "1",
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "username": "bjensen"
     }
 
     issues = checker(data, USER, "RESPONSE")
