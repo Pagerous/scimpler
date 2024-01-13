@@ -8,9 +8,10 @@ from src.filter import operator as op
 from src.filter.operator import MatchResult
 from src.schemas import Schema
 
-_OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
-_AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
-_NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s*(.*)", flags=re.DOTALL)
+OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
+AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
+NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s*(.*)", flags=re.DOTALL)
+OP_REGEX = re.compile(r'\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', flags=re.DOTALL)
 _PLACEHOLDER_REGEX = re.compile(r"\|&PLACE_HOLDER_(\d+)&\|")
 
 
@@ -225,7 +226,7 @@ class Filter:
 
         op_exp_preprocessed = op_exp_preprocessed.strip()
         if op_exp_preprocessed == "":
-            issues.add(issue=ValidationError.empty_expression(), proceed=False)
+            issues.add(issue=ValidationError.empty_filter_expression(), proceed=False)
 
         if not issues.can_proceed():
             return None, issues
@@ -249,7 +250,7 @@ class Filter:
         issues = ValidationIssues()
         or_operands, issues_ = Filter._split_exp_to_logical_operands(
             op_exp=or_exp,
-            regexp=_OR_LOGICAL_OPERATOR_SPLIT_REGEX,
+            regexp=OR_LOGICAL_OPERATOR_SPLIT_REGEX,
             operator_name="or",
             parsed_group_ops=parsed_group_ops,
             parsed_complex_ops=parsed_complex_ops,
@@ -286,7 +287,7 @@ class Filter:
         issues = ValidationIssues()
         and_operands, issues_ = Filter._split_exp_to_logical_operands(
             op_exp=and_exp,
-            regexp=_AND_LOGICAL_OPERATOR_SPLIT_REGEX,
+            regexp=AND_LOGICAL_OPERATOR_SPLIT_REGEX,
             operator_name="and",
             parsed_group_ops=parsed_group_ops,
             parsed_complex_ops=parsed_complex_ops,
@@ -297,7 +298,7 @@ class Filter:
 
         parsed_and_operands = []
         for and_operand in and_operands:
-            match = _NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
+            match = NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
             if match:
                 not_operand = match.group(1)
                 if not not_operand:
@@ -416,7 +417,7 @@ class Filter:
         if sub_or_complex is not None:
             return sub_or_complex.operator, sub_or_complex.issues
 
-        components = re.split(r'\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', attr_exp)
+        components = OP_REGEX.split(attr_exp)
         if len(components) == 2:
             op_exp = components[1].lower()
             op_ = _UNARY_ATTR_OPERATORS.get(op_exp)
@@ -505,12 +506,21 @@ class Filter:
                     ),
                     proceed=False,
                 )
-            value, issues_ = Filter._parse_comparison_value(
-                value=components[2],
-                parsed_group_ops=parsed_group_ops,
-                parsed_complex_ops=parsed_complex_ops,
-            )
-            issues.merge(issues=issues_)
+
+            try:
+                value = parse_comparison_value(components[2])
+            except ValueError:
+                value = None
+                issues.add(
+                    issue=ValidationError.bad_comparison_value(
+                        Filter._encode_sub_or_complex_into_exp(
+                            exp=components[2],
+                            parsed_group_ops=parsed_group_ops,
+                            parsed_complex_ops=parsed_complex_ops,
+                        )
+                    ),
+                    proceed=False,
+                )
 
             if not issues.can_proceed():
                 return None, issues
@@ -586,47 +596,6 @@ class Filter:
                 encoded = encoded.replace(match.group(0), parsed_complex_ops[index].expression)
         return encoded
 
-    @staticmethod
-    def _parse_comparison_value(
-        value: str,
-        parsed_group_ops: Dict[int, _ParsedGroupOperator],
-        parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
-    ) -> Tuple[_AllowedOperandValues, ValidationIssues]:
-        issues = ValidationIssues()
-        if (
-            value.startswith('"')
-            and value.endswith('"')
-            or value.startswith("'")
-            and value.endswith("'")
-        ):
-            value = value[1:-1]
-        elif value == "false":
-            value = False
-        elif value == "true":
-            value = True
-        elif value == "null":
-            value = None
-        else:
-            try:
-                parsed = float(value)
-                parsed_int = int(parsed)
-                if parsed == parsed_int:
-                    value = parsed_int
-                else:
-                    value = parsed
-            except ValueError:
-                issues.add(
-                    issue=ValidationError.bad_comparison_value(
-                        Filter._encode_sub_or_complex_into_exp(
-                            exp=value,
-                            parsed_group_ops=parsed_group_ops,
-                            parsed_complex_ops=parsed_complex_ops,
-                        )
-                    ),
-                    proceed=False,
-                )
-        return value, issues
-
     def __call__(self, data: Dict[str, Any], schema: Schema, strict: bool = True) -> MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
             data = extract(self._operator.attr_name, data)
@@ -667,3 +636,27 @@ class Filter:
                 ],
             }
         raise TypeError(f"unsupported filter type '{type(operator).__name__}'")
+
+
+def parse_comparison_value(value: str) -> Any:
+    if (
+        value.startswith('"')
+        and value.endswith('"')
+        or value.startswith("'")
+        and value.endswith("'")
+    ):
+        value = value[1:-1]
+    elif value == "false":
+        value = False
+    elif value == "true":
+        value = True
+    elif value == "null":
+        value = None
+    else:
+        parsed = float(value)
+        parsed_int = int(parsed)
+        if parsed == parsed_int:
+            value = parsed_int
+        else:
+            value = parsed
+    return value
