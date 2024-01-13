@@ -58,19 +58,22 @@ def test_patch_path_parsing_failure(path, expected_issues):
 @pytest.mark.parametrize(
     ("path", "expected_attr_name", "expected_multivalued_filter", "expected_value_sub_attr_name"),
     (
-        ("attr", AttributeName(attr="attr"), None, None),
-        ("attr.sub_attr", AttributeName(attr="attr", sub_attr="sub_attr"), None, None),
+        ("members", AttributeName(attr="members"), None, None),
+        ("name.familyName", AttributeName(attr="name", sub_attr="familyName"), None, None),
         (
-            "attr[sub_attr eq 1]",
-            AttributeName(attr="attr"),
-            Equal(AttributeName(attr="attr", sub_attr="sub_attr"), 1),
+            'addresses[type eq "work"]',
+            AttributeName(attr="addresses"),
+            Equal(AttributeName(attr="addresses", sub_attr="type"), "work"),
             None,
         ),
         (
-            "attr[sub_attr eq 1].other_sub_attr",
-            AttributeName(attr="attr"),
-            Equal(AttributeName(attr="sub_attr"), 1),
-            AttributeName(attr="attr", sub_attr="other_sub_attr"),
+            'members[value eq "2819c223-7f76-453a-919d-413861904646"].displayName',
+            AttributeName(attr="members"),
+            Equal(
+                AttributeName(attr="members", sub_attr="value"),
+                "2819c223-7f76-453a-919d-413861904646",
+            ),
+            AttributeName(attr="members", sub_attr="displayName"),
         ),
     ),
 )
@@ -87,6 +90,7 @@ def test_patch_path_parsing_success(
     if expected_multivalued_filter is not None:
         assert isinstance(parsed.multivalued_filter, type(expected_multivalued_filter))
         assert parsed.multivalued_filter.value == expected_multivalued_filter.value
+        assert parsed.multivalued_filter.attr_name == expected_multivalued_filter.attr_name
     else:
         assert parsed.multivalued_filter is None
     assert parsed.value_sub_attr_name == expected_value_sub_attr_name
