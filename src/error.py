@@ -70,6 +70,7 @@ class ValidationError:
             "SCIM '{scim_type}' can contain the values of these types only when dumping: "
             "{allowed_types}, but got '{provided_type}' instead"
         ),
+        33: "complex sub-attribute {sub_attr!r} of {attr!r} can not be complex",
         100: "no closing bracket for the bracket at position {bracket_position}",
         101: "no opening bracket for the bracket at position {bracket_position}",
         102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
@@ -86,6 +87,9 @@ class ValidationError:
         200: "attribute {attribute!r} is not defined in {schema!r} schema",
         201: "complex attribute {attribute!r} is not multivalued",
         202: "complex attribute {attribute!r} does not contain 'primary' or 'value' sub-attribute",
+        300: "bad operation path",
+        301: "only 'eq' operator is allowed",
+        302: "bad multivalued attribute filter",
     }
 
     def __init__(self, code: int, **context):
@@ -265,6 +269,10 @@ class ValidationError:
         )
 
     @classmethod
+    def complex_sub_attribute(cls, attr: str, sub_attr: str):
+        return cls(code=33, attr=attr, sub_attr=sub_attr)
+
+    @classmethod
     def no_closing_bracket(cls, bracket_position: int):
         return cls(code=100, bracket_position=bracket_position)
 
@@ -298,7 +306,7 @@ class ValidationError:
         return cls(code=106, expression=expression)
 
     @classmethod
-    def empty_expression(cls):
+    def empty_filter_expression(cls):
         return cls(code=107)
 
     @classmethod
@@ -332,6 +340,18 @@ class ValidationError:
     @classmethod
     def complex_attr_does_not_contain_primary_sub_attr(cls, attribute: str):
         return cls(code=202, attribute=attribute)
+
+    @classmethod
+    def bad_operation_path(cls):
+        return cls(code=300)
+
+    @classmethod
+    def eq_operator_allowed_only(cls):
+        return cls(code=301)
+
+    @classmethod
+    def bad_multivalued_attribute_filter(cls):
+        return cls(code=302)
 
     @property
     def context(self) -> Dict:
