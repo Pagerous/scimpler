@@ -902,9 +902,12 @@ def test_correct_resource_object_get_request_passes_validation():
     )
 
     assert issues.to_dict() == {}
-    assert data.body is not None
-    assert data.headers is not None
-    assert data.query_string["presence_checker"]
+    assert data.body is None
+    assert data.headers is None
+    assert data.query_string["presence_checker"].attr_names == [
+        AttributeName(attr="name", sub_attr="familyName")
+    ]
+    assert data.query_string["presence_checker"].include is True
 
 
 def test_correct_resource_object_get_response_passes_validation(user_data_dump):
@@ -930,20 +933,34 @@ def test_correct_resource_type_post_request_passes_validation(user_data_parse):
     user_data_parse.pop("id")
     user_data_parse.pop("meta")
 
-    data, issues = validator.parse_request(body=user_data_parse)
+    data, issues = validator.parse_request(
+        body=user_data_parse,
+        query_string={"attributes": "name.familyName"},
+    )
 
     assert issues.to_dict() == {}
     assert data.body is not None
+    assert data.query_string["presence_checker"].attr_names == [
+        AttributeName(attr="name", sub_attr="familyName")
+    ]
+    assert data.query_string["presence_checker"].include is True
 
 
 def test_correct_resource_object_put_request_passes_validation(user_data_parse):
     validator = ResourceObjectPUT(USER)
     user_data_parse.pop("meta")
 
-    data, issues = validator.parse_request(body=user_data_parse)
+    data, issues = validator.parse_request(
+        body=user_data_parse,
+        query_string={"attributes": "name.familyName"},
+    )
 
     assert issues.to_dict() == {}
     assert data.body is not None
+    assert data.query_string["presence_checker"].attr_names == [
+        AttributeName(attr="name", sub_attr="familyName")
+    ]
+    assert data.query_string["presence_checker"].include is True
 
 
 def test_resource_object_put_request__fails_when_missing_required_field(user_data_parse):
