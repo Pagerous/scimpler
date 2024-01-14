@@ -112,7 +112,7 @@ _meta__location = Attribute(
 
 # TODO: make sure it has the same value as the "ETag" HTTP response header
 _meta__version = Attribute(
-    name="location",
+    name="version",
     type_=at.String,
     required=False,
     issuer=AttributeIssuer.SERVER,
