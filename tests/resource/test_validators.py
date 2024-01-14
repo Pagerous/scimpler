@@ -1044,10 +1044,28 @@ def test_correct_search_request_passes_validation():
         "attr_name": "username",
         "value": "bjensen",
     }
-    assert data.body["sortby"].attr == "name"
-    assert data.body["sortby"].sub_attr == "familyname"
-    assert data.body["sortorder"] == "descending"
     assert data.body["sorter"].attr_name == AttributeName(attr="name", sub_attr="familyName")
     assert data.body["sorter"].asc is False
     assert data.body["startindex"] == 2
     assert data.body["count"] == 10
+
+
+def test_search_request_validation_fails_if_attributes_and_exclude_attributes_provided():
+    validator = SearchRequestPOST([USER])
+    expected_issues = {
+        "request": {
+            "body": {
+                "attributes": {"_errors": [{"code": 30}]},
+                "excludeAttributes": {"_errors": [{"code": 30}]},
+            }
+        }
+    }
+
+    data, issues = validator.parse_request(
+        body={
+            "attributes": ["userName"],
+            "excludeAttributes": ["name"],
+        }
+    )
+
+    assert issues.to_dict() == expected_issues

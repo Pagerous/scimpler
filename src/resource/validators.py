@@ -1081,7 +1081,7 @@ class SearchRequestPOST:
             body_location + ("attributes",), body_location + ("excludeAttributes",)
         ):
             to_include = body.get("attributes")
-            to_exclude = body.get("excludeAttributes")
+            to_exclude = body.get("excludeattributes")
             if to_include and to_exclude:
                 issues.add(
                     issue=ValidationError.can_not_be_used_together("excludeAttributes"),
