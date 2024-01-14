@@ -894,13 +894,30 @@ def test_correct_error_response_passes_validation(error_data):
     assert data.body is not None
 
 
+def test_correct_resource_object_get_request_passes_validation():
+    validator = ResourceObjectGET(USER)
+
+    data, issues = validator.parse_request(
+        body=None, headers=None, query_string={"attributes": "name.familyName"}
+    )
+
+    assert issues.to_dict() == {}
+    assert data.body is not None
+    assert data.headers is not None
+    assert data.query_string["presence_checker"]
+
+
 def test_correct_resource_object_get_response_passes_validation(user_data_dump):
     validator = ResourceObjectGET(USER)
+    user_data_dump.pop("name")
 
     data, issues = validator.dump_response(
         status_code=200,
         body=user_data_dump,
         headers={"Location": user_data_dump["meta"]["location"]},
+        presence_checker=AttributePresenceChecker(
+            attr_names=[AttributeName(attr="name")], include=False
+        ),
     )
 
     assert issues.to_dict() == {}
@@ -1017,8 +1034,11 @@ def test_correct_search_request_passes_validation():
     )
 
     assert issues.to_dict() == {}
-    assert data.body["attributes"][0].attr == "username"
-    assert data.body["attributes"][1].attr == "name"
+    assert data.body["presence_checker"].attr_names == [
+        AttributeName(attr="userName"),
+        AttributeName(attr="name"),
+    ]
+    assert data.body["presence_checker"].include is True
     assert data.body["filter"].to_dict() == {
         "op": "eq",
         "attr_name": "username",
@@ -1027,5 +1047,7 @@ def test_correct_search_request_passes_validation():
     assert data.body["sortby"].attr == "name"
     assert data.body["sortby"].sub_attr == "familyname"
     assert data.body["sortorder"] == "descending"
+    assert data.body["sorter"].attr_name == AttributeName(attr="name", sub_attr="familyName")
+    assert data.body["sorter"].asc is False
     assert data.body["startindex"] == 2
     assert data.body["count"] == 10

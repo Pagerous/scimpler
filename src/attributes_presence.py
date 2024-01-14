@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from src.attributes.attributes import Attribute, AttributeName, AttributeReturn, extract
 from src.error import ValidationError, ValidationIssues
@@ -15,6 +15,14 @@ class AttributePresenceChecker:
         self._attr_names = list(attr_names or [])
         self._include = include
         self._ignore_required = list(ignore_required or [])
+
+    @property
+    def attr_names(self) -> List[AttributeName]:
+        return self._attr_names
+
+    @property
+    def include(self) -> Optional[bool]:
+        return self._include
 
     @classmethod
     def parse(
@@ -151,7 +159,10 @@ class AttributePresenceChecker:
     def _sub_attr_or_top_attr_in_attr_names(self, attr_name: AttributeName) -> bool:
         for attr_name_ in self._attr_names:
             if (
-                not attr_name.sub_attr and attr_name.top_level_equals(attr_name_)
+                # sub-attr in attr names check
+                not attr_name.sub_attr
+                and attr_name.top_level_equals(attr_name_)
+                # top-attr in attr names check
                 or (
                     attr_name.sub_attr
                     and not attr_name_.sub_attr

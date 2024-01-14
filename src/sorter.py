@@ -49,6 +49,10 @@ class Sorter:
     def attr_name(self) -> AttributeName:
         return self._attr_name
 
+    @property
+    def asc(self) -> bool:
+        return self._asc
+
     @classmethod
     def parse(cls, by: str, asc: bool = True) -> Tuple[Optional["Sorter"], ValidationIssues]:
         issues = ValidationIssues()

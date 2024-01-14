@@ -1075,8 +1075,41 @@ class SearchRequestPOST:
                 issues=issues_,
                 location=body_location,
             )
+
+        to_include, to_exclude = None, None
+        if issues.can_proceed(
+            body_location + ("attributes",), body_location + ("excludeAttributes",)
+        ):
+            to_include = body.get("attributes")
+            to_exclude = body.get("excludeAttributes")
+            if to_include and to_exclude:
+                issues.add(
+                    issue=ValidationError.can_not_be_used_together("excludeAttributes"),
+                    proceed=False,
+                    location=body_location + ("attributes",),
+                )
+                issues.add(
+                    issue=ValidationError.can_not_be_used_together("attributes"),
+                    proceed=False,
+                    location=body_location + ("excludeAttributes",),
+                )
+
         if not issues.has_issues(body_location):
             body = filter_unknown_fields(self._schema, body)
+
+            if to_include or to_exclude:
+                body["presence_checker"] = AttributePresenceChecker(
+                    attr_names=to_include or to_exclude, include=bool(to_include)
+                )
+                body.pop("attributes", None)
+                body.pop("excludeAttributes", None)
+
+            if "sortby" in body:
+                body["sorter"] = Sorter(
+                    attr_name=body["sortby"], asc=body.get("sortorder") == "ascending"
+                )
+                body.pop("sortby")
+                body.pop("sortorder")
         else:
             body = None
         return RequestData(headers=headers, query_string=query_string, body=body), issues
