@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 
 from src.attributes.attributes import AttributeName
@@ -47,7 +49,54 @@ def test_restricted_attributes_can_be_sent_with_request(enterprise_user_data):
     assert issues.to_dict() == {}
 
 
-def test_presence_checker_fails_if_returned_attribute_that_was_not_requested():
+def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
+    checker = AttributePresenceChecker([AttributeName(attr="name")], include=False)
+    data = {
+        "id": "1",
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "userName": "Pagerous",
+        "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+    }
+
+    expected = {"name": {"_errors": [{"code": 19}]}}
+
+    issues = checker(data, USER, "RESPONSE")
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
+    checker = AttributePresenceChecker([AttributeName(attr="name")], include=True)
+    data = {
+        "id": "1",
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+        "meta": {
+            "resourceType": "User",
+            "created": datetime(2011, 8, 1, 18, 29, 49),
+            "lastModified": datetime(2011, 8, 1, 18, 29, 49),
+            "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+            "version": r"W\/\"f250dd84f0671c3\"",
+        },
+    }
+
+    expected = {
+        "meta": {
+            "_errors": [{"code": 19}],
+            "resourcetype": {"_errors": [{"code": 19}]},
+            "created": {"_errors": [{"code": 19}]},
+            "lastmodified": {"_errors": [{"code": 19}]},
+            "location": {"_errors": [{"code": 19}]},
+            "version": {"_errors": [{"code": 19}]},
+        }
+    }
+
+    issues = checker(data, USER, "RESPONSE")
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
     checker = AttributePresenceChecker(
         [AttributeName(attr="name", sub_attr="familyName")], include=False
     )
@@ -55,14 +104,39 @@ def test_presence_checker_fails_if_returned_attribute_that_was_not_requested():
         "id": "1",
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
         "userName": "Pagerous",
-        "name": {
-            "familyName": "Pajor",
-        },
+        "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
     }
 
     expected = {
         "name": {
             "familyname": {
+                "_errors": [
+                    {
+                        "code": 19,
+                    }
+                ]
+            }
+        }
+    }
+
+    issues = checker(data, USER, "RESPONSE")
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_checker_fails_on_sub_attr_not_requested_by_inclusion():
+    checker = AttributePresenceChecker(
+        [AttributeName(attr="name", sub_attr="familyName")], include=True
+    )
+    data = {
+        "id": "1",
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "name": {"familyName": "Pajor", "givenName": "Arkadiusz"},
+    }
+
+    expected = {
+        "name": {
+            "givenname": {
                 "_errors": [
                     {
                         "code": 19,
@@ -137,9 +211,61 @@ def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
     data = {
         "id": "1",
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "username": "bjensen",
     }
 
     issues = checker(data, USER, "RESPONSE")
 
     assert issues.to_dict() == {}
+
+
+def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exclusion():
+    checker = AttributePresenceChecker(
+        [AttributeName(attr="emails", sub_attr="display")], include=False
+    )
+    data = {
+        "id": "1",
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "userName": "Pagerous",
+        "emails": [
+            {"type": "work", "primary": True, "display": "example@example.com"},
+            {"type": "home", "primary": False},
+            {"type": "school", "primary": False, "display": "example@example.com"},
+        ],
+    }
+
+    expected = {
+        "emails": {
+            "0": {"display": {"_errors": [{"code": 19}]}},
+            "2": {"display": {"_errors": [{"code": 19}]}},
+        }
+    }
+
+    issues = checker(data, USER, "RESPONSE")
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inclusion():
+    checker = AttributePresenceChecker(
+        [AttributeName(attr="emails", sub_attr="display")], include=True
+    )
+    data = {
+        "id": "1",
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        "emails": [
+            {"type": "work", "primary": True, "display": "example@example.com"},
+            {"display": "example@example.com"},
+            {"type": "school", "primary": False, "display": "example@example.com"},
+        ],
+    }
+
+    expected = {
+        "emails": {
+            "0": {"type": {"_errors": [{"code": 19}]}, "primary": {"_errors": [{"code": 19}]}},
+            "2": {"type": {"_errors": [{"code": 19}]}, "primary": {"_errors": [{"code": 19}]}},
+        }
+    }
+
+    issues = checker(data, USER, "RESPONSE")
+
+    assert issues.to_dict() == expected
