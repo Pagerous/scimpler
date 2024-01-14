@@ -2338,3 +2338,12 @@ def test_binary_operator_non_compatible_comparison_values_are_discovered(
 
     assert filter_ is None
     assert issues.to_dict(ctx=True) == expected_issues
+
+
+def test_complex_sub_attribute_is_discovered():
+    expected_issues = {"_errors": [{"code": 33}]}
+
+    filter_, issues = Filter.parse('attr.sub_attr[type eq "work"]')
+
+    assert filter_ is None
+    assert issues.to_dict() == expected_issues

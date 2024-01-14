@@ -120,6 +120,13 @@ class Filter:
                             issue=ValidationError.bad_attribute_name(complex_attr_name),
                             proceed=False,
                         )
+                    elif attr_name.sub_attr:
+                        issues_.add(
+                            issue=ValidationError.complex_sub_attribute(
+                                attr=attr_name.attr, sub_attr=attr_name.sub_attr
+                            ),
+                            proceed=False,
+                        )
                     if not issues_.can_proceed():
                         parsed_complex_ops[complex_attr_start] = _ParsedComplexAttributeOperator(
                             operator=None,
