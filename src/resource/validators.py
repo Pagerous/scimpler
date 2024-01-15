@@ -62,22 +62,17 @@ def filter_unknown_fields(
         if value is None:
             continue
 
-        output_insert = output
-        if (
-            attr_name.schema
-            and isinstance(schema, ResourceSchema)
-            and attr_name.schema in schema.schema_extensions
-        ):
-            if attr_name.schema not in output_insert:
-                output[attr_name.schema] = {}
-            output_insert = output[attr_name.schema]
-
-        if attr_name.sub_attr:
-            if attr_name.attr not in output_insert:
-                output_insert[attr_name.attr] = {}
-            output_insert[attr_name.attr][attr_name.sub_attr] = value
-        elif not isinstance(schema.get_attr(attr_name), ComplexAttribute):
-            output_insert[attr_name.attr] = value
+        if not isinstance(schema.get_attr(attr_name), ComplexAttribute):
+            insert(
+                data=output,
+                attr_name=attr_name,
+                value=value,
+                extension=(
+                    attr_name.schema
+                    and isinstance(schema, ResourceSchema)
+                    and attr_name.schema in schema.schema_extensions
+                ),
+            )
     return output
 
 

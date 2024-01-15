@@ -10,6 +10,7 @@ from src.filter.operator import Present
 from src.resource.schemas import ERROR, USER
 from src.resource.validators import (
     Error,
+    filter_unknown_fields,
     ResourceObjectGET,
     ResourceObjectPUT,
     ResourceTypeGET,
@@ -1086,3 +1087,39 @@ def test_search_request_validation_fails_if_attributes_and_exclude_attributes_pr
     )
 
     assert issues.to_dict() == expected_issues
+
+
+def test_filter_unknown_fields__complex_multivalued_attribute_value_is_preserved():
+    data = {
+        "emails": [
+            {
+                "type": "work",
+                "value": "work@example.com",
+                "primary": True,
+                "redundant": 42,
+            },
+            {
+                "type": "home",
+                "value": "home@example.com",
+                "mess": True,
+            },
+        ]
+    }
+
+    expected_data = {
+        "emails": [
+            {
+                "type": "work",
+                "value": "work@example.com",
+                "primary": True,
+            },
+            {
+                "type": "home",
+                "value": "home@example.com",
+            },
+        ]
+    }
+
+    data_filtered = filter_unknown_fields(schema=USER, data=data)
+
+    assert data_filtered == expected_data
