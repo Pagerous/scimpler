@@ -168,6 +168,16 @@ def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optio
         for k, v in top_value.items():
             if k.lower() == attr_name.sub_attr:
                 return v
+    elif isinstance(top_value, List):
+        extracted = []
+        for item in top_value:
+            for k, v in item.items():
+                if k.lower() == attr_name.sub_attr:
+                    extracted.append(v)
+                    break
+            else:
+                extracted.append(None)
+        return extracted
 
     return None
 

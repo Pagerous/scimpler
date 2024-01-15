@@ -352,7 +352,7 @@ def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
                 attr="emails",
                 sub_attr="type",
             ),
-            None,  # no support for complex, multivalued attrs
+            ["work", "home"],
         ),
         (
             AttributeName(
