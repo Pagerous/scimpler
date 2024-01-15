@@ -110,19 +110,26 @@ def insert(
             raise ValueError("extended attribute names must contain schema")
         if attr_name.schema not in data:
             data[attr_name.schema] = {}
-        if attr_name.sub_attr:
-            if attr_name.attr not in data[attr_name.schema]:
-                data[attr_name.schema][attr_name.attr] = {}
-            data[attr_name.schema][attr_name.attr][attr_name.sub_attr] = value
-        else:
-            data[attr_name.schema][attr_name.attr] = value
+        insert_point = data[attr_name.schema]
     else:
-        if attr_name.sub_attr:
-            if attr_name.attr not in data:
-                data[attr_name.attr] = {}
-            data[attr_name.attr][attr_name.sub_attr] = value
+        insert_point = data
+
+    if attr_name.sub_attr:
+        if isinstance(value, List):
+            if attr_name.attr not in insert_point:
+                insert_point[attr_name.attr] = []
+            if len(insert_point[attr_name.attr]) < len(value):
+                for _ in range(len(value) - len(insert_point[attr_name.attr])):
+                    insert_point[attr_name.attr].append({})
+            for value_item, data_item in zip(value, insert_point[attr_name.attr]):
+                if value_item is not None:
+                    data_item[attr_name.sub_attr] = value_item
         else:
-            data[attr_name.attr] = value
+            if attr_name.attr not in insert_point:
+                insert_point[attr_name.attr] = {}
+            insert_point[attr_name.attr][attr_name.sub_attr] = value
+    else:
+        insert_point[attr_name.attr] = value
 
 
 def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optional[Any]:

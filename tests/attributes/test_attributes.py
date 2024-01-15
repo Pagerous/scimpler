@@ -427,6 +427,26 @@ def test_value_can_be_extracted(attr_name, expected, enterprise_user_data):
         ),
         (
             AttributeName(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="emails",
+                sub_attr="type",
+            ),
+            ["work", "home"],
+            False,
+            {"emails": [{"type": "work"}, {"type": "home"}]},
+        ),
+        (
+            AttributeName(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="emails",
+                sub_attr="type",
+            ),
+            [None, "home"],
+            False,
+            {"emails": [{}, {"type": "home"}]},
+        ),
+        (
+            AttributeName(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="employeeNumber",
             ),
