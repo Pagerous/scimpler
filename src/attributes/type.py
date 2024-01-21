@@ -46,7 +46,7 @@ class AttributeType(abc.ABC):
         return value, issues
 
 
-class Any(AttributeType):
+class Unknown(AttributeType):
     """
     Not a standard SCIM type. To be used by variadic attributes.
     """
