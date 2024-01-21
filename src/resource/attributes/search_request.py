@@ -49,15 +49,11 @@ exclude_attributes = Attribute(
 )
 
 
-def parse_filter(value: str) -> Tuple[Optional[Filter], ValidationIssues]:
-    return Filter.parse(value)
-
-
 filter_ = Attribute(
     name="filter",
     type_=at.String,
     required=False,
-    parsers=[parse_filter],
+    parsers=[Filter.parse],
 )
 
 

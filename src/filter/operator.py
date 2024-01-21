@@ -22,6 +22,7 @@ from src.attributes.attributes import (
     Attribute,
     AttributeName,
     ComplexAttribute,
+    Missing,
     extract,
 )
 from src.schemas import Schema
@@ -249,7 +250,7 @@ class Present(AttributeOperator):
 
     def match(
         self,
-        value: Optional[Any],
+        value: Any,
         schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
@@ -267,7 +268,7 @@ class Present(AttributeOperator):
         elif isinstance(value, str):
             match = bool(value)
         else:
-            match = value is not None
+            match = value is not None and value is not Missing
         return MatchResult.passed() if match else MatchResult.failed()
 
 
@@ -298,7 +299,11 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             return None
 
         if isinstance(attr, ComplexAttribute):
-            value_sub_attr = attr.sub_attributes.get("value")
+            value_sub_attr = None
+            for sub_attr in attr.sub_attributes:
+                if sub_attr.name.sub_attr == "value":
+                    value_sub_attr = sub_attr
+                    break
             if value_sub_attr is None:
                 return None
 
@@ -340,7 +345,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Optional[Any],
+        value: Any,
         schema: Schema,
         strict: bool = True,
     ) -> MatchResult:
@@ -348,7 +353,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr is None:
             return MatchResult.failed_no_attr()
 
-        if value is None:
+        if value is None or value is Missing:
             if not strict:
                 return MatchResult.passed()
             return MatchResult.missing_data()
@@ -555,7 +560,7 @@ class ComplexAttributeOperator:
             has_value = False
             for item in value:
                 item_value = extract(self._sub_operator.attr_name, item)
-                if item_value is not None:
+                if item_value not in [None, Missing]:
                     has_value = True
                 match = self._sub_operator.match(item_value, schema, strict)
                 if match.status == MatchStatus.PASSED:

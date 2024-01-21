@@ -1,6 +1,12 @@
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from src.attributes.attributes import Attribute, AttributeName, AttributeReturn, extract
+from src.attributes.attributes import (
+    Attribute,
+    AttributeName,
+    AttributeReturn,
+    Missing,
+    extract,
+)
 from src.error import ValidationError, ValidationIssues
 from src.schemas import Schema
 
@@ -59,50 +65,57 @@ class AttributePresenceChecker:
             return AttributePresenceChecker(parsed_attr_names, include), issues
         return None, issues
 
-    def __call__(self, data: Dict[str, Any], schema: Schema, direction: str) -> ValidationIssues:
+    def __call__(
+        self,
+        data: Dict[str, Any],
+        schema: Schema,
+        direction: str,
+        attrs: Optional[Iterable[Attribute]] = None,
+    ) -> ValidationIssues:
         issues = ValidationIssues()
 
-        for attr_name in schema.all_attr_names:
-            attr = schema.get_attr(attr_name)
-            top_attr_name = AttributeName(schema=attr_name.schema, attr=attr_name.attr)
+        if attrs is None:
+            attrs = schema.attrs
+
+        for attr in attrs:
+            top_attr_name = AttributeName(schema=attr.name.schema, attr=attr.name.attr)
             top_attr = schema.get_attr(top_attr_name)
 
-            if attr_name.sub_attr and top_attr.multi_valued:
+            if attr.name.sub_attr and top_attr.multi_valued:
                 value = extract(top_attr_name, data)
-                if value is None:
+                if value in [None, Missing]:
                     issues.merge(
                         issues=self._check_presence(
-                            value=None,
+                            value=value,
                             direction=direction,
                             attr=attr,
-                            attr_name=attr_name,
+                            attr_name=attr.name,
                         ),
-                        location=(attr_name.attr, attr_name.sub_attr),
+                        location=(attr.name.attr, attr.name.sub_attr),
                     )
                 else:
                     for i, item in enumerate(value):
-                        item_value = extract(AttributeName(attr=attr_name.sub_attr), item)
                         issues.merge(
                             issues=self._check_presence(
-                                value=item_value,
+                                value=extract(AttributeName(attr=attr.name.sub_attr), item),
                                 direction=direction,
                                 attr=attr,
-                                attr_name=attr_name,
+                                attr_name=attr.name,
                             ),
-                            location=(attr_name.attr, i, attr_name.sub_attr),
+                            location=(attr.name.attr, i, attr.name.sub_attr),
                         )
             else:
                 attr_location = (
-                    (attr_name.attr, attr_name.sub_attr)
-                    if attr_name.sub_attr
-                    else (attr_name.attr,)
+                    (attr.name.attr, attr.name.sub_attr)
+                    if attr.name.sub_attr
+                    else (attr.name.attr,)
                 )
                 issues.merge(
                     issues=self._check_presence(
-                        value=extract(attr_name, data),
+                        value=extract(attr.name, data),
                         direction=direction,
                         attr=attr,
-                        attr_name=attr_name,
+                        attr_name=attr.name,
                     ),
                     location=attr_location,
                 )
@@ -117,7 +130,7 @@ class AttributePresenceChecker:
         attr_name: AttributeName,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        if value not in [None, "", []]:
+        if value not in [None, "", [], Missing]:
             if direction != "RESPONSE":
                 return issues
 
@@ -139,7 +152,6 @@ class AttributePresenceChecker:
                     issue=ValidationError.restricted_or_not_requested(),
                     proceed=True,
                 )
-
         else:
             if (
                 attr.required

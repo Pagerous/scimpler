@@ -1,5 +1,6 @@
 from src.resource.attributes import error as error_attrs
 from src.resource.attributes import list_result as query_result_attrs
+from src.resource.attributes import patch_op as patch_op_attrs
 from src.resource.attributes import search_request as search_request_attrs
 from src.resource.attributes import user as user_attrs
 from src.resource.attributes import user_enterprise_extension as enterprise_attrs
@@ -76,4 +77,11 @@ SEARCH_REQUEST = Schema(
         search_request_attrs.start_index,
         search_request_attrs.count,
     ],
+)
+
+
+PATCH_OP = Schema(
+    schema="urn:ietf:params:scim:api:messages:2.0:patchop",
+    repr_="PatchOp",
+    attrs=[patch_op_attrs.operations],
 )

@@ -5,6 +5,7 @@ from src.attributes.attributes import (
     Attribute,
     AttributeName,
     ComplexAttribute,
+    Missing,
     extract,
     insert,
 )
@@ -32,25 +33,25 @@ def test_dumping_is_skipped_if_value_not_provided():
     assert value is None
 
 
-def test_multi_valued_attribute_parsing_fails_if_not_provided_list_or_tuple():
+def test_multi_valued_attribute_parsing_fails_if_not_provided_list():
     attr = Attribute(name="some_attr", type_=at.String, multi_valued=True)
 
     value, issues = attr.parse(
         value="non-list",
     )
 
-    assert issues.to_dict() == {"_errors": [{"code": 6}]}
+    assert issues.to_dict() == {"_errors": [{"code": 18}]}
     assert value is None
 
 
-def test_multi_valued_attribute_dumping_fails_if_not_provided_list_or_tuple():
+def test_multi_valued_attribute_dumping_fails_if_not_provided_list():
     attr = Attribute(name="some_attr", type_=at.String, multi_valued=True)
 
     value, issues = attr.dump(
         value="non-list",
     )
 
-    assert issues.to_dict() == {"_errors": [{"code": 6}]}
+    assert issues.to_dict() == {"_errors": [{"code": 18}]}
     assert value is None
 
 
@@ -126,7 +127,7 @@ def test_complex_attribute_sub_attributes_are_parsed_separately():
     value, issues = attr.parse(value={"sub_attr_1": "123", "sub_attr_2": "123"})
 
     assert issues.to_dict() == expected_issues
-    assert value == {"sub_attr_1": None, "sub_attr_2": None}
+    assert value is None
 
 
 def test_complex_attribute_sub_attributes_are_dumped_separately():
@@ -157,7 +158,7 @@ def test_complex_attribute_sub_attributes_are_dumped_separately():
     value, issues = attr.dump(value={"sub_attr_1": "123", "sub_attr_2": "123"})
 
     assert issues.to_dict() == expected_issues
-    assert value == {"sub_attr_1": None, "sub_attr_2": None}
+    assert value is None
 
 
 def test_multivalued_complex_attribute_sub_attributes_are_parsed_separately():
@@ -202,10 +203,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_parsed_separately():
     )
 
     assert issues.to_dict() == expected_issues
-    assert value == [
-        {"sub_attr_1": None, "sub_attr_2": None},
-        {"sub_attr_1": None, "sub_attr_2": 123},
-    ]
+    assert value is None
 
 
 def test_multivalued_complex_attribute_sub_attributes_are_dumped_separately():
@@ -250,10 +248,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_dumped_separately():
     )
 
     assert issues.to_dict() == expected_issues
-    assert value == [
-        {"sub_attr_1": None, "sub_attr_2": None},
-        {"sub_attr_1": None, "sub_attr_2": 123},
-    ]
+    assert value is None
 
 
 @pytest.mark.parametrize(
@@ -441,7 +436,7 @@ def test_value_can_be_extracted(attr_name, expected, enterprise_user_data):
                 attr="emails",
                 sub_attr="type",
             ),
-            [None, "home"],
+            [Missing, "home"],
             False,
             {"emails": [{}, {"type": "home"}]},
         ),

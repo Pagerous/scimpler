@@ -84,12 +84,12 @@ class ValidationError:
         111: "attribute {attribute!r} does not conform the rules",
         112: "bad comparison value {value!r}",
         113: "comparison value {value!r} is not compatible with {operator!r} operator",
-        200: "attribute {attribute!r} is not defined in {schema!r} schema",
-        201: "complex attribute {attribute!r} is not multivalued",
-        202: "complex attribute {attribute!r} does not contain 'primary' or 'value' sub-attribute",
         300: "bad operation path",
         301: "only 'eq' operator is allowed",
         302: "bad multivalued attribute filter",
+        303: "unknown update target",
+        304: "read-only attribute can not be updated",
+        305: "can not use complex filter without sub-attribute specified for 'add' operation",
     }
 
     def __init__(self, code: int, **context):
@@ -330,18 +330,6 @@ class ValidationError:
         return cls(code=113, value=value, operator=operator)
 
     @classmethod
-    def attr_not_in_schema(cls, attribute: str, schema: str):
-        return cls(code=200, attribute=attribute, schema=schema)
-
-    @classmethod
-    def complex_attr_is_not_multivalued(cls, attribute: str):
-        return cls(code=201, attribute=attribute)
-
-    @classmethod
-    def complex_attr_does_not_contain_primary_sub_attr(cls, attribute: str):
-        return cls(code=202, attribute=attribute)
-
-    @classmethod
     def bad_operation_path(cls):
         return cls(code=300)
 
@@ -352,6 +340,18 @@ class ValidationError:
     @classmethod
     def bad_multivalued_attribute_filter(cls):
         return cls(code=302)
+
+    @classmethod
+    def unknown_update_target(cls):
+        return cls(code=303)
+
+    @classmethod
+    def read_only_attribute_can_not_be_updated(cls):
+        return cls(code=304)
+
+    @classmethod
+    def complex_filter_without_sub_attr_for_add_op(cls):
+        return cls(code=305)
 
     @property
     def context(self) -> Dict:

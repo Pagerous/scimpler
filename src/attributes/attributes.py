@@ -122,7 +122,7 @@ def insert(
                 for _ in range(len(value) - len(insert_point[attr_name.attr])):
                     insert_point[attr_name.attr].append({})
             for value_item, data_item in zip(value, insert_point[attr_name.attr]):
-                if value_item is not None:
+                if value_item is not Missing:
                     data_item[attr_name.sub_attr] = value_item
         else:
             if attr_name.attr not in insert_point:
@@ -132,13 +132,24 @@ def insert(
         insert_point[attr_name.attr] = value
 
 
+class MissingType:
+    def __bool__(self):
+        return False
+
+    def __repr__(self):
+        return "Missing"
+
+
+Missing = MissingType()
+
+
 def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optional[Any]:
     if isinstance(attr_name, str):
         attr_name = AttributeName.parse(attr_name)
         if attr_name is None:
-            return None
+            raise ValueError(f"bad attribute name")
 
-    top_value = None
+    top_value = Missing
     used_extension = False
     for k, v in data.items():
         k_lower = k.lower()
@@ -183,10 +194,10 @@ def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optio
                     extracted.append(v)
                     break
             else:
-                extracted.append(None)
+                extracted.append(Missing)
         return extracted
 
-    return None
+    return Missing
 
 
 class AttributeMutability(str, Enum):
@@ -215,10 +226,13 @@ class AttributeIssuer(Enum):
     NOT_SPECIFIED = "NOT_SPECIFIED"
 
 
+_AttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
+
+
 class Attribute:
     def __init__(
         self,
-        name: str,
+        name: Union[str, AttributeName],
         type_: Type[at.AttributeType],
         reference_types: Optional[Iterable[str]] = None,
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
@@ -229,10 +243,10 @@ class Attribute:
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        parsers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
-        dumpers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
+        parsers: Optional[Collection[_AttributeProcessor]] = None,
+        dumpers: Optional[Collection[_AttributeProcessor]] = None,
     ):
-        self._name = name
+        self._name = AttributeName(attr=name) if isinstance(name, str) else name
         self._type = type_
         self._reference_types = list(reference_types or [])  # TODO validate applicability
         self._issuer = issuer
@@ -247,11 +261,7 @@ class Attribute:
         self._dumpers = dumpers or []
 
     @property
-    def name(self) -> str:
-        return self._name.lower()
-
-    @property
-    def display_name(self) -> str:
+    def name(self) -> AttributeName:
         return self._name
 
     @property
@@ -294,6 +304,14 @@ class Attribute:
     def uniqueness(self) -> AttributeUniqueness:
         return self._uniqueness
 
+    @property
+    def parsers(self) -> List[_AttributeProcessor]:
+        return self._parsers
+
+    @property
+    def dumpers(self) -> List[_AttributeProcessor]:
+        return self._dumpers
+
     def __repr__(self) -> str:
         return f"Attribute(name={self._name}, type={self._type.__name__})"
 
@@ -303,7 +321,7 @@ class Attribute:
 
         return all(
             [
-                self._name.lower() == other._name.lower(),
+                self._name == other._name,
                 self._type is other._type,
                 self._reference_types == other._reference_types,
                 self._required == other._required,
@@ -324,9 +342,9 @@ class Attribute:
             return value, issues
 
         if self._multi_valued:
-            if not isinstance(value, (list, tuple)):
+            if not isinstance(value, list):
                 issues.add(
-                    issue=ValidationError.bad_multivalued_attribute_type(type(value)),
+                    issue=ValidationError.bad_type(list, type(value)),
                     proceed=False,
                 )
                 return None, issues
@@ -343,12 +361,14 @@ class Attribute:
             if self._canonical_values is not None and parsed not in self._canonical_values:
                 pass  # TODO: warn about non-canonical value
 
-        for postprocessor in postprocessors:
-            try:
-                parsed, issues_ = postprocessor(parsed)
-                issues.merge(issues=issues_)
-            except:  # noqa: only validation procedures that finished matter
-                parsed = None
+        if not issues.has_issues():
+            for postprocessor in postprocessors:
+                try:
+                    parsed, issues_ = postprocessor(parsed)
+                    issues.merge(issues=issues_)
+                except:  # noqa: break on first failure
+                    parsed = None
+                    break
         return parsed, issues
 
     def parse(self, value: Any) -> Tuple[Any, ValidationIssues]:
@@ -366,27 +386,30 @@ class Attribute:
         )
 
 
+_ComplexAttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
+
+
 class ComplexAttribute(Attribute):
     def __init__(
         self,
         sub_attributes: Collection[Attribute],
-        name: str,
+        name: Union[str, AttributeName],
         required: bool = False,
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
-        case_exact: bool = False,
         multi_valued: bool = False,
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        parsers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
-        dumpers: Optional[Collection[Callable[[Any], Tuple[Any, ValidationIssues]]]] = None,
+        parsers: Optional[Collection[_AttributeProcessor]] = None,
+        dumpers: Optional[Collection[_AttributeProcessor]] = None,
+        complex_parsers: Optional[Collection[_ComplexAttributeProcessor]] = None,
+        complex_dumpers: Optional[Collection[_ComplexAttributeProcessor]] = None,
     ):
         super().__init__(
             name=name,
             type_=at.Complex,
             issuer=issuer,
             required=required,
-            case_exact=case_exact,
             multi_valued=multi_valued,
             mutability=mutability,
             returned=returned,
@@ -394,13 +417,46 @@ class ComplexAttribute(Attribute):
             parsers=parsers,
             dumpers=dumpers,
         )
-        self._sub_attributes: Dict[str, Attribute] = {attr.name: attr for attr in sub_attributes}
+        self._sub_attributes: List[Attribute] = [
+            self._bound_sub_attr(sub_attr) for sub_attr in sub_attributes
+        ]
+        self._complex_parsers = complex_parsers or []
+        self._complex_dumpers = complex_dumpers or []
+
+    def _bound_sub_attr(self, sub_attr: Attribute) -> Attribute:
+        if sub_attr.name.top_level_equals(self.name):
+            return sub_attr
+        return Attribute(
+            name=AttributeName(attr=self.name.attr, sub_attr=sub_attr.name.attr),
+            type_=sub_attr.type,
+            reference_types=sub_attr.reference_types,
+            issuer=sub_attr.issuer,
+            required=sub_attr.required,
+            case_exact=sub_attr.case_exact,
+            multi_valued=sub_attr.multi_valued,
+            canonical_values=sub_attr.canonical_values,
+            mutability=sub_attr.mutability,
+            returned=sub_attr.returned,
+            uniqueness=sub_attr.uniqueness,
+            parsers=sub_attr.parsers,
+            dumpers=sub_attr.dumpers,
+        )
 
     @property
-    def sub_attributes(self) -> Dict[str, Attribute]:
+    def sub_attributes(self) -> List[Attribute]:
         return self._sub_attributes
 
-    def _process_complex(self, value: Any, method: str) -> Tuple[Any, ValidationIssues]:
+    @property
+    def complex_parsers(self) -> List[_ComplexAttributeProcessor]:
+        return self._complex_parsers
+
+    @property
+    def complex_dumpers(self) -> List[_ComplexAttributeProcessor]:
+        return self._complex_dumpers
+
+    def _process_complex(
+        self, value: Any, method: str, postprocessors
+    ) -> Tuple[Any, ValidationIssues]:
         value, issues = getattr(super(), method)(value)
         if not issues.can_proceed() or value is None:
             return value, issues
@@ -408,24 +464,42 @@ class ComplexAttribute(Attribute):
             parsed = []
             for i, item in enumerate(value):
                 parsed_item = {}
-                for attr_name, attr in self._sub_attributes.items():
-                    parsed_attr, issues_ = getattr(attr, method)(extract(attr_name, item))
-                    issues.merge(location=(i, attr.name), issues=issues_)
-                    parsed_item[attr.name] = parsed_attr
+                for sub_attr in self._sub_attributes:
+                    sub_attr_value = extract(sub_attr.name.sub_attr, item)
+                    if sub_attr_value is Missing:
+                        continue
+                    parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
+                    issues.merge(location=(i, sub_attr.name.sub_attr), issues=issues_)
+                    parsed_item[sub_attr.name.sub_attr] = parsed_attr
                 parsed.append(parsed_item)
         else:
             parsed = {}
-            for attr_name, attr in self._sub_attributes.items():
-                parsed_attr, issues_ = getattr(attr, method)(extract(attr_name, value))
+            for sub_attr in self._sub_attributes:
+                sub_attr_value = extract(sub_attr.name.sub_attr, value)
+                if sub_attr_value is Missing:
+                    continue
+                parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
                 issues.merge(
-                    location=(attr.name,),
+                    location=(sub_attr.name.sub_attr,),
                     issues=issues_,
                 )
-                parsed[attr.name] = parsed_attr
+                parsed[sub_attr.name.sub_attr] = parsed_attr
+
+        if not issues:
+            for postprocessor in postprocessors:
+                try:
+                    parsed, issues_ = postprocessor(parsed)
+                    issues.merge(issues=issues_)
+                except Exception as e:  # noqa: break on first failure
+                    parsed = None
+                    break
+
+        if issues:
+            return None, issues
         return parsed, issues
 
     def parse(self, value: Any) -> Tuple[Optional[Union[Dict, List[Dict]]], ValidationIssues]:
-        return self._process_complex(value, "parse")
+        return self._process_complex(value, "parse", self._complex_parsers)
 
     def dump(self, value: Any) -> Tuple[Optional[Union[Dict, List[Dict]]], ValidationIssues]:
-        return self._process_complex(value, "dump")
+        return self._process_complex(value, "dump", self._complex_dumpers)

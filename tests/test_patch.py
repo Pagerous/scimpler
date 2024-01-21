@@ -88,9 +88,51 @@ def test_patch_path_parsing_success(
     assert not issues
     assert parsed.attr_name == expected_attr_name
     if expected_multivalued_filter is not None:
-        assert isinstance(parsed.multivalued_filter, type(expected_multivalued_filter))
-        assert parsed.multivalued_filter.value == expected_multivalued_filter.value
-        assert parsed.multivalued_filter.attr_name == expected_multivalued_filter.attr_name
+        assert isinstance(parsed.complex_filter, type(expected_multivalued_filter))
+        assert parsed.complex_filter.value == expected_multivalued_filter.value
+        assert parsed.complex_filter.attr_name == expected_multivalued_filter.attr_name
     else:
-        assert parsed.multivalued_filter is None
-    assert parsed.value_sub_attr_name == expected_value_sub_attr_name
+        assert parsed.complex_filter is None
+    assert parsed.complex_filter_attr_name == expected_value_sub_attr_name
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    (
+        {
+            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_name": None,
+        },
+        {
+            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_name": AttributeName(attr="attr", sub_attr="other_attr"),
+        },
+        {
+            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttributeName(attr="attr"), "whatever"),
+            "complex_filter_attr_name": AttributeName(attr="attr", sub_attr="other_attr"),
+        },
+        {
+            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_name": AttributeName(attr="attr"),
+        },
+        {
+            "attr_name": AttributeName(attr="attr"),
+            "complex_filter": Equal(
+                AttributeName(attr="different_attr", sub_attr="sub_attr"), "whatever"
+            ),
+            "complex_filter_attr_name": AttributeName(attr="attr", sub_attr="other_attr"),
+        },
+        {
+            "attr_name": AttributeName(attr="attr"),
+            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_name": AttributeName(attr="different_attr", sub_attr="other_attr"),
+        },
+    ),
+)
+def test_patch_path_object_construction_fails_if_broken_constraints(kwargs):
+    with pytest.raises(ValueError):
+        PatchPath(**kwargs)

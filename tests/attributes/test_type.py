@@ -196,36 +196,6 @@ from src.attributes import type as at
                 ]
             },
         ),
-        (
-            {"sub_attr_1": {}, "sub_attr_2": []},
-            at.Complex,
-            {
-                "sub_attr_1": {
-                    "_errors": [
-                        {
-                            "code": 5,
-                            "context": {
-                                "allowed_types": ["bool", "float", "int", "str"],
-                                "provided_type": "dict",
-                                "scim_type": "complex",
-                            },
-                        }
-                    ]
-                },
-                "sub_attr_2": {
-                    "_errors": [
-                        {
-                            "code": 5,
-                            "context": {
-                                "allowed_types": ["bool", "float", "int", "str"],
-                                "provided_type": "list",
-                                "scim_type": "complex",
-                            },
-                        }
-                    ]
-                },
-            },
-        ),
     ),
 )
 def test_parse_invalid(input_value, type_, expected_issues):
@@ -418,36 +388,6 @@ def test_parse_invalid(input_value, type_, expected_issues):
                         },
                     }
                 ]
-            },
-        ),
-        (
-            {"sub_attr_1": {}, "sub_attr_2": []},
-            at.Complex,
-            {
-                "sub_attr_1": {
-                    "_errors": [
-                        {
-                            "code": 32,
-                            "context": {
-                                "allowed_types": ["bool", "datetime", "float", "int", "str"],
-                                "provided_type": "dict",
-                                "scim_type": "complex",
-                            },
-                        }
-                    ]
-                },
-                "sub_attr_2": {
-                    "_errors": [
-                        {
-                            "code": 32,
-                            "context": {
-                                "allowed_types": ["bool", "datetime", "float", "int", "str"],
-                                "provided_type": "list",
-                                "scim_type": "complex",
-                            },
-                        }
-                    ]
-                },
             },
         ),
     ),

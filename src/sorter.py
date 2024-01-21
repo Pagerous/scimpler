@@ -114,7 +114,12 @@ class Sorter:
                 if isinstance(attr, ComplexAttribute):
                     for v in item_value:
                         if v.get("primary"):
-                            attr = attr.sub_attributes.get("value")
+                            for sub_attr in attr.sub_attributes:
+                                if sub_attr.name.sub_attr == "value":
+                                    attr = sub_attr
+                                    break
+                            else:
+                                attr = None
                             value = v.get("value")
                             break
                 else:

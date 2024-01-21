@@ -7,15 +7,18 @@ from src.attributes.attributes import (
     AttributeMutability,
     AttributeName,
     ComplexAttribute,
+    Missing,
     extract,
     insert,
 )
 from src.attributes_presence import AttributePresenceChecker
 from src.error import ValidationError, ValidationIssues
 from src.filter.filter import Filter
+from src.patch import PatchPath
 from src.resource.schemas import (
     ERROR,
     LIST_RESPONSE,
+    PATCH_OP,
     SEARCH_REQUEST,
     ResourceSchema,
     Schema,
@@ -59,7 +62,7 @@ def filter_unknown_fields(
             continue
 
         value = extract(attr_name, data)
-        if value is None:
+        if value is Missing:
             continue
 
         if not isinstance(schema.get_attr(attr_name), ComplexAttribute):
@@ -109,6 +112,8 @@ def _process_body(
     for attr_name in schema.top_level_attr_names:
         attr = schema.get_attr(attr_name)
         value = extract(attr_name, body)
+        if value is Missing:
+            continue
         value, issues_ = getattr(attr, method)(value)
         issues.merge(
             issues=issues_,
@@ -123,14 +128,14 @@ def _process_body(
 
 def parse_body(
     body: Dict[str, Any],
-    schema: Union[Schema, ResourceSchema],
+    schema: Schema,
 ) -> Tuple[Dict[str, Any], ValidationIssues]:
     return _process_body(body, schema, "parse")
 
 
 def dump_body(
     body: Dict[str, Any],
-    schema: Union[Schema, ResourceSchema],
+    schema: Schema,
 ) -> Tuple[Dict[str, Any], ValidationIssues]:
     return _process_body(body, schema, "dump")
 
@@ -326,8 +331,8 @@ def validate_resource_type_consistency(
     return issues
 
 
-def parse_resource_input_body(
-    schema: ResourceSchema,
+def parse_input_body(
+    schema: Schema,
     body: Any = None,
     required_attrs_to_ignore: Optional[Sequence[AttributeName]] = None,
     drop_fields: Optional[Sequence[AttributeName]] = None,
@@ -358,7 +363,7 @@ def parse_resource_input_body(
             ),
             location=body_location,
         )
-    if not issues.has_issues(body_location):
+    if not issues:
         body = filter_unknown_fields(schema, body, drop_fields)
     else:
         body = None
@@ -431,7 +436,8 @@ class ResourceObjectGET:
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("request", "query_string"))
-            query_string["presence_checker"] = checker
+            if not issues_:
+                query_string["presence_checker"] = checker
         return RequestData(body=body, headers=headers, query_string=query_string), issues
 
     def dump_response(
@@ -464,7 +470,8 @@ class ResourceObjectPUT:
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("request", "query_string"))
-            query_string["presence_checker"] = checker
+            if not issues_:
+                query_string["presence_checker"] = checker
 
         drop_fields = []
         for attr_name in self._schema.all_attr_names:
@@ -472,7 +479,7 @@ class ResourceObjectPUT:
             if attr.mutability == AttributeMutability.READ_ONLY:
                 drop_fields.append(attr_name)
 
-        body, issues_ = parse_resource_input_body(
+        body, issues_ = parse_input_body(
             schema=self._schema,
             body=body,
             drop_fields=drop_fields,
@@ -510,7 +517,8 @@ class ResourceTypePOST:
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("request", "query_string"))
-            query_string["presence_checker"] = checker
+            if not issues_:
+                query_string["presence_checker"] = checker
 
         required_to_ignore = []
         for attr_name in self._schema.all_attr_names:
@@ -518,7 +526,7 @@ class ResourceTypePOST:
             if attr.required and attr.issuer == AttributeIssuer.SERVER:
                 required_to_ignore.append(attr_name)
 
-        body, issues_ = parse_resource_input_body(self._schema, body, required_to_ignore)
+        body, issues_ = parse_input_body(self._schema, body, required_to_ignore)
         issues.merge(issues=issues_)
         return RequestData(body=body, headers=headers, query_string=query_string), issues
 
@@ -700,13 +708,13 @@ def validate_pagination_info(
     n_resources = len(resources)
     is_pagination = (count or 0) > 0 and total_results > n_resources
     if is_pagination:
-        if extract("startindex", body) is None:
+        if extract("startindex", body) in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing_required_attribute("startindex"),
                 location=("startindex",),
                 proceed=False,
             )
-        if extract("itemsperpage", body) is None:
+        if extract("itemsperpage", body) in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing_required_attribute("itemsperpage"),
                 location=("itemsperpage",),
@@ -786,10 +794,12 @@ def dump_resources(
         for attr_name in schema.top_level_attr_names:
             attr = schema.get_attr(attr_name)
             value = extract(attr_name, resource)
+            if value in [None, Missing]:
+                continue
             value, issues_ = attr.dump(value)
             issues.merge(
                 issues=issues_,
-                location=("resources", i, attr.name),
+                location=("resources", i, attr_name.attr),
             )
             extension = (
                 isinstance(schema, ResourceSchema) and attr_name.schema in schema.schema_extensions
@@ -870,7 +880,8 @@ def _parse_resources_get_request(
         )
 
         checker, issues_ = parse_requested_attributes(query_string)
-        query_string["presence_checker"] = checker
+        if not issues_:
+            query_string["presence_checker"] = checker
         issues.merge(
             issues=issues_,
             location=("request", "query_string"),
@@ -1167,3 +1178,208 @@ class SearchRequestPOST:
             sorter=sorter,
             presence_checker=presence_checker,
         )
+
+
+class ResourceObjectPATCH:
+    def __init__(self, resource_schema: ResourceSchema):
+        self._schema = PATCH_OP
+        self._resource_schema = resource_schema
+
+    def parse_request(  # noqa
+        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        issues = ValidationIssues()
+        if isinstance(query_string, Dict):
+            checker, issues_ = parse_requested_attributes(query_string)
+            issues.merge(issues=issues_, location=("request", "query_string"))
+            if not issues_:
+                query_string["presence_checker"] = checker
+
+        body, issues_ = parse_input_body(self._schema, body)
+        issues.merge(issues_)
+
+        if issues:
+            body = None
+        else:
+            operations = extract("operations", body)
+            operations, issues_ = parse_operations(self._schema, operations)
+            issues.merge(issues_, location=("request", "body", "operations"))
+
+        if issues:
+            body = None
+        return RequestData(body=body, headers=headers, query_string=query_string), issues
+
+
+def parse_operations(
+    schema: ResourceSchema, data: List[Dict[str, Any]]
+) -> Tuple[Optional[List[Dict[str, Any]]], ValidationIssues]:
+    issues = ValidationIssues()
+    parsed = []
+    for i, item in enumerate(data):
+        path = extract("path", item)
+        if path not in [None, Missing]:
+            issues_ = validate_operation_path(schema, path)
+            if issues_:
+                issues.merge(issues_, location=(i, "path"))
+                parsed.append(None)
+                continue
+
+        type_ = extract("op", item)
+        value = extract("value", item)
+        if type_ == "add":
+            value, issues_ = _parse_add_operation_value(schema, path, value)
+            if issues_:
+                issues.merge(issues_, location=(i, "value"))
+                parsed.append(None)
+            else:
+                parsed.append(
+                    {
+                        "type": type_,
+                        "path": path,
+                        "value": value,
+                    }
+                )
+    if issues:
+        return None, issues
+    return parsed, issues
+
+
+def _parse_add_operation_value(
+    schema: ResourceSchema, path: Optional[PatchPath], value: Any
+) -> Tuple[Any, ValidationIssues]:
+    if path in [None, Missing]:
+        return _parse_add_operation_value_no_path(schema, value)
+
+    # sub-attribute of filtered multivalued complex attribute
+    if (
+        isinstance(schema.get_attr(path.attr_name), ComplexAttribute)
+        and path.complex_filter
+        and path.complex_filter_attr_name
+    ):
+        return _parse_update_attr_value(schema, path.complex_filter_attr_name, value)
+    return _parse_update_attr_value(schema, path.attr_name, value)
+
+
+def _parse_add_operation_value_no_path(
+    schema: ResourceSchema, value: Any
+) -> Tuple[Any, ValidationIssues]:
+    issues = ValidationIssues()
+    issues.merge(validate_dict_type(value))
+    if issues:
+        return None, issues
+
+    value_parsed = {}
+    for k, v in value.items():
+        if not isinstance(k, str):
+            continue
+
+        attr_name = AttributeName.parse(k)
+        if attr_name is None:
+            continue
+
+        k = k.lower()
+        if k in schema.schema_extensions:
+            issues_ = validate_dict_type(v)
+            if issues_:
+                issues.merge(issues_, location=(k,))
+                continue
+
+            for k_, v_ in v.items():
+                if not isinstance(k_, str):
+                    continue
+                sub_attr_name = AttributeName.parse(attr_name.full_attr + ":" + k_)
+                if sub_attr_name is None:
+                    continue
+                parsed_v_, issues_ = _parse_update_attr_value(schema, sub_attr_name, v_)
+                if issues_:
+                    issues.merge(issues_, location=(k, k_))
+                else:
+                    if k not in value_parsed:
+                        value_parsed[k] = {}
+                    value_parsed[k][k_] = parsed_v_
+        else:
+            parsed_v, issues_ = _parse_update_attr_value(schema, attr_name, v)
+            if issues_:
+                issues.merge(issues_, location=(k,))
+            else:
+                value_parsed[k] = parsed_v
+
+    if issues:
+        return None, issues
+    return value_parsed, issues
+
+
+def _parse_update_attr_value(
+    schema: Schema,
+    attr_name: AttributeName,
+    attr_value: Any,
+) -> Tuple[Any, ValidationIssues]:
+    issues = ValidationIssues()
+
+    attr = schema.get_attr(attr_name)
+    if attr is None:
+        return None, issues
+
+    if attr.mutability == AttributeMutability.READ_ONLY:
+        issues.add(
+            issue=ValidationError.read_only_attribute_can_not_be_updated(),
+            proceed=False,
+        )
+        return None, issues
+
+    parsed_attr_value, issues_ = attr.parse(attr_value)
+    if issues_:
+        issues.merge(issues_)
+    elif isinstance(attr, ComplexAttribute):
+        if attr.multi_valued:
+            ignore_required = []
+            for sub_attr in attr.sub_attributes:
+                if sub_attr.required and sub_attr.issuer == AttributeIssuer.SERVER:
+                    ignore_required.append(sub_attr.name)
+            presence_checker = AttributePresenceChecker(ignore_required=ignore_required)
+            for i, item in enumerate(parsed_attr_value):
+                issues.merge(
+                    issues=presence_checker(
+                        data=item,
+                        schema=schema,
+                        direction="REQUEST",
+                        attrs=attr.sub_attributes,
+                    ),
+                    location=(i,),
+                )
+        else:
+            for sub_attr in attr.sub_attributes:
+                if sub_attr.mutability != AttributeMutability.READ_ONLY:
+                    # non-read-only attributes can be updated
+                    continue
+                v = extract(sub_attr.name, parsed_attr_value)
+                if v is not Missing:
+                    issues.add(
+                        issue=ValidationError.read_only_attribute_can_not_be_updated(),
+                        proceed=False,
+                        location=(sub_attr.name.sub_attr,),
+                    )
+
+    if issues.has_issues():
+        return None, issues
+    return parsed_attr_value, issues
+
+
+def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues():
+    issues = ValidationIssues()
+    if (
+        schema.get_attr(path.attr_name) is None
+        or (
+            path.complex_filter_attr_name is not None
+            and schema.get_attr(path.complex_filter_attr_name) is None
+        )
+        or (
+            path.complex_filter is not None
+            and schema.get_attr(path.complex_filter.attr_name) is None
+        )
+    ):
+        issues.add(
+            issue=ValidationError.unknown_update_target(),
+            proceed=False,
+        )
+    return issues

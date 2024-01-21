@@ -12,16 +12,55 @@ class Schema(abc.ABC):
         self._attr_names: List[AttributeName] = []
         self._attrs: Dict[Tuple[str, str, str], Attribute] = {}
         for attr in [common_attrs.schemas, *attrs]:
-            attr_name = AttributeName(schema, attr.name)
-            self._attrs[schema, attr.name, ""] = attr
-            self._attr_names.append(attr_name)
-            self._top_level_attr_names.append(attr_name)
+            attr = self._bound_attr_to_schema(schema, attr)
+            self._attrs[schema, attr.name.attr, attr.name.sub_attr] = attr
+            self._attr_names.append(attr.name)
+            self._top_level_attr_names.append(attr.name)
             if isinstance(attr, ComplexAttribute):
-                for sub_attr_name, sub_attr in attr.sub_attributes.items():
-                    self._attrs[schema, attr.name, sub_attr_name] = sub_attr
-                    self._attr_names.append(AttributeName(schema, attr.name, sub_attr_name))
+                for sub_attr in attr.sub_attributes:
+                    self._attrs[schema, sub_attr.name.attr, sub_attr.name.sub_attr] = sub_attr
+                    self._attr_names.append(
+                        AttributeName(schema, sub_attr.name.attr, sub_attr.name.sub_attr)
+                    )
         self._repr = repr_
         self._schema = schema
+
+    @staticmethod
+    def _bound_attr_to_schema(schema: str, attr: Attribute) -> Attribute:
+        if isinstance(attr, ComplexAttribute):
+            return ComplexAttribute(
+                sub_attributes=attr.sub_attributes,
+                name=AttributeName(schema=schema, attr=attr.name.attr),
+                required=attr.required,
+                issuer=attr.issuer,
+                multi_valued=attr.multi_valued,
+                mutability=attr.mutability,
+                returned=attr.returned,
+                uniqueness=attr.uniqueness,
+                parsers=attr.parsers,
+                dumpers=attr.dumpers,
+                complex_parsers=attr.complex_parsers,
+                complex_dumpers=attr.complex_dumpers,
+            )
+        return Attribute(
+            name=AttributeName(schema=schema, attr=attr.name.attr, sub_attr=attr.name.sub_attr),
+            type_=attr.type,
+            reference_types=attr.reference_types,
+            issuer=attr.issuer,
+            required=attr.required,
+            case_exact=attr.case_exact,
+            multi_valued=attr.multi_valued,
+            canonical_values=attr.canonical_values,
+            mutability=attr.mutability,
+            returned=attr.returned,
+            uniqueness=attr.uniqueness,
+            parsers=attr.parsers,
+            dumpers=attr.dumpers,
+        )
+
+    @property
+    def attrs(self) -> List[Attribute]:
+        return list(self._attrs.values())
 
     @property
     def top_level_attr_names(self) -> List[AttributeName]:
@@ -88,15 +127,17 @@ class ResourceSchema(Schema, abc.ABC):
         copy = deepcopy(self)
         copy._schema_extensions[extension.schema] = required
         for attr in extension.attrs:
-            attr_name = AttributeName(extension.schema, attr.name)
-            copy._attrs[extension.schema, attr.name, ""] = attr
-            copy._attr_names.append(attr_name)
-            copy._top_level_attr_names.append(attr_name)
+            attr = self._bound_attr_to_schema(extension.schema, attr)
+            copy._attrs[extension.schema, attr.name.attr, ""] = attr
+            copy._attr_names.append(attr.name)
+            copy._top_level_attr_names.append(attr.name)
             if isinstance(attr, ComplexAttribute):
-                for sub_attr_name, sub_attr in attr.sub_attributes.items():
-                    copy._attrs[(extension.schema, attr.name, sub_attr_name)] = sub_attr
+                for sub_attr in attr.sub_attributes:
+                    copy._attrs[
+                        (extension.schema, sub_attr.name.attr, sub_attr.name.sub_attr)
+                    ] = sub_attr
                     copy._attr_names.append(
-                        AttributeName(extension.schema, attr.name, sub_attr_name)
+                        AttributeName(extension.schema, sub_attr.name.attr, sub_attr.name.sub_attr)
                     )
         return copy
 

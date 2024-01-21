@@ -6,11 +6,11 @@ import pytest
 from src.attributes.attributes import AttributeName
 from src.attributes_presence import AttributePresenceChecker
 from src.filter.filter import Filter
-from src.filter.operator import Present
+from src.filter.operator import Equal, Present
+from src.patch import PatchPath
 from src.resource.schemas import ERROR, USER
 from src.resource.validators import (
     Error,
-    filter_unknown_fields,
     ResourceObjectGET,
     ResourceObjectPUT,
     ResourceTypeGET,
@@ -18,8 +18,10 @@ from src.resource.validators import (
     SearchRequestPOST,
     ServerRootResourceGET,
     dump_resources,
+    filter_unknown_fields,
     infer_schema_from_data,
     parse_body,
+    parse_operations,
     parse_request_filtering,
     parse_request_sorting,
     parse_requested_attributes,
@@ -29,6 +31,7 @@ from src.resource.validators import (
     validate_existence,
     validate_items_per_page_consistency,
     validate_number_of_resources,
+    validate_operation_path,
     validate_pagination_info,
     validate_resource_location_consistency,
     validate_resource_location_in_header,
@@ -1123,3 +1126,455 @@ def test_filter_unknown_fields__complex_multivalued_attribute_value_is_preserved
     data_filtered = filter_unknown_fields(schema=USER, data=data)
 
     assert data_filtered == expected_data
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_issues"),
+    (
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="nonexisting"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {"_errors": [{"code": 303}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="non", sub_attr="existing"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {"_errors": [{"code": 303}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="nonexisting"), value="whatever"
+                ),
+                complex_filter_attr_name=None,
+            ),
+            {"_errors": [{"code": 303}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="type"), value="whatever"
+                ),
+                complex_filter_attr_name=AttributeName(attr="emails", sub_attr="nonexisting"),
+            ),
+            {"_errors": [{"code": 303}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="type"), value="work"
+                ),
+                complex_filter_attr_name=AttributeName(attr="emails", sub_attr="value"),
+            ),
+            {},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="type"), value="work"
+                ),
+                complex_filter_attr_name=None,
+            ),
+            {},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="name", sub_attr="familyName"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="name"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {},
+        ),
+    ),
+)
+def test_validate_operation_path(path, expected_issues):
+    issues = validate_operation_path(schema=USER, path=path)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_parse_patch_operations__fails_if_path_with_unknown_attribute():
+    operations = [
+        {
+            "op": "add",
+            "path": PatchPath(
+                attr_name=AttributeName(attr="unknown"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+        },
+        {
+            "op": "add",
+            "path": PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="unknown"),
+                    value="whatever",
+                ),
+                complex_filter_attr_name=None,
+            ),
+        },
+        {
+            "op": "add",
+            "path": PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="type"),
+                    value="work",
+                ),
+                complex_filter_attr_name=AttributeName(attr="emails", sub_attr="unknown"),
+            ),
+        },
+    ]
+    expected_issues = {
+        "0": {"path": {"_errors": [{"code": 303}]}},
+        "1": {"path": {"_errors": [{"code": 303}]}},
+        "2": {"path": {"_errors": [{"code": 303}]}},
+    }
+
+    parsed, issues = parse_operations(schema=USER, data=operations)
+
+    assert parsed is None
+    assert issues.to_dict() == expected_issues
+
+
+def test_parse_add_operation_without_path__succeeds_for_correct_data():
+    operations = [
+        {
+            "op": "add",
+            "value": {
+                "ignore^me": 42,
+                "name": {
+                    "formatted": "Ms. Barbara J Jensen III",
+                    "ignore^me": 42,
+                },
+                "userName": "bjensen",
+                "emails": [{"value": "bjensen@example.com", "type": "work"}],
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "ignore^me": 42,
+                    "department": "Tour Operations",
+                    "manager": {
+                        "displayName": "Jan Kowalski",
+                    },
+                },
+            },
+        }
+    ]
+    expected_value = {
+        "name": {
+            "formatted": "Ms. Barbara J Jensen III",
+        },
+        "username": "bjensen",
+        "emails": [{"value": "bjensen@example.com", "type": "work"}],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:user": {
+            "department": "Tour Operations",
+            "manager": {
+                "displayname": "Jan Kowalski",
+            },
+        },
+    }
+
+    parsed, issues = parse_operations(schema=USER, data=operations)
+
+    assert not issues
+    assert parsed[0]["value"] == expected_value
+
+
+def test_parse_add_operation_without_path__fails_for_incorrect_data():
+    operations = [
+        {
+            "op": "add",
+            "value": {
+                "name": {
+                    "formatted": 123,
+                },
+                "userName": 123,
+                "emails": [{"value": "bjensen@example.com", "type": 123}],
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "department": 123,
+                    "manager": {
+                        "displayName": 123,
+                    },
+                },
+            },
+        }
+    ]
+    expected_issues = {
+        "0": {
+            "value": {
+                "name": {"formatted": {"_errors": [{"code": 2}]}},
+                "username": {"_errors": [{"code": 2}]},
+                "emails": {"0": {"type": {"_errors": [{"code": 2}]}}},
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:user": {
+                    "department": {"_errors": [{"code": 2}]},
+                    "manager": {"displayname": {"_errors": [{"code": 2}]}},
+                },
+            }
+        }
+    }
+
+    parsed, issues = parse_operations(schema=USER, data=operations)
+
+    assert parsed is None
+    assert issues.to_dict() == expected_issues
+
+
+def test_parse_add_operation_without_path__fails_if_attribute_is_readonly():
+    operations = [
+        {
+            "op": "add",
+            "value": {"meta": {"resourceType": "Users"}},
+        }
+    ]
+    expected_issues = {"0": {"value": {"meta": {"_errors": [{"code": 304}]}}}}
+
+    parsed, issues = parse_operations(schema=USER, data=operations)
+
+    assert parsed is None
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "expected_value_issues"),
+    (
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="userName"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            123,
+            {"_errors": [{"code": 2}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="name", sub_attr="formatted"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            123,
+            {"_errors": [{"code": 2}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="name"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {"formatted": 123, "familyName": 123},
+            {"formatted": {"_errors": [{"code": 2}]}, "familyname": {"_errors": [{"code": 2}]}},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="name"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            123,
+            {"_errors": [{"code": 2}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            123,
+            {"_errors": [{"code": 18}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            [{"type": 123, "value": 123}],
+            {"0": {"type": {"_errors": [{"code": 2}]}, "value": {"_errors": [{"code": 2}]}}},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {"type": "home", "value": "home@example.com"},
+            {"_errors": [{"code": 18}]},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="type"),
+                    value="work",
+                ),
+                complex_filter_attr_name=AttributeName(attr="emails", sub_attr="value"),
+            ),
+            123,
+            {"_errors": [{"code": 2}]},
+        ),
+    ),
+)
+def test_parse_add_operation__fails_for_incorrect_data(path, value, expected_value_issues):
+    operations = [
+        {
+            "op": "add",
+            "path": path,
+            "value": value,
+        }
+    ]
+    expected_issues = {"0": {"value": expected_value_issues}}
+
+    parsed, issues = parse_operations(schema=USER, data=operations)
+
+    assert parsed is None
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "expected_value"),
+    (
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="userName"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            "bjensen",
+            "bjensen",
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="name", sub_attr="formatted"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            "Jan Kowalski",
+            "Jan Kowalski",
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="name"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {"formatted": "Jan Kowalski", "familyName": "Kowalski"},
+            {"formatted": "Jan Kowalski", "familyName": "Kowalski"},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            [{"type": "work", "value": "work@example.com"}],
+            [{"type": "work", "value": "work@example.com"}],
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="emails"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="emails", sub_attr="type"),
+                    value="work",
+                ),
+                complex_filter_attr_name=AttributeName(attr="emails", sub_attr="value"),
+            ),
+            "work@example.com",
+            "work@example.com",
+        ),
+    ),
+)
+def test_parse_add_operation__succeeds_on_correct_data(path, value, expected_value):
+    operations = [
+        {
+            "op": "add",
+            "path": path,
+            "value": value,
+        }
+    ]
+
+    parsed, issues = parse_operations(schema=USER, data=operations)
+
+    assert not issues
+    assert value == expected_value
+
+
+@pytest.mark.parametrize(
+    ("path", "value"),
+    (
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="id"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            "123",
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="manager", sub_attr="displayName"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            "The Grok",
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="meta"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            {"resourceType": "Users"},
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="groups"),
+                complex_filter=None,
+                complex_filter_attr_name=None,
+            ),
+            [{"type": "direct", "value": "admins"}],
+        ),
+        (
+            PatchPath(
+                attr_name=AttributeName(attr="groups"),
+                complex_filter=Equal(
+                    attr_name=AttributeName(attr="groups", sub_attr="type"),
+                    value="direct",
+                ),
+                complex_filter_attr_name=AttributeName(attr="groups", sub_attr="value"),
+            ),
+            "admins",
+        ),
+    ),
+)
+def test_parse_add_operation__fails_if_attribute_is_readonly(path, value):
+    operations = [
+        {
+            "op": "add",
+            "path": path,
+            "value": value,
+        }
+    ]
+    expected_issues = {"0": {"value": {"_errors": [{"code": 304}]}}}
+
+    parsed, issues = parse_operations(schema=USER, data=operations)
+
+    assert parsed is None
+    assert issues.to_dict() == expected_issues

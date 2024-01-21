@@ -10,24 +10,42 @@ class PatchPath:
     def __init__(
         self,
         attr_name: AttributeName,
-        multivalued_filter: Optional[Equal],
-        value_sub_attr_name: Optional[AttributeName],
+        complex_filter: Optional[Equal],
+        complex_filter_attr_name: Optional[AttributeName],
     ):
+        if attr_name.sub_attr and (complex_filter or complex_filter_attr_name):
+            raise ValueError("sub-attribute can not be complex")
+        if complex_filter_attr_name:
+            if not complex_filter_attr_name.sub_attr:
+                raise ValueError("sub-attribute name is required for 'complex_filter_attr_name'")
+            if not complex_filter_attr_name.top_level_equals(attr_name):
+                raise ValueError(
+                    "non-matching top-level attributes for 'attr_name' "
+                    "and 'complex_filter_attr_name'"
+                )
+        if complex_filter:
+            if not complex_filter.attr_name.sub_attr:
+                raise ValueError("complex filter can operate on sub-attributes only")
+            if not complex_filter.attr_name.top_level_equals(attr_name):
+                raise ValueError(
+                    "non-matching top-level attributes for 'attr_name' and 'complex_filter'"
+                )
+
         self._attr_name = attr_name
-        self._multivalued_filter = multivalued_filter
-        self._value_sub_attr_name = value_sub_attr_name
+        self._complex_filter = complex_filter
+        self._complex_filter_attr_name = complex_filter_attr_name
 
     @property
     def attr_name(self) -> AttributeName:
         return self._attr_name
 
     @property
-    def multivalued_filter(self) -> Optional[Equal]:
-        return self._multivalued_filter
+    def complex_filter(self) -> Optional[Equal]:
+        return self._complex_filter
 
     @property
-    def value_sub_attr_name(self) -> Optional[AttributeName]:
-        return self._value_sub_attr_name
+    def complex_filter_attr_name(self) -> Optional[AttributeName]:
+        return self._complex_filter_attr_name
 
     @classmethod
     def parse(cls, path: str) -> Tuple[Optional["PatchPath"], ValidationIssues]:
@@ -50,7 +68,7 @@ class PatchPath:
                 issues.add(issue=ValidationError.bad_attribute_name(path), proceed=False)
                 return None, issues
             return (
-                PatchPath(attr_name=attr_name, multivalued_filter=None, value_sub_attr_name=None),
+                PatchPath(attr_name=attr_name, complex_filter=None, complex_filter_attr_name=None),
                 issues,
             )
 
@@ -104,8 +122,8 @@ class PatchPath:
         return (
             cls(
                 attr_name=attr_name,
-                multivalued_filter=multivalued_filter,
-                value_sub_attr_name=value_sub_attr_name,
+                complex_filter=multivalued_filter,
+                complex_filter_attr_name=value_sub_attr_name,
             ),
             issues,
         )

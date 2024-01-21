@@ -1,22 +1,22 @@
 import abc
 import base64
 import binascii
+import typing as t
 from datetime import datetime
-from typing import Any, Dict, Optional, Set, Tuple, Type
 
 from ..error import ValidationError, ValidationIssues
 from . import validators
 
 
 class AttributeType(abc.ABC):
-    PARSE_TYPE: Type
-    DUMP_TYPE: Type
+    PARSE_TYPE: t.Type
+    DUMP_TYPE: t.Type
 
     SCIM_NAME: str
-    COMPATIBLE_TYPES: Set[Type] = set()
+    COMPATIBLE_TYPES: t.Set[t.Type] = set()
 
     @classmethod
-    def parse(cls, value: Any) -> Tuple[Any, ValidationIssues]:
+    def parse(cls, value: t.Any) -> t.Tuple[t.Any, ValidationIssues]:
         issues = ValidationIssues()
         if not isinstance(value, cls.PARSE_TYPE):
             issues.add(
@@ -31,7 +31,7 @@ class AttributeType(abc.ABC):
         return value, issues
 
     @classmethod
-    def dump(cls, value: Any) -> Tuple[Any, ValidationIssues]:
+    def dump(cls, value: t.Any) -> t.Tuple[t.Any, ValidationIssues]:
         issues = ValidationIssues()
         if not isinstance(value, cls.DUMP_TYPE):
             issues.add(
@@ -44,6 +44,22 @@ class AttributeType(abc.ABC):
             )
             value = None
         return value, issues
+
+
+class Any(AttributeType):
+    """
+    Not a standard SCIM type. To be used by variadic attributes.
+    """
+
+    _T = t.TypeVar("_T")
+
+    @classmethod
+    def parse(cls, value: _T) -> t.Tuple[_T, ValidationIssues]:
+        return value, ValidationIssues()
+
+    @classmethod
+    def dump(cls, value: _T) -> t.Tuple[_T, ValidationIssues]:
+        return value, ValidationIssues()
 
 
 class Boolean(AttributeType):
@@ -59,7 +75,7 @@ class Decimal(AttributeType):
     COMPATIBLE_TYPES = {int}
 
     @classmethod
-    def parse(cls, value: Any) -> Tuple[Optional[float], ValidationIssues]:
+    def parse(cls, value: t.Any) -> t.Tuple[t.Optional[float], ValidationIssues]:
         if isinstance(value, int):
             value, issues = Integer.parse(value)
             if value is not None:
@@ -68,7 +84,7 @@ class Decimal(AttributeType):
         return super().parse(value)
 
     @classmethod
-    def dump(cls, value: Any) -> Tuple[Optional[float], ValidationIssues]:
+    def dump(cls, value: t.Any) -> t.Tuple[t.Optional[float], ValidationIssues]:
         if isinstance(value, int):
             value, issues = Integer.dump(value)
             if value is not None:
@@ -84,13 +100,13 @@ class Integer(AttributeType):
     COMPATIBLE_TYPES = {float}
 
     @classmethod
-    def parse(cls, value: Any) -> Tuple[Optional[int], ValidationIssues]:
+    def parse(cls, value: t.Any) -> t.Tuple[t.Optional[int], ValidationIssues]:
         if isinstance(value, float) and int(value) == value:
             return int(value), ValidationIssues()
         return super().parse(value)
 
     @classmethod
-    def dump(cls, value: Any) -> Tuple[Optional[int], ValidationIssues]:
+    def dump(cls, value: t.Any) -> t.Tuple[t.Optional[int], ValidationIssues]:
         if isinstance(value, float) and int(value) == value:
             return int(value), ValidationIssues()
         return super().dump(value)
@@ -108,7 +124,7 @@ class Binary(String):
     DUMP_TYPE = str
 
     @classmethod
-    def parse(cls, value: Any) -> Tuple[Optional[str], ValidationIssues]:
+    def parse(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().parse(value)
         if not issues.can_proceed():
             return None, issues
@@ -118,7 +134,7 @@ class Binary(String):
         return value, issues
 
     @classmethod
-    def dump(cls, value: Any) -> Tuple[Optional[str], ValidationIssues]:
+    def dump(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().dump(value)
         if not issues.can_proceed():
             return None, issues
@@ -128,7 +144,7 @@ class Binary(String):
         return value, issues
 
     @classmethod
-    def _validate_encoding(cls, value: Any, issues: ValidationIssues) -> ValidationIssues:
+    def _validate_encoding(cls, value: t.Any, issues: ValidationIssues) -> ValidationIssues:
         try:
             if (
                 base64.b64encode(base64.b64decode(value).decode("utf-8").encode("utf-8")).decode(
@@ -154,7 +170,7 @@ class ExternalReference(String):
     DUMP_TYPE = str
 
     @classmethod
-    def parse(cls, value: Any) -> Tuple[Optional[str], ValidationIssues]:
+    def parse(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().parse(value)
         if issues.can_proceed():
             value, issues_ = validators.validate_absolute_url(value)
@@ -164,7 +180,7 @@ class ExternalReference(String):
         return None, issues
 
     @classmethod
-    def dump(cls, value: Any) -> Tuple[Optional[str], ValidationIssues]:
+    def dump(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().dump(value)
         if issues.can_proceed():
             value, issues_ = validators.validate_absolute_url(value)
@@ -192,7 +208,7 @@ class DateTime(String):
     DUMP_TYPE = datetime
 
     @classmethod
-    def parse(cls, value: Any) -> Tuple[Optional[datetime], ValidationIssues]:
+    def parse(cls, value: t.Any) -> t.Tuple[t.Optional[datetime], ValidationIssues]:
         value, issues = super().parse(value)
         if not issues.can_proceed():
             return None, issues
@@ -205,14 +221,14 @@ class DateTime(String):
         return value, issues
 
     @classmethod
-    def dump(cls, value: Any) -> Tuple[Optional[str], ValidationIssues]:
+    def dump(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().dump(value)
         if not issues.can_proceed():
             return None, issues
         return value.isoformat(), issues
 
     @staticmethod
-    def _parse_xsd_datetime(value: str) -> Optional[datetime]:
+    def _parse_xsd_datetime(value: str) -> t.Optional[datetime]:
         try:
             return datetime.fromisoformat(value)
         except ValueError:
@@ -223,58 +239,3 @@ class Complex(AttributeType):
     SCIM_NAME = "complex"
     PARSE_TYPE = dict
     DUMP_TYPE = dict
-    ALLOWED_SCIM_TYPES = {
-        Integer,
-        Decimal,
-        Boolean,
-        String,
-        Binary,
-        ExternalReference,
-        URIReference,
-        SCIMReference,
-        DateTime,
-    }
-
-    @classmethod
-    def parse(cls, value: Any) -> Tuple[Optional[Dict], ValidationIssues]:
-        value, issues = super().parse(value)
-        if not issues.can_proceed():
-            return None, issues
-        types = tuple(type_.PARSE_TYPE for type_ in cls.ALLOWED_SCIM_TYPES)
-        dumped = {}
-        for k, v in value.items():
-            if not isinstance(v, types):
-                issues.add(
-                    location=(k,),
-                    issue=ValidationError.bad_sub_attribute_parse_type(
-                        scim_type=cls.SCIM_NAME,
-                        allowed_types=types,
-                        provided_type=type(v),
-                    ),
-                    proceed=False,
-                )
-            else:
-                dumped[k] = v
-        return dumped, issues
-
-    @classmethod
-    def dump(cls, value: Any) -> Tuple[Optional[Dict], ValidationIssues]:
-        value, issues = super().dump(value)
-        if not issues.can_proceed():
-            return None, issues
-        types = tuple(type_.DUMP_TYPE for type_ in cls.ALLOWED_SCIM_TYPES)
-        dumped = {}
-        for k, v in value.items():
-            if not isinstance(v, types):
-                issues.add(
-                    location=(k,),
-                    issue=ValidationError.bad_sub_attribute_dump_type(
-                        scim_type=cls.SCIM_NAME,
-                        allowed_types=types,
-                        provided_type=type(v),
-                    ),
-                    proceed=False,
-                )
-            else:
-                dumped[k] = v
-        return dumped, issues

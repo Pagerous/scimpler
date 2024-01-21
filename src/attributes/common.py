@@ -135,7 +135,6 @@ meta = ComplexAttribute(
     name="meta",
     required=False,
     issuer=AttributeIssuer.SERVER,
-    case_exact=False,
     multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
