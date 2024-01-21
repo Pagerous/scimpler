@@ -622,11 +622,10 @@ def parse_requested_attributes(
 @skip_if_bad_data
 def validate_resources_sorted(
     sorter: Sorter,
-    body: Any,
+    resources: List[Any],
     schemas: Sequence[Schema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    resources = extract("resources", body)
     if resources != sorter(resources, schema=schemas):
         issues.add(
             issue=ValidationError.resources_not_sorted(),
@@ -639,11 +638,10 @@ def validate_resources_sorted(
 @skip_if_bad_data
 def validate_resources_attribute_presence(
     presence_checker: AttributePresenceChecker,
-    body: Any,
+    resources: List[Any],
     schemas: Sequence[Schema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    resources = extract("resources", body)
     for i, (resource, schema) in enumerate(zip(resources, schemas)):
         try:
             issues.merge(
@@ -658,12 +656,11 @@ def validate_resources_attribute_presence(
 @skip_if_bad_data
 def validate_number_of_resources(
     count: Optional[int],
-    body: Any,
+    total_results: Any,
+    resources: List[Any],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    total_results = extract("totalresults", body)
-    resources = extract("resources", body)
-    n_resources = 0 if resources in [None, Missing] else len(resources)
+    n_resources = len(resources)
     if total_results < n_resources:
         issues.add(
             issue=ValidationError.total_results_mismatch(
@@ -700,21 +697,22 @@ def validate_number_of_resources(
 @skip_if_bad_data
 def validate_pagination_info(
     count: Optional[int],
-    body: Dict[str, Any],
+    total_results: Any,
+    resources: List[Any],
+    start_index: Any,
+    items_per_page: Any,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    total_results = extract("totalresults", body)
-    resources = extract("resources", body)
     n_resources = len(resources)
     is_pagination = (count or 0) > 0 and total_results > n_resources
     if is_pagination:
-        if extract("startindex", body) in [None, Missing]:
+        if start_index in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing_required_attribute("startindex"),
                 location=("startindex",),
                 proceed=False,
             )
-        if extract("itemsperpage", body) in [None, Missing]:
+        if items_per_page in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing_required_attribute("itemsperpage"),
                 location=("itemsperpage",),
@@ -747,11 +745,9 @@ def validate_start_index_consistency(
 
 @skip_if_bad_data
 def validate_items_per_page_consistency(
-    body: Any,
+    resources: List[Any], items_per_page: Any
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    resources = extract("resources", body)
-    items_per_page = extract("itemsperpage", body)
     if not isinstance(items_per_page, int):
         return issues
 
@@ -775,11 +771,10 @@ def validate_items_per_page_consistency(
 
 
 def dump_resources(
-    body: Dict[str, Any],
+    resources: List[Any],
     schemas: Sequence[Schema],
-) -> Tuple[Dict, ValidationIssues]:
+) -> Tuple[List[Dict], ValidationIssues]:
     issues = ValidationIssues()
-    resources = extract("resources", body)
     dumped_resources = []
     for i, (resource, schema) in enumerate(zip(resources, schemas)):
         if not isinstance(resource, Dict):
@@ -806,16 +801,14 @@ def dump_resources(
             )
             insert(dumped_resource, attr_name, value, extension=extension)
         dumped_resources.append(dumped_resource)
-    insert(body, "resources", dumped_resources)
-    return body, issues
+    return dumped_resources, issues
 
 
 @skip_if_bad_data
 def validate_resources_filtered(
-    body: Any, filter_: Filter, schemas: Sequence[Schema], strict: bool
+    resources: List[Any], filter_: Filter, schemas: Sequence[Schema], strict: bool
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    resources = extract("resources", body)
     for i, (resource, schema) in enumerate(zip(resources, schemas)):
         if not filter_(resource, schema, strict):
             issues.add(
@@ -827,9 +820,8 @@ def validate_resources_filtered(
 
 
 @skip_if_bad_data
-def validate_resources_schemas_field(body: Any, schemas: Sequence[Schema]):
+def validate_resources_schemas_field(resources: Any, schemas: Sequence[Schema]):
     issues = ValidationIssues()
-    resources = extract("resources", body)
     for i, (resource, schema) in enumerate(zip(resources, schemas)):
         if schema is None:
             issues.add(
@@ -846,13 +838,9 @@ def validate_resources_schemas_field(body: Any, schemas: Sequence[Schema]):
 
 
 def _get_schemas_for_resources(
-    data: Dict[str, Any], available_schemas: Sequence[Schema]
+    resources: List[Any], available_schemas: Sequence[Schema]
 ) -> Optional[List[Schema]]:
     schemas = []
-    resources = extract("resources", data)
-    if resources is Missing:
-        return None
-
     n_schemas = len(available_schemas)
     for resource in resources:
         if n_schemas == 1:
@@ -910,7 +898,7 @@ def _parse_resources_get_request(
                     issue=ValidationError.bad_type(
                         expected_type=int, provided_type=type(start_index)
                     ),
-                    location=("request", "query_string", "startIndex"),
+                    location=("request", "query_string", "startindex"),
                     proceed=False,
                 )
     return RequestData(headers=headers, query_string=query_string, body=body), issues
@@ -938,79 +926,111 @@ def _dump_resources_get_response(
         issues=validate_dict_type(body),
         location=body_location,
     )
-    if issues.can_proceed(body_location):
-        body, issues_ = dump_body(body, list_response_schema)
+    if issues:
+        return ResponseData(headers=headers, body=None), issues
+
+    body, issues_ = dump_body(body, list_response_schema)
+    issues.merge(
+        issues=issues_,
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_schemas_field(body, list_response_schema),
+        location=body_location,
+    )
+    issues.merge(
+        issues=validate_status_code(200, status_code),
+        location=("response", "status"),
+    )
+    issues.merge(
+        issues=validate_start_index_consistency(start_index, body),
+        location=body_location,
+    )
+    issues.merge(
+        issues=AttributePresenceChecker()(body, list_response_schema, "RESPONSE"),
+        location=body_location,
+    )
+
+    schemas_for_resources = []
+    resources = extract("resources", body)
+    if not (resources is Missing or isinstance(resources, List)):
+        issues.add(
+            issue=ValidationError.bad_type(list, type(resources)),
+            location=body_location + ("resources",),
+            proceed=False,
+        )
+
+    if issues.can_proceed(body_location + ("resources",)):
+        total_results = extract("totalresults", body)
+        start_index_body = extract("startindex", body)
+        items_per_page = extract("itemsperpage", body)
         issues.merge(
-            issues=issues_,
+            issues=validate_number_of_resources(
+                count=count,
+                total_results=total_results,
+                resources=resources,
+            ),
             location=body_location,
         )
         issues.merge(
-            issues=validate_schemas_field(body, list_response_schema),
+            issues=validate_pagination_info(
+                count=count,
+                total_results=total_results,
+                resources=resources,
+                start_index=start_index_body,
+                items_per_page=items_per_page,
+            ),
             location=body_location,
         )
         issues.merge(
-            issues=validate_status_code(200, status_code),
-            location=("response", "status"),
-        )
-        issues.merge(
-            issues=validate_number_of_resources(count, body),
+            issues=validate_items_per_page_consistency(
+                resources=resources,
+                items_per_page=items_per_page,
+            ),
             location=body_location,
         )
-        issues.merge(
-            issues=validate_pagination_info(count, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_start_index_consistency(start_index, body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=validate_items_per_page_consistency(body),
-            location=body_location,
-        )
-        issues.merge(
-            issues=AttributePresenceChecker()(body, list_response_schema, "RESPONSE"),
-            location=body_location,
-        )
-        resource_schemas = _get_schemas_for_resources(body, resource_schemas)
-        if resource_schemas is not None:
+        if resources:
+            schemas_for_resources = _get_schemas_for_resources(resources, resource_schemas)
             issues.merge(
-                issues=validate_resources_schemas_field(body, resource_schemas),
+                issues=validate_resources_schemas_field(resources, schemas_for_resources),
                 location=body_location,
             )
-            body, issues_ = dump_resources(body, resource_schemas)
+            resources, issues_ = dump_resources(resources, schemas_for_resources)
             issues.merge(
                 issues=issues_,
                 location=body_location,
             )
             if filter_ is not None:
                 issues.merge(
-                    issues=validate_resources_filtered(body, filter_, resource_schemas, False),
+                    issues=validate_resources_filtered(
+                        resources, filter_, schemas_for_resources, False
+                    ),
                     location=body_location,
                 )
             if sorter is not None:
                 issues.merge(
-                    issues=validate_resources_sorted(sorter, body, resource_schemas),
+                    issues=validate_resources_sorted(sorter, resources, schemas_for_resources),
                     location=body_location,
                 )
             if resource_presence_checker is None:
                 resource_presence_checker = AttributePresenceChecker()
             issues.merge(
                 issues=validate_resources_attribute_presence(
-                    resource_presence_checker, body, resource_schemas
+                    resource_presence_checker, resources, schemas_for_resources
                 ),
                 location=body_location,
             )
-    if not issues.has_issues(body_location):
-        if resource_schemas:
-            resources = extract("resources", body)
-            body = filter_unknown_fields(list_response_schema, body)
-            body["resources"] = [
-                filter_unknown_fields(schema, resource)
-                for schema, resource in zip(resource_schemas, resources)
-            ]
-    else:
-        body = None
+
+    if issues:
+        return ResponseData(headers=headers, body=None), issues
+
+    if resources and schemas_for_resources:
+        body = filter_unknown_fields(list_response_schema, body)
+        body["resources"] = [
+            filter_unknown_fields(schema, resource)
+            for schema, resource in zip(schemas_for_resources, resources)
+        ]
+
     return ResponseData(headers=headers, body=body), issues
 
 
@@ -1050,7 +1070,10 @@ class ResourceTypeGET:
         )
 
 
-def infer_schema_from_data(data: Dict[str, Any], schemas: Sequence[Schema]) -> Optional[Schema]:
+def infer_schema_from_data(data: Any, schemas: Sequence[Schema]) -> Optional[Schema]:
+    if not isinstance(data, Dict):
+        return None
+
     schemas_value = extract("schemas", data)
     if isinstance(schemas_value, List) and len(schemas_value) > 0:
         schemas_value = {item.lower() if isinstance(item, str) else item for item in schemas_value}

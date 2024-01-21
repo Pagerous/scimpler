@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from src.attributes.attributes import AttributeName
+from src.attributes.attributes import AttributeName, Missing
 from src.attributes_presence import AttributePresenceChecker
 from src.filter.filter import Filter
 from src.filter.operator import Equal, Present
@@ -441,7 +441,11 @@ def test_validate_number_of_resources__fails_if_more_resources_than_total_result
         "resources": {"_errors": [{"code": 22}]},
     }
 
-    issues = validate_number_of_resources(None, list_user_data)
+    issues = validate_number_of_resources(
+        count=None,
+        total_results=1,
+        resources=list_user_data["Resources"],
+    )
 
     assert issues.to_dict() == expected
 
@@ -449,19 +453,25 @@ def test_validate_number_of_resources__fails_if_more_resources_than_total_result
 def test_validate_number_of_resources__fails_if_less_resources_than_total_results_without_count(
     list_user_data,
 ):
-    list_user_data["totalResults"] = 3
     expected = {"resources": {"_errors": [{"code": 23}]}}
 
-    issues = validate_number_of_resources(None, list_user_data)
+    issues = validate_number_of_resources(
+        count=None,
+        total_results=3,
+        resources=list_user_data["Resources"],
+    )
 
     assert issues.to_dict() == expected
 
 
 def test_validate_number_of_resources__fails_if_more_resources_than_specified_count(list_user_data):
-    count = 1
     expected = {"resources": {"_errors": [{"code": 21}]}}
 
-    issues = validate_number_of_resources(count, list_user_data)
+    issues = validate_number_of_resources(
+        count=1,
+        total_results=2,
+        resources=list_user_data["Resources"],
+    )
 
     assert issues.to_dict() == expected
 
@@ -476,14 +486,17 @@ def test_validate_number_of_resources__succeeds_if_correct_number_of_resources(
 
 
 def test_validate_pagination_info__fails_if_start_index_is_missing_when_pagination(list_user_data):
-    count = 2
-    list_user_data["itemsPerPage"] = 1
-    list_user_data["Resources"] = list_user_data["Resources"][:1]
     expected = {
         "startindex": {"_errors": [{"code": 1}]},
     }
 
-    issues = validate_pagination_info(count, list_user_data)
+    issues = validate_pagination_info(
+        count=2,
+        total_results=2,
+        resources=list_user_data["Resources"][:1],
+        start_index=Missing,
+        items_per_page=1,
+    )
 
     assert issues.to_dict() == expected
 
@@ -491,14 +504,17 @@ def test_validate_pagination_info__fails_if_start_index_is_missing_when_paginati
 def test_validate_pagination_info__fails_if_items_per_page_is_missing_when_pagination(
     list_user_data,
 ):
-    count = 2
-    list_user_data["startindex"] = 1
-    list_user_data["Resources"] = list_user_data["Resources"][:1]
     expected = {
         "itemsperpage": {"_errors": [{"code": 1}]},
     }
 
-    issues = validate_pagination_info(count, list_user_data)
+    issues = validate_pagination_info(
+        count=1,
+        total_results=2,
+        resources=list_user_data["Resources"][:1],
+        start_index=1,
+        items_per_page=Missing,
+    )
 
     assert issues.to_dict() == expected
 
@@ -540,13 +556,15 @@ def test_validate_start_index_consistency__succeeds_if_correct_data(list_user_da
 
 
 def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):
-    list_user_data["itemsPerPage"] = 1
     expected = {
         "itemsperpage": {"_errors": [{"code": 11}]},
         "resources": {"_errors": [{"code": 11}]},
     }
 
-    issues = validate_items_per_page_consistency(list_user_data)
+    issues = validate_items_per_page_consistency(
+        resources=list_user_data["Resources"],
+        items_per_page=1,
+    )
 
     assert issues.to_dict() == expected
 
@@ -569,13 +587,13 @@ def test_dump_resources__fails_for_bad_resource_schema(list_user_data):
         }
     }
 
-    body, issues = dump_resources(list_user_data, [USER, USER])
+    body, issues = dump_resources(list_user_data["Resources"], [USER, USER])
 
     assert issues.to_dict() == expected
 
 
 def test_dump_resources__succeeds_for_correct_data(list_user_data):
-    body, issues = dump_resources(list_user_data, [USER])
+    body, issues = dump_resources(list_user_data["Resources"], [USER])
 
     assert issues.to_dict() == {}
 
@@ -590,7 +608,7 @@ def test_dump_resources__resources_with_bad_type_are_reported(list_user_data):
         }
     }
 
-    body, issues = dump_resources(list_user_data, [USER, USER])
+    body, issues = dump_resources(list_user_data["Resources"], [USER, USER])
 
     assert issues.to_dict() == expected
 
@@ -673,7 +691,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
+    issues = validate_resources_filtered(list_user_data["Resources"], filter_, [USER], False)
 
     assert issues.to_dict() == expected
 
@@ -699,7 +717,7 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_, [USER, USER], False)
+    issues = validate_resources_filtered(list_user_data["Resources"], filter_, [USER, USER], False)
 
     assert issues.to_dict() == expected
 
@@ -726,7 +744,7 @@ def test_validate_resources_filtered__infers_correct_schema_from_data(list_user_
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_, [USER, ERROR], False)
+    issues = validate_resources_filtered(list_user_data["Resources"], filter_, [USER, ERROR], False)
 
     assert issues.to_dict() == expected
 
@@ -755,7 +773,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
         }
     }
 
-    issues = validate_resources_filtered(list_user_data, filter_, [USER], False)
+    issues = validate_resources_filtered(list_user_data["Resources"], filter_, [USER], False)
 
     assert issues.to_dict() == expected
 
@@ -778,7 +796,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
 def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
     expected = {"resources": {"_errors": [{"code": 26}]}}
 
-    issues = validate_resources_sorted(sorter, list_user_data, [USER, USER])
+    issues = validate_resources_sorted(sorter, list_user_data["Resources"], [USER, USER])
 
     assert issues.to_dict() == expected
 
@@ -810,7 +828,9 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
         }
     }
 
-    issues = validate_resources_attribute_presence(checker, list_user_data, [USER, USER])
+    issues = validate_resources_attribute_presence(
+        checker, list_user_data["Resources"], [USER, USER]
+    )
 
     assert issues.to_dict() == expected
 
@@ -835,7 +855,9 @@ def test_validate_resources_attribute_presence__invalid_resources_are_skipped(
         }
     }
 
-    issues = validate_resources_attribute_presence(checker, list_user_data, [USER, USER])
+    issues = validate_resources_attribute_presence(
+        checker, list_user_data["Resources"], [USER, USER]
+    )
 
     assert issues.to_dict() == expected
 
@@ -844,7 +866,7 @@ def test_validate_resources_schemas_field__bad_schemas_is_discovered(list_user_d
     list_user_data["Resources"][1]["schemas"].append("bad:user:schema")
     expected = {"resources": {"1": {"schemas": {"_errors": [{"code": 27}]}}}}
 
-    issues = validate_resources_schemas_field(list_user_data, [USER, USER])
+    issues = validate_resources_schemas_field(list_user_data["Resources"], [USER, USER])
 
     assert issues.to_dict() == expected
 
@@ -1058,6 +1080,64 @@ def test_attributes_existence_is_validated_in_list_response(validator):
     data, issues = validator.dump_response(
         status_code=200,
         body={},
+    )
+
+    assert issues.to_dict() == expected_issues
+    assert data.body is None
+
+
+@pytest.mark.parametrize(
+    "validator", (ResourceTypeGET(USER), ServerRootResourceGET([USER]), SearchRequestPOST([USER]))
+)
+def test_resources_in_list_response_must_be_list(validator):
+    expected_issues = {
+        "response": {
+            "body": {
+                "resources": {
+                    "_errors": [{"code": 18}],
+                },
+            }
+        }
+    }
+
+    data, issues = validator.dump_response(
+        status_code=200,
+        body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:listresponse"],
+            "totalResults": 1,
+            "Resources": {},
+        },
+    )
+
+    assert issues.to_dict() == expected_issues
+    assert data.body is None
+
+
+@pytest.mark.parametrize(
+    "validator", (ResourceTypeGET(USER), ServerRootResourceGET([USER]), SearchRequestPOST([USER]))
+)
+def test_attributes_presence_is_validated_in_resources_in_list_response(validator):
+    expected_issues = {
+        "response": {
+            "body": {
+                "resources": {
+                    "0": {
+                        "id": {"_errors": [{"code": 15}]},
+                        "schemas": {"_errors": [{"code": 15}]},
+                        "username": {"_errors": [{"code": 15}]},
+                    }
+                },
+            }
+        }
+    }
+
+    data, issues = validator.dump_response(
+        status_code=200,
+        body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:listresponse"],
+            "totalResults": 1,
+            "Resources": [{}],
+        },
     )
 
     assert issues.to_dict() == expected_issues
