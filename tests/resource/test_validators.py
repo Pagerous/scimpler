@@ -1040,6 +1040,30 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
     assert data.body is not None
 
 
+@pytest.mark.parametrize(
+    "validator", (ResourceTypeGET(USER), ServerRootResourceGET([USER]), SearchRequestPOST([USER]))
+)
+def test_attributes_existence_is_validated_in_list_response(validator):
+    expected_issues = {
+        "response": {
+            "body": {
+                "schemas": {
+                    "_errors": [{"code": 15}],
+                },
+                "totalresults": {"_errors": [{"code": 15}]},
+            }
+        }
+    }
+
+    data, issues = validator.dump_response(
+        status_code=200,
+        body={},
+    )
+
+    assert issues.to_dict() == expected_issues
+    assert data.body is None
+
+
 def test_correct_search_request_passes_validation():
     validator = SearchRequestPOST([USER])
 

@@ -663,7 +663,7 @@ def validate_number_of_resources(
     issues = ValidationIssues()
     total_results = extract("totalresults", body)
     resources = extract("resources", body)
-    n_resources = len(resources)
+    n_resources = 0 if resources in [None, Missing] else len(resources)
     if total_results < n_resources:
         issues.add(
             issue=ValidationError.total_results_mismatch(
@@ -848,8 +848,11 @@ def validate_resources_schemas_field(body: Any, schemas: Sequence[Schema]):
 def _get_schemas_for_resources(
     data: Dict[str, Any], available_schemas: Sequence[Schema]
 ) -> Optional[List[Schema]]:
-    resources = extract("resources", data)
     schemas = []
+    resources = extract("resources", data)
+    if resources is Missing:
+        return None
+
     n_schemas = len(available_schemas)
     for resource in resources:
         if n_schemas == 1:
@@ -923,7 +926,7 @@ def _dump_resources_get_response(
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
-    presence_checker: Optional[AttributePresenceChecker] = None,
+    resource_presence_checker: Optional[AttributePresenceChecker] = None,
 ) -> Tuple[ResponseData, ValidationIssues]:
     issues = ValidationIssues()
     body_location = ("response", "body")
@@ -965,6 +968,10 @@ def _dump_resources_get_response(
             issues=validate_items_per_page_consistency(body),
             location=body_location,
         )
+        issues.merge(
+            issues=AttributePresenceChecker()(body, list_response_schema, "RESPONSE"),
+            location=body_location,
+        )
         resource_schemas = _get_schemas_for_resources(body, resource_schemas)
         if resource_schemas is not None:
             issues.merge(
@@ -986,21 +993,22 @@ def _dump_resources_get_response(
                     issues=validate_resources_sorted(sorter, body, resource_schemas),
                     location=body_location,
                 )
-            if presence_checker is None:
-                presence_checker = AttributePresenceChecker()
+            if resource_presence_checker is None:
+                resource_presence_checker = AttributePresenceChecker()
             issues.merge(
                 issues=validate_resources_attribute_presence(
-                    presence_checker, body, resource_schemas
+                    resource_presence_checker, body, resource_schemas
                 ),
                 location=body_location,
             )
     if not issues.has_issues(body_location):
-        resources = extract("resources", body)
-        body = filter_unknown_fields(list_response_schema, body)
-        body["resources"] = [
-            filter_unknown_fields(schema, resource)
-            for schema, resource in zip(resource_schemas, resources)
-        ]
+        if resource_schemas:
+            resources = extract("resources", body)
+            body = filter_unknown_fields(list_response_schema, body)
+            body["resources"] = [
+                filter_unknown_fields(schema, resource)
+                for schema, resource in zip(resource_schemas, resources)
+            ]
     else:
         body = None
     return ResponseData(headers=headers, body=body), issues
@@ -1038,7 +1046,7 @@ class ResourceTypeGET:
             count=count,
             filter_=filter_,
             sorter=sorter,
-            presence_checker=presence_checker,
+            resource_presence_checker=presence_checker,
         )
 
 
@@ -1084,7 +1092,7 @@ class ServerRootResourceGET:
             count=count,
             filter_=filter_,
             sorter=sorter,
-            presence_checker=presence_checker,
+            resource_presence_checker=presence_checker,
         )
 
 
@@ -1174,7 +1182,7 @@ class SearchRequestPOST:
             count=count,
             filter_=filter_,
             sorter=sorter,
-            presence_checker=presence_checker,
+            resource_presence_checker=presence_checker,
         )
 
 
