@@ -936,9 +936,7 @@ def _dump_resources_get_response(
         location=body_location,
     )
     if issues.can_proceed(body_location):
-        resources = extract("resources", body)
         body, issues_ = dump_body(body, list_response_schema)
-        body["resources"] = resources
         issues.merge(
             issues=issues_,
             location=body_location,

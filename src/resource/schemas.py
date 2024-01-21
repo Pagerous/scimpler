@@ -13,6 +13,7 @@ LIST_RESPONSE = Schema(
         query_result_attrs.total_results,
         query_result_attrs.start_index,
         query_result_attrs.items_per_page,
+        query_result_attrs.resources,
     ],
 )
 
