@@ -1,30 +1,25 @@
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple
 
-from src.attributes.attributes import (
-    Attribute,
-    AttributeName,
-    AttributeReturn,
-    Missing,
-    extract,
-)
+from src.data.attributes import Attribute, AttributeReturn
+from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
-from src.schemas import Schema
+from src.schemas import BaseSchema
 
 
 class AttributePresenceChecker:
     def __init__(
         self,
-        attr_names: Optional[Iterable[AttributeName]] = None,
+        attr_reps: Optional[Iterable[AttrRep]] = None,
         include: Optional[bool] = None,
-        ignore_required: Optional[Iterable[AttributeName]] = None,
+        ignore_required: Optional[Iterable[AttrRep]] = None,
     ):
-        self._attr_names = list(attr_names or [])
+        self._attr_reps = list(attr_reps or [])
         self._include = include
         self._ignore_required = list(ignore_required or [])
 
     @property
-    def attr_names(self) -> List[AttributeName]:
-        return self._attr_names
+    def attr_reps(self) -> List[AttrRep]:
+        return self._attr_reps
 
     @property
     def include(self) -> Optional[bool]:
@@ -32,43 +27,39 @@ class AttributePresenceChecker:
 
     @classmethod
     def parse(
-        cls,
-        attr_names: Iterable[str],
-        include: Optional[bool] = None,
+        cls, attr_reps: Iterable[str], include: Optional[bool] = None
     ) -> Tuple[Optional["AttributePresenceChecker"], ValidationIssues]:
         issues = ValidationIssues()
-        parsed_attr_names = []
+        parsed_attr_reps = []
         all_parsed = True
-        for attr_name_ in attr_names:
-            attr_name = AttributeName.parse(attr_name_)
-            if attr_name:
+        for attr_rep_ in attr_reps:
+            attr_rep = AttrRep.parse(attr_rep_)
+            if attr_rep:
                 attr_location = (
-                    (attr_name.attr, attr_name.sub_attr)
-                    if attr_name.sub_attr
-                    else (attr_name.attr,)
+                    (attr_rep.attr, attr_rep.sub_attr) if attr_rep.sub_attr else (attr_rep.attr,)
                 )
             else:
-                attr_location = (attr_name_,)
-            if attr_name is None:
+                attr_location = (attr_rep_,)
+            if attr_rep is None:
                 issues.add(
-                    issue=ValidationError.bad_attribute_name(attr_name_),
+                    issue=ValidationError.bad_attribute_name(attr_rep_),
                     location=attr_location,
                     proceed=False,
                 )
 
             if issues.can_proceed(attr_location):
-                parsed_attr_names.append(attr_name)
+                parsed_attr_reps.append(attr_rep)
             else:
                 all_parsed = False
 
         if all_parsed:
-            return AttributePresenceChecker(parsed_attr_names, include), issues
+            return AttributePresenceChecker(parsed_attr_reps, include), issues
         return None, issues
 
     def __call__(
         self,
-        data: Dict[str, Any],
-        schema: Schema,
+        data: SCIMDataContainer,
+        schema: BaseSchema,
         direction: str,
         attrs: Optional[Iterable[Attribute]] = None,
     ) -> ValidationIssues:
@@ -78,44 +69,42 @@ class AttributePresenceChecker:
             attrs = schema.attrs
 
         for attr in attrs:
-            top_attr_name = AttributeName(schema=attr.name.schema, attr=attr.name.attr)
-            top_attr = schema.get_attr(top_attr_name)
+            top_attr_rep = AttrRep(schema=attr.rep.schema, attr=attr.rep.attr)
+            top_attr = schema.get_attr(top_attr_rep)
 
-            if attr.name.sub_attr and top_attr.multi_valued:
-                value = extract(top_attr_name, data)
+            if attr.rep.sub_attr and top_attr.multi_valued:
+                value = data[top_attr_rep]
                 if value in [None, Missing]:
                     issues.merge(
                         issues=self._check_presence(
                             value=value,
                             direction=direction,
                             attr=attr,
-                            attr_name=attr.name,
+                            attr_rep=attr.rep,
                         ),
-                        location=(attr.name.attr, attr.name.sub_attr),
+                        location=(attr.rep.attr, attr.rep.sub_attr),
                     )
                 else:
                     for i, item in enumerate(value):
                         issues.merge(
                             issues=self._check_presence(
-                                value=extract(AttributeName(attr=attr.name.sub_attr), item),
+                                value=item[AttrRep(attr=attr.rep.sub_attr)],
                                 direction=direction,
                                 attr=attr,
-                                attr_name=attr.name,
+                                attr_rep=attr.rep,
                             ),
-                            location=(attr.name.attr, i, attr.name.sub_attr),
+                            location=(attr.rep.attr, i, attr.rep.sub_attr),
                         )
             else:
                 attr_location = (
-                    (attr.name.attr, attr.name.sub_attr)
-                    if attr.name.sub_attr
-                    else (attr.name.attr,)
+                    (attr.rep.attr, attr.rep.sub_attr) if attr.rep.sub_attr else (attr.rep.attr,)
                 )
                 issues.merge(
                     issues=self._check_presence(
-                        value=extract(attr.name, data),
+                        value=data[attr.rep],
                         direction=direction,
                         attr=attr,
-                        attr_name=attr.name,
+                        attr_rep=attr.rep,
                     ),
                     location=attr_location,
                 )
@@ -127,7 +116,7 @@ class AttributePresenceChecker:
         value: Any,
         direction: str,
         attr: Attribute,
-        attr_name: AttributeName,
+        attr_rep: AttrRep,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if value not in [None, "", [], Missing]:
@@ -141,10 +130,10 @@ class AttributePresenceChecker:
                 )
 
             elif attr.returned != AttributeReturn.ALWAYS and (
-                (attr_name in self._attr_names and self._include is False)
+                (attr_rep in self._attr_reps and self._include is False)
                 or (
-                    attr_name not in self._attr_names
-                    and not self._sub_attr_or_top_attr_in_attr_names(attr_name)
+                    attr_rep not in self._attr_reps
+                    and not self._sub_attr_or_top_attr_in_attr_reps(attr_rep)
                     and self._include is True
                 )
             ):
@@ -155,10 +144,10 @@ class AttributePresenceChecker:
         else:
             if (
                 attr.required
-                and attr_name not in self._ignore_required
+                and attr_rep not in self._ignore_required
                 and (
                     self._include is not True
-                    or (attr_name in self._attr_names and self._include is True)
+                    or (attr_rep in self._attr_reps and self._include is True)
                     or (direction == "RESPONSE" and attr.returned == AttributeReturn.ALWAYS)
                 )
             ):
@@ -168,17 +157,17 @@ class AttributePresenceChecker:
                 )
         return issues
 
-    def _sub_attr_or_top_attr_in_attr_names(self, attr_name: AttributeName) -> bool:
-        for attr_name_ in self._attr_names:
+    def _sub_attr_or_top_attr_in_attr_reps(self, attr_rep: AttrRep) -> bool:
+        for attr_rep_ in self._attr_reps:
             if (
                 # sub-attr in attr names check
-                not attr_name.sub_attr
-                and attr_name.top_level_equals(attr_name_)
+                not attr_rep.sub_attr
+                and attr_rep.top_level_equals(attr_rep_)
                 # top-attr in attr names check
                 or (
-                    attr_name.sub_attr
-                    and not attr_name_.sub_attr
-                    and attr_name.top_level_equals(attr_name_)
+                    attr_rep.sub_attr
+                    and not attr_rep_.sub_attr
+                    and attr_rep.top_level_equals(attr_rep_)
                 )
             ):
                 return True

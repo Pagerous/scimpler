@@ -1,4 +1,3 @@
-import re
 from enum import Enum
 from typing import (
     Any,
@@ -13,191 +12,9 @@ from typing import (
     Union,
 )
 
-from src.attributes import type as at
+from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.type import AttributeType, Complex, get_scim_type
 from src.error import ValidationError, ValidationIssues
-
-_ATTR_NAME = re.compile(r"(\w+|\$ref)")
-_URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
-_FULL_ATTR_NAME_REGEX = re.compile(rf"({_URI_PREFIX.pattern})?({_ATTR_NAME.pattern}(\.\w+)?)")
-
-
-class AttributeName:
-    def __init__(self, schema: str = "", attr: str = "", sub_attr: str = ""):
-        if not _ATTR_NAME.fullmatch(attr):
-            raise ValueError(f"{attr!r} is not valid attr name")
-
-        schema, attr, sub_attr = schema.lower(), attr.lower(), sub_attr.lower()
-        attr_ = attr
-        if schema:
-            attr_ = f"{schema}:{attr_}"
-        if sub_attr:
-            attr_ += "." + sub_attr
-
-        if not _FULL_ATTR_NAME_REGEX.fullmatch(attr):
-            raise ValueError(f"{attr_!r} is not valid attr / sub-attr name")
-
-        self._schema = schema
-        self._attr = attr
-        self._sub_attr = sub_attr
-        self._repr = attr_
-
-    def __repr__(self) -> str:
-        return self._repr
-
-    def __eq__(self, other):
-        if not isinstance(other, AttributeName):
-            return False
-
-        if all([self.schema, other.schema]) and self.schema != other.schema:
-            return False
-
-        if self.attr != other.attr:
-            return False
-
-        if self.sub_attr != other.sub_attr:
-            return False
-
-        return True
-
-    @classmethod
-    def parse(cls, attr: str) -> Optional["AttributeName"]:
-        match = _FULL_ATTR_NAME_REGEX.fullmatch(attr)
-        if not match:
-            return None
-
-        schema, attr_name = match.group(1), match.group(2)
-        schema = schema[:-1].lower() if schema else ""
-        if "." in attr_name:
-            attr, sub_attr = attr_name.split(".")
-        else:
-            attr, sub_attr = attr_name, ""
-        return AttributeName(schema=schema, attr=attr, sub_attr=sub_attr)
-
-    @property
-    def schema(self) -> str:
-        return self._schema
-
-    @property
-    def full_attr(self) -> str:
-        if self._schema:
-            return f"{self._schema}:{self.attr}"
-        return self.attr
-
-    @property
-    def attr(self) -> str:
-        return self._attr
-
-    @property
-    def sub_attr(self) -> str:
-        return self._sub_attr
-
-    def top_level_equals(self, other: "AttributeName") -> bool:
-        if all([self.schema, other.schema]):
-            return self.full_attr == other.full_attr
-        return self.attr == other.attr
-
-
-def insert(
-    data: Dict, attr_name: Union[str, AttributeName], value: Any, extension: bool = False
-) -> None:
-    if isinstance(attr_name, str):
-        attr_name = AttributeName.parse(attr_name)
-        if attr_name is None:
-            return None
-
-    if extension:
-        if attr_name.schema is None:
-            raise ValueError("extended attribute names must contain schema")
-        if attr_name.schema not in data:
-            data[attr_name.schema] = {}
-        insert_point = data[attr_name.schema]
-    else:
-        insert_point = data
-
-    if attr_name.sub_attr:
-        if isinstance(value, List):
-            if attr_name.attr not in insert_point:
-                insert_point[attr_name.attr] = []
-            if len(insert_point[attr_name.attr]) < len(value):
-                for _ in range(len(value) - len(insert_point[attr_name.attr])):
-                    insert_point[attr_name.attr].append({})
-            for value_item, data_item in zip(value, insert_point[attr_name.attr]):
-                if value_item is not Missing:
-                    data_item[attr_name.sub_attr] = value_item
-        else:
-            if attr_name.attr not in insert_point:
-                insert_point[attr_name.attr] = {}
-            insert_point[attr_name.attr][attr_name.sub_attr] = value
-    else:
-        insert_point[attr_name.attr] = value
-
-
-class MissingType:
-    def __bool__(self):
-        return False
-
-    def __repr__(self):
-        return "Missing"
-
-
-Missing = MissingType()
-
-
-def extract(attr_name: Union[str, AttributeName], data: Dict[str, Any]) -> Optional[Any]:
-    if isinstance(attr_name, str):
-        attr_name = AttributeName.parse(attr_name)
-        if attr_name is None:
-            raise ValueError(f"bad attribute name")
-
-    top_value = Missing
-    used_extension = False
-    for k, v in data.items():
-        k_lower = k.lower()
-        if k_lower == attr_name.schema:
-            used_extension = True
-            top_value = v
-            break
-        if k_lower in [attr_name.full_attr, attr_name.attr]:
-            top_value = v
-            break
-        k_parsed = AttributeName.parse(k)
-        if k_parsed and attr_name.top_level_equals(k_parsed):
-            top_value = v
-            break
-        if (
-            _URI_PREFIX.fullmatch(f"{k}:")
-            and isinstance(v, Dict)
-            and attr_name.attr in map(lambda x: x.lower(), v)
-        ):
-            used_extension = True
-            top_value = v
-            break
-
-    if used_extension and isinstance(top_value, Dict):
-        for k, v in top_value.items():
-            if k.lower() == attr_name.attr:
-                top_value = v
-                break
-
-    if not attr_name.sub_attr:
-        return top_value
-
-    if isinstance(top_value, Dict):
-        for k, v in top_value.items():
-            if k.lower() == attr_name.sub_attr:
-                return v
-    elif isinstance(top_value, List):
-        extracted = []
-        for item in top_value:
-            for k, v in item.items():
-                if k.lower() == attr_name.sub_attr:
-                    extracted.append(v)
-                    break
-            else:
-                extracted.append(Missing)
-        return extracted
-
-    return Missing
 
 
 class AttributeMutability(str, Enum):
@@ -232,8 +49,8 @@ _AttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
 class Attribute:
     def __init__(
         self,
-        name: Union[str, AttributeName],
-        type_: Type[at.AttributeType],
+        name: Union[str, AttrRep],
+        type_: Type[AttributeType],
         reference_types: Optional[Iterable[str]] = None,
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
         required: bool = False,
@@ -246,7 +63,7 @@ class Attribute:
         parsers: Optional[Collection[_AttributeProcessor]] = None,
         dumpers: Optional[Collection[_AttributeProcessor]] = None,
     ):
-        self._name = AttributeName(attr=name) if isinstance(name, str) else name
+        self._rep = AttrRep(attr=name) if isinstance(name, str) else name
         self._type = type_
         self._reference_types = list(reference_types or [])  # TODO validate applicability
         self._issuer = issuer
@@ -261,11 +78,11 @@ class Attribute:
         self._dumpers = dumpers or []
 
     @property
-    def name(self) -> AttributeName:
-        return self._name
+    def rep(self) -> AttrRep:
+        return self._rep
 
     @property
-    def type(self) -> Type[at.AttributeType]:
+    def type(self) -> Type[AttributeType]:
         return self._type
 
     @property
@@ -313,7 +130,7 @@ class Attribute:
         return self._dumpers
 
     def __repr__(self) -> str:
-        return f"Attribute(name={self._name}, type={self._type.__name__})"
+        return f"Attribute(name={self._rep}, type={self._type.__name__})"
 
     def __eq__(self, other):
         if not isinstance(other, Attribute):
@@ -321,7 +138,7 @@ class Attribute:
 
         return all(
             [
-                self._name == other._name,
+                self._rep == other._rep,
                 self._type is other._type,
                 self._reference_types == other._reference_types,
                 self._required == other._required,
@@ -344,7 +161,7 @@ class Attribute:
         if self._multi_valued:
             if not isinstance(value, list):
                 issues.add(
-                    issue=ValidationError.bad_type(list, type(value)),
+                    issue=ValidationError.bad_type(get_scim_type(list), get_scim_type(type(value))),
                     proceed=False,
                 )
                 return None, issues
@@ -393,7 +210,7 @@ class ComplexAttribute(Attribute):
     def __init__(
         self,
         sub_attributes: Collection[Attribute],
-        name: Union[str, AttributeName],
+        name: Union[str, AttrRep],
         required: bool = False,
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
         multi_valued: bool = False,
@@ -407,7 +224,7 @@ class ComplexAttribute(Attribute):
     ):
         super().__init__(
             name=name,
-            type_=at.Complex,
+            type_=Complex,
             issuer=issuer,
             required=required,
             multi_valued=multi_valued,
@@ -420,14 +237,21 @@ class ComplexAttribute(Attribute):
         self._sub_attributes: List[Attribute] = [
             self._bound_sub_attr(sub_attr) for sub_attr in sub_attributes
         ]
-        self._complex_parsers = complex_parsers or []
-        self._complex_dumpers = complex_dumpers or []
+
+        complex_parsers, complex_dumpers = complex_parsers or [], complex_dumpers or []
+        if multi_valued:
+            if validate_single_primary_value not in complex_parsers:
+                complex_parsers.append(validate_single_primary_value)
+            if validate_single_primary_value not in complex_dumpers:
+                complex_dumpers.append(validate_single_primary_value)
+        self._complex_parsers = complex_parsers
+        self._complex_dumpers = complex_dumpers
 
     def _bound_sub_attr(self, sub_attr: Attribute) -> Attribute:
-        if sub_attr.name.top_level_equals(self.name):
+        if sub_attr.rep.top_level_equals(self.rep):
             return sub_attr
         return Attribute(
-            name=AttributeName(attr=self.name.attr, sub_attr=sub_attr.name.attr),
+            name=AttrRep(attr=self.rep.attr, sub_attr=sub_attr.rep.attr),
             type_=sub_attr.type,
             reference_types=sub_attr.reference_types,
             issuer=sub_attr.issuer,
@@ -463,27 +287,29 @@ class ComplexAttribute(Attribute):
         if self.multi_valued:
             parsed = []
             for i, item in enumerate(value):
-                parsed_item = {}
+                item = SCIMDataContainer(item)
+                parsed_item = SCIMDataContainer()
                 for sub_attr in self._sub_attributes:
-                    sub_attr_value = extract(sub_attr.name.sub_attr, item)
+                    sub_attr_value = item[AttrRep(attr=sub_attr.rep.sub_attr)]
                     if sub_attr_value is Missing:
                         continue
                     parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
-                    issues.merge(location=(i, sub_attr.name.sub_attr), issues=issues_)
-                    parsed_item[sub_attr.name.sub_attr] = parsed_attr
+                    issues.merge(location=(i, sub_attr.rep.sub_attr), issues=issues_)
+                    parsed_item[AttrRep(attr=sub_attr.rep.sub_attr)] = parsed_attr
                 parsed.append(parsed_item)
         else:
-            parsed = {}
+            value = SCIMDataContainer(value)
+            parsed = SCIMDataContainer()
             for sub_attr in self._sub_attributes:
-                sub_attr_value = extract(sub_attr.name.sub_attr, value)
+                sub_attr_value = value[AttrRep(attr=sub_attr.rep.sub_attr)]
                 if sub_attr_value is Missing:
                     continue
                 parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
                 issues.merge(
-                    location=(sub_attr.name.sub_attr,),
+                    location=(sub_attr.rep.sub_attr,),
                     issues=issues_,
                 )
-                parsed[sub_attr.name.sub_attr] = parsed_attr
+                parsed[AttrRep(attr=sub_attr.rep.sub_attr)] = parsed_attr
 
         if not issues:
             for postprocessor in postprocessors:
@@ -494,12 +320,31 @@ class ComplexAttribute(Attribute):
                     parsed = None
                     break
 
-        if issues:
-            return None, issues
         return parsed, issues
 
-    def parse(self, value: Any) -> Tuple[Optional[Union[Dict, List[Dict]]], ValidationIssues]:
+    def parse(
+        self, value: Any
+    ) -> Tuple[Optional[Union[SCIMDataContainer, List[SCIMDataContainer]]], ValidationIssues]:
         return self._process_complex(value, "parse", self._complex_parsers)
 
-    def dump(self, value: Any) -> Tuple[Optional[Union[Dict, List[Dict]]], ValidationIssues]:
+    def dump(
+        self, value: Any
+    ) -> Tuple[Optional[Union[SCIMDataContainer, List[SCIMDataContainer]]], ValidationIssues]:
         return self._process_complex(value, "dump", self._complex_dumpers)
+
+
+def validate_single_primary_value(
+    value: Collection[SCIMDataContainer],
+) -> Tuple[List[SCIMDataContainer], ValidationIssues]:
+    issues = ValidationIssues()
+    primary_entries = set()
+    for i, item in enumerate(value):
+        if item[AttrRep(attr="primary")] is True:
+            primary_entries.add(i)
+    if len(primary_entries) > 1:
+        issues.add(
+            issue=ValidationError.multiple_primary_values(primary_entries),
+            proceed=True,
+        )
+    # TODO: warn if a given type-value pair appears more than once
+    return list(value), issues

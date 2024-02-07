@@ -1,13 +1,14 @@
 from typing import Optional, Tuple
 
-from src.attributes import type as at
-from src.attributes.attributes import (
+from src.data import type as type_
+from src.data.attributes import (
     Attribute,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
 )
 from src.error import ValidationError, ValidationIssues
+from src.schemas import BaseSchema
 
 
 def parse_error_status(value: str) -> Tuple[Optional[int], ValidationIssues]:
@@ -53,7 +54,7 @@ def validate_error_scim_type(value: str) -> Tuple[Optional[str], ValidationIssue
 
 status = Attribute(
     name="status",
-    type_=at.String,
+    type_=type_.String,
     required=True,
     case_exact=False,
     multi_valued=False,
@@ -66,7 +67,7 @@ status = Attribute(
 
 scim_type = Attribute(
     name="scimType",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -79,7 +80,7 @@ scim_type = Attribute(
 
 detail = Attribute(
     name="detail",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -87,3 +88,18 @@ detail = Attribute(
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,
 )
+
+
+class Error(BaseSchema):
+    def __init__(self):
+        super().__init__(
+            schema="urn:ietf:params:scim:api:messages:2.0:Error",
+            attrs=[
+                status,
+                scim_type,
+                detail,
+            ],
+        )
+
+    def __repr__(self) -> str:
+        return "Error"

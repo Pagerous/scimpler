@@ -1,14 +1,10 @@
 from collections import defaultdict
-from typing import Any, Collection, Dict, List, Optional, Tuple, Type
+from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Type
 
 
 class ValidationError:
     _message_for_code = {
-        1: "attribute '{attr_name}' is required",
-        2: (
-            "expected type for parsing SCIM '{scim_type}' is '{expected_type}', "
-            "got '{provided_type}' instead"
-        ),
+        2: "expected type '{expected}', got '{provided}' instead",
         3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
         4: "SCIM '{scim_type}' should be encoded as a valid xsd:dateTime",
         5: (
@@ -26,7 +22,7 @@ class ValidationError:
             "MUST appear no more than once, but these items have it: {primary_entries}"
         ),
         10: "header '{header}' is required",
-        11: "values of {value_1} and {value_2} must match",
+        11: "must be equal to {value!r}",
         12: (
             "error status should be greater or equal to 300 and lesser than 600, "
             "but provided {provided}"
@@ -37,16 +33,12 @@ class ValidationError:
         ),
         14: "value must be one of: {expected_values}, but provided '{provided}'",
         15: "missing",
-        16: (
-            "HTTP response status for method '{method}' must be '{expected}', "
-            "but provided '{provided}'"
-        ),
+        16: "bad status code, expecting '{expected}', but provided '{provided}'",
         17: (
             "meta.resourceType must match configured type `{resource_type}`, "
             "but provided '{provided}'"
         ),
-        18: "expected type '{expected_type}', got '{provided_type}' instead",
-        19: "should never be returned",
+        19: "should not be returned",
         20: "provided 'schemas' do not correspond to the resource {resource_type!r}",
         21: "too many results, must {must}",
         22: "total results ({total_results}) do not match number of resources ({n_resources})",
@@ -62,10 +54,6 @@ class ValidationError:
         28: "main schema not included",
         29: "extension {extension!r} is missing",
         30: "can not be used together with {other!r}",
-        31: (  # TODO: change code to 3
-            "expected type for dumping SCIM '{scim_type}' is '{expected_type}', "
-            "got '{provided_type}' instead"
-        ),
         32: (  # TODO: change code to 6
             "SCIM '{scim_type}' can contain the values of these types only when dumping: "
             "{allowed_types}, but got '{provided_type}' instead"
@@ -99,17 +87,8 @@ class ValidationError:
         self._location: Optional[str] = None
 
     @classmethod
-    def missing_required_attribute(cls, attr_name):  # TODO: remove it
-        return cls(code=1, attr_name=attr_name)
-
-    @classmethod
-    def bad_scim_parse_type(cls, scim_type: str, expected_type: Type, provided_type: Type):
-        return cls(
-            code=2,
-            scim_type=scim_type,
-            expected_type=expected_type.__name__,
-            provided_type=provided_type.__name__,
-        )
+    def bad_type(cls, expected: str, provided: str):
+        return cls(code=2, expected=expected, provided=provided)
 
     @classmethod
     def base_64_encoding_required(cls, scim_type: str):
@@ -151,8 +130,8 @@ class ValidationError:
         return cls(code=10, header=header)
 
     @classmethod
-    def values_must_match(cls, value_1: Any, value_2: Any):
-        return cls(code=11, value_1=value_1, value_2=value_2)
+    def must_be_equal_to(cls, value: Any):
+        return cls(code=11, value=value)
 
     @classmethod
     def bad_error_status(cls, provided: int):
@@ -171,20 +150,12 @@ class ValidationError:
         return cls(code=15)
 
     @classmethod
-    def bad_status_code(cls, method: str, expected: int, provided: int):
-        return cls(code=16, method=method, expected=expected, provided=provided)
+    def bad_status_code(cls, expected: int, provided: int):
+        return cls(code=16, expected=expected, provided=provided)
 
     @classmethod
     def resource_type_mismatch(cls, resource_type: str, provided: str):
         return cls(code=17, resource_type=resource_type, provided=provided)
-
-    @classmethod
-    def bad_type(cls, expected_type: Type, provided_type: Type):
-        return cls(
-            code=18,
-            expected_type=expected_type.__name__,
-            provided_type=provided_type.__name__,
-        )
 
     @classmethod
     def restricted_or_not_requested(cls):
@@ -247,15 +218,6 @@ class ValidationError:
     @classmethod
     def can_not_be_used_together(cls, other: str):
         return cls(code=30, other=other)
-
-    @classmethod
-    def bad_scim_dump_type(cls, scim_type: str, expected_type: Type, provided_type: Type):
-        return cls(
-            code=31,
-            scim_type=scim_type,
-            expected_type=expected_type.__name__,
-            provided_type=provided_type.__name__,
-        )
 
     @classmethod
     def bad_sub_attribute_dump_type(
@@ -371,19 +333,14 @@ class ValidationError:
 class ValidationIssues:
     def __init__(self):
         self._issues: Dict[Tuple, List[ValidationError]] = defaultdict(list)
-        self._stop_proceeding = set()
-
-    @property
-    def issues(self) -> Dict[Tuple, List[ValidationError]]:
-        return self._issues
+        self._stop_proceeding: Dict[Tuple, Set[int]] = defaultdict(set)
 
     def merge(self, issues: "ValidationIssues", location: Optional[Tuple] = None):
         location = location or tuple()
-        for other_location, location_issues in issues.issues.items():
+        for other_location, location_issues in issues._issues.items():
             new_location = location + other_location
             self._issues[new_location].extend(location_issues)
-            if not issues.can_proceed(other_location):
-                self._stop_proceeding.add(new_location)
+            self._stop_proceeding[new_location].update(issues._stop_proceeding[other_location])
 
     def add(
         self,
@@ -391,21 +348,38 @@ class ValidationIssues:
         proceed: bool,
         location: Optional[Collection[str]] = None,
     ) -> None:
-        location = location or tuple()
-        location = tuple(location)
+        location = tuple(location or tuple())
         self._issues[location].append(issue)
         if not proceed:
-            self._stop_proceeding.add(location)
+            self._stop_proceeding[location].add(issue.code)
+
+    def drop(self, *locations: Collection[str], code: int) -> None:
+        if not locations:
+            locations = [tuple()]
+
+        for location in locations:
+            if location not in self._issues:
+                continue
+
+            for issue in self._issues[location]:
+                if issue.code == code:
+                    self._issues[location].remove(issue)
+                    if issue.code in self._stop_proceeding.get(location, set()):
+                        self._stop_proceeding[location].remove(issue.code)
+
+            if len(self._issues[location]) == 0:
+                self._issues.pop(location)
+
+            if location in self._stop_proceeding and len(self._stop_proceeding[location]) == 0:
+                self._stop_proceeding.pop(location)
 
     def can_proceed(self, *locations: Collection[str]) -> bool:
         if not locations:
             locations = [tuple()]
         for location in locations:
-            for i in range(1, len(location) + 1):
+            for i in range(len(location) + 1):
                 if location[:i] in self._stop_proceeding:
                     return False
-            if location in self._stop_proceeding:
-                return False
         return True
 
     def has_issues(self, *locations: Collection[str]) -> bool:

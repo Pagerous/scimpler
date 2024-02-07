@@ -2,7 +2,7 @@ from typing import Optional
 
 import pytest
 
-from src.attributes.attributes import AttributeName
+from src.data.container import AttrRep
 from src.filter.operator import Equal
 from src.patch import PatchPath
 
@@ -56,80 +56,80 @@ def test_patch_path_parsing_failure(path, expected_issues):
 
 
 @pytest.mark.parametrize(
-    ("path", "expected_attr_name", "expected_multivalued_filter", "expected_value_sub_attr_name"),
+    ("path", "expected_attr_rep", "expected_multivalued_filter", "expected_value_sub_attr_rep"),
     (
-        ("members", AttributeName(attr="members"), None, None),
-        ("name.familyName", AttributeName(attr="name", sub_attr="familyName"), None, None),
+        ("members", AttrRep(attr="members"), None, None),
+        ("name.familyName", AttrRep(attr="name", sub_attr="familyName"), None, None),
         (
             'addresses[type eq "work"]',
-            AttributeName(attr="addresses"),
-            Equal(AttributeName(attr="addresses", sub_attr="type"), "work"),
+            AttrRep(attr="addresses"),
+            Equal(AttrRep(attr="addresses", sub_attr="type"), "work"),
             None,
         ),
         (
             'members[value eq "2819c223-7f76-453a-919d-413861904646"].displayName',
-            AttributeName(attr="members"),
+            AttrRep(attr="members"),
             Equal(
-                AttributeName(attr="members", sub_attr="value"),
+                AttrRep(attr="members", sub_attr="value"),
                 "2819c223-7f76-453a-919d-413861904646",
             ),
-            AttributeName(attr="members", sub_attr="displayName"),
+            AttrRep(attr="members", sub_attr="displayName"),
         ),
     ),
 )
 def test_patch_path_parsing_success(
     path,
-    expected_attr_name: AttributeName,
+    expected_attr_rep: AttrRep,
     expected_multivalued_filter: Optional[Equal],
-    expected_value_sub_attr_name: Optional[AttributeName],
+    expected_value_sub_attr_rep: Optional[AttrRep],
 ):
     parsed, issues = PatchPath.parse(path)
 
     assert not issues
-    assert parsed.attr_name == expected_attr_name
+    assert parsed.attr_rep == expected_attr_rep
     if expected_multivalued_filter is not None:
         assert isinstance(parsed.complex_filter, type(expected_multivalued_filter))
         assert parsed.complex_filter.value == expected_multivalued_filter.value
-        assert parsed.complex_filter.attr_name == expected_multivalued_filter.attr_name
+        assert parsed.complex_filter.attr_rep == expected_multivalued_filter.attr_rep
     else:
         assert parsed.complex_filter is None
-    assert parsed.complex_filter_attr_name == expected_value_sub_attr_name
+    assert parsed.complex_filter_attr_rep == expected_value_sub_attr_rep
 
 
 @pytest.mark.parametrize(
     "kwargs",
     (
         {
-            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
-            "complex_filter_attr_name": None,
+            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_rep": None,
         },
         {
-            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
-            "complex_filter_attr_name": AttributeName(attr="attr", sub_attr="other_attr"),
+            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
         },
         {
-            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttributeName(attr="attr"), "whatever"),
-            "complex_filter_attr_name": AttributeName(attr="attr", sub_attr="other_attr"),
+            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttrRep(attr="attr"), "whatever"),
+            "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
         },
         {
-            "attr_name": AttributeName(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
-            "complex_filter_attr_name": AttributeName(attr="attr"),
+            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_rep": AttrRep(attr="attr"),
         },
         {
-            "attr_name": AttributeName(attr="attr"),
+            "attr_rep": AttrRep(attr="attr"),
             "complex_filter": Equal(
-                AttributeName(attr="different_attr", sub_attr="sub_attr"), "whatever"
+                AttrRep(attr="different_attr", sub_attr="sub_attr"), "whatever"
             ),
-            "complex_filter_attr_name": AttributeName(attr="attr", sub_attr="other_attr"),
+            "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
         },
         {
-            "attr_name": AttributeName(attr="attr"),
-            "complex_filter": Equal(AttributeName(attr="attr", sub_attr="sub_attr"), "whatever"),
-            "complex_filter_attr_name": AttributeName(attr="different_attr", sub_attr="other_attr"),
+            "attr_rep": AttrRep(attr="attr"),
+            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter_attr_rep": AttrRep(attr="different_attr", sub_attr="other_attr"),
         },
     ),
 )

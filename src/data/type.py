@@ -3,9 +3,11 @@ import base64
 import binascii
 import typing as t
 from datetime import datetime
+from typing import Optional, Tuple
+from urllib.parse import urlparse
 
 from ..error import ValidationError, ValidationIssues
-from . import validators
+from .container import SCIMDataContainer
 
 
 class AttributeType(abc.ABC):
@@ -20,10 +22,8 @@ class AttributeType(abc.ABC):
         issues = ValidationIssues()
         if not isinstance(value, cls.PARSE_TYPE):
             issues.add(
-                issue=ValidationError.bad_scim_parse_type(
-                    scim_type=cls.SCIM_NAME,
-                    expected_type=cls.PARSE_TYPE,
-                    provided_type=type(value),
+                issue=ValidationError.bad_type(
+                    expected=get_scim_type(cls.PARSE_TYPE), provided=get_scim_type(type(value))
                 ),
                 proceed=False,
             )
@@ -35,10 +35,8 @@ class AttributeType(abc.ABC):
         issues = ValidationIssues()
         if not isinstance(value, cls.DUMP_TYPE):
             issues.add(
-                issue=ValidationError.bad_scim_dump_type(
-                    scim_type=cls.SCIM_NAME,
-                    expected_type=cls.DUMP_TYPE,
-                    provided_type=type(value),
+                issue=ValidationError.bad_type(
+                    expected=get_scim_type(cls.DUMP_TYPE), provided=get_scim_type(type(value))
                 ),
                 proceed=False,
             )
@@ -146,17 +144,13 @@ class Binary(String):
     @classmethod
     def _validate_encoding(cls, value: t.Any, issues: ValidationIssues) -> ValidationIssues:
         try:
-            if (
-                base64.b64encode(base64.b64decode(value).decode("utf-8").encode("utf-8")).decode(
-                    "utf-8"
-                )
-                != value
-            ):
+            value = bytes(value, "ascii")
+            if base64.b64encode(base64.b64decode(value)) != value:
                 issues.add(
                     issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
                     proceed=False,
                 )
-        except (binascii.Error, UnicodeDecodeError):
+        except binascii.Error:
             issues.add(
                 issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
                 proceed=False,
@@ -173,7 +167,7 @@ class ExternalReference(String):
     def parse(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().parse(value)
         if issues.can_proceed():
-            value, issues_ = validators.validate_absolute_url(value)
+            value, issues_ = validate_absolute_url(value)
             issues.merge(issues=issues_)
         if issues.can_proceed():
             return value, issues
@@ -183,7 +177,7 @@ class ExternalReference(String):
     def dump(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().dump(value)
         if issues.can_proceed():
-            value, issues_ = validators.validate_absolute_url(value)
+            value, issues_ = validate_absolute_url(value)
             issues.merge(issues=issues_)
         if issues.can_proceed():
             return value, issues
@@ -237,5 +231,40 @@ class DateTime(String):
 
 class Complex(AttributeType):
     SCIM_NAME = "complex"
-    PARSE_TYPE = dict
-    DUMP_TYPE = dict
+    PARSE_TYPE = SCIMDataContainer
+    DUMP_TYPE = SCIMDataContainer
+
+
+_TYPE_TO_SCIM_TYPE: t.Dict[t.Type, str] = {
+    bool: Boolean.SCIM_NAME,
+    int: Integer.SCIM_NAME,
+    float: Decimal.SCIM_NAME,
+    str: String.SCIM_NAME,
+    SCIMDataContainer: Complex.SCIM_NAME,
+    list: "list",
+    datetime: "datetime",
+}
+
+
+def get_scim_type(type_: t.Type) -> str:
+    return _TYPE_TO_SCIM_TYPE.get(type_, "unknown")
+
+
+def validate_absolute_url(value: str) -> Tuple[Optional[str], ValidationIssues]:
+    issues = ValidationIssues()
+    try:
+        result = urlparse(value)
+        is_valid = all([result.scheme, result.netloc])
+        if not is_valid:
+            issues.add(
+                issue=ValidationError.bad_url(value),
+                proceed=False,
+            )
+            return None, issues
+    except ValueError:
+        issues.add(
+            issue=ValidationError.bad_url(value),
+            proceed=False,
+        )
+        return None, issues
+    return value, issues

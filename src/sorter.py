@@ -1,15 +1,11 @@
 import functools
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
-from src.attributes import type as at
-from src.attributes.attributes import (
-    Attribute,
-    AttributeName,
-    ComplexAttribute,
-    extract,
-)
+from src.data import type as at
+from src.data.attributes import Attribute, ComplexAttribute
+from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
-from src.schemas import Schema
+from src.schemas import BaseSchema, ResourceSchema
 
 
 class AlwaysLastKey:
@@ -40,14 +36,14 @@ class StringKey:
 
 
 class Sorter:
-    def __init__(self, attr_name: AttributeName, asc: bool = True):
-        self._attr_name = attr_name
+    def __init__(self, attr_rep: AttrRep, asc: bool = True):
+        self._attr_rep = attr_rep
         self._asc = asc
         self._default_value = AlwaysLastKey()
 
     @property
-    def attr_name(self) -> AttributeName:
-        return self._attr_name
+    def attr_rep(self) -> AttrRep:
+        return self._attr_rep
 
     @property
     def asc(self) -> bool:
@@ -56,8 +52,8 @@ class Sorter:
     @classmethod
     def parse(cls, by: str, asc: bool = True) -> Tuple[Optional["Sorter"], ValidationIssues]:
         issues = ValidationIssues()
-        attr_name = AttributeName.parse(by)
-        if attr_name is None:
+        attr_rep = AttrRep.parse(by)
+        if attr_rep is None:
             issues.add(
                 issue=ValidationError.bad_attribute_name(by),
                 proceed=False,
@@ -67,19 +63,22 @@ class Sorter:
             return None, issues
 
         return (
-            Sorter(attr_name=attr_name, asc=asc),
+            Sorter(attr_rep=attr_rep, asc=asc),
             issues,
         )
 
     def __call__(
         self,
-        data: List[Dict[str, Any]],
-        schema: Union[Schema, Sequence[Schema]],
-    ) -> List[Dict[str, Any]]:
-        if not any(extract(self._attr_name, item) for item in data):
+        data: List[SCIMDataContainer],
+        schema: Union[ResourceSchema, Sequence[ResourceSchema]],
+    ) -> List[SCIMDataContainer]:
+        if not any(item[self._attr_rep] for item in data):
             return data
 
-        if isinstance(schema, Schema):
+        if not isinstance(schema, ResourceSchema) and len(set(schema)) == 1:
+            schema = schema[0]
+
+        if isinstance(schema, ResourceSchema):
             key = functools.partial(self._attr_key, schema=schema)
         else:
             key = self._attr_key_many_schemas(data, schema)
@@ -98,29 +97,30 @@ class Sorter:
 
         return StringKey(value, attr)
 
-    def _attr_key_many_schemas(self, data: List[Dict[str, Any]], schemas: Sequence[Schema]):
+    def _attr_key_many_schemas(self, data: List[SCIMDataContainer], schemas: Sequence[BaseSchema]):
         def attr_key(item):
             schema = schemas[data.index(item)]
             return self._attr_key(item, schema)
 
         return attr_key
 
-    def _attr_key(self, item: Dict[str, Any], schema: Schema):
-        attr = schema.get_attr(self._attr_name)
+    def _attr_key(self, item: SCIMDataContainer, schema: BaseSchema):
+        attr = schema.get_attr(self._attr_rep)
         value = None
         if attr is not None:
-            item_value = extract(self._attr_name, item)
-            if item_value and attr.multi_valued:
+            item_value = item[self._attr_rep]
+            if item_value is not Missing and attr.multi_valued:
                 if isinstance(attr, ComplexAttribute):
                     for v in item_value:
-                        if v.get("primary"):
+                        primary = v[AttrRep(attr="primary")]
+                        if primary is True:
                             for sub_attr in attr.sub_attributes:
-                                if sub_attr.name.sub_attr == "value":
+                                if sub_attr.rep.sub_attr.lower() == "value":
                                     attr = sub_attr
                                     break
                             else:
                                 attr = None
-                            value = v.get("value")
+                            value = v[AttrRep(attr="value")]
                             break
                 else:
                     value = item_value[0]

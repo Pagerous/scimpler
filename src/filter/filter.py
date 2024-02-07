@@ -1,12 +1,14 @@
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, TypeAlias, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, TypeAlias, Union
 
-from src.attributes.attributes import AttributeName, extract
+from src.data.container import AttrRep, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.filter import operator as op
 from src.filter.operator import MatchResult
-from src.schemas import Schema
+
+if TYPE_CHECKING:
+    from src.schemas import BaseSchema
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
@@ -75,7 +77,7 @@ class Filter:
     def parse(cls, filter_exp: str) -> Tuple[Optional["Filter"], ValidationIssues]:
         issues = ValidationIssues()
         bracket_open_index = None
-        complex_attr_name = ""
+        complex_attr_rep = ""
         parsed_complex_ops = {}
         filter_exp_preprocessed = filter_exp
         ignore_processing = False
@@ -87,7 +89,7 @@ class Filter:
                 continue
 
             if (re.match(r"\w", char) or char in ":.") and bracket_open_index is None:
-                complex_attr_name += char
+                complex_attr_rep += char
             elif char == "[":
                 if bracket_open_index is not None:
                     issues.add(
@@ -105,25 +107,25 @@ class Filter:
                     )
                 else:
                     sub_ops_exp = filter_exp_preprocessed[bracket_open_index + 1 : i]
-                    complex_attr_start = bracket_open_index - len(complex_attr_name)
-                    complex_attr_exp = f"{complex_attr_name}[{sub_ops_exp}]"
+                    complex_attr_start = bracket_open_index - len(complex_attr_rep)
+                    complex_attr_exp = f"{complex_attr_rep}[{sub_ops_exp}]"
                     if sub_ops_exp.strip() == "":
                         issues_.add(
                             issue=ValidationError.empty_complex_attribute_expression(
-                                complex_attr_name, complex_attr_start
+                                complex_attr_rep, complex_attr_start
                             ),
                             proceed=False,
                         )
-                    attr_name = AttributeName.parse(complex_attr_name)
-                    if attr_name is None:
+                    attr_rep = AttrRep.parse(complex_attr_rep)
+                    if attr_rep is None:
                         issues_.add(
-                            issue=ValidationError.bad_attribute_name(complex_attr_name),
+                            issue=ValidationError.bad_attribute_name(complex_attr_rep),
                             proceed=False,
                         )
-                    elif attr_name.sub_attr:
+                    elif attr_rep.sub_attr:
                         issues_.add(
                             issue=ValidationError.complex_sub_attribute(
-                                attr=attr_name.attr, sub_attr=attr_name.sub_attr
+                                attr=attr_rep.attr, sub_attr=attr_rep.sub_attr
                             ),
                             proceed=False,
                         )
@@ -139,7 +141,7 @@ class Filter:
                             operator = None
                         else:
                             operator = op.ComplexAttributeOperator(
-                                attr_name=attr_name,
+                                attr_rep=attr_rep,
                                 sub_operator=parsed_complex_sub_ops,
                             )
                         parsed_complex_ops[complex_attr_start] = _ParsedComplexAttributeOperator(
@@ -151,10 +153,10 @@ class Filter:
                         complex_attr_exp, Filter._get_placeholder(complex_attr_start), 1
                     )
                 bracket_open_index = None
-                complex_attr_name = ""
+                complex_attr_rep = ""
                 issues_ = ValidationIssues()
             elif bracket_open_index is None:
-                complex_attr_name = ""
+                complex_attr_rep = ""
                 issues_ = ValidationIssues()
 
         if not issues.can_proceed():
@@ -458,8 +460,8 @@ class Filter:
                         ),
                         proceed=False,
                     )
-            attr_name = AttributeName.parse(components[0])
-            if attr_name is None:
+            attr_rep = AttrRep.parse(components[0])
+            if attr_rep is None:
                 issues.add(
                     issue=ValidationError.bad_attribute_name(
                         Filter._encode_sub_or_complex_into_exp(
@@ -473,13 +475,13 @@ class Filter:
             if not issues.can_proceed():
                 return None, issues
 
-            if attr_name.sub_attr:
+            if attr_rep.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_name=AttributeName(attr_name.schema, attr_name.attr),
-                    sub_operator=op_(attr_name),
+                    attr_rep=AttrRep(attr_rep.schema, attr_rep.attr),
+                    sub_operator=op_(attr_rep),
                 )
             else:
-                operator = op_(attr_name)
+                operator = op_(attr_rep)
             return operator, issues
 
         elif len(components) == 3:
@@ -501,8 +503,8 @@ class Filter:
                     ),
                     proceed=False,
                 )
-            attr_name = AttributeName.parse(components[0])
-            if attr_name is None:
+            attr_rep = AttrRep.parse(components[0])
+            if attr_rep is None:
                 issues.add(
                     issue=ValidationError.bad_attribute_name(
                         Filter._encode_sub_or_complex_into_exp(
@@ -541,13 +543,13 @@ class Filter:
             if not issues.can_proceed():
                 return None, issues
 
-            if attr_name.sub_attr:
+            if attr_rep.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_name=AttributeName(attr_name.schema, attr_name.attr),
-                    sub_operator=op_(attr_name, value),
+                    attr_rep=AttrRep(attr_rep.schema, attr_rep.attr),
+                    sub_operator=op_(attr_rep, value),
                 )
             else:
-                operator = op_(attr_name, value)
+                operator = op_(attr_rep, value)
             return operator, issues
 
         issues.add(
@@ -603,9 +605,11 @@ class Filter:
                 encoded = encoded.replace(match.group(0), parsed_complex_ops[index].expression)
         return encoded
 
-    def __call__(self, data: Dict[str, Any], schema: Schema, strict: bool = True) -> MatchResult:
+    def __call__(
+        self, data: SCIMDataContainer, schema: "BaseSchema", strict: bool = True
+    ) -> MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
-            data = extract(self._operator.attr_name, data)
+            data = data[self._operator.attr_rep]
         return self._operator.match(data, schema, strict)
 
     def to_dict(self):
@@ -616,7 +620,7 @@ class Filter:
         if isinstance(operator, op.AttributeOperator):
             filter_dict = {
                 "op": operator.SCIM_OP,
-                "attr_name": operator.attr_name.sub_attr or operator.attr_name.full_attr,
+                "attr_rep": operator.attr_rep.sub_attr or operator.attr_rep.attr_with_schema,
             }
             if isinstance(operator, op.BinaryAttributeOperator):
                 filter_dict["value"] = operator.value
@@ -625,7 +629,7 @@ class Filter:
         if isinstance(operator, op.ComplexAttributeOperator):
             return {
                 "op": "complex",
-                "attr_name": operator.attr_name.sub_attr or operator.attr_name.full_attr,
+                "attr_rep": operator.attr_rep.sub_attr or operator.attr_rep.attr_with_schema,
                 "sub_op": Filter._to_dict(operator.sub_operator),
             }
 

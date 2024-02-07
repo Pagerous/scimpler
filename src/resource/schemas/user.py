@@ -1,16 +1,16 @@
-from src.attributes import type as at
-from src.attributes.attributes import (
+from src.data import type as type_
+from src.data.attributes import (
     Attribute,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
     ComplexAttribute,
 )
-from src.attributes.validators import validate_single_primary_value
+from src.schemas import ResourceSchema, SchemaExtension
 
 user_name = Attribute(
     name="userName",
-    type_=at.String,
+    type_=type_.String,
     required=True,
     case_exact=False,
     multi_valued=False,
@@ -21,7 +21,7 @@ user_name = Attribute(
 
 _name__formatted = Attribute(
     name="formatted",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -32,7 +32,7 @@ _name__formatted = Attribute(
 
 _name__family_name = Attribute(
     name="familyName",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -43,7 +43,7 @@ _name__family_name = Attribute(
 
 _name__given_name = Attribute(
     name="givenName",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -54,7 +54,7 @@ _name__given_name = Attribute(
 
 _name__middle_name = Attribute(
     name="middleName",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -65,7 +65,7 @@ _name__middle_name = Attribute(
 
 _name__honorific_prefix = Attribute(
     name="honorificPrefix",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -76,7 +76,7 @@ _name__honorific_prefix = Attribute(
 
 _name__honorific_suffix = Attribute(
     name="honorificSuffix",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -105,7 +105,7 @@ name = ComplexAttribute(
 # TODO: warn if 'displayName' does not match any of: 'userName', 'name' (any of its sub-attributes)
 display_name = Attribute(
     name="displayName",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -117,7 +117,7 @@ display_name = Attribute(
 # TODO: warn if 'nickName' is equal to 'username'
 nick_name = Attribute(
     name="nickName",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -128,7 +128,7 @@ nick_name = Attribute(
 
 profile_url = Attribute(
     name="profileUrl",
-    type_=at.ExternalReference,
+    type_=type_.ExternalReference,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -139,7 +139,7 @@ profile_url = Attribute(
 
 title = Attribute(
     name="title",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -150,7 +150,7 @@ title = Attribute(
 
 user_type = Attribute(
     name="userType",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -162,7 +162,7 @@ user_type = Attribute(
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
 preferred_language = Attribute(
     name="preferredLanguage",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -174,7 +174,7 @@ preferred_language = Attribute(
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
 locale = Attribute(
     name="locale",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -185,8 +185,8 @@ locale = Attribute(
 
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc6557 ("Olson")
 timezone = Attribute(
-    name="locale",
-    type_=at.String,
+    name="timezone",
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -196,8 +196,8 @@ timezone = Attribute(
 )
 
 active = Attribute(
-    name="locale",
-    type_=at.Boolean,
+    name="active",
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -209,7 +209,7 @@ active = Attribute(
 # TODO: make password preparation according to https://www.rfc-editor.org/rfc/rfc7644#section-7.8
 password = Attribute(
     name="password",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -220,7 +220,7 @@ password = Attribute(
 
 _email_value = Attribute(
     name="value",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -231,7 +231,7 @@ _email_value = Attribute(
 
 _email_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -242,7 +242,7 @@ _email_display = Attribute(
 
 _email_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -254,7 +254,7 @@ _email_type = Attribute(
 
 _email_primary = Attribute(
     name="primary",
-    type_=at.Boolean,
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -276,14 +276,12 @@ emails = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_single_primary_value],
-    dumpers=[validate_single_primary_value],
 )
 
 # TODO: make proper validation (warn) according to RFC3966 https://datatracker.ietf.org/doc/html/rfc3966
 _phone_number_value = Attribute(
     name="value",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -294,7 +292,7 @@ _phone_number_value = Attribute(
 
 _phone_number_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -305,7 +303,7 @@ _phone_number_display = Attribute(
 
 _phone_number_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -317,7 +315,7 @@ _phone_number_type = Attribute(
 
 _phone_number_primary = Attribute(
     name="primary",
-    type_=at.Boolean,
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -339,14 +337,12 @@ phone_numbers = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_single_primary_value],
-    dumpers=[validate_single_primary_value],
 )
 
 # TODO: warn if value contain whitespaces and isn't lowercase
 _ims_value = Attribute(
     name="value",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -357,7 +353,7 @@ _ims_value = Attribute(
 
 _ims_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -366,10 +362,11 @@ _ims_display = Attribute(
     uniqueness=AttributeUniqueness.NONE,
 )
 
-# no canonical values included, as those presented in RFC 7643 are obsolete and does not contain modern tools
+# no canonical values included, as those presented in RFC 7643 are obsolete
+# and does not contain modern tools
 _ims_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -380,7 +377,7 @@ _ims_type = Attribute(
 
 _ims_primary = Attribute(
     name="primary",
-    type_=at.Boolean,
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -402,13 +399,11 @@ ims = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_single_primary_value],
-    dumpers=[validate_single_primary_value],
 )
 
 _photos_value = Attribute(
     name="value",
-    type_=at.ExternalReference,
+    type_=type_.ExternalReference,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -419,7 +414,7 @@ _photos_value = Attribute(
 
 _photos_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -430,7 +425,7 @@ _photos_display = Attribute(
 
 _photos_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     canonical_values=["photo", "thumbnail"],
@@ -442,7 +437,7 @@ _photos_type = Attribute(
 
 _photos_primary = Attribute(
     name="primary",
-    type_=at.Boolean,
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -464,13 +459,11 @@ photos = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_single_primary_value],
-    dumpers=[validate_single_primary_value],
 )
 
 _addresses_formatted = Attribute(
     name="formatted",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -481,7 +474,7 @@ _addresses_formatted = Attribute(
 
 _addresses_street_address = Attribute(
     name="streetAddress",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -492,7 +485,7 @@ _addresses_street_address = Attribute(
 
 _addresses_locality = Attribute(
     name="locality",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -503,7 +496,7 @@ _addresses_locality = Attribute(
 
 _addresses_region = Attribute(
     name="region",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -514,7 +507,7 @@ _addresses_region = Attribute(
 
 _addresses_postal_code = Attribute(
     name="postalCode",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -526,7 +519,7 @@ _addresses_postal_code = Attribute(
 # TODO: validate according to ISO 3166-1 "alpha-2"
 _addresses_country = Attribute(
     name="country",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -537,7 +530,7 @@ _addresses_country = Attribute(
 
 _addresses_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     canonical_values=["work", "home", "other"],
@@ -568,7 +561,7 @@ addresses = ComplexAttribute(
 # TODO: make validation of correct group id here
 _groups_value = Attribute(
     name="value",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -579,7 +572,7 @@ _groups_value = Attribute(
 
 _groups_ref = Attribute(
     name="$ref",
-    type_=at.SCIMReference,
+    type_=type_.SCIMReference,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -590,7 +583,7 @@ _groups_ref = Attribute(
 
 _groups_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -601,7 +594,7 @@ _groups_display = Attribute(
 
 _groups_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     canonical_values=["direct", "indirect"],
@@ -628,7 +621,7 @@ groups = ComplexAttribute(
 
 _entitlements_value = Attribute(
     name="value",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -639,7 +632,7 @@ _entitlements_value = Attribute(
 
 _entitlements_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -650,7 +643,7 @@ _entitlements_display = Attribute(
 
 _entitlements_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -661,7 +654,7 @@ _entitlements_type = Attribute(
 
 _entitlements_primary = Attribute(
     name="primary",
-    type_=at.Boolean,
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -683,13 +676,11 @@ entitlements = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_single_primary_value],
-    dumpers=[validate_single_primary_value],
 )
 
 _roles_value = Attribute(
     name="value",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -700,7 +691,7 @@ _roles_value = Attribute(
 
 _roles_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -711,7 +702,7 @@ _roles_display = Attribute(
 
 _roles_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -722,7 +713,7 @@ _roles_type = Attribute(
 
 _roles_primary = Attribute(
     name="primary",
-    type_=at.Boolean,
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -744,13 +735,11 @@ roles = ComplexAttribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_single_primary_value],
-    dumpers=[validate_single_primary_value],
 )
 
 _x509_certificates_value = Attribute(
     name="value",
-    type_=at.Binary,
+    type_=type_.Binary,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -761,7 +750,7 @@ _x509_certificates_value = Attribute(
 
 _x509_certificates_display = Attribute(
     name="display",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -772,7 +761,7 @@ _x509_certificates_display = Attribute(
 
 _x509_certificates_type = Attribute(
     name="type",
-    type_=at.String,
+    type_=type_.String,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -783,7 +772,7 @@ _x509_certificates_type = Attribute(
 
 _x509_certificates_primary = Attribute(
     name="primary",
-    type_=at.Boolean,
+    type_=type_.Boolean,
     required=False,
     case_exact=False,
     multi_valued=False,
@@ -799,12 +788,163 @@ x509_certificates = ComplexAttribute(
         _x509_certificates_type,
         _x509_certificates_primary,
     ],
-    name="x509_certificates",
+    name="x509Certificates",
     required=False,
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_single_primary_value],
-    dumpers=[validate_single_primary_value],
 )
+
+
+# BELOW ATTRS FROM ENTERPRISE EXTENSION
+
+
+employee_number = Attribute(
+    name="employeeNumber",
+    type_=type_.String,
+    required=False,
+    case_exact=False,
+    multi_valued=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+cost_center = Attribute(
+    name="costCenter",
+    type_=type_.String,
+    required=False,
+    case_exact=False,
+    multi_valued=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+organization = Attribute(
+    name="organization",
+    type_=type_.String,
+    required=False,
+    case_exact=False,
+    multi_valued=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+division = Attribute(
+    name="division",
+    type_=type_.String,
+    required=False,
+    case_exact=False,
+    multi_valued=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+department = Attribute(
+    name="department",
+    type_=type_.String,
+    required=False,
+    case_exact=False,
+    multi_valued=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+
+_manager__value = Attribute(
+    name="value",
+    type_=type_.String,
+    multi_valued=False,
+    required=False,
+    case_exact=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+_manager__ref = Attribute(
+    name="$ref",
+    type_=type_.SCIMReference,
+    reference_types=["User"],
+    multi_valued=False,
+    required=False,
+    case_exact=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+_manager__display_name = Attribute(
+    name="displayName",
+    type_=type_.String,
+    multi_valued=False,
+    required=False,
+    case_exact=False,
+    mutability=AttributeMutability.READ_ONLY,
+    returned=AttributeReturn.DEFAULT,
+    uniqueness=AttributeUniqueness.NONE,
+)
+
+manager = ComplexAttribute(
+    sub_attributes=[
+        _manager__value,
+        _manager__ref,
+        _manager__display_name,
+    ],
+    name="manager",
+    required=False,
+    multi_valued=False,
+    mutability=AttributeMutability.READ_WRITE,
+    returned=AttributeReturn.DEFAULT,
+)
+
+
+class User(ResourceSchema):
+    def __init__(self):
+        super().__init__(
+            schema="urn:ietf:params:scim:schemas:core:2.0:User",
+            attrs=[
+                user_name,
+                name,
+                display_name,
+                nick_name,
+                profile_url,
+                title,
+                user_type,
+                preferred_language,
+                locale,
+                timezone,
+                active,
+                password,
+                emails,
+                phone_numbers,
+                ims,
+                photos,
+                addresses,
+                groups,
+                entitlements,
+                roles,
+                x509_certificates,
+            ],
+        )
+        self.with_extension(
+            SchemaExtension(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                attrs=[
+                    employee_number,
+                    cost_center,
+                    division,
+                    department,
+                    organization,
+                    manager,
+                ],
+            )
+        )
+
+    def __repr__(self) -> str:
+        return "User"

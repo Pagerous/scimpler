@@ -3,7 +3,8 @@ from datetime import datetime
 
 import pytest
 
-from src.attributes import type as at
+from src.data import type as at
+from src.data.container import SCIMDataContainer
 
 
 @pytest.mark.parametrize(
@@ -17,9 +18,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "string",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -33,9 +33,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "integer",
-                            "expected_type": "int",
-                            "provided_type": "str",
+                            "expected": "integer",
+                            "provided": "string",
                         },
                     }
                 ]
@@ -49,9 +48,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "integer",
-                            "expected_type": "int",
-                            "provided_type": "float",
+                            "expected": "integer",
+                            "provided": "decimal",
                         },
                     }
                 ]
@@ -65,9 +63,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "decimal",
-                            "expected_type": "float",
-                            "provided_type": "str",
+                            "expected": "decimal",
+                            "provided": "string",
                         },
                     }
                 ]
@@ -81,9 +78,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "boolean",
-                            "expected_type": "bool",
-                            "provided_type": "str",
+                            "expected": "boolean",
+                            "provided": "string",
                         },
                     }
                 ]
@@ -97,9 +93,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "reference",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -113,9 +108,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "reference",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -129,9 +123,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "reference",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -150,15 +143,14 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "binary",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
             },
         ),
-        ("blahblah", at.Binary, {"_errors": [{"code": 3, "context": {"scim_type": "binary"}}]}),
+        ("bad", at.Binary, {"_errors": [{"code": 3, "context": {"scim_type": "binary"}}]}),
         (
             123,
             at.DateTime,
@@ -167,9 +159,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "dateTime",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -188,9 +179,8 @@ from src.attributes import type as at
                     {
                         "code": 2,
                         "context": {
-                            "scim_type": "complex",
-                            "expected_type": "dict",
-                            "provided_type": "int",
+                            "expected": "complex",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -201,7 +191,6 @@ from src.attributes import type as at
 def test_parse_invalid(input_value, type_, expected_issues):
     actual, issues = type_.parse(input_value)
 
-    assert not actual
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -214,11 +203,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "string",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -230,11 +218,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "integer",
-                            "expected_type": "int",
-                            "provided_type": "str",
+                            "expected": "integer",
+                            "provided": "string",
                         },
                     }
                 ]
@@ -246,11 +233,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "integer",
-                            "expected_type": "int",
-                            "provided_type": "float",
+                            "expected": "integer",
+                            "provided": "decimal",
                         },
                     }
                 ]
@@ -262,11 +248,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "decimal",
-                            "expected_type": "float",
-                            "provided_type": "str",
+                            "expected": "decimal",
+                            "provided": "string",
                         },
                     }
                 ]
@@ -278,11 +263,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "boolean",
-                            "expected_type": "bool",
-                            "provided_type": "str",
+                            "expected": "boolean",
+                            "provided": "string",
                         },
                     }
                 ]
@@ -294,11 +278,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "reference",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -310,11 +293,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "reference",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -326,11 +308,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "reference",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -347,28 +328,26 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "binary",
-                            "expected_type": "str",
-                            "provided_type": "int",
+                            "expected": "string",
+                            "provided": "integer",
                         },
                     }
                 ]
             },
         ),
-        ("blahblah", at.Binary, {"_errors": [{"code": 3, "context": {"scim_type": "binary"}}]}),
+        ("bad", at.Binary, {"_errors": [{"code": 3, "context": {"scim_type": "binary"}}]}),
         (
             "2024-01-06T20:16:39.399319",
             at.DateTime,
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "dateTime",
-                            "expected_type": "datetime",
-                            "provided_type": "str",
+                            "expected": "datetime",
+                            "provided": "string",
                         },
                     }
                 ]
@@ -380,11 +359,10 @@ def test_parse_invalid(input_value, type_, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 31,
+                        "code": 2,
                         "context": {
-                            "scim_type": "complex",
-                            "expected_type": "dict",
-                            "provided_type": "int",
+                            "expected": "complex",
+                            "provided": "integer",
                         },
                     }
                 ]
@@ -395,7 +373,6 @@ def test_parse_invalid(input_value, type_, expected_issues):
 def test_dump_invalid(input_value, type_, expected_issues):
     actual, issues = type_.dump(input_value)
 
-    assert not actual
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -458,9 +435,9 @@ def test_dump_invalid(input_value, type_, expected_issues):
             datetime(2024, 1, 6),
         ),
         (
-            {"sub_attr_1": 1, "sub_attr_2": "2"},
+            SCIMDataContainer({"sub_attr_1": 1, "sub_attr_2": "2"}),
             at.Complex,
-            {"sub_attr_1": 1, "sub_attr_2": "2"},
+            SCIMDataContainer({"sub_attr_1": 1, "sub_attr_2": "2"}),
         ),
     ),
 )
@@ -522,9 +499,9 @@ def test_parse_valid(input_value, type_, expected):
         ),
         (datetime(2024, 1, 6), at.DateTime, "2024-01-06T00:00:00"),
         (
-            {"sub_attr_1": 1, "sub_attr_2": "2"},
+            SCIMDataContainer({"sub_attr_1": 1, "sub_attr_2": "2"}),
             at.Complex,
-            {"sub_attr_1": 1, "sub_attr_2": "2"},
+            SCIMDataContainer({"sub_attr_1": 1, "sub_attr_2": "2"}),
         ),
     ),
 )

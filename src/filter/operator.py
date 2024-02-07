@@ -4,9 +4,9 @@ from copy import deepcopy
 from datetime import datetime
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Generator,
     List,
     Optional,
@@ -17,15 +17,12 @@ from typing import (
     Union,
 )
 
-from src.attributes import type as at
-from src.attributes.attributes import (
-    Attribute,
-    AttributeName,
-    ComplexAttribute,
-    Missing,
-    extract,
-)
-from src.schemas import Schema
+from src.data import type as at
+from src.data.attributes import Attribute, ComplexAttribute
+from src.data.container import AttrRep, Missing, SCIMDataContainer
+
+if TYPE_CHECKING:
+    from src.schemas import BaseSchema
 
 
 class MatchStatus(Enum):
@@ -86,8 +83,8 @@ class LogicalOperator(abc.ABC):
     @abc.abstractmethod
     def match(
         self,
-        value: Optional[Dict[str, Any]],
-        schema: Schema,
+        value: Optional[SCIMDataContainer],
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
         ...
@@ -107,18 +104,18 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         return self._sub_operators
 
     def _collect_matches(
-        self, value: Dict[str, Any], schema: Schema, strict: bool = True
+        self, value: SCIMDataContainer, schema: "BaseSchema", strict: bool = True
     ) -> Generator[MatchResult, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
                 yield sub_operator.match(value, schema, strict)
             else:
-                yield sub_operator.match(extract(sub_operator.attr_name, value), schema, strict)
+                yield sub_operator.match(value[sub_operator.attr_rep], schema, strict)
 
-    def with_parent(self, attr_name: AttributeName) -> "MultiOperandLogicalOperator":
+    def with_parent(self, attr_rep: AttrRep) -> "MultiOperandLogicalOperator":
         copy = deepcopy(self)
         copy._sub_operators = tuple(
-            sub_operator.with_parent(attr_name) for sub_operator in self._sub_operators
+            sub_operator.with_parent(attr_rep) for sub_operator in self._sub_operators
         )
         return copy
 
@@ -128,8 +125,8 @@ class And(MultiOperandLogicalOperator):
 
     def match(
         self,
-        value: Optional[Dict[str, Any]],
-        schema: Schema,
+        value: Optional[SCIMDataContainer],
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -149,8 +146,8 @@ class Or(MultiOperandLogicalOperator):
 
     def match(
         self,
-        value: Optional[Dict[str, Any]],
-        schema: Schema,
+        value: Optional[SCIMDataContainer],
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -182,8 +179,8 @@ class Not(LogicalOperator):
 
     def match(
         self,
-        value: Optional[Dict[str, Any]],
-        schema: Schema,
+        value: Optional[SCIMDataContainer],
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -196,10 +193,7 @@ class Not(LogicalOperator):
             if match.status == MatchStatus.FAILED:
                 return MatchResult.passed()
             return MatchResult.failed()
-
-        match = self._sub_operator.match(
-            extract(self._sub_operator.attr_name, value), schema, strict=True
-        )
+        match = self._sub_operator.match(value[self._sub_operator.attr_rep], schema, strict=True)
         if (
             match.status == MatchStatus.FAILED
             or not strict
@@ -208,39 +202,39 @@ class Not(LogicalOperator):
             return MatchResult.passed()
         return MatchResult.failed()
 
-    def with_parent(self, attr_name: AttributeName) -> "Not":
+    def with_parent(self, attr_rep: AttrRep) -> "Not":
         copy = deepcopy(self)
-        copy._sub_operator = self._sub_operator.with_parent(attr_name)
+        copy._sub_operator = self._sub_operator.with_parent(attr_rep)
         return copy
 
 
 class AttributeOperator(abc.ABC):
     SCIM_OP = None
 
-    def __init__(self, attr_name: AttributeName):
-        self._attr_name = attr_name
+    def __init__(self, attr_rep: AttrRep):
+        self._attr_rep = attr_rep
 
     @property
-    def attr_name(self) -> AttributeName:
-        return self._attr_name
+    def attr_rep(self) -> AttrRep:
+        return self._attr_rep
 
     @abc.abstractmethod
     def match(
         self,
         value: Any,
-        schema: Schema,
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
         ...
 
-    def with_parent(self, attr_name: AttributeName) -> "AttributeOperator":
-        if self._attr_name.sub_attr:
-            if not self._attr_name.top_level_equals(attr_name):
+    def with_parent(self, attr_rep: AttrRep) -> "AttributeOperator":
+        if self._attr_rep.sub_attr:
+            if not self._attr_rep.top_level_equals(attr_rep):
                 raise ValueError("operator has parent already")
             return self
         copy = deepcopy(self)
-        copy._attr_name = AttributeName(
-            schema=attr_name.schema, attr=attr_name.attr, sub_attr=self._attr_name.attr
+        copy._attr_rep = AttrRep(
+            schema=attr_rep.schema, attr=attr_rep.attr, sub_attr=self._attr_rep.attr
         )
         return copy
 
@@ -251,10 +245,10 @@ class Present(AttributeOperator):
     def match(
         self,
         value: Any,
-        schema: Schema,
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
-        attr = schema.get_attr(self._attr_name)
+        attr = schema.get_attr(self._attr_rep)
         if attr is None:
             return MatchResult.failed_no_attr()
 
@@ -280,8 +274,8 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     SUPPORTED_TYPES: Set[Type]
     OPERATOR: Callable[[Any, Any], bool]
 
-    def __init__(self, attr_name: AttributeName, value: T2):
-        super().__init__(attr_name=attr_name)
+    def __init__(self, attr_rep: AttrRep, value: T2):
+        super().__init__(attr_rep=attr_rep)
         if type(value) not in self.SUPPORTED_TYPES:
             raise TypeError(
                 f"unsupported value type {type(value).__name__!r} for {self.SCIM_OP!r} operator"
@@ -301,29 +295,16 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if isinstance(attr, ComplexAttribute):
             value_sub_attr = None
             for sub_attr in attr.sub_attributes:
-                if sub_attr.name.sub_attr == "value":
+                if sub_attr.rep.sub_attr == "value":
                     value_sub_attr = sub_attr
                     break
             if value_sub_attr is None:
                 return None
 
-            if (
-                not isinstance(self.value, value_sub_attr.type.PARSE_TYPE)
-                and type(self.value) not in value_sub_attr.type.COMPATIBLE_TYPES
-            ):
-                return None
-
             if not attr.multi_valued:
                 return None
 
-            value = [item.get("value") for item in value]
-
-        else:
-            if (
-                not isinstance(self.value, attr.type.PARSE_TYPE)
-                and type(self.value) not in attr.type.COMPATIBLE_TYPES
-            ):
-                return None
+            value = [item["value"] for item in value]
 
         if attr.type.SCIM_NAME == "dateTime":
             try:
@@ -346,10 +327,10 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     def match(
         self,
         value: Any,
-        schema: Schema,
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
-        attr = schema.get_attr(self._attr_name)
+        attr = schema.get_attr(self._attr_rep)
         if attr is None:
             return MatchResult.failed_no_attr()
 
@@ -512,34 +493,34 @@ TComplexAttributeSubOperator = TypeVar(
 class ComplexAttributeOperator:
     def __init__(
         self,
-        attr_name: AttributeName,
+        attr_rep: AttrRep,
         sub_operator: TComplexAttributeSubOperator,
     ):
-        self._attr_name = attr_name
-        self._sub_operator = sub_operator.with_parent(attr_name)
+        self._attr_rep = attr_rep
+        self._sub_operator = sub_operator.with_parent(attr_rep)
 
     @property
-    def attr_name(self) -> AttributeName:
-        return self._attr_name
+    def attr_rep(self) -> AttrRep:
+        return self._attr_rep
 
     @property
     def sub_operator(self) -> TComplexAttributeSubOperator:
         return self._sub_operator
 
-    def with_parent(self, attr_name: AttributeName) -> "ComplexAttributeOperator":
-        if self._attr_name.top_level_equals(attr_name):
+    def with_parent(self, attr_rep: AttrRep) -> "ComplexAttributeOperator":
+        if self._attr_rep.top_level_equals(attr_rep):
             return self
-        if self._attr_name.sub_attr:
+        if self._attr_rep.sub_attr:
             raise ValueError("operator has parent already")
         raise TypeError("parental 'ComplexAttributeOperator' can not be child to other operator")
 
     def match(
         self,
-        value: Optional[Union[List[Dict[str, Any]], Dict[str, Any]]],
-        schema: Schema,
+        value: Optional[Union[List[SCIMDataContainer], SCIMDataContainer]],
+        schema: "BaseSchema",
         strict: bool = True,
     ) -> MatchResult:
-        attr = schema.get_attr(self._attr_name)
+        attr = schema.get_attr(self._attr_rep)
         if attr is None:
             return MatchResult.failed_no_attr()
         if (
@@ -550,16 +531,16 @@ class ComplexAttributeOperator:
         ):
             return MatchResult.failed()
 
-        value = value or ([] if attr.multi_valued else {})
+        value = value or ([] if attr.multi_valued else SCIMDataContainer())
 
         if not isinstance(value, List):
             value = [value]
-        value = [{self.attr_name.full_attr: item} for item in value]
+        value = [SCIMDataContainer({self.attr_rep.attr: item}) for item in value]
 
         if isinstance(self._sub_operator, AttributeOperator):
             has_value = False
             for item in value:
-                item_value = extract(self._sub_operator.attr_name, item)
+                item_value = item[self._sub_operator.attr_rep]
                 if item_value not in [None, Missing]:
                     has_value = True
                 match = self._sub_operator.match(item_value, schema, strict)

@@ -2,29 +2,29 @@ from datetime import datetime
 
 import pytest
 
-from src.attributes.attributes import AttributeName
 from src.attributes_presence import AttributePresenceChecker
-from src.resource.schemas import USER
+from src.data.container import AttrRep, SCIMDataContainer
+from src.resource.schemas.user import User
 
 
 @pytest.mark.parametrize(
-    ("attr_names", "expected"),
+    ("attr_reps", "expected"),
     (
         (["username", "name.familyname"], {}),
         (["bad^attr"], {"bad^attr": {"_errors": [{"code": 111}]}}),
     ),
 )
-def test_attribute_presence_checker_parsing(attr_names, expected):
-    _, issues = AttributePresenceChecker.parse(attr_names, include=True)
+def test_attribute_presence_checker_parsing(attr_reps, expected):
+    _, issues = AttributePresenceChecker.parse(attr_reps, include=True)
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_if_returned_attribute_that_never_should_be_returned(
-    enterprise_user_data,
+    user_data_dump,
 ):
     checker = AttributePresenceChecker()
-    enterprise_user_data["password"] = "1234"
+    user_data_dump["password"] = "1234"
     expected = {
         "password": {
             "_errors": [
@@ -35,81 +35,85 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
         }
     }
 
-    issues = checker(enterprise_user_data, USER, "RESPONSE")
+    issues = checker(SCIMDataContainer(user_data_dump), User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
-def test_restricted_attributes_can_be_sent_with_request(enterprise_user_data):
-    checker = AttributePresenceChecker()
-    enterprise_user_data["password"] = "1234"
+def test_restricted_attributes_can_be_sent_with_request(user_data_parse):
+    checker = AttributePresenceChecker(ignore_required=[AttrRep(attr="id")])
+    user_data_parse["password"] = "1234"
 
-    issues = checker(enterprise_user_data, USER, "REQUEST")
+    issues = checker(SCIMDataContainer(user_data_parse), User(), "REQUEST")
 
     assert issues.to_dict() == {}
 
 
 def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
-    checker = AttributePresenceChecker([AttributeName(attr="name")], include=False)
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "userName": "Pagerous",
-        "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
-    }
+    checker = AttributePresenceChecker([AttrRep(attr="name")], include=False)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "userName": "Pagerous",
+            "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+        }
+    )
 
     expected = {"name": {"_errors": [{"code": 19}]}}
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
-    checker = AttributePresenceChecker([AttributeName(attr="name")], include=True)
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
-        "meta": {
-            "resourceType": "User",
-            "created": datetime(2011, 8, 1, 18, 29, 49),
-            "lastModified": datetime(2011, 8, 1, 18, 29, 49),
-            "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
-            "version": r"W\/\"f250dd84f0671c3\"",
-        },
-    }
+    checker = AttributePresenceChecker([AttrRep(attr="name")], include=True)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+            "meta": {
+                "resourceType": "User",
+                "created": datetime(2011, 8, 1, 18, 29, 49),
+                "lastModified": datetime(2011, 8, 1, 18, 29, 49),
+                "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+                "version": r"W\/\"f250dd84f0671c3\"",
+            },
+        }
+    )
 
     expected = {
         "meta": {
             "_errors": [{"code": 19}],
-            "resourcetype": {"_errors": [{"code": 19}]},
+            "resourceType": {"_errors": [{"code": 19}]},
             "created": {"_errors": [{"code": 19}]},
-            "lastmodified": {"_errors": [{"code": 19}]},
+            "lastModified": {"_errors": [{"code": 19}]},
             "location": {"_errors": [{"code": 19}]},
             "version": {"_errors": [{"code": 19}]},
         }
     }
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
-    checker = AttributePresenceChecker(
-        [AttributeName(attr="name", sub_attr="familyName")], include=False
+    checker = AttributePresenceChecker([AttrRep(attr="name", sub_attr="familyName")], include=False)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "userName": "Pagerous",
+            "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+        }
     )
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "userName": "Pagerous",
-        "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
-    }
 
     expected = {
         "name": {
-            "familyname": {
+            "familyName": {
                 "_errors": [
                     {
                         "code": 19,
@@ -119,24 +123,24 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
         }
     }
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_on_sub_attr_not_requested_by_inclusion():
-    checker = AttributePresenceChecker(
-        [AttributeName(attr="name", sub_attr="familyName")], include=True
+    checker = AttributePresenceChecker([AttrRep(attr="name", sub_attr="familyName")], include=True)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "name": {"familyName": "Pajor", "givenName": "Arkadiusz"},
+        }
     )
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "name": {"familyName": "Pajor", "givenName": "Arkadiusz"},
-    }
 
     expected = {
         "name": {
-            "givenname": {
+            "givenName": {
                 "_errors": [
                     {
                         "code": 19,
@@ -146,7 +150,7 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_inclusion():
         }
     }
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -169,7 +173,7 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
                 }
             ]
         },
-        "username": {
+        "userName": {
             "_errors": [
                 {
                     "code": 15,
@@ -178,19 +182,21 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
         },
     }
 
-    issues = checker({}, USER, "RESPONSE")
+    issues = checker(SCIMDataContainer(), User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_if_not_provided_requested_required_attribute():
-    checker = AttributePresenceChecker([AttributeName(attr="username")], include=True)
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-    }
+    checker = AttributePresenceChecker([AttrRep(attr="username")], include=True)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        }
+    )
     expected = {
-        "username": {
+        "userName": {
             "_errors": [
                 {
                     "code": 15,
@@ -199,39 +205,39 @@ def test_presence_checker_fails_if_not_provided_requested_required_attribute():
         },
     }
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
-    checker = AttributePresenceChecker(
-        [AttributeName(attr="name", sub_attr="familyname")], include=True
+    checker = AttributePresenceChecker([AttrRep(attr="name", sub_attr="familyname")], include=True)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        }
     )
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-    }
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == {}
 
 
 def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exclusion():
-    checker = AttributePresenceChecker(
-        [AttributeName(attr="emails", sub_attr="display")], include=False
+    checker = AttributePresenceChecker([AttrRep(attr="emails", sub_attr="display")], include=False)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "userName": "Pagerous",
+            "emails": [
+                {"type": "work", "primary": True, "display": "example@example.com"},
+                {"type": "home", "primary": False},
+                {"type": "school", "primary": False, "display": "example@example.com"},
+            ],
+        }
     )
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "userName": "Pagerous",
-        "emails": [
-            {"type": "work", "primary": True, "display": "example@example.com"},
-            {"type": "home", "primary": False},
-            {"type": "school", "primary": False, "display": "example@example.com"},
-        ],
-    }
 
     expected = {
         "emails": {
@@ -240,24 +246,24 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exc
         }
     }
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inclusion():
-    checker = AttributePresenceChecker(
-        [AttributeName(attr="emails", sub_attr="display")], include=True
+    checker = AttributePresenceChecker([AttrRep(attr="emails", sub_attr="display")], include=True)
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "emails": [
+                {"type": "work", "primary": True, "display": "example@example.com"},
+                {"display": "example@example.com"},
+                {"type": "school", "primary": False, "display": "example@example.com"},
+            ],
+        }
     )
-    data = {
-        "id": "1",
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "emails": [
-            {"type": "work", "primary": True, "display": "example@example.com"},
-            {"display": "example@example.com"},
-            {"type": "school", "primary": False, "display": "example@example.com"},
-        ],
-    }
 
     expected = {
         "emails": {
@@ -266,6 +272,6 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inc
         }
     }
 
-    issues = checker(data, USER, "RESPONSE")
+    issues = checker(data, User(), "RESPONSE")
 
     assert issues.to_dict() == expected

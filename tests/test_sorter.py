@@ -1,9 +1,9 @@
 import pytest
 
-from src.attributes.attributes import AttributeName
-from src.resource.schemas import USER
+from src.data.container import AttrRep, SCIMDataContainer
+from src.resource.schemas.user import User
 from src.sorter import Sorter
-from tests.conftest import SCHEMA_FOR_TESTS
+from tests.conftest import SchemaForTests
 
 
 @pytest.mark.parametrize(
@@ -13,7 +13,7 @@ from tests.conftest import SCHEMA_FOR_TESTS
         "name.givenName",
         "urn:ietf:params:scim:schemas:core:2.0:User:userName",
         "urn:ietf:params:scim:schemas:core:2.0:User:name.givenName",
-        "emails",  # complex, multivalued,
+        "emails",
         "urn:ietf:params:scim:schemas:core:2.0:User:emails",
     ),
 )
@@ -33,382 +33,182 @@ def test_sorter_parsing_fails_with_schema():
 
 
 def test_items_are_sorted_according_to_attr_value():
-    sorter = Sorter(AttributeName.parse("userName"), asc=True)
-    values = [
-        {
-            "userName": "C",
-            "id": "2",
-        },
-        {
-            "userName": "A",
-            "id": "3",
-        },
-        {
-            "userName": "B",
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "userName": "A",
-            "id": "3",
-        },
-        {
-            "userName": "B",
-            "id": "1",
-        },
-        {
-            "userName": "C",
-            "id": "2",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("userName"), asc=True)
+    c_1 = SCIMDataContainer({"userName": "C", "id": "2"})
+    c_2 = SCIMDataContainer({"userName": "A", "id": "3"})
+    c_3 = SCIMDataContainer({"userName": "B", "id": "1"})
 
-    actual = sorter(values, schema=USER)
+    values = [c_1, c_2, c_3]
+    expected = [c_2, c_3, c_1]
+
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttributeName.parse("userName"), asc=True)
-    values = [
-        {
-            "urn:ietf:params:scim:schemas:core:2.0:User:userName": "C",
-            "id": "2",
-        },
-        {
-            "userName": "A",
-            "id": "3",
-        },
-        {
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "userName": "A",
-            "id": "3",
-        },
-        {
-            "urn:ietf:params:scim:schemas:core:2.0:User:userName": "C",
-            "id": "2",
-        },
-        {
-            "id": "1",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("userName"), asc=True)
+    c_1 = SCIMDataContainer({"urn:ietf:params:scim:schemas:core:2.0:User:userName": "C", "id": "2"})
+    c_2 = SCIMDataContainer({"userName": "A", "id": "3"})
+    c_3 = SCIMDataContainer({"id": "1"})
+    values = [c_1, c_2, c_3]
+    expected = [c_2, c_1, c_3]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttributeName.parse("userName"), asc=False)
-    values = [
-        {
-            "userName": "C",
-            "id": "2",
-        },
-        {
-            "userName": "A",
-            "id": "3",
-        },
-        {
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "id": "1",
-        },
-        {
-            "userName": "C",
-            "id": "2",
-        },
-        {
-            "userName": "A",
-            "id": "3",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("userName"), asc=False)
+    c_1 = SCIMDataContainer({"userName": "C", "id": "2"})
+    c_2 = SCIMDataContainer({"userName": "A", "id": "3"})
+    c_3 = SCIMDataContainer({"id": "1"})
+    values = [c_1, c_2, c_3]
+    expected = [c_3, c_1, c_2]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_original_order_is_preserved_if_no_values_for_all_items():
-    sorter = Sorter(AttributeName.parse("userName"))
-    values = [
-        {
-            "id": "2",
-        },
-        {
-            "id": "3",
-        },
-        {
-            "id": "1",
-        },
-    ]
-    expected = values
+    sorter = Sorter(AttrRep.parse("userName"))
+    c_1 = SCIMDataContainer({"id": "2"})
+    c_2 = SCIMDataContainer({"id": "3"})
+    c_3 = SCIMDataContainer({"id": "1"})
+    values = [c_1, c_2, c_3]
+    expected = [c_1, c_2, c_3]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_attrs():
-    sorter = Sorter(AttributeName.parse("str_mv"), asc=True)
-    values = [
-        {
-            "str_mv": [7, 1, 9],
-        },
-        {
-            "str_mv": [1, 8, 2],
-        },
-        {
-            "str_mv": [4, 3, 6],
-        },
-    ]
-    expected = [
-        {
-            "str_mv": [1, 8, 2],
-        },
-        {
-            "str_mv": [4, 3, 6],
-        },
-        {
-            "str_mv": [7, 1, 9],
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("str_mv"), asc=True)
+    c_1 = SCIMDataContainer({"str_mv": [7, 1, 9]})
+    c_2 = SCIMDataContainer({"str_mv": [1, 8, 2]})
+    c_3 = SCIMDataContainer({"str_mv": [4, 3, 6]})
+    values = [c_1, c_2, c_3]
+    expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=SCHEMA_FOR_TESTS)
+    actual = sorter(values, schema=SchemaForTests())
 
     assert actual == expected
 
 
 def test_items_are_sorted_according_to_sub_attr_value():
-    sorter = Sorter(AttributeName.parse("name.givenName"), asc=True)
-    values = [
-        {
-            "urn:ietf:params:scim:schemas:core:2.0:User:name": {"givenName": "C"},
-            "id": "2",
-        },
-        {
-            "name": {"givenName": "A"},
-            "id": "3",
-        },
-        {
-            "name": {"givenName": "B"},
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "name": {"givenName": "A"},
-            "id": "3",
-        },
-        {
-            "name": {"givenName": "B"},
-            "id": "1",
-        },
-        {
-            "urn:ietf:params:scim:schemas:core:2.0:User:name": {"givenName": "C"},
-            "id": "2",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("name.givenName"), asc=True)
+    c_1 = SCIMDataContainer(
+        {"urn:ietf:params:scim:schemas:core:2.0:User:name": {"givenName": "C"}, "id": "2"}
+    )
+    c_2 = SCIMDataContainer({"name": {"givenName": "A"}, "id": "3"})
+    c_3 = SCIMDataContainer({"name": {"givenName": "B"}, "id": "1"})
+    values = [c_1, c_2, c_3]
 
-    actual = sorter(values, schema=USER)
+    expected = [c_2, c_3, c_1]
+
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttributeName.parse("name.givenName"), asc=True)
-    values = [
-        {
-            "name": {"givenName": "C"},
-            "id": "2",
-        },
-        {
-            "id": "3",
-        },
-        {
-            "name": {"givenName": "B"},
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "name": {"givenName": "B"},
-            "id": "1",
-        },
-        {
-            "name": {"givenName": "C"},
-            "id": "2",
-        },
-        {
-            "id": "3",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("name.givenName"), asc=True)
+    c_1 = SCIMDataContainer({"name": {"givenName": "C"}, "id": "2"})
+    c_2 = SCIMDataContainer({"id": "3"})
+    c_3 = SCIMDataContainer({"name": {"givenName": "B"}, "id": "1"})
+    values = [c_1, c_2, c_3]
+    expected = [c_3, c_1, c_2]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttributeName.parse("name.givenName"), asc=False)
-    values = [
-        {
-            "name": {"givenName": "C"},
-            "id": "2",
-        },
-        {
-            "id": "3",
-        },
-        {
-            "name": {"givenName": "B"},
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "id": "3",
-        },
-        {
-            "name": {"givenName": "C"},
-            "id": "2",
-        },
-        {
-            "name": {"givenName": "B"},
-            "id": "1",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("name.givenName"), asc=False)
+    c_1 = SCIMDataContainer({"name": {"givenName": "C"}, "id": "2"})
+    c_2 = SCIMDataContainer({"id": "3"})
+    c_3 = SCIMDataContainer({"name": {"givenName": "B"}, "id": "1"})
+    values = [c_1, c_2, c_3]
+    expected = [c_2, c_1, c_3]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs():
-    sorter = Sorter(AttributeName(attr="emails"), asc=True)
-    values = [
+    sorter = Sorter(AttrRep(attr="emails"), asc=True)
+    c_1 = SCIMDataContainer(
         {
             "id": "1",
             "emails": [
                 {"primary": True, "value": "z@example.com"},
             ],
-        },
+        }
+    )
+    c_2 = SCIMDataContainer(
         {
             "id": "2",
             "emails": [
                 {"value": "a@example.com"},
             ],
-        },
+        }
+    )
+    c_3 = SCIMDataContainer(
         {
             "id": "3",
             "emails": [
                 {"primary": True, "value": "a@example.com"},
             ],
-        },
-    ]
-    expected = [
-        {
-            "id": "3",
-            "emails": [
-                {"primary": True, "value": "a@example.com"},
-            ],
-        },
-        {
-            "id": "1",
-            "emails": [
-                {"primary": True, "value": "z@example.com"},
-            ],
-        },
-        {
-            "id": "2",
-            "emails": [
-                {"value": "a@example.com"},
-            ],
-        },
-    ]
+        }
+    )
+    values = [c_1, c_2, c_3]
+    expected = [c_3, c_1, c_2]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_case_insensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttributeName.parse("userName"), asc=True)
-    values = [
-        {
-            "userName": "C",
-            "id": "2",
-        },
-        {
-            "userName": "a",  # 'a' would be after 'C' if case-sensitive
-            "id": "3",
-        },
-        {
-            "userName": "B",
-            "id": "1",
-        },
-    ]
-    expected = [
-        {
-            "userName": "a",
-            "id": "3",
-        },
-        {
-            "userName": "B",
-            "id": "1",
-        },
-        {
-            "userName": "C",
-            "id": "2",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("userName"), asc=True)
+    c_1 = SCIMDataContainer({"userName": "C", "id": "2"})
+    # 'a' would be after 'C' if case-sensitive
+    c_2 = SCIMDataContainer({"userName": "a", "id": "3"})
+    c_3 = SCIMDataContainer({"userName": "B", "id": "1"})
+    values = [c_1, c_2, c_3]
+    expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_case_sensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttributeName.parse("id"), asc=True)
-    values = [
-        {
-            "id": "a",
-        },
-        {
-            "id": "A",
-        },
-        {
-            "id": "B",
-        },
-    ]
-    expected = [
-        {
-            "id": "A",
-        },
-        {
-            "id": "B",
-        },
-        {
-            "id": "a",
-        },
-    ]
+    sorter = Sorter(AttrRep.parse("id"), asc=True)
+    c_1 = SCIMDataContainer({"id": "a"})
+    c_2 = SCIMDataContainer({"id": "A"})
+    c_3 = SCIMDataContainer({"id": "B"})
+    values = [c_1, c_2, c_3]
+    expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=USER)
+    actual = sorter(values, schema=User())
 
     assert actual == expected
 
 
 def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_case_sensitive():
-    sorter = Sorter(AttributeName.parse("userName"), asc=False)
-    values = [{"userName": "A"}, {"userName": "a"}, {"userName": "B"}]
-    schemas = [SCHEMA_FOR_TESTS, USER, USER]
-    expected = [{"userName": "B"}, {"userName": "a"}, {"userName": "A"}]
+    sorter = Sorter(AttrRep.parse("userName"), asc=False)
+    c_1 = SCIMDataContainer({"userName": "A"})
+    c_2 = SCIMDataContainer({"userName": "a"})
+    c_3 = SCIMDataContainer({"userName": "B"})
+    values = [c_1, c_2, c_3]
+    expected = [c_3, c_2, c_1]
+    schemas = [SchemaForTests(), User(), User()]
 
     actual = sorter(values, schemas)
 
@@ -416,9 +216,11 @@ def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_cas
 
 
 def test_fails_if_different_value_types():
-    sorter = Sorter(AttributeName.parse("title"), asc=False)
-    values = [{"title": 1}, {"title": "a"}]
-    schemas = [SCHEMA_FOR_TESTS, USER]
+    sorter = Sorter(AttrRep.parse("title"), asc=False)
+    c_1 = SCIMDataContainer({"title": 1})
+    c_2 = SCIMDataContainer({"title": "a"})
+    values = [c_1, c_2]
+    schemas = [SchemaForTests(), User()]
 
     with pytest.raises(TypeError):
         sorter(values, schemas)
