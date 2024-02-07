@@ -2343,3 +2343,57 @@ def test_complex_sub_attribute_is_discovered():
 
     assert filter_ is None
     assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
+    ("filter_exp", "expected"),
+    (
+        (
+            'attr eq "id eq 1 and value neq 2" and other_attr eq "id eq 1 or value neq 2"',
+            {
+                "op": "and",
+                "sub_ops": [
+                    {
+                        "op": "eq",
+                        "attr_rep": "attr",
+                        "value": "id eq 1 and value neq 2",
+                    },
+                    {
+                        "op": "eq",
+                        "attr_rep": "other_attr",
+                        "value": "id eq 1 or value neq 2",
+                    },
+                ],
+            },
+        ),
+        (
+            'emails[value eq "id eq 1 and attr neq 2"]',
+            {
+                "op": "complex",
+                "attr_rep": "emails",
+                "sub_op": {
+                    "op": "eq",
+                    "attr_rep": "value",
+                    "value": "id eq 1 and attr neq 2",
+                },
+            },
+        ),
+        (
+            'emails[value eq "ims[type eq "work"]"]',
+            {
+                "op": "complex",
+                "attr_rep": "emails",
+                "sub_op": {
+                    "op": "eq",
+                    "attr_rep": "value",
+                    "value": 'ims[type eq "work"]',
+                },
+            },
+        ),
+    ),
+)
+def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, expected):
+    filter_, issues = Filter.parse(filter_exp)
+
+    assert issues.to_dict() == {}
+    assert filter_.to_dict() == expected

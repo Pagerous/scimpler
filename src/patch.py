@@ -1,9 +1,12 @@
+import re
 from typing import Optional, Tuple
 
 from src.data.container import AttrRep
 from src.error import ValidationError, ValidationIssues
-from src.filter.filter import OP_REGEX, parse_comparison_value
+from src.filter.filter import parse_comparison_value
 from src.filter.operator import Equal
+
+OP_REGEX = re.compile(r'\s+(?=(?:[^"]*"[^"]*")*[^"]*$)', flags=re.DOTALL)
 
 
 class PatchPath:
