@@ -102,7 +102,7 @@ class Filter:
             elif char == "]":
                 if bracket_open_index is None:
                     issues.add(
-                        issue=ValidationError.no_opening_complex_attribute_bracket(i),
+                        issue=ValidationError.complex_attribute_bracket_not_opened_or_closed(),
                         proceed=False,
                     )
                 else:
@@ -112,7 +112,7 @@ class Filter:
                     if sub_ops_exp.strip() == "":
                         issues_.add(
                             issue=ValidationError.empty_complex_attribute_expression(
-                                complex_attr_rep, complex_attr_start
+                                complex_attr_rep
                             ),
                             proceed=False,
                         )
@@ -166,7 +166,7 @@ class Filter:
 
         if bracket_open_index and bracket_open_index not in parsed_complex_ops:
             issues.add(
-                issue=ValidationError.no_closing_complex_attribute_bracket(bracket_open_index),
+                issue=ValidationError.complex_attribute_bracket_not_opened_or_closed(),
                 proceed=False,
             )
 
@@ -212,7 +212,7 @@ class Filter:
                 if bracket_open:
                     bracket_cnt -= 1
                 else:
-                    issues.add(issue=ValidationError.no_opening_bracket(i), proceed=False)
+                    issues.add(issue=ValidationError.bracket_not_opened_or_closed(), proceed=False)
             if bracket_open and bracket_cnt == 0:
                 group_op_exp = op_exp[bracket_open_index : i + 1]
                 parsed_group_op, issues_ = Filter._parse_operator(
@@ -231,7 +231,7 @@ class Filter:
                 bracket_open_index = None
 
         if bracket_open and bracket_open_index not in parsed_group_ops:
-            issues.add(issue=ValidationError.no_closing_bracket(bracket_open_index), proceed=False)
+            issues.add(issue=ValidationError.bracket_not_opened_or_closed(), proceed=False)
 
         op_exp_preprocessed = op_exp_preprocessed.strip()
         if op_exp_preprocessed == "":

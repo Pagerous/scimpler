@@ -59,16 +59,14 @@ class ValidationError:
             "{allowed_types}, but got '{provided_type}' instead"
         ),
         33: "complex sub-attribute {sub_attr!r} of {attr!r} can not be complex",
-        100: "no closing bracket for the bracket at position {bracket_position}",
-        101: "no opening bracket for the bracket at position {bracket_position}",
-        102: "no closing complex attribute bracket for the bracket at position {bracket_position}",
-        103: "no opening complex attribute bracket for the bracket at position {bracket_position}",
+        100: "one of brackets is not opened / closed",
+        102: "one of complex attribute brackets is not opened / closed",
         104: "missing operand for operator '{operator}' in expression '{expression}'",
         105: "unknown {operator_type} operator '{operator}' in expression '{expression}'",
         106: "unknown expression '{expression}'",
-        107: "no expression or empty expression inside precedence grouping operator",
+        107: "no expression or empty expression inside grouping operator",
         109: "complex attribute can not contain inner complex attributes or square brackets",
-        110: "complex attribute {attribute!r} at position {expression_position} has no expression",
+        110: "complex attribute {attribute!r} has no expression",
         111: "attribute {attribute!r} does not conform the rules",
         112: "bad comparison value {value!r}",
         113: "comparison value {value!r} is not compatible with {operator!r} operator",
@@ -235,20 +233,12 @@ class ValidationError:
         return cls(code=33, attr=attr, sub_attr=sub_attr)
 
     @classmethod
-    def no_closing_bracket(cls, bracket_position: int):
-        return cls(code=100, bracket_position=bracket_position)
+    def bracket_not_opened_or_closed(cls):
+        return cls(code=100)
 
     @classmethod
-    def no_opening_bracket(cls, bracket_position: int):
-        return cls(code=101, bracket_position=bracket_position)
-
-    @classmethod
-    def no_closing_complex_attribute_bracket(cls, bracket_position: int):
-        return cls(code=102, bracket_position=bracket_position)
-
-    @classmethod
-    def no_opening_complex_attribute_bracket(cls, bracket_position: int):
-        return cls(code=103, bracket_position=bracket_position)
+    def complex_attribute_bracket_not_opened_or_closed(cls):
+        return cls(code=102)
 
     @classmethod
     def missing_operand_for_operator(cls, operator: str, expression: str):
@@ -276,8 +266,8 @@ class ValidationError:
         return cls(code=109)
 
     @classmethod
-    def empty_complex_attribute_expression(cls, attribute: str, expression_position: int):
-        return cls(code=110, attribute=attribute, expression_position=expression_position)
+    def empty_complex_attribute_expression(cls, attribute: str):
+        return cls(code=110, attribute=attribute)
 
     @classmethod
     def bad_attribute_name(cls, attribute: str):

@@ -1047,29 +1047,29 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
         ),
         (
             'userName eq "user123" and id eq 1 or display co "user")',
-            {"_errors": [{"code": 101}]},
+            {"_errors": [{"code": 100}]},
         ),
         (
             'userName eq "user(123" and id eq 1 or display co "user")',
-            {"_errors": [{"code": 101}]},
+            {"_errors": [{"code": 100}]},
         ),
         (
             'userName eq "user123") and (id eq 1 or display co "user"',
-            {"_errors": [{"code": 101}, {"code": 100}]},
+            {"_errors": [{"code": 100}, {"code": 100}]},
         ),
         (
             'userName eq "user(123") and (id eq 1 or display co "use)r"',
-            {"_errors": [{"code": 101}, {"code": 100}]},
+            {"_errors": [{"code": 100}, {"code": 100}]},
         ),
         (
             'userName eq "user123") and (id eq 1 or display co "user") '
             'or (id eq 2 or display co "user"',
-            {"_errors": [{"code": 101}, {"code": 100}]},
+            {"_errors": [{"code": 100}, {"code": 100}]},
         ),
         (
             'userName eq "user123") and ((id eq 1 or display co "user") '
             'or (id eq 2 or display co "user")',
-            {"_errors": [{"code": 101}, {"code": 100}]},
+            {"_errors": [{"code": 100}, {"code": 100}]},
         ),
         (
             'userName eq "user123" and (not (id eq 1 or display co "user")',
@@ -1077,7 +1077,7 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
         ),
         (
             'userName eq "user123" and not (id eq 1 or display co "user"))',
-            {"_errors": [{"code": 101}]},
+            {"_errors": [{"code": 100}]},
         ),
         (
             'emails[type eq "work" and (display co "@example.com" or value co "@example"]',
@@ -1085,11 +1085,11 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
         ),
         (
             'emails[type eq "work") and (display co "@example.com" or value co "@example"]',
-            {"_errors": [{"code": 101}, {"code": 100}]},
+            {"_errors": [{"code": 100}, {"code": 100}]},
         ),
         (
             'emails[type eq "work") and display co "@example.com" or value co "@example"]',
-            {"_errors": [{"code": 101}]},
+            {"_errors": [{"code": 100}]},
         ),
     ),
 )
@@ -1151,13 +1151,13 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
         ),
         (
             'emails type eq "work" and display co "@example.com" or value co "@example"]',
-            {"_errors": [{"code": 103}]},
+            {"_errors": [{"code": 102}]},
         ),
         ('emails[type eq "work" and ims[type eq "work"', {"_errors": [{"code": 109}]}),
         ('emails[type eq "work"] and ims[type eq "work"', {"_errors": [{"code": 102}]}),
         (
             'emails type eq "work"] and ims type eq "work"]',
-            {"_errors": [{"code": 103}, {"code": 103}]},
+            {"_errors": [{"code": 102}, {"code": 102}]},
         ),
     ),
 )
@@ -1912,7 +1912,6 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
                         "code": 110,
                         "context": {
                             "attribute": "emails",
-                            "expression_position": 0,
                         },
                     }
                 ]
@@ -1926,7 +1925,6 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
                         "code": 110,
                         "context": {
                             "attribute": "ims",
-                            "expression_position": 27,
                         },
                     }
                 ]
@@ -1940,14 +1938,12 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
                         "code": 110,
                         "context": {
                             "attribute": "emails",
-                            "expression_position": 0,
                         },
                     },
                     {
                         "code": 110,
                         "context": {
                             "attribute": "ims",
-                            "expression_position": 13,
                         },
                     },
                 ]
