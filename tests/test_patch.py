@@ -56,7 +56,7 @@ def test_patch_path_parsing_failure(path, expected_issues):
 
 
 @pytest.mark.parametrize(
-    ("path", "expected_attr_rep", "expected_multivalued_filter", "expected_value_sub_attr_rep"),
+    ("path", "expected_attr_rep", "expected_multivalued_filter", "expected_complex_filter_attr_rep"),
     (
         ("members", AttrRep(attr="members"), None, None),
         ("name.familyName", AttrRep(attr="name", sub_attr="familyName"), None, None),
@@ -81,7 +81,7 @@ def test_patch_path_parsing_success(
     path,
     expected_attr_rep: AttrRep,
     expected_multivalued_filter: Optional[Equal],
-    expected_value_sub_attr_rep: Optional[AttrRep],
+    expected_complex_filter_attr_rep: Optional[AttrRep],
 ):
     parsed, issues = PatchPath.parse(path)
 
@@ -93,7 +93,7 @@ def test_patch_path_parsing_success(
         assert parsed.complex_filter.attr_rep == expected_multivalued_filter.attr_rep
     else:
         assert parsed.complex_filter is None
-    assert parsed.complex_filter_attr_rep == expected_value_sub_attr_rep
+    assert parsed.complex_filter_attr_rep == expected_complex_filter_attr_rep
 
 
 @pytest.mark.parametrize(
@@ -136,3 +136,23 @@ def test_patch_path_parsing_success(
 def test_patch_path_object_construction_fails_if_broken_constraints(kwargs):
     with pytest.raises(ValueError):
         PatchPath(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_filter_value"),
+    (
+        (
+            'emails[value eq "id eq 1 and attr neq 2"]',
+            "id eq 1 and attr neq 2",
+        ),
+        (
+            'emails[value eq "ims[type eq "work"]"]',
+            "ims[type eq \"work\"]"
+        ),
+    ),
+)
+def test_complex_filter_string_values_can_contain_anything(path, expected_filter_value):
+    parsed, issues = PatchPath.parse(path)
+
+    assert issues.to_dict() == {}
+    assert parsed.complex_filter.value == expected_filter_value

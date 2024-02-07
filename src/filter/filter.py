@@ -14,8 +14,8 @@ OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
 NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s*(.*)", flags=re.DOTALL)
 OP_REGEX = re.compile(r"\s+", flags=re.DOTALL)
-_PLACEHOLDER_REGEX = re.compile(r"\|&PLACE_HOLDER_(\d+)&\|")
-_STRING_VALUES_REGEX = re.compile(r"'(.*?)'|\"(.*?)\"", flags=re.DOTALL)
+PLACEHOLDER_REGEX = re.compile(r"\|&PLACE_HOLDER_(\d+)&\|")
+STRING_VALUES_REGEX = re.compile(r"'(.*?)'|\"(.*?)\"", flags=re.DOTALL)
 
 
 _UNARY_ATTR_OPERATORS = {
@@ -79,11 +79,11 @@ class Filter:
         issues = ValidationIssues()
 
         string_values = {}
-        for match in _STRING_VALUES_REGEX.finditer(filter_exp):
+        for match in STRING_VALUES_REGEX.finditer(filter_exp):
             start, stop = match.span()
             string_value = match.string[start:stop]
             string_values[start] = string_value
-            filter_exp = filter_exp.replace(string_value, Filter._get_placeholder(start), 1)
+            filter_exp = filter_exp.replace(string_value, get_placeholder(start), 1)
 
         bracket_open_index = None
         complex_attr_rep = ""
@@ -162,7 +162,7 @@ class Filter:
                             expression=complex_attr_exp,
                         )
                     filter_exp = filter_exp.replace(
-                        complex_attr_exp, Filter._get_placeholder(complex_attr_start), 1
+                        complex_attr_exp, get_placeholder(complex_attr_start), 1
                     )
                 bracket_open_index = None
                 complex_attr_rep = ""
@@ -240,7 +240,7 @@ class Filter:
                     expression=group_op_exp,
                 )
                 op_exp_preprocessed = op_exp_preprocessed.replace(
-                    group_op_exp, Filter._get_placeholder(bracket_open_index), 1
+                    group_op_exp, get_placeholder(bracket_open_index), 1
                 )
                 bracket_open = False
                 bracket_open_index = None
@@ -618,24 +618,13 @@ class Filter:
         parsed_group_ops: Dict[int, _ParsedGroupOperator],
         parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
     ) -> Optional[Union[_ParsedGroupOperator, _ParsedComplexAttributeOperator]]:
-        position = Filter._parse_placeholder(op_exp)
+        position = parse_placeholder(op_exp)
         if position is None:
             return None
         if position in parsed_group_ops:
             return parsed_group_ops[position]
         elif position in parsed_complex_ops:
             return parsed_complex_ops[position]
-        return None
-
-    @staticmethod
-    def _get_placeholder(index: int) -> str:
-        return f"|&PLACE_HOLDER_{index}&|"
-
-    @staticmethod
-    def _parse_placeholder(exp: str) -> Optional[int]:
-        match = _PLACEHOLDER_REGEX.fullmatch(exp)
-        if match:
-            return int(match.group(1))
         return None
 
     @staticmethod
@@ -646,7 +635,7 @@ class Filter:
         parsed_complex_ops: Optional[Dict[int, _ParsedComplexAttributeOperator]] = None,
     ):
         encoded = exp
-        for match in _PLACEHOLDER_REGEX.finditer(exp):
+        for match in PLACEHOLDER_REGEX.finditer(exp):
             index = int(match.group(1))
             if index in (string_values or {}):
                 encoded = encoded.replace(match.group(0), string_values[index])
@@ -699,6 +688,17 @@ class Filter:
                 ],
             }
         raise TypeError(f"unsupported filter type '{type(operator).__name__}'")
+
+
+def get_placeholder(index: int) -> str:
+    return f"|&PLACE_HOLDER_{index}&|"
+
+
+def parse_placeholder(exp: str) -> Optional[int]:
+    match = PLACEHOLDER_REGEX.fullmatch(exp)
+    if match:
+        return int(match.group(1))
+    return None
 
 
 def parse_comparison_value(value: str) -> Any:
