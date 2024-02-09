@@ -348,3 +348,41 @@ def validate_single_primary_value(
         )
     # TODO: warn if a given type-value pair appears more than once
     return list(value), issues
+
+
+class Attributes:
+    def __init__(self, attrs: Iterable[Attribute]):
+        self._top_level: List[Attribute] = []
+        self._attrs = {}
+        for attr in attrs:
+            self._attrs[attr.rep.schema, attr.rep.attr, attr.rep.sub_attr] = attr
+            if not attr.rep.sub_attr:
+                self._top_level.append(attr)
+
+    @property
+    def top_level(self) -> List[Attribute]:
+        return self._top_level
+
+    def __getattr__(self, name: str) -> Attribute:
+        for attr in self._top_level:
+            if attr.rep.attr.lower() == name.lower():
+                return attr
+
+        raise AttributeError(f"no {name!r} attribute")
+
+    def __iter__(self):
+        return iter(self._attrs.values())
+
+    def get(self, attr_rep: AttrRep) -> Optional[Attribute]:
+        for (schema, attr, sub_attr), attr_obj in self._attrs.items():
+            if AttrRep(schema, attr, sub_attr) == attr_rep:
+                return attr_obj
+        return None
+
+    def get_by_path(self, path: "PatchPath") -> Optional[Attribute]:
+        if path.complex_filter is not None and self.get(path.complex_filter.attr_rep) is None:
+            return None
+        attr = self.get(path.attr_rep)
+        if attr is None or path.complex_filter_attr_rep is None:
+            return attr
+        return self.get(path.complex_filter_attr_rep)
