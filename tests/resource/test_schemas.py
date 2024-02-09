@@ -3,8 +3,8 @@ from copy import deepcopy
 import pytest
 
 from src.data.container import AttrRep, Missing, SCIMDataContainer
-from src.filter.operator import Equal
-from src.patch import PatchPath
+from src.data.operator import Equal
+from src.data.path import PatchPath
 from src.resource.schemas import list_response, patch_op, user
 from src.resource.schemas.list_response import validate_items_per_page_consistency
 from src.schemas import validate_resource_type_consistency, validate_schemas_field
@@ -450,7 +450,7 @@ def test_patch_op__add_operation_without_path_can_be_parsed():
                         "ignore^me": 42,
                         "department": "Tour Operations",
                         "manager": {
-                            "displayName": "Jan Kowalski",
+                            "value": "Jan Kowalski",
                         },
                     },
                 },
@@ -472,7 +472,7 @@ def test_patch_op__add_operation_without_path_can_be_parsed():
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                         "department": "Tour Operations",
                         "manager": {
-                            "displayName": "Jan Kowalski",
+                            "value": "Jan Kowalski",
                         },
                     },
                 },
@@ -482,7 +482,7 @@ def test_patch_op__add_operation_without_path_can_be_parsed():
 
     actual_data, issues = schema.parse(input_data)
 
-    assert not issues
+    assert issues.to_dict() == {}
     assert actual_data.to_dict() == expected_data
 
 
@@ -522,7 +522,7 @@ def test_parse_add_operation_without_path__fails_for_incorrect_data():
                     "emails": {"0": {"type": {"_errors": [{"code": 2}]}}},
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                         "department": {"_errors": [{"code": 2}]},
-                        "manager": {"displayName": {"_errors": [{"code": 2}]}},
+                        "manager": {"displayName": {"_errors": [{"code": 2}, {"code": 304}]}},
                     },
                 }
             }
@@ -734,7 +734,10 @@ def test_parse_add_operation__succeeds_on_correct_data(path, expected_path, valu
     ("path", "value"),
     (
         ("id", "123"),
-        ("manager.displayName", "The Grok"),
+        (
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
+            "The Grok",
+        ),
         ("meta", {"resourceType": "Users"}),
         ("groups", [{"type": "direct", "value": "admins"}]),
         ('groups[type eq "direct"].value', "admins"),

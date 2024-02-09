@@ -2,8 +2,8 @@ import pytest
 
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
-from src.filter.filter import Filter
-from src.filter.operator import Present
+from src.data.operator import Present
+from src.filter import Filter
 from src.resource.request_validators import (
     Error,
     ResourceObjectGET,

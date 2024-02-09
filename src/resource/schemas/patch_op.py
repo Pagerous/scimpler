@@ -3,8 +3,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from src.data import type as at
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
 from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.path import PatchPath
 from src.error import ValidationError, ValidationIssues
-from src.patch import PatchPath
 from src.schemas import BaseSchema, ResourceSchema
 
 
@@ -108,21 +108,26 @@ class PatchOp(BaseSchema):
             if issues.has_issues((operations.rep.attr, i)):
                 continue
 
-            path = item[_operations_path.rep]
+            path = item[self.attrs.operations.attrs.path.rep]
             if path not in [None, Missing]:
                 issues_ = validate_operation_path(self._resource_schema, path)
                 if issues_:
-                    issues.merge(issues_, location=(i, _operations_path.rep.attr))
+                    issues.merge(issues_, location=(i, self.attrs.operations.attrs.path.rep.attr))
                     parsed.append(None)
                     continue
 
-            op = item[_operations_op.rep]
-            value = item[_operations_value.rep]
+            op = item[self.attrs.operations.attrs.op.rep]
+            value = item[self.attrs.operations.attrs.value.rep]
             if op == "add":
                 value, issues_ = self._parse_add_operation_value(path, value)
                 if issues_:
                     issues.merge(
-                        issues_, location=(operations.rep.attr, i, _operations_value.rep.attr)
+                        issues_,
+                        location=(
+                            self.attrs.operations.rep.attr,
+                            i,
+                            self.attrs.operations.attrs.value.rep.attr,
+                        ),
                     )
                     parsed.append(None)
                 else:
@@ -163,7 +168,7 @@ class PatchOp(BaseSchema):
 
         # sub-attribute of filtered multivalued complex attribute
         if (
-            isinstance(self._resource_schema.get_attr(path.attr_rep), ComplexAttribute)
+            isinstance(self._resource_schema.attrs.get(path.attr_rep), ComplexAttribute)
             and path.complex_filter
             and path.complex_filter_attr_rep
         ):
@@ -175,7 +180,7 @@ class PatchOp(BaseSchema):
     ) -> Tuple[Any, ValidationIssues]:
         issues = ValidationIssues()
 
-        attr = self._resource_schema.get_attr(attr_rep)
+        attr = self._resource_schema.attrs.get(attr_rep)
         if attr is None:
             return None, issues
 
@@ -191,7 +196,7 @@ class PatchOp(BaseSchema):
             issues.merge(issues_)
 
         elif isinstance(attr, ComplexAttribute) and not attr.multi_valued:
-            for sub_attr in attr.sub_attributes:
+            for sub_attr in attr.attrs:
                 if sub_attr.mutability != AttributeMutability.READ_ONLY:
                     # non-read-only attributes can be updated
                     continue
@@ -211,14 +216,14 @@ class PatchOp(BaseSchema):
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues():
     issues = ValidationIssues()
     if (
-        schema.get_attr(path.attr_rep) is None
+        schema.attrs.get(path.attr_rep) is None
         or (
             path.complex_filter_attr_rep is not None
-            and schema.get_attr(path.complex_filter_attr_rep) is None
+            and schema.attrs.get(path.complex_filter_attr_rep) is None
         )
         or (
             path.complex_filter is not None
-            and schema.get_attr(path.complex_filter.attr_rep) is None
+            and schema.attrs.get(path.complex_filter.attr_rep) is None
         )
     ):
         issues.add(

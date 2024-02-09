@@ -1,9 +1,9 @@
 from enum import Enum
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Collection,
-    Dict,
     Iterable,
     List,
     Optional,
@@ -15,6 +15,9 @@ from typing import (
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.type import AttributeType, Complex, get_scim_type
 from src.error import ValidationError, ValidationIssues
+
+if TYPE_CHECKING:
+    from src.data.path import PatchPath
 
 
 class AttributeMutability(str, Enum):
@@ -234,9 +237,7 @@ class ComplexAttribute(Attribute):
             parsers=parsers,
             dumpers=dumpers,
         )
-        self._sub_attributes: List[Attribute] = [
-            self._bound_sub_attr(sub_attr) for sub_attr in sub_attributes
-        ]
+        self._sub_attributes = Attributes(sub_attributes)
 
         complex_parsers, complex_dumpers = complex_parsers or [], complex_dumpers or []
         if multi_valued:
@@ -247,27 +248,8 @@ class ComplexAttribute(Attribute):
         self._complex_parsers = complex_parsers
         self._complex_dumpers = complex_dumpers
 
-    def _bound_sub_attr(self, sub_attr: Attribute) -> Attribute:
-        if sub_attr.rep.top_level_equals(self.rep):
-            return sub_attr
-        return Attribute(
-            name=AttrRep(attr=self.rep.attr, sub_attr=sub_attr.rep.attr),
-            type_=sub_attr.type,
-            reference_types=sub_attr.reference_types,
-            issuer=sub_attr.issuer,
-            required=sub_attr.required,
-            case_exact=sub_attr.case_exact,
-            multi_valued=sub_attr.multi_valued,
-            canonical_values=sub_attr.canonical_values,
-            mutability=sub_attr.mutability,
-            returned=sub_attr.returned,
-            uniqueness=sub_attr.uniqueness,
-            parsers=sub_attr.parsers,
-            dumpers=sub_attr.dumpers,
-        )
-
     @property
-    def sub_attributes(self) -> List[Attribute]:
+    def attrs(self) -> "Attributes":
         return self._sub_attributes
 
     @property
@@ -290,26 +272,26 @@ class ComplexAttribute(Attribute):
                 item = SCIMDataContainer(item)
                 parsed_item = SCIMDataContainer()
                 for sub_attr in self._sub_attributes:
-                    sub_attr_value = item[AttrRep(attr=sub_attr.rep.sub_attr)]
+                    sub_attr_value = item[sub_attr.rep]
                     if sub_attr_value is Missing:
                         continue
                     parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
-                    issues.merge(location=(i, sub_attr.rep.sub_attr), issues=issues_)
-                    parsed_item[AttrRep(attr=sub_attr.rep.sub_attr)] = parsed_attr
+                    issues.merge(location=(i, sub_attr.rep.attr), issues=issues_)
+                    parsed_item[sub_attr.rep] = parsed_attr
                 parsed.append(parsed_item)
         else:
             value = SCIMDataContainer(value)
             parsed = SCIMDataContainer()
             for sub_attr in self._sub_attributes:
-                sub_attr_value = value[AttrRep(attr=sub_attr.rep.sub_attr)]
+                sub_attr_value = value[sub_attr.rep]
                 if sub_attr_value is Missing:
                     continue
                 parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
                 issues.merge(
-                    location=(sub_attr.rep.sub_attr,),
+                    location=(sub_attr.rep.attr,),
                     issues=issues_,
                 )
-                parsed[AttrRep(attr=sub_attr.rep.sub_attr)] = parsed_attr
+                parsed[sub_attr.rep] = parsed_attr
 
         if not issues:
             for postprocessor in postprocessors:
@@ -339,7 +321,7 @@ def validate_single_primary_value(
     issues = ValidationIssues()
     primary_entries = set()
     for i, item in enumerate(value):
-        if item[AttrRep(attr="primary")] is True:
+        if item["primary"] is True:
             primary_entries.add(i)
     if len(primary_entries) > 1:
         issues.add(

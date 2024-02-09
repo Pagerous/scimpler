@@ -105,22 +105,22 @@ class Sorter:
         return attr_key
 
     def _attr_key(self, item: SCIMDataContainer, schema: BaseSchema):
-        attr = schema.get_attr(self._attr_rep)
+        attr = schema.attrs.get(self._attr_rep)
         value = None
         if attr is not None:
             item_value = item[self._attr_rep]
             if item_value is not Missing and attr.multi_valued:
                 if isinstance(attr, ComplexAttribute):
                     for v in item_value:
-                        primary = v[AttrRep(attr="primary")]
+                        primary = v["primary"]
                         if primary is True:
-                            for sub_attr in attr.sub_attributes:
-                                if sub_attr.rep.sub_attr.lower() == "value":
+                            for sub_attr in attr.attrs:
+                                if sub_attr.rep.attr.lower() == "value":
                                     attr = sub_attr
                                     break
                             else:
                                 attr = None
-                            value = v[AttrRep(attr="value")]
+                            value = v["value"]
                             break
                 else:
                     value = item_value[0]

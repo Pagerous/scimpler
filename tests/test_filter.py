@@ -1,6 +1,6 @@
 import pytest
 
-from src.filter.filter import Filter
+from src.filter import Filter
 
 
 @pytest.mark.parametrize(

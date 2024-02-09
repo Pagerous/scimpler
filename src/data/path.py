@@ -1,15 +1,15 @@
 from typing import Dict, Optional, Tuple
 
 from src.data.container import AttrRep
+from src.data.operator import Equal
 from src.error import ValidationError, ValidationIssues
-from src.filter.filter import (
+from src.utils import (
     OP_REGEX,
     PLACEHOLDER_REGEX,
     STRING_VALUES_REGEX,
     get_placeholder,
     parse_comparison_value,
 )
-from src.filter.operator import Equal
 
 
 class PatchPath:
