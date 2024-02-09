@@ -1,11 +1,18 @@
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, TypeAlias, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, TypeAlias, Union
 
+from src.data import operator as op
 from src.data.container import AttrRep, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
-from src.filter import operator as op
-from src.filter.operator import MatchResult
+from src.utils import (
+    OP_REGEX,
+    PLACEHOLDER_REGEX,
+    STRING_VALUES_REGEX,
+    get_placeholder,
+    parse_comparison_value,
+    parse_placeholder,
+)
 
 if TYPE_CHECKING:
     from src.schemas import BaseSchema
@@ -13,10 +20,6 @@ if TYPE_CHECKING:
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
 NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s*(.*)", flags=re.DOTALL)
-OP_REGEX = re.compile(r"\s+", flags=re.DOTALL)
-PLACEHOLDER_REGEX = re.compile(r"\|&PLACE_HOLDER_(\d+)&\|")
-STRING_VALUES_REGEX = re.compile(r"'(.*?)'|\"(.*?)\"", flags=re.DOTALL)
-
 
 _UNARY_ATTR_OPERATORS = {
     "pr": op.Present,
@@ -515,8 +518,8 @@ class Filter:
 
             if attr_rep.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr_rep.schema, attr_rep.attr),
-                    sub_operator=op_(attr_rep),
+                    attr_rep=AttrRep(schema=attr_rep.schema, attr=attr_rep.attr),
+                    sub_operator=op_(AttrRep(attr=attr_rep.sub_attr)),
                 )
             else:
                 operator = op_(attr_rep)
@@ -592,8 +595,8 @@ class Filter:
 
             if attr_rep.sub_attr:
                 operator = op.ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr_rep.schema, attr_rep.attr),
-                    sub_operator=op_(attr_rep, value),
+                    attr_rep=AttrRep(schema=attr_rep.schema, attr=attr_rep.attr),
+                    sub_operator=op_(AttrRep(attr=attr_rep.sub_attr), value),
                 )
             else:
                 operator = op_(attr_rep, value)
@@ -648,10 +651,10 @@ class Filter:
 
     def __call__(
         self, data: SCIMDataContainer, schema: "BaseSchema", strict: bool = True
-    ) -> MatchResult:
+    ) -> op.MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
             data = data[self._operator.attr_rep]
-        return self._operator.match(data, schema, strict)
+        return self._operator.match(data, schema.attrs, strict)
 
     def to_dict(self):
         return self._to_dict(self._operator)
@@ -688,38 +691,3 @@ class Filter:
                 ],
             }
         raise TypeError(f"unsupported filter type '{type(operator).__name__}'")
-
-
-def get_placeholder(index: int) -> str:
-    return f"|&PLACE_HOLDER_{index}&|"
-
-
-def parse_placeholder(exp: str) -> Optional[int]:
-    match = PLACEHOLDER_REGEX.fullmatch(exp)
-    if match:
-        return int(match.group(1))
-    return None
-
-
-def parse_comparison_value(value: str) -> Any:
-    if (
-        value.startswith('"')
-        and value.endswith('"')
-        or value.startswith("'")
-        and value.endswith("'")
-    ):
-        value = value[1:-1]
-    elif value == "false":
-        value = False
-    elif value == "true":
-        value = True
-    elif value == "null":
-        value = None
-    else:
-        parsed = float(value)
-        parsed_int = int(parsed)
-        if parsed == parsed_int:
-            value = parsed_int
-        else:
-            value = parsed
-    return value

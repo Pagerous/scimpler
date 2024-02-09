@@ -50,7 +50,7 @@ class ListResponse(BaseSchema):
         if not issues.can_proceed():
             return data, issues
 
-        resources_ = data[resources.rep]
+        resources_ = data[self.attrs.resources.rep]
         if resources_ is Missing:
             return data, issues
 
@@ -59,13 +59,13 @@ class ListResponse(BaseSchema):
                 issue=ValidationError.bad_type(
                     get_scim_type(list), get_scim_type(type(resources_))
                 ),
-                location=(resources.rep.attr,),
+                location=(self.attrs.resources.rep.attr,),
                 proceed=False,
             )
             return data, issues
 
-        if issues.can_proceed((items_per_page.rep.attr,)):
-            items_per_page_ = data[items_per_page.rep]
+        if issues.can_proceed((self.attrs.itemsperpage.rep.attr,)):
+            items_per_page_ = data[self.attrs.itemsperpage.rep]
             issues.merge(
                 validate_items_per_page_consistency(
                     resources_=resources_,
@@ -81,14 +81,14 @@ class ListResponse(BaseSchema):
                 issues.add(
                     issue=ValidationError.unknown_schema(),
                     proceed=False,
-                    location=(resources.rep.attr, i),
+                    location=(self.attrs.resources.rep.attr, i),
                 )
                 resource = None
             else:
                 resource, issues_ = schema.dump(resource)
-                issues.merge(issues_, location=(resources.rep.attr, i))
+                issues.merge(issues_, location=(self.attrs.resources.rep.attr, i))
             dumped_resources.append(resource)
-        data[resources.rep] = dumped_resources
+        data[self.attrs.resources.rep] = dumped_resources
 
         return data, issues
 
@@ -106,7 +106,7 @@ class ListResponse(BaseSchema):
         if not isinstance(data, SCIMDataContainer):
             return None
 
-        schemas_value = data[schemas.rep]
+        schemas_value = data[self.attrs.schemas.rep]
         if isinstance(schemas_value, List) and len(schemas_value) > 0:
             schemas_value = {
                 item.lower() if isinstance(item, str) else item for item in schemas_value

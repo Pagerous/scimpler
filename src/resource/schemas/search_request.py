@@ -5,7 +5,7 @@ from src.data import type as type_
 from src.data.attributes import Attribute
 from src.data.container import AttrRep
 from src.error import ValidationError, ValidationIssues
-from src.filter.filter import Filter
+from src.filter import Filter
 from src.schemas import BaseSchema
 from src.sorter import Sorter
 
@@ -115,30 +115,34 @@ class SearchRequest(BaseSchema):
         if not issues.can_proceed():
             return data, issues
 
-        if issues.can_proceed((attributes.rep.attr,), (exclude_attributes.rep.attr,)):
-            to_include = data[attributes.rep]
-            to_exclude = data[exclude_attributes.rep]
+        if issues.can_proceed(
+            (self.attrs.attributes.rep.attr,), (self.attrs.excludeattributes.rep.attr,)
+        ):
+            to_include = data[self.attrs.attributes.rep]
+            to_exclude = data[self.attrs.excludeattributes.rep]
             if to_include and to_exclude:
                 issues.add(
-                    issue=ValidationError.can_not_be_used_together(exclude_attributes.rep.attr),
+                    issue=ValidationError.can_not_be_used_together(
+                        self.attrs.excludeattributes.rep.attr
+                    ),
                     proceed=False,
-                    location=(attributes.rep.attr,),
+                    location=(self.attrs.attributes.rep.attr,),
                 )
                 issues.add(
-                    issue=ValidationError.can_not_be_used_together(attributes.rep.attr),
+                    issue=ValidationError.can_not_be_used_together(self.attrs.attributes.rep.attr),
                     proceed=False,
-                    location=(exclude_attributes.rep.attr,),
+                    location=(self.attrs.excludeattributes.rep.attr,),
                 )
             if to_include or to_include:
                 data[AttrRep(attr="presence_checker")] = AttributePresenceChecker(
                     attr_reps=to_include or to_exclude, include=bool(to_include)
                 )
 
-        if issues.can_proceed((sort_by.rep.attr,)):
-            sort_by_ = data[sort_by.rep]
+        if issues.can_proceed((self.attrs.sortby.rep.attr,)):
+            sort_by_ = data[self.attrs.sortby.rep]
             if sort_by_:
                 data[AttrRep(attr="sorter")] = Sorter(
-                    attr_rep=sort_by_, asc=data[sort_by.rep] == "ascending"
+                    attr_rep=sort_by_, asc=data[self.attrs.sortby.rep] == "ascending"
                 )
 
         return data, issues

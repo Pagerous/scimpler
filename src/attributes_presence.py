@@ -70,7 +70,7 @@ class AttributePresenceChecker:
 
         for attr in attrs:
             top_attr_rep = AttrRep(schema=attr.rep.schema, attr=attr.rep.attr)
-            top_attr = schema.get_attr(top_attr_rep)
+            top_attr = schema.attrs.get(top_attr_rep)
 
             if attr.rep.sub_attr and top_attr.multi_valued:
                 value = data[top_attr_rep]

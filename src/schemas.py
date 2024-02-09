@@ -7,13 +7,13 @@ from src.data.attributes import (
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
+    Attributes,
     AttributeUniqueness,
     ComplexAttribute,
 )
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
-from src.patch import PatchPath
 
 
 def bulk_id_validator(value) -> Tuple[Any, ValidationIssues]:
@@ -148,28 +148,25 @@ meta = ComplexAttribute(
 
 class BaseSchema(abc.ABC):
     def __init__(self, schema: str, attrs: Iterable[Attribute]):
-        self._top_level_attr_reps: List[AttrRep] = []
-        self._attr_reps: List[AttrRep] = []
-        self._attrs: Dict[Tuple[str, str, str], Attribute] = {}
+        bounded_attrs = []
         for attr in [schemas, *attrs]:
-            attr = self._bound_attr_to_schema(schema, attr)
-            self._attrs[schema, attr.rep.attr, attr.rep.sub_attr] = attr
-            self._attr_reps.append(attr.rep)
-            self._top_level_attr_reps.append(attr.rep)
+            bounded_attrs.append(self._bound_attr_to_schema(attr, AttrRep(schema, attr.rep.attr)))
             if isinstance(attr, ComplexAttribute):
-                for sub_attr in attr.sub_attributes:
-                    self._attrs[schema, sub_attr.rep.attr, sub_attr.rep.sub_attr] = sub_attr
-                    self._attr_reps.append(
-                        AttrRep(schema, sub_attr.rep.attr, sub_attr.rep.sub_attr)
+                for sub_attr in attr.attrs:
+                    bounded_attrs.append(
+                        self._bound_attr_to_schema(
+                            sub_attr, AttrRep(schema, attr.rep.attr, sub_attr.rep.attr)
+                        )
                     )
+        self._attrs = Attributes(bounded_attrs)
         self._schema = schema
 
     @staticmethod
-    def _bound_attr_to_schema(schema: str, attr: Attribute, extension: bool = False) -> Attribute:
+    def _bound_attr_to_schema(attr: Attribute, attr_rep: AttrRep) -> Attribute:
         if isinstance(attr, ComplexAttribute):
             return ComplexAttribute(
-                sub_attributes=attr.sub_attributes,
-                name=AttrRep(schema=schema, attr=attr.rep.attr, extension=extension),
+                sub_attributes=list(attr.attrs),
+                name=attr_rep,
                 required=attr.required,
                 issuer=attr.issuer,
                 multi_valued=attr.multi_valued,
@@ -182,12 +179,7 @@ class BaseSchema(abc.ABC):
                 complex_dumpers=attr.complex_dumpers,
             )
         return Attribute(
-            name=AttrRep(
-                schema=schema,
-                attr=attr.rep.attr,
-                sub_attr=attr.rep.sub_attr,
-                extension=extension,
-            ),
+            name=attr_rep,
             type_=attr.type,
             reference_types=attr.reference_types,
             issuer=attr.issuer,
@@ -203,16 +195,8 @@ class BaseSchema(abc.ABC):
         )
 
     @property
-    def attrs(self) -> List[Attribute]:
-        return list(self._attrs.values())
-
-    @property
-    def top_level_attr_reps(self) -> List[AttrRep]:
-        return self._top_level_attr_reps
-
-    @property
-    def all_attr_reps(self) -> List[AttrRep]:
-        return self._attr_reps
+    def attrs(self) -> Attributes:
+        return self._attrs
 
     @property
     def schemas(self) -> List[str]:
@@ -225,28 +209,6 @@ class BaseSchema(abc.ABC):
     @abc.abstractmethod
     def __repr__(self) -> str:
         ...
-
-    def get_attr(self, attr_rep: AttrRep) -> Optional[Attribute]:
-        if (
-            attr_rep.schema
-            and attr_rep.schema not in self.schemas
-            or attr_rep not in self._attr_reps
-        ):
-            return None
-
-        for (schema, attr, sub_attr), attr_obj in self._attrs.items():
-            if AttrRep(schema, attr, sub_attr) == attr_rep:
-                return attr_obj
-
-        return None
-
-    def get_attr_by_path(self, path: PatchPath) -> Optional[Attribute]:
-        if path.complex_filter is not None and self.get_attr(path.complex_filter.attr_rep) is None:
-            return None
-        attr = self.get_attr(path.attr_rep)
-        if attr is None or path.complex_filter_attr_rep is None:
-            return attr
-        return self.get_attr(path.complex_filter_attr_rep)
 
     def parse(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
         return self._process(data, method="parse")
@@ -277,7 +239,7 @@ class BaseSchema(abc.ABC):
         data, issues_ = self._process_data(data, method)
         issues.merge(issues_)
 
-        schemas_ = data[schemas.rep]
+        schemas_ = data[self._attrs.schemas.rep]
         if issues.can_proceed(("schemas",)) and schemas_:
             issues.merge(
                 validate_schemas_field(
@@ -297,20 +259,19 @@ class BaseSchema(abc.ABC):
         issues = ValidationIssues()
         data = SCIMDataContainer(data)
         processed = SCIMDataContainer()
-        for attr_rep in self.top_level_attr_reps:
-            attr = self.get_attr(attr_rep)
-            value = data[attr_rep]
+        for attr in self.attrs.top_level:
+            value = data[attr.rep]
             if value is Missing:
                 continue
             value, issues_ = getattr(attr, method)(value)
-            location = (attr_rep.attr,)
-            if attr_rep.extension:
-                location = (attr_rep.schema,) + location
+            location = (attr.rep.attr,)
+            if attr.rep.extension:
+                location = (attr.rep.schema,) + location
             issues.merge(
                 issues=issues_,
                 location=location,
             )
-            processed[attr_rep] = value
+            processed[attr.rep] = value
         return processed, issues
 
 
@@ -397,19 +358,26 @@ class ResourceSchema(BaseSchema, abc.ABC):
             raise ValueError(f"extension {extension!r} already in {self!r} schema")
 
         self._schema_extensions[extension.schema] = required
+
+        bounded_attrs = []
         for attr in extension.attrs:
-            attr = self._bound_attr_to_schema(extension.schema, attr, extension=True)
-            self._attrs[extension.schema, attr.rep.attr, ""] = attr
-            self._attr_reps.append(attr.rep)
-            self._top_level_attr_reps.append(attr.rep)
+            bounded_attrs.append(
+                self._bound_attr_to_schema(
+                    attr=attr,
+                    attr_rep=AttrRep(extension.schema, attr.rep.attr, extension=True),
+                )
+            )
             if isinstance(attr, ComplexAttribute):
-                for sub_attr in attr.sub_attributes:
-                    self._attrs[
-                        (extension.schema, sub_attr.rep.attr, sub_attr.rep.sub_attr)
-                    ] = sub_attr
-                    self._attr_reps.append(
-                        AttrRep(extension.schema, sub_attr.rep.attr, sub_attr.rep.sub_attr)
+                for sub_attr in attr.attrs:
+                    bounded_attrs.append(
+                        self._bound_attr_to_schema(
+                            attr=sub_attr,
+                            attr_rep=AttrRep(
+                                extension.schema, attr.rep.attr, sub_attr.rep.attr, extension=True
+                            ),
+                        )
                     )
+        self._attrs = Attributes(list(self._attrs) + bounded_attrs)
 
     def dump(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
         data, issues = super().dump(data)
@@ -417,7 +385,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
             return None, issues
 
         if issues.can_proceed(("meta", "resourceType")):
-            resource_type = data[AttrRep(attr="meta", sub_attr="resourceType")]
+            resource_type = data[self.attrs.meta.attrs.resourcetype.rep]
             if resource_type is not Missing:
                 issues.merge(
                     validate_resource_type_consistency(

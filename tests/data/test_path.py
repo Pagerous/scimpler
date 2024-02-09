@@ -3,8 +3,8 @@ from typing import Optional
 import pytest
 
 from src.data.container import AttrRep
-from src.filter.operator import Equal
-from src.patch import PatchPath
+from src.data.operator import Equal
+from src.data.path import PatchPath
 
 
 @pytest.mark.parametrize(
@@ -56,7 +56,12 @@ def test_patch_path_parsing_failure(path, expected_issues):
 
 
 @pytest.mark.parametrize(
-    ("path", "expected_attr_rep", "expected_multivalued_filter", "expected_complex_filter_attr_rep"),
+    (
+        "path",
+        "expected_attr_rep",
+        "expected_multivalued_filter",
+        "expected_complex_filter_attr_rep",
+    ),
     (
         ("members", AttrRep(attr="members"), None, None),
         ("name.familyName", AttrRep(attr="name", sub_attr="familyName"), None, None),
@@ -145,10 +150,7 @@ def test_patch_path_object_construction_fails_if_broken_constraints(kwargs):
             'emails[value eq "id eq 1 and attr neq 2"]',
             "id eq 1 and attr neq 2",
         ),
-        (
-            'emails[value eq "ims[type eq "work"]"]',
-            "ims[type eq \"work\"]"
-        ),
+        ('emails[value eq "ims[type eq "work"]"]', 'ims[type eq "work"]'),
     ),
 )
 def test_complex_filter_string_values_can_contain_anything(path, expected_filter_value):

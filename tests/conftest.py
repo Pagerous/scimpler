@@ -5,7 +5,6 @@ import pytest
 
 from src.data import type as at
 from src.data.attributes import Attribute, ComplexAttribute
-from src.data.container import SCIMDataContainer
 from src.schemas import ResourceSchema
 
 
@@ -181,7 +180,7 @@ def list_user_data(user_data_dump):
 
 @pytest.fixture
 def list_user_data_dumped(list_user_data):
-    data = deepcopy(list_user_data)
+    data: dict = deepcopy(list_user_data)
     data["Resources"][0]["meta"]["created"] = data["Resources"][0]["meta"]["created"].isoformat()
     data["Resources"][1]["meta"]["created"] = data["Resources"][1]["meta"]["created"].isoformat()
     data["Resources"][0]["meta"]["lastModified"] = data["Resources"][0]["meta"][

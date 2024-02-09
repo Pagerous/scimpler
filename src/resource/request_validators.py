@@ -7,7 +7,7 @@ from src.data.attributes import AttributeIssuer, AttributeMutability, ComplexAtt
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
-from src.filter.filter import Filter
+from src.filter import Filter
 from src.resource.schemas import error, list_response, patch_op, search_request
 from src.schemas import BaseSchema, ResourceSchema
 from src.sorter import Sorter
@@ -54,10 +54,10 @@ class Error:
                 issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
                 location=body_location,
             )
-        if issues.can_proceed(body_location + (error.status.rep.attr,)):
+        if issues.can_proceed(body_location + (self._schema.attrs.status.rep.attr,)):
             issues.merge(
                 validate_error_status_code_consistency(
-                    status_code_body=body[error.status.rep], status_code=status_code
+                    status_code_body=body[self._schema.attrs.status.rep], status_code=status_code
                 )
             )
         issues.merge(validate_error_status_code(status_code))
@@ -258,10 +258,9 @@ class ResourceObjectPUT:
         if issues:
             body = None
         else:
-            for attr_rep in self._schema.all_attr_reps:
-                attr = self._schema.get_attr(attr_rep)
+            for attr in self._schema.attrs:
                 if attr.mutability == AttributeMutability.READ_ONLY:
-                    del body[attr_rep]
+                    del body[attr.rep]
 
         return RequestData(body=body, headers=headers, query_string=query_string), issues
 
@@ -299,10 +298,9 @@ class ResourceTypePOST:
                 query_string["presence_checker"] = checker
 
         required_to_ignore = []
-        for attr_rep in self._schema.all_attr_reps:
-            attr = self._schema.get_attr(attr_rep)
+        for attr in self._schema.attrs:
             if attr.required and attr.issuer == AttributeIssuer.SERVER:
-                required_to_ignore.append(attr_rep)
+                required_to_ignore.append(attr.rep)
 
         body, issues_ = _parse_body(self._schema, body, required_to_ignore)
         issues.merge(issues=issues_)
@@ -804,14 +802,14 @@ class ResourceObjectPATCH:
                 if path in [None, Missing]:
                     attrs = self._resource_schema.attrs
                 else:
-                    attrs = [self._resource_schema.get_attr_by_path(path)]
+                    attrs = [self._resource_schema.attrs.get_by_path(path)]
                 for attr in attrs:
                     if not isinstance(attr, ComplexAttribute) or not attr.multi_valued:
                         continue
 
                     attr_value = value[attr.rep]
                     ignore_required = []
-                    for sub_attr in attr.sub_attributes:
+                    for sub_attr in attr.attrs:
                         if sub_attr.required and sub_attr.issuer == AttributeIssuer.SERVER:
                             ignore_required.append(sub_attr.rep)
                     presence_checker = AttributePresenceChecker(ignore_required=ignore_required)
@@ -821,7 +819,7 @@ class ResourceObjectPATCH:
                                 data=item,
                                 schema=self._resource_schema,
                                 direction="REQUEST",
-                                attrs=attr.sub_attributes,
+                                attrs=attr.attrs,
                             ),
                             location=("body", "operations", i, "value", j),
                         )
