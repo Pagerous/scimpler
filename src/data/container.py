@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 _ATTR_NAME = re.compile(r"(\w+|\$ref)")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
@@ -126,7 +126,10 @@ class SCIMDataContainer:
             self._data = d._data
             self._lower_case_to_original = d._lower_case_to_original
 
-    def __setitem__(self, attr_rep: "AttrRep", value):
+    def __setitem__(self, attr_rep: Union["AttrRep", str], value):
+        if isinstance(attr_rep, str):
+            attr_rep = self._to_attr_rep(attr_rep)
+
         if attr_rep.extension:
             extension_key = self._lower_case_to_original.get(attr_rep.schema.lower())
             if extension_key is None:
@@ -136,32 +139,36 @@ class SCIMDataContainer:
                 AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
             ] = value
         elif attr_rep.sub_attr:
-            attr_key = self._lower_case_to_original.get(attr_rep.attr.lower())
-            if attr_key is None:
-                self._lower_case_to_original[attr_rep.attr.lower()] = attr_rep.attr
+            initial_key = self._lower_case_to_original.get(attr_rep.attr.lower())
+            if initial_key is None:
+                initial_key = attr_rep.attr
+                self._lower_case_to_original[initial_key.lower()] = initial_key
                 if isinstance(value, List):
-                    self._data[attr_rep.attr] = []
+                    self._data[initial_key] = []
                 else:
-                    self._data[attr_rep.attr] = SCIMDataContainer()
+                    self._data[initial_key] = SCIMDataContainer()
+            elif not self._can_assign_to_complex(self._data[initial_key], value):
+                raise KeyError(
+                    f"can not assign ({attr_rep.sub_attr}, {value}) to '{attr_rep.attr}'"
+                )
+
             if isinstance(value, List):
-                to_create = len(value) - len(self._data[attr_rep.attr])
+                to_create = len(value) - len(self._data[initial_key])
                 if to_create > 0:
-                    self._data[attr_rep.attr].extend(
+                    self._data[initial_key].extend(
                         [SCIMDataContainer() for _ in range(to_create)]
                     )
-                for item, container in zip(value, self._data[attr_rep.attr]):
+                for item, container in zip(value, self._data[initial_key]):
                     if item is not Missing:
                         container[AttrRep(attr=attr_rep.sub_attr)] = item
             else:
-                self._data[attr_rep.attr][AttrRep(attr=attr_rep.sub_attr)] = value
+                self._data[initial_key][AttrRep(attr=attr_rep.sub_attr)] = value
         else:
             self._lower_case_to_original[attr_rep.attr.lower()] = attr_rep.attr
             self._data[attr_rep.attr] = value
 
-    def __getitem__(
-        self, attr_rep: Union["AttrRep", str, Tuple[str], Tuple[str, str], Tuple[str, str, str]]
-    ):
-        if not isinstance(attr_rep, AttrRep):
+    def __getitem__(self, attr_rep: Union["AttrRep", str]):
+        if isinstance(attr_rep, str):
             attr_rep = self._to_attr_rep(attr_rep)
 
         extension = self._lower_case_to_original.get(attr_rep.schema.lower())
@@ -181,10 +188,8 @@ class SCIMDataContainer:
             return Missing
         return self._data[attr]
 
-    def __delitem__(
-        self, attr_rep: Union["AttrRep", str, Tuple[str], Tuple[str, str], Tuple[str, str, str]]
-    ):
-        if not isinstance(attr_rep, AttrRep):
+    def __delitem__(self, attr_rep: Union["AttrRep", str]):
+        if isinstance(attr_rep, str):
             attr_rep = self._to_attr_rep(attr_rep)
 
         extension = self._lower_case_to_original.get(attr_rep.schema.lower())
@@ -209,23 +214,23 @@ class SCIMDataContainer:
         self._lower_case_to_original.pop(attr_rep.attr.lower())
 
     @staticmethod
+    def _can_assign_to_complex(current_value, new_value) -> bool:
+        if isinstance(current_value, SCIMDataContainer):
+            return True
+
+        if isinstance(new_value, List) and isinstance(current_value, List):
+            current_item_type = {type(item) for item in current_value}
+            if current_item_type == {SCIMDataContainer}:
+                return True
+
+        return False
+
+    @staticmethod
     def _to_attr_rep(attr_rep):
-        if isinstance(attr_rep, str):
-            if _URI_PREFIX.fullmatch(attr_rep):
-                raise ValueError("attribute name is required")
-            return AttrRep(attr=attr_rep)
-
-        if len(attr_rep) == 1:
-            if _URI_PREFIX.fullmatch(attr_rep[0]):
-                raise ValueError("attribute name is required")
-            return AttrRep(attr=attr_rep[0])
-
-        if len(attr_rep) == 2:
-            if _URI_PREFIX.fullmatch(attr_rep[0]):
-                return AttrRep(*attr_rep)
-            return AttrRep(attr=attr_rep[0], sub_attr=attr_rep[1])
-
-        return AttrRep(*attr_rep)
+        attr_rep = AttrRep.parse(attr_rep)
+        if attr_rep is None:
+            raise ValueError(f"bad attribute name {attr_rep!r}")
+        return attr_rep
 
     def to_dict(self) -> Dict[str, Any]:
         output = {}
