@@ -346,11 +346,23 @@ class Attributes:
         return self._top_level
 
     def __getattr__(self, name: str) -> Attribute:
-        for attr in self._top_level:
-            if attr.rep.attr.lower() == name.lower():
-                return attr
+        parts = name.split("__", 1)
+        if len(parts) == 1:
+            for attr in self._top_level:
+                if attr.rep.attr.lower() == name.lower():
+                    return attr
+            raise AttributeError(f"no {name!r} attribute")
 
-        raise AttributeError(f"no {name!r} attribute")
+        has_attr = False
+        for (_, attr, sub_attr), attr_obj in self._attrs.items():
+            if attr.lower() == parts[0].lower():
+                has_attr = True
+                if sub_attr.lower() == parts[1].lower():
+                    return attr_obj
+
+        if has_attr:
+            raise AttributeError(f"{parts[0]!r} has no {parts[1]!r} attribute")
+        raise AttributeError(f"no {parts[0]!r} attribute")
 
     def __iter__(self):
         return iter(self._attrs.values())
