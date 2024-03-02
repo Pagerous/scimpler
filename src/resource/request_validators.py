@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import AttributeIssuer, AttributeMutability, ComplexAttribute
@@ -54,10 +54,13 @@ class Error:
                 issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
                 location=body_location,
             )
-        if issues.can_proceed(body_location + (self._schema.attrs.status.rep.attr,)):
+        status_attr_rep = self._schema.attrs.status.rep
+        if issues.can_proceed(body_location + _location(status_attr_rep)):
             issues.merge(
                 validate_error_status_code_consistency(
-                    status_code_body=body[self._schema.attrs.status.rep], status_code=status_code
+                    status_code_attr_name=status_attr_rep.attr,
+                    status_code_body=body[status_attr_rep],
+                    status_code=status_code,
                 )
             )
         issues.merge(validate_error_status_code(status_code))
@@ -69,6 +72,7 @@ class Error:
 
 
 def validate_error_status_code_consistency(
+    status_code_attr_name: str,
     status_code_body: str,
     status_code: int,
 ) -> ValidationIssues:
@@ -76,7 +80,7 @@ def validate_error_status_code_consistency(
     if str(status_code) != status_code_body:
         issues.add(
             issue=ValidationError.error_status_mismatch(str(status_code), status_code_body),
-            location=("body", error.status.rep.attr),
+            location=("body", status_code_attr_name),
             proceed=True,
         )
         issues.add(
@@ -126,7 +130,7 @@ def validate_resource_location_consistency(
             proceed=True,
         )
         issues.add(
-            issue=ValidationError.must_be_equal_to("'meta.location' attribute"),
+            issue=ValidationError.must_be_equal_to("'meta.location'"),
             location=("headers", "Location"),
             proceed=True,
         )
@@ -192,10 +196,11 @@ def _dump_resource_output_body(
             ),
             location=body_location,
         )
-    if issues.can_proceed(body_location + ("meta", "location"), ("headers", "Location")):
+    meta_location = schema.attrs.meta__location.rep
+    if issues.can_proceed(body_location + _location(meta_location), ("headers", "Location")):
         issues.merge(
             issues=validate_resource_location_consistency(
-                meta_location=body[AttrRep(attr="meta", sub_attr="location")],
+                meta_location=body[meta_location],
                 headers_location=headers.get("Location"),
             ),
         )
@@ -408,7 +413,6 @@ def validate_resources_sorted(
         issues.add(
             issue=ValidationError.resources_not_sorted(),
             proceed=True,
-            location=(list_response.resources.rep.attr,),
         )
     return issues
 
@@ -422,7 +426,7 @@ def validate_resources_attributes_presence(
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
         issues.merge(
             issues=presence_checker(resource, schema, "RESPONSE"),
-            location=(list_response.resources.rep.attr, i),
+            location=(i,),
         )
     return issues
 
@@ -439,36 +443,24 @@ def validate_number_of_resources(
             issue=ValidationError.total_results_mismatch(
                 total_results=total_results, n_resources=n_resources
             ),
-            location=(list_response.total_results.rep.attr,),
             proceed=True,
         )
-        issues.add(
-            issue=ValidationError.total_results_mismatch(
-                total_results=total_results, n_resources=n_resources
-            ),
-            location=(list_response.resources.rep.attr,),
-            proceed=True,
-        )
-
     if count is None and total_results > n_resources:
         issues.add(
             issue=ValidationError.too_little_results(must="be equal to 'totalResults'"),
-            location=(list_response.resources.rep.attr,),
             proceed=True,
         )
-
     if count is not None and count < n_resources:
         issues.add(
             issue=ValidationError.too_many_results(must="be lesser or equal to 'count' parameter"),
-            location=(list_response.resources.rep.attr,),
             proceed=True,
         )
-
     return issues
 
 
 @skip_if_bad_data
 def validate_pagination_info(
+    schema: list_response.ListResponse,
     count: Optional[int],
     total_results: Any,
     resources: List[Any],
@@ -482,13 +474,13 @@ def validate_pagination_info(
         if start_index in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
-                location=(list_response.start_index.rep.attr,),
+                location=_location(schema.attrs.startindex.rep),
                 proceed=False,
             )
         if items_per_page in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
-                location=(list_response.items_per_page.rep.attr,),
+                location=_location(schema.attrs.itemsperpage.rep),
                 proceed=False,
             )
     return issues
@@ -509,7 +501,6 @@ def validate_start_index_consistency(
                 reason="bigger value than requested",
             ),
             proceed=True,
-            location=(list_response.start_index.rep.attr,),
         )
     return issues
 
@@ -524,7 +515,7 @@ def validate_resources_filtered(
             issues.add(
                 issue=ValidationError.included_resource_does_not_match_filter(),
                 proceed=True,
-                location=(list_response.resources.rep.attr, i),
+                location=(i,),
             )
     return issues
 
@@ -611,6 +602,11 @@ def _dump_resources_get_response(
 ) -> Tuple[ResponseData, ValidationIssues]:
     issues = ValidationIssues()
     body_location = ("body",)
+    resources_location = body_location + _location(schema.attrs.resources.rep)
+
+    start_index_rep = schema.attrs.startindex.rep
+    start_index_location = body_location + _location(start_index_rep)
+
     body, issues_ = schema.dump(body)
     issues.merge(issues_, location=body_location)
     if not issues.can_proceed(body_location):
@@ -624,39 +620,43 @@ def _dump_resources_get_response(
         issues=validate_status_code(200, status_code),
         location=("status",),
     )
-    if issues.can_proceed(body_location + (list_response.start_index.rep.attr,)):
-        start_index_body = body[list_response.start_index.rep]
+    if issues.can_proceed(start_index_location):
+        start_index_body = body[start_index_rep]
         if start_index_body:
             issues.merge(
                 issues=validate_start_index_consistency(start_index, start_index_body),
-                location=body_location,
+                location=start_index_location,
             )
 
-    if not issues.can_proceed(body_location + (list_response.resources.rep.attr,)):
+    if not issues.can_proceed(resources_location):
         return ResponseData(headers=headers, body=None), issues
 
-    resources = body[list_response.resources.rep]
+    total_results_rep = schema.attrs.totalresults.rep
+    total_results_location = body_location + _location(total_results_rep)
+
+    items_per_page_rep = schema.attrs.itemsperpage.rep
+    items_per_page_location = body_location + _location(items_per_page_rep)
+
+    resources = body[schema.attrs.resources.rep]
     if resources is Missing:
         resources = []
 
-    if issues.can_proceed(body_location + (list_response.total_results.rep.attr,)):
-        total_results = body[list_response.total_results.rep]
+    if issues.can_proceed(total_results_location):
+        total_results = body[total_results_rep]
         issues.merge(
             issues=validate_number_of_resources(
                 count=count,
                 total_results=total_results,
                 resources=resources,
             ),
-            location=body_location,
+            location=resources_location,
         )
-        if issues.can_proceed(
-            body_location + (list_response.start_index.rep.attr,),
-            body_location + (list_response.items_per_page.rep.attr,),
-        ):
-            start_index_body = body[list_response.start_index.rep]
-            items_per_page = body[list_response.items_per_page.rep]
+        if issues.can_proceed(start_index_location, items_per_page_location):
+            start_index_body = body[start_index_rep]
+            items_per_page = body[items_per_page_rep]
             issues.merge(
                 issues=validate_pagination_info(
+                    schema=schema,
                     count=count,
                     total_results=total_results,
                     resources=resources,
@@ -666,19 +666,19 @@ def _dump_resources_get_response(
                 location=body_location,
             )
 
-    if issues.has_issues(body_location + (list_response.resources.rep.attr,)):
+    if issues.has_issues(resources_location):
         return ResponseData(headers=headers, body=None), issues
 
     resource_schemas = schema.get_schemas_for_resources(resources)
     if filter_ is not None:
         issues.merge(
             issues=validate_resources_filtered(resources, filter_, resource_schemas, False),
-            location=body_location,
+            location=resources_location,
         )
     if sorter is not None:
         issues.merge(
             issues=validate_resources_sorted(sorter, resources, resource_schemas),
-            location=body_location,
+            location=resources_location,
         )
     if resource_presence_checker is None:
         resource_presence_checker = AttributePresenceChecker()
@@ -686,7 +686,7 @@ def _dump_resources_get_response(
         issues=validate_resources_attributes_presence(
             resource_presence_checker, resources, resource_schemas
         ),
-        location=body_location,
+        location=resources_location,
     )
 
     if issues:
@@ -783,6 +783,8 @@ class ResourceObjectPATCH:
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
         issues = ValidationIssues()
+        body_location = ("body",)
+        operations_location = body_location + _location(self._schema.attrs.operations.rep)
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
@@ -790,15 +792,21 @@ class ResourceObjectPATCH:
                 query_string["presence_checker"] = checker
 
         body, issues_ = _parse_body(self._schema, body)
-        issues.merge(issues_, location=("body",))
+        issues.merge(issues_, location=body_location)
 
-        if issues.can_proceed(("body", patch_op.operations.rep.attr)):
-            for i, operation in enumerate(body[patch_op.operations.rep]):
-                if not issues.can_proceed(("body", "operations", i, "value")):
+        if issues.can_proceed(operations_location):
+            values = body[self._schema.attrs.operations__value]
+            paths = body[self._schema.attrs.operations__path]
+
+            for i, (value, path) in enumerate(zip(values, paths)):
+                value_location = operations_location + (
+                    i,
+                    self._schema.attrs.operations__value.rep.sub_attr,
+                )
+
+                if not issues.can_proceed(value_location):
                     continue
 
-                value = operation[AttrRep(attr="value")]
-                path = operation[AttrRep(attr="path")]
                 if path in [None, Missing]:
                     attrs = self._resource_schema.attrs
                 else:
@@ -821,8 +829,14 @@ class ResourceObjectPATCH:
                                 direction="REQUEST",
                                 attrs=attr.attrs,
                             ),
-                            location=("body", "operations", i, "value", j),
+                            location=value_location + (j,),
                         )
         if issues:
             body = None
         return RequestData(body=body, headers=headers, query_string=query_string), issues
+
+
+def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:
+    if attr_rep.sub_attr:
+        return attr_rep.attr, attr_rep.sub_attr
+    return (attr_rep.attr,)

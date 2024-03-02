@@ -27,7 +27,7 @@ from src.resource.request_validators import (
     validate_start_index_consistency,
     validate_status_code,
 )
-from src.resource.schemas import user
+from src.resource.schemas import list_response, user
 from src.sorter import Sorter
 
 
@@ -59,7 +59,7 @@ def test_validate_error_status_code(status_code, expected):
     ),
 )
 def test_validate_error_status_code_consistency(status_code, expected):
-    issues = validate_error_status_code_consistency("400", status_code)
+    issues = validate_error_status_code_consistency("status", "400", status_code)
 
     assert issues.to_dict() == expected
 
@@ -138,10 +138,7 @@ def test_validate_status_code(status_code, expected):
 
 def test_validate_number_of_resources__fails_if_more_resources_than_total_results(list_user_data):
     list_user_data["totalResults"] = 1
-    expected = {
-        "totalResults": {"_errors": [{"code": 22}]},
-        "Resources": {"_errors": [{"code": 22}]},
-    }
+    expected = {"_errors": [{"code": 22}]}
 
     issues = validate_number_of_resources(
         count=None,
@@ -155,7 +152,7 @@ def test_validate_number_of_resources__fails_if_more_resources_than_total_result
 def test_validate_number_of_resources__fails_if_less_resources_than_total_results_without_count(
     list_user_data,
 ):
-    expected = {"Resources": {"_errors": [{"code": 23}]}}
+    expected = {"_errors": [{"code": 23}]}
 
     issues = validate_number_of_resources(
         count=None,
@@ -167,7 +164,7 @@ def test_validate_number_of_resources__fails_if_less_resources_than_total_result
 
 
 def test_validate_number_of_resources__fails_if_more_resources_than_specified_count(list_user_data):
-    expected = {"Resources": {"_errors": [{"code": 21}]}}
+    expected = {"_errors": [{"code": 21}]}
 
     issues = validate_number_of_resources(
         count=1,
@@ -197,6 +194,7 @@ def test_validate_pagination_info__fails_if_start_index_is_missing_when_paginati
     }
 
     issues = validate_pagination_info(
+        schema=list_response.ListResponse([user.User()]),
         count=2,
         total_results=2,
         resources=[SCIMDataContainer(list_user_data["Resources"][0])],
@@ -215,6 +213,7 @@ def test_validate_pagination_info__fails_if_items_per_page_is_missing_when_pagin
     }
 
     issues = validate_pagination_info(
+        schema=list_response.ListResponse([user.User()]),
         count=1,
         total_results=2,
         resources=[SCIMDataContainer(list_user_data["Resources"][0])],
@@ -227,6 +226,7 @@ def test_validate_pagination_info__fails_if_items_per_page_is_missing_when_pagin
 
 def test_validate_pagination_info__correct_data_when_pagination(list_user_data):
     issues = validate_pagination_info(
+        schema=list_response.ListResponse([user.User()]),
         count=2,
         total_results=2,
         resources=[SCIMDataContainer(list_user_data["Resources"][0])],
@@ -238,9 +238,7 @@ def test_validate_pagination_info__correct_data_when_pagination(list_user_data):
 
 
 def test_validate_start_index_consistency__fails_if_start_index_bigger_than_requested():
-    expected = {
-        "startIndex": {"_errors": [{"code": 24}]},
-    }
+    expected = {"_errors": [{"code": 24}]}
 
     issues = validate_start_index_consistency(start_index=1, start_index_body=2)
 
@@ -320,14 +318,12 @@ def test_validate_request_filtering(query_string, expected):
 def test_validate_resources_filtered(filter_exp, list_user_data):
     filter_, _ = Filter.parse(filter_exp)
     expected = {
-        "Resources": {
-            "0": {
-                "_errors": [
-                    {
-                        "code": 25,
-                    }
-                ]
-            }
+        "0": {
+            "_errors": [
+                {
+                    "code": 25,
+                }
+            ]
         }
     }
 
@@ -344,22 +340,20 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
 def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
     filter_, _ = Filter.parse('meta.resourcetype eq "user"')  # "user", not "User"
     expected = {
-        "Resources": {
-            "0": {
-                "_errors": [
-                    {
-                        "code": 25,
-                    }
-                ]
-            },
-            "1": {
-                "_errors": [
-                    {
-                        "code": 25,
-                    }
-                ]
-            },
-        }
+        "0": {
+            "_errors": [
+                {
+                    "code": 25,
+                }
+            ]
+        },
+        "1": {
+            "_errors": [
+                {
+                    "code": 25,
+                }
+            ]
+        },
     }
 
     issues = validate_resources_filtered(
@@ -380,15 +374,13 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
         'eq "John Smith"'
     )
     expected = {
-        "Resources": {
-            "0": {
-                "_errors": [
-                    {
-                        "code": 25,
-                    }
-                ]
-            },
-        }
+        "0": {
+            "_errors": [
+                {
+                    "code": 25,
+                }
+            ]
+        },
     }
 
     issues = validate_resources_filtered(
@@ -416,7 +408,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
     ),
 )
 def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
-    expected = {"Resources": {"_errors": [{"code": 26}]}}
+    expected = {"_errors": [{"code": 26}]}
 
     issues = validate_resources_sorted(
         sorter=sorter,
@@ -432,26 +424,24 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
 ):
     checker = AttributePresenceChecker(attr_reps=[AttrRep(attr="name")], include=False)
     expected = {
-        "Resources": {
-            "0": {
-                "name": {
-                    "_errors": [
-                        {
-                            "code": 19,
-                        }
-                    ]
-                }
-            },
-            "1": {
-                "name": {
-                    "_errors": [
-                        {
-                            "code": 19,
-                        }
-                    ]
-                }
-            },
-        }
+        "0": {
+            "name": {
+                "_errors": [
+                    {
+                        "code": 19,
+                    }
+                ]
+            }
+        },
+        "1": {
+            "name": {
+                "_errors": [
+                    {
+                        "code": 19,
+                    }
+                ]
+            }
+        },
     }
 
     issues = validate_resources_attributes_presence(
