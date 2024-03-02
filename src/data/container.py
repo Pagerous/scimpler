@@ -155,9 +155,7 @@ class SCIMDataContainer:
             if isinstance(value, List):
                 to_create = len(value) - len(self._data[initial_key])
                 if to_create > 0:
-                    self._data[initial_key].extend(
-                        [SCIMDataContainer() for _ in range(to_create)]
-                    )
+                    self._data[initial_key].extend([SCIMDataContainer() for _ in range(to_create)])
                 for item, container in zip(value, self._data[initial_key]):
                     if item is not Missing:
                         container[AttrRep(attr=attr_rep.sub_attr)] = item

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Type
+from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Type, Union
 
 
 class ValidationError:
@@ -336,14 +336,14 @@ class ValidationIssues:
         self,
         issue: ValidationError,
         proceed: bool,
-        location: Optional[Collection[str]] = None,
+        location: Optional[Collection[Union[str, int]]] = None,
     ) -> None:
         location = tuple(location or tuple())
         self._issues[location].append(issue)
         if not proceed:
             self._stop_proceeding[location].add(issue.code)
 
-    def drop(self, *locations: Collection[str], code: int) -> None:
+    def drop(self, *locations: Collection[Union[str, int]], code: int) -> None:
         if not locations:
             locations = [tuple()]
 
@@ -363,7 +363,7 @@ class ValidationIssues:
             if location in self._stop_proceeding and len(self._stop_proceeding[location]) == 0:
                 self._stop_proceeding.pop(location)
 
-    def can_proceed(self, *locations: Collection[str]) -> bool:
+    def can_proceed(self, *locations: Collection[Union[str, int]]) -> bool:
         if not locations:
             locations = [tuple()]
         for location in locations:
@@ -372,7 +372,7 @@ class ValidationIssues:
                     return False
         return True
 
-    def has_issues(self, *locations: Collection[str]) -> bool:
+    def has_issues(self, *locations: Collection[Union[str, int]]) -> bool:
         if not locations:
             locations = [tuple()]
 
