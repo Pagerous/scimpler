@@ -794,43 +794,46 @@ class ResourceObjectPATCH:
         body, issues_ = _parse_body(self._schema, body)
         issues.merge(issues_, location=body_location)
 
-        if issues.can_proceed(operations_location):
-            values = body[self._schema.attrs.operations__value]
-            paths = body[self._schema.attrs.operations__path]
+        if not issues.can_proceed(operations_location):
+            return RequestData(body=None, headers=headers, query_string=query_string), issues
 
-            for i, (value, path) in enumerate(zip(values, paths)):
-                value_location = operations_location + (
-                    i,
-                    self._schema.attrs.operations__value.rep.sub_attr,
-                )
+        values = body[self._schema.attrs.operations__value]
+        paths = body[self._schema.attrs.operations__path]
 
-                if not issues.can_proceed(value_location):
+        for i, (value, path) in enumerate(zip(values, paths)):
+            value_location = operations_location + (
+                i,
+                self._schema.attrs.operations__value.rep.sub_attr,
+            )
+
+            if not issues.can_proceed(value_location):
+                continue
+
+            if path in [None, Missing]:
+                attrs = self._resource_schema.attrs
+            else:
+                attrs = [self._resource_schema.attrs.get_by_path(path)]
+            for attr in attrs:
+                if not (isinstance(attr, ComplexAttribute) and attr.multi_valued):
                     continue
 
-                if path in [None, Missing]:
-                    attrs = self._resource_schema.attrs
-                else:
-                    attrs = [self._resource_schema.attrs.get_by_path(path)]
-                for attr in attrs:
-                    if not isinstance(attr, ComplexAttribute) or not attr.multi_valued:
-                        continue
-
-                    attr_value = value[attr.rep]
-                    ignore_required = []
-                    for sub_attr in attr.attrs:
-                        if sub_attr.required and sub_attr.issuer == AttributeIssuer.SERVER:
-                            ignore_required.append(sub_attr.rep)
-                    presence_checker = AttributePresenceChecker(ignore_required=ignore_required)
-                    for j, item in enumerate(attr_value):
-                        issues.merge(
-                            issues=presence_checker(
-                                data=item,
-                                schema=self._resource_schema,
-                                direction="REQUEST",
-                                attrs=attr.attrs,
-                            ),
-                            location=value_location + (j,),
-                        )
+                # checking if new item of complex attribute has all required fields
+                attr_value = value[attr.rep]
+                ignore_required = []
+                for sub_attr in attr.attrs:
+                    if sub_attr.required and sub_attr.issuer == AttributeIssuer.SERVER:
+                        ignore_required.append(sub_attr.rep)
+                presence_checker = AttributePresenceChecker(ignore_required=ignore_required)
+                for j, item in enumerate(attr_value):
+                    issues.merge(
+                        issues=presence_checker(
+                            data=item,
+                            schema=self._resource_schema,
+                            direction="REQUEST",
+                            attrs=attr.attrs,
+                        ),
+                        location=value_location + (j,),
+                    )
         if issues:
             body = None
         return RequestData(body=body, headers=headers, query_string=query_string), issues

@@ -3,8 +3,9 @@ from copy import deepcopy
 import pytest
 
 from src.data.container import AttrRep, Missing, SCIMDataContainer
-from src.data.operator import Equal
+from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
+from src.filter import Filter
 from src.resource.schemas import list_response, patch_op, user
 from src.resource.schemas.list_response import validate_items_per_page_consistency
 from src.schemas import validate_resource_type_consistency, validate_schemas_field
@@ -370,18 +371,29 @@ def test_list_response__get_schema_for_resources__returns_schema_for_bad_data_if
         (
             PatchPath(
                 attr_rep=AttrRep(attr="emails"),
-                complex_filter=Equal(
-                    attr_rep=AttrRep(attr="emails", sub_attr="nonexisting"), value="whatever"
+                complex_filter=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=AttrRep(attr="emails"),
+                        sub_operator=Equal(
+                            attr_rep=AttrRep(attr="emails", sub_attr="nonexisting"),
+                            value="whatever",
+                        ),
+                    )
                 ),
                 complex_filter_attr_rep=None,
             ),
-            {"_errors": [{"code": 303}]},
+            {},
         ),
         (
             PatchPath(
                 attr_rep=AttrRep(attr="emails"),
-                complex_filter=Equal(
-                    attr_rep=AttrRep(attr="emails", sub_attr="type"), value="whatever"
+                complex_filter=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=AttrRep(attr="emails"),
+                        sub_operator=Equal(
+                            attr_rep=AttrRep(attr="emails", sub_attr="type"), value="whatever"
+                        ),
+                    ),
                 ),
                 complex_filter_attr_rep=AttrRep(attr="emails", sub_attr="nonexisting"),
             ),
@@ -390,8 +402,14 @@ def test_list_response__get_schema_for_resources__returns_schema_for_bad_data_if
         (
             PatchPath(
                 attr_rep=AttrRep(attr="emails"),
-                complex_filter=Equal(
-                    attr_rep=AttrRep(attr="emails", sub_attr="type"), value="work"
+                complex_filter=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=AttrRep(attr="emails"),
+                        sub_operator=Equal(
+                            attr_rep=AttrRep(attr="emails", sub_attr="type"),
+                            value="work",
+                        ),
+                    ),
                 ),
                 complex_filter_attr_rep=AttrRep(attr="emails", sub_attr="value"),
             ),
@@ -400,8 +418,13 @@ def test_list_response__get_schema_for_resources__returns_schema_for_bad_data_if
         (
             PatchPath(
                 attr_rep=AttrRep(attr="emails"),
-                complex_filter=Equal(
-                    attr_rep=AttrRep(attr="emails", sub_attr="type"), value="work"
+                complex_filter=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=AttrRep(attr="emails"),
+                        sub_operator=Equal(
+                            attr_rep=AttrRep(attr="emails", sub_attr="type"), value="work"
+                        ),
+                    )
                 ),
                 complex_filter_attr_rep=None,
             ),
@@ -685,9 +708,14 @@ def test_parse_add_operation__fails_for_incorrect_data(path, value, expected_val
             'emails[type eq "work"].value',
             PatchPath(
                 attr_rep=AttrRep(attr="emails"),
-                complex_filter=Equal(
-                    attr_rep=AttrRep(attr="emails", sub_attr="type"),
-                    value="work",
+                complex_filter=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=AttrRep(attr="emails"),
+                        sub_operator=Equal(
+                            attr_rep=AttrRep(attr="emails", sub_attr="type"),
+                            value="work",
+                        ),
+                    )
                 ),
                 complex_filter_attr_rep=AttrRep(attr="emails", sub_attr="value"),
             ),
@@ -716,12 +744,12 @@ def test_parse_add_operation__succeeds_on_correct_data(path, expected_path, valu
     assert actual_data["Operations"][0]["path"].attr_rep == expected_path.attr_rep
     if expected_path.complex_filter:
         assert (
-            actual_data["Operations"][0]["path"].complex_filter.value
-            == expected_path.complex_filter.value
+            actual_data["Operations"][0]["path"].complex_filter.operator.sub_operator.value
+            == expected_path.complex_filter.operator.sub_operator.value
         )
         assert (
-            actual_data["Operations"][0]["path"].complex_filter.attr_rep
-            == expected_path.complex_filter.attr_rep
+            actual_data["Operations"][0]["path"].complex_filter.operator.attr_rep
+            == expected_path.complex_filter.operator.attr_rep
         )
     if expected_path.complex_filter_attr_rep:
         assert (

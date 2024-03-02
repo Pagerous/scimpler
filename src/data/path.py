@@ -1,22 +1,17 @@
 from typing import Dict, Optional, Tuple
 
 from src.data.container import AttrRep
-from src.data.operator import Equal
+from src.data.operator import ComplexAttributeOperator
 from src.error import ValidationError, ValidationIssues
-from src.utils import (
-    OP_REGEX,
-    PLACEHOLDER_REGEX,
-    STRING_VALUES_REGEX,
-    get_placeholder,
-    parse_comparison_value,
-)
+from src.filter import Filter
+from src.utils import PLACEHOLDER_REGEX, STRING_VALUES_REGEX, get_placeholder
 
 
 class PatchPath:
     def __init__(
         self,
         attr_rep: AttrRep,
-        complex_filter: Optional[Equal],
+        complex_filter: Optional[Filter],
         complex_filter_attr_rep: Optional[AttrRep],
     ):
         if attr_rep.sub_attr and (complex_filter or complex_filter_attr_rep):
@@ -29,10 +24,11 @@ class PatchPath:
                     "non-matching top-level attributes for 'attr_rep' "
                     "and 'complex_filter_attr_rep'"
                 )
-        if complex_filter:
-            if not complex_filter.attr_rep.sub_attr:
-                raise ValueError("complex filter can operate on sub-attributes only")
-            if not complex_filter.attr_rep.top_level_equals(attr_rep):
+        if complex_filter is not None:
+            if not isinstance(complex_filter.operator, ComplexAttributeOperator):
+                raise ValueError("only ComplexAttributeOperator is supported as path filter")
+
+            if complex_filter.operator.attr_rep != attr_rep:
                 raise ValueError(
                     "non-matching top-level attributes for 'attr_rep' and 'complex_filter'"
                 )
@@ -46,7 +42,7 @@ class PatchPath:
         return self._attr_rep
 
     @property
-    def complex_filter(self) -> Optional[Equal]:
+    def complex_filter(self) -> Optional[Filter]:
         return self._complex_filter
 
     @property
@@ -76,55 +72,25 @@ class PatchPath:
 
         if "[" in path and "]" in path:
             return cls._parse_complex_multivalued_path(path, string_values)
-        else:
-            path = cls._encode_string_values(path, string_values)
-            attr_rep = AttrRep.parse(path)
-            if attr_rep is None:
-                issues.add(issue=ValidationError.bad_attribute_name(path), proceed=False)
-                return None, issues
-            return (
-                PatchPath(attr_rep=attr_rep, complex_filter=None, complex_filter_attr_rep=None),
-                issues,
-            )
+
+        path = cls._encode_string_values(path, string_values)
+        attr_rep = AttrRep.parse(path)
+        if attr_rep is None:
+            issues.add(issue=ValidationError.bad_attribute_name(path), proceed=False)
+            return None, issues
+        return (
+            PatchPath(attr_rep=attr_rep, complex_filter=None, complex_filter_attr_rep=None),
+            issues,
+        )
 
     @classmethod
     def _parse_complex_multivalued_path(
-        cls, path: str, string_values: Dict[int, str]
+        cls, path: str, string_values
     ) -> Tuple[Optional["PatchPath"], ValidationIssues]:
-        issues = ValidationIssues()
-
-        attr_rep_exp = cls._encode_string_values(path[: path.index("[")], string_values)
-        attr_rep = AttrRep.parse(attr_rep_exp)
-        if attr_rep is None:
-            issues.add(issue=ValidationError.bad_attribute_name(attr_rep_exp), proceed=False)
-        elif attr_rep.sub_attr:
-            issues.add(
-                issue=ValidationError.complex_sub_attribute(attr_rep.attr, attr_rep.sub_attr),
-                proceed=False,
-            )
-
-        multivalued_filter = None
-        multivalued_filter_exp = path[path.index("[") + 1 : path.index("]")]
-        components = OP_REGEX.split(multivalued_filter_exp)
-        if len(components) != 3:
-            issues.add(issue=ValidationError.bad_multivalued_attribute_filter(), proceed=False)
-        else:
-            if components[1].lower() != "eq":
-                issues.add(issue=ValidationError.eq_operator_allowed_only(), proceed=False)
-            sub_attr_rep = cls._get_sub_attr_rep(
-                issues=issues,
-                attr_rep=attr_rep,
-                sub_attr_rep_exp=cls._encode_string_values(components[0], string_values),
-            )
-            value_encoded = cls._encode_string_values(components[2], string_values)
-            try:
-                value = parse_comparison_value(value_encoded)
-            except ValueError:
-                value = None
-                issues.add(issue=ValidationError.bad_comparison_value(value_encoded), proceed=False)
-
-            if issues.can_proceed():
-                multivalued_filter = Equal(sub_attr_rep, value)
+        filter_exp = path[: path.index("]") + 1]
+        filter_, issues = Filter.parse(cls._encode_string_values(filter_exp, string_values))
+        if issues.has_issues():
+            return None, issues
 
         value_sub_attr_rep = None
         value_sub_attr_rep_exp = path[path.index("]") + 1 :]
@@ -133,7 +99,7 @@ class PatchPath:
                 value_sub_attr_rep_exp = value_sub_attr_rep_exp[1:]
             value_sub_attr_rep = cls._get_sub_attr_rep(
                 issues=issues,
-                attr_rep=attr_rep,
+                attr_rep=filter_.operator.attr_rep,
                 sub_attr_rep_exp=cls._encode_string_values(value_sub_attr_rep_exp, string_values),
             )
 
@@ -141,8 +107,8 @@ class PatchPath:
             return None, issues
         return (
             cls(
-                attr_rep=attr_rep,
-                complex_filter=multivalued_filter,
+                attr_rep=filter_.operator.attr_rep,
+                complex_filter=filter_,
                 complex_filter_attr_rep=value_sub_attr_rep,
             ),
             issues,

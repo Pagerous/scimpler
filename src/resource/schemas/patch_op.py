@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from src.data import type as at
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
 from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.operator import ComplexAttributeOperator, MultiOperandLogicalOperator, Not
 from src.data.path import PatchPath
 from src.error import ValidationError, ValidationIssues
 from src.schemas import BaseSchema, ResourceSchema
@@ -215,19 +216,12 @@ class PatchOp(BaseSchema):
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues():
     issues = ValidationIssues()
-    if (
-        schema.attrs.get(path.attr_rep) is None
-        or (
-            path.complex_filter_attr_rep is not None
-            and schema.attrs.get(path.complex_filter_attr_rep) is None
-        )
-        or (
-            path.complex_filter is not None
-            and schema.attrs.get(path.complex_filter.attr_rep) is None
-        )
+    if schema.attrs.get(path.attr_rep) is None or (
+        path.complex_filter_attr_rep is not None
+        and schema.attrs.get(path.complex_filter_attr_rep) is None
     ):
         issues.add(
-            issue=ValidationError.unknown_update_target(),
+            issue=ValidationError.unknown_operation_target(),
             proceed=False,
         )
     return issues

@@ -77,6 +77,10 @@ class Filter:
     def __init__(self, operator: _ParsedOperator):
         self._operator = operator
 
+    @property
+    def operator(self) -> _ParsedOperator:
+        return self._operator
+
     @classmethod
     def parse(cls, filter_exp: str) -> Tuple[Optional["Filter"], ValidationIssues]:
         issues = ValidationIssues()

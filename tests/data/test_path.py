@@ -3,8 +3,9 @@ from typing import Optional
 import pytest
 
 from src.data.container import AttrRep
-from src.data.operator import Equal
+from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
+from src.filter import Filter
 
 
 @pytest.mark.parametrize(
@@ -19,7 +20,7 @@ from src.data.path import PatchPath
         ("attr]", {"_errors": [{"code": 300, "context": {}}]}),
         ("attr[[]", {"_errors": [{"code": 300, "context": {}}]}),
         ("attr[]]", {"_errors": [{"code": 300, "context": {}}]}),
-        ("attr[]", {"_errors": [{"code": 302, "context": {}}]}),
+        ("attr[]", {"_errors": [{"code": 110, "context": {"attribute": "attr"}}]}),
         (
             "attr.sub_attr[value eq 1]",
             {"_errors": [{"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
@@ -32,16 +33,30 @@ from src.data.path import PatchPath
             "attr[value eq 1].sub_attr.sub_sub_attr",
             {"_errors": [{"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
         ),
-        ("attr[value neq 1]", {"_errors": [{"code": 301, "context": {}}]}),
-        ("attr[value eq]", {"_errors": [{"code": 302, "context": {}}]}),
-        ("attr[eq 1]", {"_errors": [{"code": 302, "context": {}}]}),
+        (
+            "attr[value eq]",
+            {"_errors": [{"code": 104, "context": {"expression": "value eq", "operator": "eq"}}]},
+        ),
+        (
+            "attr[eq 1]",
+            {
+                "_errors": [
+                    {
+                        "code": 105,
+                        "context": {
+                            "expression": "eq 1",
+                            "operator": "1",
+                            "operator_type": "unary",
+                        },
+                    }
+                ]
+            },
+        ),
         ("attr[value eq abc]", {"_errors": [{"code": 112, "context": {"value": "abc"}}]}),
         (
             "attr.sub_attr[value eq abc].sub_attr.sub_sub_attr",
             {
                 "_errors": [
-                    {"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}},
-                    {"code": 112, "context": {"value": "abc"}},
                     {"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}},
                 ]
             },
@@ -68,15 +83,25 @@ def test_patch_path_parsing_failure(path, expected_issues):
         (
             'addresses[type eq "work"]',
             AttrRep(attr="addresses"),
-            Equal(AttrRep(attr="addresses", sub_attr="type"), "work"),
+            Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="addressed"),
+                    sub_operator=Equal(AttrRep(attr="type"), "work"),
+                )
+            ),
             None,
         ),
         (
             'members[value eq "2819c223-7f76-453a-919d-413861904646"].displayName',
             AttrRep(attr="members"),
-            Equal(
-                AttrRep(attr="members", sub_attr="value"),
-                "2819c223-7f76-453a-919d-413861904646",
+            Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="members"),
+                    sub_operator=Equal(
+                        AttrRep(attr="value"),
+                        "2819c223-7f76-453a-919d-413861904646",
+                    ),
+                )
             ),
             AttrRep(attr="members", sub_attr="displayName"),
         ),
@@ -85,7 +110,7 @@ def test_patch_path_parsing_failure(path, expected_issues):
 def test_patch_path_parsing_success(
     path,
     expected_attr_rep: AttrRep,
-    expected_multivalued_filter: Optional[Equal],
+    expected_multivalued_filter: Optional[Filter],
     expected_complex_filter_attr_rep: Optional[AttrRep],
 ):
     parsed, issues = PatchPath.parse(path)
@@ -94,8 +119,14 @@ def test_patch_path_parsing_success(
     assert parsed.attr_rep == expected_attr_rep
     if expected_multivalued_filter is not None:
         assert isinstance(parsed.complex_filter, type(expected_multivalued_filter))
-        assert parsed.complex_filter.value == expected_multivalued_filter.value
-        assert parsed.complex_filter.attr_rep == expected_multivalued_filter.attr_rep
+        assert (
+            parsed.complex_filter.operator.sub_operator.value
+            == expected_multivalued_filter.operator.sub_operator.value
+        )
+        assert (
+            parsed.complex_filter.operator.sub_operator.attr_rep
+            == expected_multivalued_filter.operator.sub_operator.attr_rep
+        )
     else:
         assert parsed.complex_filter is None
     assert parsed.complex_filter_attr_rep == expected_complex_filter_attr_rep
@@ -106,34 +137,62 @@ def test_patch_path_parsing_success(
     (
         {
             "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter": Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="attr"),
+                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
+                )
+            ),
             "complex_filter_attr_rep": None,
         },
         {
             "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter": Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="attr"),
+                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
+                )
+            ),
             "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
         },
         {
             "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttrRep(attr="attr"), "whatever"),
+            "complex_filter": Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="attr"),
+                    sub_operator=Equal(AttrRep(attr="attr"), "whatever"),
+                )
+            ),
             "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
         },
         {
             "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter": Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="attr"),
+                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
+                )
+            ),
             "complex_filter_attr_rep": AttrRep(attr="attr"),
         },
         {
             "attr_rep": AttrRep(attr="attr"),
-            "complex_filter": Equal(
-                AttrRep(attr="different_attr", sub_attr="sub_attr"), "whatever"
+            "complex_filter": Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="different_attr"),
+                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
+                )
             ),
             "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
         },
         {
             "attr_rep": AttrRep(attr="attr"),
-            "complex_filter": Equal(AttrRep(attr="attr", sub_attr="sub_attr"), "whatever"),
+            "complex_filter": Filter(
+                ComplexAttributeOperator(
+                    attr_rep=AttrRep(attr="attr"),
+                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
+                )
+            ),
             "complex_filter_attr_rep": AttrRep(attr="different_attr", sub_attr="other_attr"),
         },
     ),
@@ -157,4 +216,4 @@ def test_complex_filter_string_values_can_contain_anything(path, expected_filter
     parsed, issues = PatchPath.parse(path)
 
     assert issues.to_dict() == {}
-    assert parsed.complex_filter.value == expected_filter_value
+    assert parsed.complex_filter.operator.sub_operator.value == expected_filter_value

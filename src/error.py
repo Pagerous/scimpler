@@ -71,9 +71,8 @@ class ValidationError:
         112: "bad comparison value {value!r}",
         113: "comparison value {value!r} is not compatible with {operator!r} operator",
         300: "bad operation path",
-        301: "only 'eq' operator is allowed",
         302: "bad multivalued attribute filter",
-        303: "unknown update target",
+        303: "unknown operation target",
         304: "read-only attribute can not be updated",
         305: "can not use complex filter without sub-attribute specified for 'add' operation",
     }
@@ -286,15 +285,11 @@ class ValidationError:
         return cls(code=300)
 
     @classmethod
-    def eq_operator_allowed_only(cls):
-        return cls(code=301)
-
-    @classmethod
     def bad_multivalued_attribute_filter(cls):
         return cls(code=302)
 
     @classmethod
-    def unknown_update_target(cls):
+    def unknown_operation_target(cls):
         return cls(code=303)
 
     @classmethod
