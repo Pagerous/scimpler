@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from src.data import type as at
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
@@ -58,6 +58,7 @@ def validate_operations(
                 proceed=False,
                 location=(i, _operations_path.rep.attr),
             )
+            del operation_data[_operations_value.rep]
         elif type_ == "add":
             if value in [None, Missing]:
                 issues.add(
@@ -104,33 +105,87 @@ class PatchOp(BaseSchema):
             return data, issues
 
         parsed = []
-        for i, item in enumerate(data[operations.rep]):
+        ops = data[self.attrs.operations__op.rep]
+        paths = data[self.attrs.operations__path.rep]
+        values = data[self.attrs.operations__value.rep]
+
+        for i, (op, path, value) in enumerate(zip(ops, paths, values)):
             if issues.has_issues((operations.rep.attr, i)):
                 continue
 
-            path = item[self.attrs.operations.attrs.path.rep]
-            if path not in [None, Missing]:
-                issues_ = validate_operation_path(self._resource_schema, path)
-                if issues_:
-                    issues.merge(issues_, location=(i, self.attrs.operations.attrs.path.rep.attr))
-                    parsed.append(None)
-                    continue
-
-            op = item[self.attrs.operations.attrs.op.rep]
-            value = item[self.attrs.operations.attrs.value.rep]
             if op == "add":
-                value, issues_ = self._parse_add_operation_value(path, value)
-                issues.merge(
-                    issues_,
-                    location=(
-                        self.attrs.operations.rep.attr,
-                        i,
-                        self.attrs.operations.attrs.value.rep.attr,
-                    ),
-                )
-                parsed.append(SCIMDataContainer({"op": op, "path": path, "value": value}))
+                parsed_op, issues_ = self._parse_add_operation(path, value)
+                issues.merge(issues_, location=(self.attrs.operations.rep.attr, i))
+                parsed.append(parsed_op)
+            elif op == "remove":
+                parsed_op, issues_ = self._parse_remove_operation(path)
+                issues.merge(issues_, location=(self.attrs.operations.rep.attr, i))
+                parsed.append(parsed_op)
+
         data[operations.rep] = parsed
         return data, issues
+
+    def _parse_remove_operation(
+        self, path: PatchPath
+    ) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+        issues = validate_operation_path(self._resource_schema, path)
+        if issues:
+            return None, issues
+
+        attr = self._resource_schema.attrs.get(path.attr_rep)
+        path_location = (self.attrs.operations__path.rep.sub_attr,)
+        if path.complex_filter_attr_rep is None:
+            if attr.mutability == AttributeMutability.READ_ONLY:
+                issues.add(
+                    issue=ValidationError.read_only_attribute_can_not_be_modified(),
+                    proceed=True,
+                    location=path_location,
+                )
+            if attr.required:
+                if isinstance(attr, ComplexAttribute):
+                    pass  # TODO: add warning here
+                else:
+                    issues.add(
+                        issue=ValidationError.required_attribute_can_not_be_deleted(),
+                        proceed=True,
+                        location=path_location,
+                    )
+        else:
+            sub_attr = self._resource_schema.attrs.get(path.complex_filter_attr_rep)
+            if sub_attr.required:
+                issues.add(
+                    issue=ValidationError.required_attribute_can_not_be_deleted(),
+                    proceed=True,
+                    location=path_location,
+                )
+            if (
+                attr.mutability == AttributeMutability.READ_ONLY
+                or sub_attr.mutability == AttributeMutability.READ_ONLY
+            ):
+                issues.add(
+                    issue=ValidationError.read_only_attribute_can_not_be_modified(),
+                    proceed=True,
+                    location=path_location,
+                )
+
+        return SCIMDataContainer({"op": "remove", "path": path}), issues
+
+    def _parse_add_operation(
+        self, path: Union[PatchPath, None, Missing], value: Any
+    ) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+        issues = ValidationIssues()
+        if path not in [None, Missing]:
+            issues_ = validate_operation_path(self._resource_schema, path)
+            if issues_:
+                issues.merge(issues_, location=(self.attrs.operations__path.rep.sub_attr,))
+                return None, issues
+
+        value, issues_ = self._parse_add_operation_value(path, value)
+        issues.merge(
+            issues_,
+            location=(self.attrs.operations__value.rep.sub_attr,),
+        )
+        return SCIMDataContainer({"op": "add", "path": path, "value": value}), issues
 
     def _parse_add_operation_value(
         self, path: Optional[PatchPath], value: Any
@@ -151,7 +206,7 @@ class PatchOp(BaseSchema):
                     if attr.rep.extension:
                         location = (attr.rep.schema,) + location
                     issues.add(
-                        issue=ValidationError.read_only_attribute_can_not_be_updated(),
+                        issue=ValidationError.read_only_attribute_can_not_be_modified(),
                         proceed=False,
                         location=location,
                     )
@@ -177,7 +232,7 @@ class PatchOp(BaseSchema):
 
         if attr.mutability == AttributeMutability.READ_ONLY:
             issues.add(
-                issue=ValidationError.read_only_attribute_can_not_be_updated(),
+                issue=ValidationError.read_only_attribute_can_not_be_modified(),
                 proceed=False,
             )
             return None, issues
@@ -194,14 +249,14 @@ class PatchOp(BaseSchema):
                 v = parsed_attr_value[sub_attr.rep]
                 if v is not Missing:
                     issues.add(
-                        issue=ValidationError.read_only_attribute_can_not_be_updated(),
+                        issue=ValidationError.read_only_attribute_can_not_be_modified(),
                         proceed=False,
                         location=(sub_attr.rep.sub_attr,),
                     )
         return parsed_attr_value, issues
 
 
-def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues():
+def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:
     issues = ValidationIssues()
     if schema.attrs.get(path.attr_rep) is None or (
         path.complex_filter_attr_rep is not None

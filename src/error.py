@@ -73,8 +73,9 @@ class ValidationError:
         300: "bad operation path",
         302: "bad multivalued attribute filter",
         303: "unknown operation target",
-        304: "read-only attribute can not be updated",
+        304: "read-only attribute can not be modified",
         305: "can not use complex filter without sub-attribute specified for 'add' operation",
+        306: "required attribute can not be deleted",
     }
 
     def __init__(self, code: int, **context):
@@ -293,12 +294,16 @@ class ValidationError:
         return cls(code=303)
 
     @classmethod
-    def read_only_attribute_can_not_be_updated(cls):
+    def read_only_attribute_can_not_be_modified(cls):
         return cls(code=304)
 
     @classmethod
     def complex_filter_without_sub_attr_for_add_op(cls):
         return cls(code=305)
+
+    @classmethod
+    def required_attribute_can_not_be_deleted(cls):
+        return cls(code=306)
 
     @property
     def context(self) -> Dict:

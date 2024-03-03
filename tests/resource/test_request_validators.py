@@ -3,6 +3,7 @@ import pytest
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present
+from src.data.path import PatchPath
 from src.filter import Filter
 from src.resource.request_validators import (
     Error,
@@ -795,3 +796,63 @@ def test_required_sub_attrs_are_checked_when_adding_complex_attr():
 
     assert data.body is None
     assert issues.to_dict() == expected_issues
+
+
+def test_remove_operations_are_parsed():
+    validator = ResourceObjectPATCH(SchemaForTests())
+    expected_body = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "remove",
+                "path": PatchPath.parse("str")[0],
+            },
+            {
+                "op": "remove",
+                "path": PatchPath.parse("str_mv[value eq 'abc']")[0],
+            },
+            {
+                "op": "remove",
+                "path": PatchPath.parse("c2.int")[0],
+            },
+            {
+                "op": "remove",
+                "path": PatchPath.parse("c2_mv[int eq 1]")[0],
+            },
+            {
+                "op": "remove",
+                "path": PatchPath.parse("c2_mv[int eq 1].str")[0],
+            },
+        ],
+    }
+
+    data, issues = validator.parse_request(
+        body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": "remove",
+                    "path": "str",
+                },
+                {
+                    "op": "remove",
+                    "path": "str_mv[value eq 'abc']",
+                },
+                {
+                    "op": "remove",
+                    "path": "c2.int",
+                },
+                {
+                    "op": "remove",
+                    "path": "c2_mv[int eq 1]",
+                },
+                {
+                    "op": "remove",
+                    "path": "c2_mv[int eq 1].str",
+                },
+            ],
+        }
+    )
+
+    assert issues.to_dict() == {}
+    assert data.body == expected_body

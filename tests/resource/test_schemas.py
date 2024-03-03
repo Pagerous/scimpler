@@ -9,6 +9,7 @@ from src.filter import Filter
 from src.resource.schemas import list_response, patch_op, user
 from src.resource.schemas.list_response import validate_items_per_page_consistency
 from src.schemas import validate_resource_type_consistency, validate_schemas_field
+from tests.conftest import SchemaForTests
 
 
 def test_lack_of_data_is_validated():
@@ -773,14 +774,7 @@ def test_parse_add_operation__succeeds_on_correct_data(path, expected_path, valu
     assert actual_data["Operations"][0]["value"] == expected_value
     assert actual_data["Operations"][0]["path"].attr_rep == expected_path.attr_rep
     if expected_path.complex_filter:
-        assert (
-            actual_data["Operations"][0]["path"].complex_filter.operator.sub_operator.value
-            == expected_path.complex_filter.operator.sub_operator.value
-        )
-        assert (
-            actual_data["Operations"][0]["path"].complex_filter.operator.attr_rep
-            == expected_path.complex_filter.operator.attr_rep
-        )
+        assert actual_data["Operations"][0]["path"].complex_filter == expected_path.complex_filter
     if expected_path.complex_filter_attr_rep:
         assert (
             actual_data["Operations"][0]["path"].complex_filter_attr_rep
@@ -818,6 +812,104 @@ def test_parse_add_operation__fails_if_attribute_is_readonly(path, value):
         "Operations": [{"op": "add", "path": PatchPath.parse(path)[0], "value": None}],
     }
     expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 304}]}}}}
+
+    actual_data, issues = schema.parse(input_data)
+
+    assert issues.to_dict() == expected_issues
+    assert actual_data.to_dict() == expected_data
+
+
+@pytest.mark.parametrize(
+    "path",
+    (
+        "name",
+        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
+        "emails",
+        "emails[type eq 'work']",
+        "emails[type eq 'work'].value",
+    ),
+)
+def test_parse_remove_operation__succeeds_if_correct_path(path):
+    schema = patch_op.PatchOp(resource_schema=user.User())
+    input_data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "remove",
+                "path": path,
+            }
+        ],
+    }
+    expected_data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{"op": "remove", "path": PatchPath.parse(path)[0]}],
+    }
+    expected_issues = {}
+
+    actual_data, issues = schema.parse(input_data)
+
+    assert issues.to_dict() == expected_issues
+    assert actual_data.to_dict() == expected_data
+
+
+def test_parse_remove_operation__path_can_point_at_item_of_simple_multivalued_attribute():
+    schema = patch_op.PatchOp(resource_schema=SchemaForTests())
+    path = "str_mv[value sw 'a']"
+    input_data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "remove",
+                "path": path,
+            }
+        ],
+    }
+    expected_data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{"op": "remove", "path": PatchPath.parse(path)[0]}],
+    }
+    expected_issues = {}
+
+    actual_data, issues = schema.parse(input_data)
+
+    assert issues.to_dict() == expected_issues
+    assert actual_data.to_dict() == expected_data
+
+
+@pytest.mark.parametrize(
+    ("path", "expected_path_issue_codes", "resource_schema"),
+    (
+        ("id", [{"code": 304}, {"code": 306}], user.User()),
+        ("userName", [{"code": 306}], user.User()),
+        (
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
+            [{"code": 304}],
+            user.User(),
+        ),
+        ("meta", [{"code": 304}], user.User()),
+        ("groups", [{"code": 304}], user.User()),
+        ('groups[type eq "direct"].value', [{"code": 304}], user.User()),
+        ("c2_mv[int eq 1].bool", [{"code": 306}], SchemaForTests()),
+    ),
+)
+def test_parse_remove_operation__fails_if_attribute_is_readonly_or_required(
+    path, expected_path_issue_codes, resource_schema
+):
+    schema = patch_op.PatchOp(resource_schema)
+    input_data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "remove",
+                "path": path,
+            }
+        ],
+    }
+    expected_data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{"op": "remove", "path": PatchPath.parse(path)[0]}],
+    }
+    expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
 
     actual_data, issues = schema.parse(input_data)
 

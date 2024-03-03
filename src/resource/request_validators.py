@@ -804,8 +804,12 @@ class ResourceObjectPATCH:
 
         values = body[self._schema.attrs.operations__value.rep]
         paths = body[self._schema.attrs.operations__path.rep]
+        ops = body[self._schema.attrs.operations__op.rep]
 
-        for i, (value, path) in enumerate(zip(values, paths)):
+        for i, (op, value, path) in enumerate(zip(ops, values, paths)):
+            if op == "remove":
+                continue
+
             value_location = operations_location + (
                 i,
                 self._schema.attrs.operations__value.rep.sub_attr,
