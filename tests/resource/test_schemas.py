@@ -534,7 +534,25 @@ def test_parse_add_operation_without_path__fails_for_incorrect_data():
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [None],
+        "Operations": [
+            {
+                "op": "add",
+                "path": Missing,
+                "value": {
+                    "name": {
+                        "formatted": None,
+                    },
+                    "userName": None,
+                    "emails": [{"value": "bjensen@example.com", "type": None}],
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "department": None,
+                        "manager": {
+                            "displayName": None,
+                        },
+                    },
+                },
+            }
+        ],
     }
     expected_issues = {
         "Operations": {
@@ -571,7 +589,9 @@ def test_parse_add_operation_without_path__fails_if_attribute_is_readonly():
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [None],
+        "Operations": [
+            {"op": "add", "path": Missing, "value": {"meta": {"resourceType": "Users"}}}
+        ],
     }
     expected_issues = {
         "Operations": {
@@ -593,51 +613,61 @@ def test_parse_add_operation_without_path__fails_if_attribute_is_readonly():
 
 
 @pytest.mark.parametrize(
-    ("path", "value", "expected_value_issues"),
+    ("path", "input_value", "expected_value", "expected_value_issues"),
     (
         (
             "userName",
             123,
+            None,
             {"_errors": [{"code": 2}]},
         ),
         (
             "name.formatted",
             123,
+            None,
             {"_errors": [{"code": 2}]},
         ),
         (
             "name",
             {"formatted": 123, "familyName": 123},
+            {"formatted": None, "familyName": None},
             {"formatted": {"_errors": [{"code": 2}]}, "familyName": {"_errors": [{"code": 2}]}},
         ),
         (
             "name",
             123,
+            None,
             {"_errors": [{"code": 2}]},
         ),
         (
             "emails",
             123,
+            None,
             {"_errors": [{"code": 2}]},
         ),
         (
             "emails",
             [{"type": 123, "value": 123}],
+            [{"type": None, "value": None}],
             {"0": {"type": {"_errors": [{"code": 2}]}, "value": {"_errors": [{"code": 2}]}}},
         ),
         (
             "emails",
             {"type": "home", "value": "home@example.com"},
+            None,
             {"_errors": [{"code": 2}]},
         ),
         (
             'emails[type eq "work"].value',
             123,
+            None,
             {"_errors": [{"code": 2}]},
         ),
     ),
 )
-def test_parse_add_operation__fails_for_incorrect_data(path, value, expected_value_issues):
+def test_parse_add_operation__fails_for_incorrect_data(
+    path, input_value, expected_value, expected_value_issues
+):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -645,14 +675,14 @@ def test_parse_add_operation__fails_for_incorrect_data(path, value, expected_val
             {
                 "op": "add",
                 "path": path,
-                "value": value,
+                "value": input_value,
             }
         ],
     }
     expected_issues = {"Operations": {"0": {"value": expected_value_issues}}}
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [None],
+        "Operations": [{"op": "add", "path": PatchPath.parse(path)[0], "value": expected_value}],
     }
 
     actual_data, issues = schema.parse(input_data)
@@ -785,7 +815,7 @@ def test_parse_add_operation__fails_if_attribute_is_readonly(path, value):
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [None],
+        "Operations": [{"op": "add", "path": PatchPath.parse(path)[0], "value": None}],
     }
     expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 304}]}}}}
 

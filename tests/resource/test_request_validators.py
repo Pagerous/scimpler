@@ -7,6 +7,7 @@ from src.filter import Filter
 from src.resource.request_validators import (
     Error,
     ResourceObjectGET,
+    ResourceObjectPATCH,
     ResourceObjectPUT,
     ResourceTypeGET,
     ResourceTypePOST,
@@ -29,6 +30,7 @@ from src.resource.request_validators import (
 )
 from src.resource.schemas import list_response, user
 from src.sorter import Sorter
+from tests.conftest import SchemaForTests
 
 
 @pytest.mark.parametrize(
@@ -717,4 +719,79 @@ def test_search_request_validation_fails_if_attributes_and_exclude_attributes_pr
         }
     )
 
+    assert issues.to_dict() == expected_issues
+
+
+def test_required_sub_attrs_are_checked_when_adding_complex_items():
+    validator = ResourceObjectPATCH(SchemaForTests())
+    expected_issues = {
+        "body": {
+            "Operations": {
+                "0": {
+                    "value": {
+                        "0": {"bool": {"_errors": [{"code": 15}]}},
+                        "2": {"bool": {"_errors": [{"code": 2}]}},
+                    }
+                }
+            }
+        }
+    }
+
+    data, issues = validator.parse_request(
+        body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": "add",
+                    "path": "c2_mv",
+                    "value": [
+                        {"str": "abc", "int": 123},
+                        {"str": "def", "int": 456, "bool": True},
+                        {"str": "egh", "int": 789, "bool": "not-bool"},
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert data.body is None
+    assert issues.to_dict() == expected_issues
+
+
+def test_required_sub_attrs_are_checked_when_adding_complex_attr():
+    validator = ResourceObjectPATCH(SchemaForTests())
+    expected_issues = {
+        "body": {
+            "Operations": {
+                "0": {
+                    "value": {
+                        "c2_mv": {
+                            "0": {"bool": {"_errors": [{"code": 15}]}},
+                            "2": {"bool": {"_errors": [{"code": 2}]}},
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    data, issues = validator.parse_request(
+        body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": "add",
+                    "value": {
+                        "c2_mv": [
+                            {"str": "abc", "int": 123},
+                            {"str": "def", "int": 456, "bool": True},
+                            {"str": "egh", "int": 789, "bool": "not-bool"},
+                        ],
+                    },
+                }
+            ],
+        }
+    )
+
+    assert data.body is None
     assert issues.to_dict() == expected_issues

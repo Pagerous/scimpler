@@ -3,7 +3,12 @@ from functools import wraps
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.attributes_presence import AttributePresenceChecker
-from src.data.attributes import AttributeIssuer, AttributeMutability, ComplexAttribute
+from src.data.attributes import (
+    Attribute,
+    AttributeIssuer,
+    AttributeMutability,
+    ComplexAttribute,
+)
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
@@ -783,8 +788,7 @@ class ResourceObjectPATCH:
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
         issues = ValidationIssues()
-        body_location = ("body",)
-        operations_location = body_location + _location(self._schema.attrs.operations.rep)
+
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
@@ -792,51 +796,70 @@ class ResourceObjectPATCH:
                 query_string["presence_checker"] = checker
 
         body, issues_ = _parse_body(self._schema, body)
-        issues.merge(issues_, location=body_location)
+        issues.merge(issues_)
+        operations_location = ("body", *_location(self._schema.attrs.operations.rep))
 
         if not issues.can_proceed(operations_location):
             return RequestData(body=None, headers=headers, query_string=query_string), issues
 
-        values = body[self._schema.attrs.operations__value]
-        paths = body[self._schema.attrs.operations__path]
+        values = body[self._schema.attrs.operations__value.rep]
+        paths = body[self._schema.attrs.operations__path.rep]
 
         for i, (value, path) in enumerate(zip(values, paths)):
             value_location = operations_location + (
                 i,
                 self._schema.attrs.operations__value.rep.sub_attr,
             )
-
-            if not issues.can_proceed(value_location):
-                continue
-
             if path in [None, Missing]:
-                attrs = self._resource_schema.attrs
-            else:
-                attrs = [self._resource_schema.attrs.get_by_path(path)]
-            for attr in attrs:
-                if not (isinstance(attr, ComplexAttribute) and attr.multi_valued):
-                    continue
-
-                # checking if new item of complex attribute has all required fields
-                attr_value = value[attr.rep]
-                ignore_required = []
-                for sub_attr in attr.attrs:
-                    if sub_attr.required and sub_attr.issuer == AttributeIssuer.SERVER:
-                        ignore_required.append(sub_attr.rep)
-                presence_checker = AttributePresenceChecker(ignore_required=ignore_required)
-                for j, item in enumerate(attr_value):
-                    issues.merge(
-                        issues=presence_checker(
-                            data=item,
-                            schema=self._resource_schema,
-                            direction="REQUEST",
-                            attrs=attr.attrs,
-                        ),
-                        location=value_location + (j,),
+                for attr in self._resource_schema.attrs:
+                    self._check_complex_sub_attrs_presence(
+                        issues=issues,
+                        attr=attr,
+                        value=value[attr.rep],
+                        value_location=value_location + _location(attr.rep),
                     )
+
+            else:
+                attr = self._resource_schema.attrs.get_by_path(path)
+                self._check_complex_sub_attrs_presence(
+                    issues=issues,
+                    attr=attr,
+                    value=value,
+                    value_location=value_location,
+                )
+
         if issues:
             body = None
         return RequestData(body=body, headers=headers, query_string=query_string), issues
+
+    def _check_complex_sub_attrs_presence(
+        self,
+        issues: ValidationIssues,
+        attr: Attribute,
+        value: Any,
+        value_location,
+    ) -> None:
+        if not (isinstance(attr, ComplexAttribute) and attr.multi_valued) or value is Missing:
+            return
+
+        # checking if new item of complex attribute has all required fields
+        ignore_required = []
+        for sub_attr in attr.attrs:
+            if sub_attr.required and sub_attr.issuer == AttributeIssuer.SERVER:
+                ignore_required.append(sub_attr.rep)
+        presence_checker = AttributePresenceChecker(ignore_required=ignore_required)
+        for j, item in enumerate(value):
+            item_location = value_location + (j,)
+            if not issues.has_issues(item_location):
+                issues.merge(
+                    issues=presence_checker(
+                        data=item,
+                        schema=self._resource_schema,
+                        direction="REQUEST",
+                        attrs=attr.attrs,
+                    ),
+                    location=item_location,
+                )
 
 
 def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:

@@ -374,7 +374,10 @@ class Attributes:
         return None
 
     def get_by_path(self, path: "PatchPath") -> Optional[Attribute]:
-        if path.complex_filter is not None and self.get(path.complex_filter.attr_rep) is None:
+        if (
+            path.complex_filter is not None
+            and self.get(path.complex_filter.operator.attr_rep) is None
+        ):
             return None
         attr = self.get(path.attr_rep)
         if attr is None or path.complex_filter_attr_rep is None:

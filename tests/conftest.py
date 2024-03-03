@@ -241,7 +241,7 @@ class SchemaForTests(ResourceSchema):
                     sub_attributes=[
                         Attribute(name="str", type_=at.String),
                         Attribute(name="int", type_=at.Integer),
-                        Attribute(name="bool", type_=at.Boolean),
+                        Attribute(name="bool", type_=at.Boolean, required=True),
                     ],
                     multi_valued=True,
                 ),

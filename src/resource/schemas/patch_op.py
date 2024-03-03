@@ -1,9 +1,8 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 from src.data import type as at
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
 from src.data.container import AttrRep, Missing, SCIMDataContainer
-from src.data.operator import ComplexAttributeOperator, MultiOperandLogicalOperator, Not
 from src.data.path import PatchPath
 from src.error import ValidationError, ValidationIssues
 from src.schemas import BaseSchema, ResourceSchema
@@ -121,24 +120,15 @@ class PatchOp(BaseSchema):
             value = item[self.attrs.operations.attrs.value.rep]
             if op == "add":
                 value, issues_ = self._parse_add_operation_value(path, value)
-                if issues_:
-                    issues.merge(
-                        issues_,
-                        location=(
-                            self.attrs.operations.rep.attr,
-                            i,
-                            self.attrs.operations.attrs.value.rep.attr,
-                        ),
-                    )
-                    parsed.append(None)
-                else:
-                    parsed.append(
-                        {
-                            "op": op,
-                            "path": path,
-                            "value": value,
-                        }
-                    )
+                issues.merge(
+                    issues_,
+                    location=(
+                        self.attrs.operations.rep.attr,
+                        i,
+                        self.attrs.operations.attrs.value.rep.attr,
+                    ),
+                )
+                parsed.append(SCIMDataContainer({"op": op, "path": path, "value": value}))
         data[operations.rep] = parsed
         return data, issues
 
@@ -208,9 +198,6 @@ class PatchOp(BaseSchema):
                         proceed=False,
                         location=(sub_attr.rep.sub_attr,),
                     )
-
-        if issues.has_issues():
-            return None, issues
         return parsed_attr_value, issues
 
 
