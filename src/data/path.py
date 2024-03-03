@@ -145,3 +145,13 @@ class PatchPath:
             if index in (string_values or {}):
                 encoded = encoded.replace(match.group(0), string_values[index])
         return encoded
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, PatchPath):
+            return False
+
+        return bool(
+            self.attr_rep == other.attr_rep
+            and self.complex_filter == other.complex_filter
+            and self.complex_filter_attr_rep == other.complex_filter_attr_rep
+        )
