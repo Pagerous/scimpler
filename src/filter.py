@@ -660,6 +660,11 @@ class Filter:
             data = data[self._operator.attr_rep]
         return self._operator.match(data, schema.attrs, strict)
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Filter):
+            return False
+        return SCIMDataContainer(self.to_dict()) == SCIMDataContainer(other.to_dict())
+
     def to_dict(self):
         return self._to_dict(self._operator)
 
