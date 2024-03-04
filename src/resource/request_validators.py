@@ -181,8 +181,10 @@ def _dump_resource_output_body(
     presence_checker: Optional[AttributePresenceChecker] = None,
 ) -> Tuple[ResponseData, ValidationIssues]:
     issues = ValidationIssues()
+    headers = headers or {}
     body_location = ("body",)
     body, issues_ = schema.dump(body)
+    issues.merge(issues_, location=body_location)
 
     issues.merge(
         issues=validate_resource_location_in_header(headers, location_header_required),
@@ -202,11 +204,15 @@ def _dump_resource_output_body(
             location=body_location,
         )
     meta_location = schema.attrs.meta__location.rep
-    if issues.can_proceed(body_location + _location(meta_location), ("headers", "Location")):
+    location_header = headers.get("Location")
+    if (
+        issues.can_proceed(body_location + _location(meta_location), ("headers", "Location"))
+        and location_header is not None
+    ):
         issues.merge(
             issues=validate_resource_location_consistency(
                 meta_location=body[meta_location],
-                headers_location=headers.get("Location"),
+                headers_location=location_header,
             ),
         )
 
@@ -384,7 +390,9 @@ def parse_requested_attributes(
     if to_exclude and isinstance(to_exclude, str):
         to_exclude = to_exclude.split(",")
 
-    if not isinstance(to_include, List) or not isinstance(to_exclude, List):
+    if not (isinstance(to_include, List) and isinstance(to_exclude, List)) or not (
+        to_include or to_exclude
+    ):
         return None, issues
 
     if to_include and to_exclude:
@@ -863,6 +871,33 @@ class ResourceObjectPATCH:
                     ),
                     location=item_location,
                 )
+
+    def dump_response(
+        self,
+        *,
+        status_code: int,
+        body: Any = None,
+        headers: Any = None,
+        presence_checker: Optional[AttributePresenceChecker] = None,
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        issues = ValidationIssues()
+        if status_code == 204:
+            if presence_checker is not None and presence_checker.attr_reps:
+                issues.add(
+                    issue=ValidationError.bad_status_code(200, status_code),
+                    proceed=True,
+                    location=("status",),
+                )
+            return ResponseData(headers=headers, body=None), issues
+        return _dump_resource_output_body(
+            schema=self._resource_schema,
+            location_header_required=False,
+            expected_status_code=200,
+            status_code=status_code,
+            body=body,
+            headers=headers,
+            presence_checker=presence_checker,
+        )
 
 
 def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:

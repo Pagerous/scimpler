@@ -858,3 +858,63 @@ def test_remove_operations_are_parsed():
 
     assert issues.to_dict() == {}
     assert data.body == expected_body
+
+
+def test_resource_object_patch_dumping_response_fails_if_204_but_attributes_requested():
+    validator = ResourceObjectPATCH(user.User())
+
+    data, issues = validator.dump_response(
+        status_code=204,
+        body=None,
+        presence_checker=AttributePresenceChecker(
+            attr_reps=[AttrRep(attr="userName")], include=True
+        ),
+    )
+
+    assert issues.to_dict() == {"status": {"_errors": [{"code": 16}]}}
+    assert data.body is None
+
+
+def test_resource_object_patch_dumping_response_succeeds_if_204_and_no_attributes_requested():
+    validator = ResourceObjectPATCH(user.User())
+
+    data, issues = validator.dump_response(
+        status_code=204,
+        body=None,
+        presence_checker=None,
+    )
+
+    assert issues.to_dict() == {}
+    assert data.body is None
+
+
+def test_resource_object_patch_dumping_response_succeeds_if_200_and_user_data(user_data_dump):
+    validator = ResourceObjectPATCH(user.User())
+
+    data, issues = validator.dump_response(
+        status_code=200,
+        body=user_data_dump,
+        presence_checker=None,
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_resource_object_patch_dumping_response_succeeds_if_200_and_selected_attributes(
+    user_data_dump,
+):
+    validator = ResourceObjectPATCH(user.User())
+
+    data, issues = validator.dump_response(
+        status_code=200,
+        body={
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "id": "1",
+            "userName": "bjensen",
+        },
+        presence_checker=AttributePresenceChecker(
+            attr_reps=[AttrRep(attr="userName")], include=True
+        ),
+    )
+
+    assert issues.to_dict(msg=True) == {}
