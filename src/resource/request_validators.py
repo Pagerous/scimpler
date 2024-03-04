@@ -900,6 +900,23 @@ class ResourceObjectPATCH:
         )
 
 
+class ResourceObjectDELETE:
+    @staticmethod
+    def dump_response(
+        *,
+        status_code: int,
+        headers: Any = None,
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        issues = ValidationIssues()
+        if status_code != 204:
+            issues.add(
+                issue=ValidationError.bad_status_code(204, status_code),
+                proceed=True,
+                location=("status",),
+            )
+        return ResponseData(headers=headers, body=None), issues
+
+
 def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:
     if attr_rep.sub_attr:
         return attr_rep.attr, attr_rep.sub_attr

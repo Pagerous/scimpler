@@ -7,6 +7,7 @@ from src.data.path import PatchPath
 from src.filter import Filter
 from src.resource.request_validators import (
     Error,
+    ResourceObjectDELETE,
     ResourceObjectGET,
     ResourceObjectPATCH,
     ResourceObjectPUT,
@@ -916,5 +917,21 @@ def test_resource_object_patch_dumping_response_succeeds_if_200_and_selected_att
             attr_reps=[AttrRep(attr="userName")], include=True
         ),
     )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_resource_object_delete_dumping_response_fails_if_status_different_than_204():
+    validator = ResourceObjectDELETE()
+
+    data, issues = validator.dump_response(status_code=200)
+
+    assert issues.to_dict() == {"status": {"_errors": [{"code": 16}]}}
+
+
+def test_resource_object_delete_dumping_response_succeeds_if_status_204():
+    validator = ResourceObjectDELETE()
+
+    data, issues = validator.dump_response(status_code=204)
 
     assert issues.to_dict(msg=True) == {}
