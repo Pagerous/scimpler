@@ -56,7 +56,7 @@ class Error:
         issues.merge(issues_, location=body_location)
         if issues.can_proceed(body_location):
             issues.merge(
-                issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
+                issues=AttributePresenceChecker()(body, self._schema.attrs, "RESPONSE"),
                 location=body_location,
             )
         status_attr_rep = self._schema.attrs.status.rep
@@ -164,7 +164,7 @@ def _parse_body(
     if issues.can_proceed(body_location):
         issues.merge(
             issues=AttributePresenceChecker(ignore_required=required_attrs_to_ignore)(
-                body, schema, "REQUEST"
+                body, schema.attrs, "REQUEST"
             ),
             location=body_location,
         )
@@ -196,7 +196,7 @@ def _dump_resource_output_body(
         issues.merge(
             issues=(presence_checker or AttributePresenceChecker())(
                 data=body,
-                schema=schema,
+                attrs=schema.attrs,
                 direction="RESPONSE",
             ),
             location=body_location,
@@ -430,7 +430,7 @@ def validate_resources_attributes_presence(
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
         issues.merge(
-            issues=presence_checker(resource, schema, "RESPONSE"),
+            issues=presence_checker(resource, schema.attrs, "RESPONSE"),
             location=(i,),
         )
     return issues
@@ -618,7 +618,7 @@ def _dump_resources_get_response(
         return ResponseData(headers=headers, body=None), issues
 
     issues.merge(
-        issues=AttributePresenceChecker()(body, schema, "RESPONSE"),
+        issues=AttributePresenceChecker()(body, schema.attrs, "RESPONSE"),
         location=body_location,
     )
     issues.merge(
@@ -858,7 +858,6 @@ class ResourceObjectPATCH:
                 issues.merge(
                     issues=presence_checker(
                         data=item,
-                        schema=self._resource_schema,
                         direction="REQUEST",
                         attrs=attr.attrs,
                     ),

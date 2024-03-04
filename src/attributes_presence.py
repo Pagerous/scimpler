@@ -1,9 +1,8 @@
 from typing import Any, Iterable, List, Optional, Tuple
 
-from src.data.attributes import Attribute, AttributeReturn
+from src.data.attributes import Attribute, AttributeReturn, Attributes
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema
 
 
 class AttributePresenceChecker:
@@ -59,18 +58,14 @@ class AttributePresenceChecker:
     def __call__(
         self,
         data: SCIMDataContainer,
-        schema: BaseSchema,
+        attrs: Attributes,
         direction: str,
-        attrs: Optional[Iterable[Attribute]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
 
-        if attrs is None:
-            attrs = schema.attrs
-
         for attr in attrs:
             top_attr_rep = AttrRep(schema=attr.rep.schema, attr=attr.rep.attr)
-            top_attr = schema.attrs.get(top_attr_rep)
+            top_attr = attrs.get(top_attr_rep)
 
             if attr.rep.sub_attr and top_attr.multi_valued:
                 value = data[top_attr_rep]

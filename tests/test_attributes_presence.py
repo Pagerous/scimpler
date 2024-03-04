@@ -35,7 +35,7 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
         }
     }
 
-    issues = checker(SCIMDataContainer(user_data_dump), User(), "RESPONSE")
+    issues = checker(SCIMDataContainer(user_data_dump), User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -44,7 +44,7 @@ def test_restricted_attributes_can_be_sent_with_request(user_data_parse):
     checker = AttributePresenceChecker(ignore_required=[AttrRep(attr="id")])
     user_data_parse["password"] = "1234"
 
-    issues = checker(SCIMDataContainer(user_data_parse), User(), "REQUEST")
+    issues = checker(SCIMDataContainer(user_data_parse), User().attrs, "REQUEST")
 
     assert issues.to_dict() == {}
 
@@ -62,7 +62,7 @@ def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
 
     expected = {"name": {"_errors": [{"code": 19}]}}
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -95,7 +95,7 @@ def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
         }
     }
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -123,7 +123,7 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
         }
     }
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -150,7 +150,7 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_inclusion():
         }
     }
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -182,7 +182,7 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
         },
     }
 
-    issues = checker(SCIMDataContainer(), User(), "RESPONSE")
+    issues = checker(SCIMDataContainer(), User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -205,7 +205,7 @@ def test_presence_checker_fails_if_not_provided_requested_required_attribute():
         },
     }
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -219,7 +219,7 @@ def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
         }
     )
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == {}
 
@@ -246,7 +246,7 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exc
         }
     }
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -272,6 +272,6 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inc
         }
     }
 
-    issues = checker(data, User(), "RESPONSE")
+    issues = checker(data, User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
