@@ -455,13 +455,14 @@ def test_validate_operation_path(path, expected_issues):
     assert issues.to_dict() == expected_issues
 
 
-def test_patch_op__add_operation_without_path_can_be_parsed():
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_patch_op__add_and_replace_operation_without_path_can_be_parsed(op):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "value": {
                     "ignore^me": 42,
                     "name": {
@@ -485,7 +486,7 @@ def test_patch_op__add_operation_without_path_can_be_parsed():
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "path": Missing,
                 "value": {
                     "name": {
@@ -510,13 +511,14 @@ def test_patch_op__add_operation_without_path_can_be_parsed():
     assert actual_data.to_dict() == expected_data
 
 
-def test_parse_add_operation_without_path__fails_for_incorrect_data():
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_parse_add_and_replace_operation_without_path__fails_for_incorrect_data(op):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "value": {
                     "name": {
                         "formatted": 123,
@@ -537,7 +539,7 @@ def test_parse_add_operation_without_path__fails_for_incorrect_data():
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "path": Missing,
                 "value": {
                     "name": {
@@ -577,22 +579,21 @@ def test_parse_add_operation_without_path__fails_for_incorrect_data():
     assert actual_data.to_dict() == expected_data
 
 
-def test_parse_add_operation_without_path__fails_if_attribute_is_readonly():
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_parse_add_and_replace_operation_without_path__fails_if_attribute_is_readonly(op):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "value": {"meta": {"resourceType": "Users"}},
             }
         ],
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [
-            {"op": "add", "path": Missing, "value": {"meta": {"resourceType": "Users"}}}
-        ],
+        "Operations": [{"op": op, "path": Missing, "value": {"meta": {"resourceType": "Users"}}}],
     }
     expected_issues = {
         "Operations": {
@@ -613,6 +614,7 @@ def test_parse_add_operation_without_path__fails_if_attribute_is_readonly():
     assert actual_data.to_dict() == expected_data
 
 
+@pytest.mark.parametrize("op", ("add", "replace"))
 @pytest.mark.parametrize(
     ("path", "input_value", "expected_value", "expected_value_issues"),
     (
@@ -666,15 +668,15 @@ def test_parse_add_operation_without_path__fails_if_attribute_is_readonly():
         ),
     ),
 )
-def test_parse_add_operation__fails_for_incorrect_data(
-    path, input_value, expected_value, expected_value_issues
+def test_parse_add_and_replace_operation__fails_for_incorrect_data(
+    op, path, input_value, expected_value, expected_value_issues
 ):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "path": path,
                 "value": input_value,
             }
@@ -683,7 +685,7 @@ def test_parse_add_operation__fails_for_incorrect_data(
     expected_issues = {"Operations": {"0": {"value": expected_value_issues}}}
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "add", "path": PatchPath.parse(path)[0], "value": expected_value}],
+        "Operations": [{"op": op, "path": PatchPath.parse(path)[0], "value": expected_value}],
     }
 
     actual_data, issues = schema.parse(input_data)
@@ -692,6 +694,7 @@ def test_parse_add_operation__fails_for_incorrect_data(
     assert actual_data.to_dict() == expected_data
 
 
+@pytest.mark.parametrize("op", ("add", "replace"))
 @pytest.mark.parametrize(
     ("path", "expected_path", "value", "expected_value"),
     (
@@ -755,13 +758,15 @@ def test_parse_add_operation__fails_for_incorrect_data(
         ),
     ),
 )
-def test_parse_add_operation__succeeds_on_correct_data(path, expected_path, value, expected_value):
+def test_parse_add_and_replace_operation__succeeds_on_correct_data(
+    op, path, expected_path, value, expected_value
+):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "path": path,
                 "value": value,
             }
@@ -782,6 +787,7 @@ def test_parse_add_operation__succeeds_on_correct_data(path, expected_path, valu
         )
 
 
+@pytest.mark.parametrize("op", ("add", "replace"))
 @pytest.mark.parametrize(
     ("path", "value"),
     (
@@ -795,13 +801,13 @@ def test_parse_add_operation__succeeds_on_correct_data(path, expected_path, valu
         ('groups[type eq "direct"].value', "admins"),
     ),
 )
-def test_parse_add_operation__fails_if_attribute_is_readonly(path, value):
+def test_parse_add_operation__fails_if_attribute_is_readonly(op, path, value):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
-                "op": "add",
+                "op": op,
                 "path": path,
                 "value": value,
             }
@@ -809,7 +815,7 @@ def test_parse_add_operation__fails_if_attribute_is_readonly(path, value):
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "add", "path": PatchPath.parse(path)[0], "value": None}],
+        "Operations": [{"op": op, "path": PatchPath.parse(path)[0], "value": None}],
     }
     expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 304}]}}}}
 

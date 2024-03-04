@@ -836,8 +836,8 @@ class ResourceObjectPATCH:
             body = None
         return RequestData(body=body, headers=headers, query_string=query_string), issues
 
+    @staticmethod
     def _check_complex_sub_attrs_presence(
-        self,
         issues: ValidationIssues,
         attr: Attribute,
         value: Any,

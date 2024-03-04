@@ -723,7 +723,8 @@ def test_search_request_validation_fails_if_attributes_and_exclude_attributes_pr
     assert issues.to_dict() == expected_issues
 
 
-def test_required_sub_attrs_are_checked_when_adding_complex_items():
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_items(op):
     validator = ResourceObjectPATCH(SchemaForTests())
     expected_issues = {
         "body": {
@@ -743,7 +744,7 @@ def test_required_sub_attrs_are_checked_when_adding_complex_items():
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
-                    "op": "add",
+                    "op": op,
                     "path": "c2_mv",
                     "value": [
                         {"str": "abc", "int": 123},
@@ -759,7 +760,8 @@ def test_required_sub_attrs_are_checked_when_adding_complex_items():
     assert issues.to_dict() == expected_issues
 
 
-def test_required_sub_attrs_are_checked_when_adding_complex_attr():
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op):
     validator = ResourceObjectPATCH(SchemaForTests())
     expected_issues = {
         "body": {
@@ -781,7 +783,7 @@ def test_required_sub_attrs_are_checked_when_adding_complex_attr():
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
-                    "op": "add",
+                    "op": op,
                     "value": {
                         "c2_mv": [
                             {"str": "abc", "int": 123},
