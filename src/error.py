@@ -59,6 +59,9 @@ class ValidationError:
             "{allowed_types}, but got '{provided_type}' instead"
         ),
         33: "complex sub-attribute {sub_attr!r} of {attr!r} can not be complex",
+        34: "resource type endpoint is required",
+        35: "resource object endpoint is required",
+        36: "unknown resource",
         100: "one of brackets is not opened / closed",
         102: "one of complex attribute brackets is not opened / closed",
         104: "missing operand for operator '{operator}' in expression '{expression}'",
@@ -233,6 +236,18 @@ class ValidationError:
         return cls(code=33, attr=attr, sub_attr=sub_attr)
 
     @classmethod
+    def resource_type_endpoint_required(cls):
+        return cls(code=34)
+
+    @classmethod
+    def resource_object_endpoint_required(cls):
+        return cls(code=35)
+
+    @classmethod
+    def unknown_resource(cls):
+        return cls(code=36)
+
+    @classmethod
     def bracket_not_opened_or_closed(cls):
         return cls(code=100)
 
@@ -342,6 +357,20 @@ class ValidationIssues:
         self._issues[location].append(issue)
         if not proceed:
             self._stop_proceeding[location].add(issue.code)
+
+    def get(self, location: Collection[Union[str, int]]) -> "ValidationIssues":
+        copy = ValidationIssues()
+        copy._issues = {
+            location_[len(location) :]: errors
+            for location_, errors in self._issues.items()
+            if location_[: len(location)] == location
+        }
+        copy._stop_proceeding = {
+            location_[len(location) :]: codes
+            for location_, codes in self._stop_proceeding.items()
+            if location_[: len(location)] == location
+        }
+        return copy
 
     def drop(self, *locations: Collection[Union[str, int]], code: int) -> None:
         if not locations:

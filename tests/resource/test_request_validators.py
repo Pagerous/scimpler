@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 
 from src.attributes_presence import AttributePresenceChecker
@@ -6,6 +8,7 @@ from src.data.operator import Present
 from src.data.path import PatchPath
 from src.filter import Filter
 from src.resource.request_validators import (
+    BulkOperations,
     Error,
     ResourceObjectDELETE,
     ResourceObjectGET,
@@ -950,3 +953,136 @@ def test_resource_object_delete_dumping_response_succeeds_if_status_204():
     data, issues = validator.dump_response(status_code=204)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_bulk_operations_request_is_parsed_if_correct_data():
+    validator = BulkOperations([user.User()])
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "failOnErrors": 1,
+        "Operations": [
+            {
+                "method": "POST",
+                "path": "/Users",
+                "bulkId": "qwerty",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                    "userName": "Alice",
+                },
+            },
+            {
+                "method": "PUT",
+                "path": "/Users/b7c14771-226c-4d05-8860-134711653041",
+                "version": 'W/"3694e05e9dff591"',
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                    "id": "b7c14771-226c-4d05-8860-134711653041",
+                    "userName": "Bob",
+                },
+            },
+            {
+                "method": "PATCH",
+                "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
+                "version": 'W"edac3253e2c0ef2"',
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                    "Operations": [
+                        {"op": "remove", "path": "nickName"},
+                        {"op": "add", "path": "userName", "value": "Dave"},
+                    ],
+                },
+            },
+            {
+                "method": "DELETE",
+                "path": "/Users/e9025315-6bea-44e1-899c-1e07454e468b",
+                "version": 'W/"0ee8add0a938e1a"',
+            },
+        ],
+    }
+    expected_body: dict = deepcopy(data)
+    expected_body["Operations"][1]["data"] = {"userName": "Bob"}
+    expected_body["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath(
+        attr_rep=AttrRep(attr="nickName"), complex_filter=None, complex_filter_attr_rep=None
+    )
+    expected_body["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath(
+        attr_rep=AttrRep(attr="userName"), complex_filter=None, complex_filter_attr_rep=None
+    )
+
+    data, issues = validator.parse_request(body=data)
+
+    assert issues.to_dict(msg=True) == {}
+    assert data.body.to_dict() == expected_body
+
+
+def test_bulk_operations_request_parsing_fails_for_bad_data():
+    validator = BulkOperations([user.User()])
+    expected_issues = {
+        "Operations": {
+            "0": {
+                "data": {
+                    "userName": {"_errors": [{"code": 15}]},
+                    "nickName": {"_errors": [{"code": 2}]},
+                }
+            },
+            "1": {
+                "data": {
+                    "schemas": {"_errors": [{"code": 15}]},
+                    "userName": {"_errors": [{"code": 2}]},
+                }
+            },
+            "2": {
+                "version": {"_errors": [{"code": 2}]},
+                "data": {
+                    "Operations": {
+                        "0": {"path": {"_errors": [{"code": 111}]}},
+                        "1": {"op": {"_errors": [{"code": 14}]}},
+                    }
+                },
+            },
+        }
+    }
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "failOnErrors": 1,
+        "Operations": [
+            {
+                "method": "POST",
+                "path": "/Users",
+                "bulkId": "qwerty",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                    "nickName": 123,
+                },
+            },
+            {
+                "method": "PUT",
+                "path": "/Users/b7c14771-226c-4d05-8860-134711653041",
+                "version": 'W/"3694e05e9dff591"',
+                "data": {
+                    "id": "b7c14771-226c-4d05-8860-134711653041",
+                    "userName": 123,
+                },
+            },
+            {
+                "method": "PATCH",
+                "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
+                "version": 123,
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                    "Operations": [
+                        {"op": "remove", "path": "bad^attr"},
+                        {"op": "kill", "path": "userName", "value": "Dave"},
+                    ],
+                },
+            },
+            {
+                "method": "DELETE",
+                "path": "/Users/e9025315-6bea-44e1-899c-1e07454e468b",
+                "version": 'W/"0ee8add0a938e1a"',
+            },
+        ],
+    }
+
+    data, issues = validator.parse_request(body=data)
+
+    assert issues.to_dict() == expected_issues

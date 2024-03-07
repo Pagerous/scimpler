@@ -13,7 +13,13 @@ from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
-from src.resource.schemas import error, list_response, patch_op, search_request
+from src.resource.schemas import (
+    bulk_ops,
+    error,
+    list_response,
+    patch_op,
+    search_request,
+)
 from src.schemas import BaseSchema, ResourceSchema
 from src.sorter import Sorter
 
@@ -916,6 +922,73 @@ class ResourceObjectDELETE:
                 location=("status",),
             )
         return ResponseData(headers=headers, body=None), issues
+
+
+class BulkOperations:
+    def __init__(self, resource_schemas: Sequence[ResourceSchema]):
+        self._validators = {
+            "GET": {},
+            "POST": {},
+            "PUT": {},
+            "PATCH": {},
+            "DELETE": {},
+        }
+        for resource_schema in resource_schemas:
+            resource_name_plural = (
+                repr(resource_schema) + "s"
+            )  # TODO: make it explicit attribute of schema
+            self._validators["GET"][resource_name_plural] = ResourceObjectGET(resource_schema)
+            self._validators["POST"][resource_name_plural] = ResourceTypePOST(resource_schema)
+            self._validators["PUT"][resource_name_plural] = ResourceObjectPUT(resource_schema)
+            self._validators["PATCH"][resource_name_plural] = ResourceObjectPATCH(resource_schema)
+            self._validators["DELETE"][resource_name_plural] = ResourceObjectDELETE()
+
+        self._request_schema = bulk_ops.BulkRequest()
+        self._response_schema = bulk_ops.BulkResponse()
+
+    def parse_request(self, *, body: Any = None, headers: Any = None, query_string: Any = None):
+        body, issues = self._request_schema.parse(body)
+        if not issues.can_proceed(_location(self._request_schema.attrs.operations.rep)):
+            return RequestData(headers=headers, query_string=query_string, body=body), issues
+
+        path_rep = self._request_schema.attrs.operations__path.rep
+        data_rep = self._request_schema.attrs.operations__data.rep
+        method_rep = self._request_schema.attrs.operations__method.rep
+        paths = body[path_rep]
+        data = body[data_rep]
+        methods = body[method_rep]
+        for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
+            path_location = (path_rep.attr, i, path_rep.sub_attr)
+            data_item_location = (data_rep.attr, i, data_rep.sub_attr)
+            if issues.can_proceed(
+                path_location,
+                data_item_location,
+                (method_rep.attr, i, method_rep.sub_attr),
+            ):
+                if method == "DELETE":
+                    continue
+
+                if method == "POST":
+                    resource_name = path.split("/", 1)[1]
+                else:
+                    resource_name = path.split("/", 2)[1]
+                validator = self._validators[method].get(resource_name)
+                if validator is None:
+                    issues.add(
+                        issue=ValidationError.unknown_resource(),
+                        proceed=False,
+                        location=path_location,
+                    )
+                    continue
+                resource_data, issues_ = validator.parse_request(body=data_item)
+                issues.merge(issues_.get(("body",)), location=data_item_location)
+                body[self._request_schema.attrs.operations.rep][i][
+                    data_rep.sub_attr
+                ] = resource_data.body
+
+        if issues.has_issues():
+            return RequestData(headers=headers, query_string=query_string, body=None), issues
+        return RequestData(headers=headers, query_string=query_string, body=body), issues
 
 
 def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:
