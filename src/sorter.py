@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Sequence, Tuple, Union
 
 from src.data import type as at
 from src.data.attributes import Attribute, ComplexAttribute
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.schemas import BaseSchema, ResourceSchema
 
@@ -50,18 +50,15 @@ class Sorter:
         return self._asc
 
     @classmethod
-    def parse(cls, by: str, asc: bool = True) -> Tuple[Optional["Sorter"], ValidationIssues]:
+    def parse(cls, by: str, asc: bool = True) -> Tuple[Union[Invalid, "Sorter"], ValidationIssues]:
         issues = ValidationIssues()
         attr_rep = AttrRep.parse(by)
-        if attr_rep is None:
+        if attr_rep is Invalid:
             issues.add(
                 issue=ValidationError.bad_attribute_name(by),
                 proceed=False,
             )
-
-        if not issues.can_proceed():
-            return None, issues
-
+            return Invalid, issues
         return (
             Sorter(attr_rep=attr_rep, asc=asc),
             issues,

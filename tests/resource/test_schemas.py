@@ -17,7 +17,7 @@ def test_lack_of_data_is_validated():
 
     data, issues = user.User().parse(None)
 
-    assert data is None
+    assert data is Invalid
     assert issues.to_dict() == expected_issues
 
 
@@ -815,7 +815,7 @@ def test_parse_add_operation__fails_if_attribute_is_readonly(op, path, value):
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": op, "path": PatchPath.parse(path)[0], "value": None}],
+        "Operations": [{"op": op, "path": PatchPath.parse(path)[0], "value": Invalid}],
     }
     expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 304}]}}}}
 

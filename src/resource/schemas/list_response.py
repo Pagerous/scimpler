@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 from src.data import type as type_
 from src.data.attributes import Attribute
@@ -45,7 +45,7 @@ class ListResponse(BaseSchema):
     def __repr__(self) -> str:
         return "ListResponse"
 
-    def dump(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().dump(data)
         if not issues.can_proceed():
             return data, issues

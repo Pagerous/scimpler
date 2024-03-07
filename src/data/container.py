@@ -50,10 +50,10 @@ class AttrRep:
         return True
 
     @classmethod
-    def parse(cls, attr_rep: str) -> Optional["AttrRep"]:
+    def parse(cls, attr_rep: str) -> Union["Invalid", "AttrRep"]:
         match = _ATTR_REP.fullmatch(attr_rep)
         if not match:
-            return None
+            return Invalid
 
         schema, attr = match.group(1), match.group(2)
         schema = schema[:-1] if schema else ""
@@ -237,7 +237,7 @@ class SCIMDataContainer:
     @staticmethod
     def _to_attr_rep(attr_rep):
         attr_rep = AttrRep.parse(attr_rep)
-        if attr_rep is None:
+        if attr_rep is Invalid:
             raise ValueError(f"bad attribute name {attr_rep!r}")
         return attr_rep
 

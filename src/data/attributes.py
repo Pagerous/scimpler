@@ -306,12 +306,12 @@ class ComplexAttribute(Attribute):
 
     def parse(
         self, value: Any
-    ) -> Tuple[Optional[Union[SCIMDataContainer, List[SCIMDataContainer]]], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, SCIMDataContainer, List[SCIMDataContainer]], ValidationIssues]:
         return self._process_complex(value, "parse", self._complex_parsers)
 
     def dump(
         self, value: Any
-    ) -> Tuple[Optional[Union[SCIMDataContainer, List[SCIMDataContainer]]], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, SCIMDataContainer, List[SCIMDataContainer]], ValidationIssues]:
         return self._process_complex(value, "dump", self._complex_dumpers)
 
 

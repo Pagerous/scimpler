@@ -3,7 +3,6 @@ import base64
 import binascii
 import typing as t
 from datetime import datetime
-from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 from ..error import ValidationError, ValidationIssues

@@ -2,13 +2,13 @@ from typing import Any, List, Optional, Tuple, Union
 
 from src.data import type as at
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.error import ValidationError, ValidationIssues
 from src.schemas import BaseSchema, ResourceSchema
 
 
-def parse_operation_type(op: str) -> Tuple[Optional[str], ValidationIssues]:
+def parse_operation_type(op: str) -> Tuple[Union[Invalid, str], ValidationIssues]:
     issues = ValidationIssues()
     allowed_ops = ["add", "remove", "replace"]
     if op not in allowed_ops:
@@ -16,7 +16,7 @@ def parse_operation_type(op: str) -> Tuple[Optional[str], ValidationIssues]:
             issue=ValidationError.must_be_one_of(allowed_ops, op),
             proceed=False,
         )
-        return None, issues
+        return Invalid, issues
     return op, issues
 
 
@@ -46,7 +46,7 @@ _operations_value = Attribute(
 
 def validate_operations(
     operations_data: List[SCIMDataContainer],
-) -> Tuple[Optional[List[SCIMDataContainer]], ValidationIssues]:
+) -> Tuple[List[SCIMDataContainer], ValidationIssues]:
     issues = ValidationIssues()
     for i, operation_data in enumerate(operations_data):
         type_ = operation_data[_operations_op.rep]
@@ -99,9 +99,9 @@ class PatchOp(BaseSchema):
     def __repr__(self) -> str:
         return "PatchOp"
 
-    def parse(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().parse(data)
-        if not issues.can_proceed((operations.rep.attr,)):
+        if not issues.can_proceed((self.attrs.operations.rep.attr,)):
             return data, issues
 
         parsed = []
@@ -111,6 +111,14 @@ class PatchOp(BaseSchema):
 
         for i, (op, path, value) in enumerate(zip(ops, paths, values)):
             if issues.has_issues((operations.rep.attr, i)):
+                parsed_op = SCIMDataContainer(
+                    {
+                        "op": op,
+                        "path": path,
+                        "value": value,
+                    }
+                )
+                parsed.append(parsed_op)
                 continue
 
             if op in ["add", "replace"]:
@@ -127,10 +135,10 @@ class PatchOp(BaseSchema):
 
     def _parse_remove_operation(
         self, path: PatchPath
-    ) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         issues = validate_operation_path(self._resource_schema, path)
         if issues:
-            return None, issues
+            return Invalid, issues
 
         attr = self._resource_schema.attrs.get(path.attr_rep)
         path_location = (self.attrs.operations__path.rep.sub_attr,)
@@ -172,13 +180,13 @@ class PatchOp(BaseSchema):
 
     def _parse_add_or_replace_operation(
         self, op: str, path: Union[PatchPath, None, Missing], value: Any
-    ) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         issues = ValidationIssues()
         if path not in [None, Missing]:
             issues_ = validate_operation_path(self._resource_schema, path)
             if issues_:
                 issues.merge(issues_, location=(self.attrs.operations__path.rep.sub_attr,))
-                return None, issues
+                return Invalid, issues
 
         value, issues_ = self._parse_operation_value(path, value)
         issues.merge(
@@ -228,14 +236,14 @@ class PatchOp(BaseSchema):
 
         attr = self._resource_schema.attrs.get(attr_rep)
         if attr is None:
-            return None, issues
+            return Invalid, issues
 
         if attr.mutability == AttributeMutability.READ_ONLY:
             issues.add(
                 issue=ValidationError.attribute_can_not_be_modified(),
                 proceed=False,
             )
-            return None, issues
+            return Invalid, issues
 
         parsed_attr_value, issues_ = attr.parse(attr_value)
         if issues_:

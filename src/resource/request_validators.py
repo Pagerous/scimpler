@@ -9,7 +9,7 @@ from src.data.attributes import (
     AttributeMutability,
     ComplexAttribute,
 )
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
@@ -156,7 +156,7 @@ def _parse_body(
     schema: BaseSchema,
     body: Any,
     required_attrs_to_ignore: Optional[Sequence[AttrRep]] = None,
-) -> Tuple[Optional[Dict], ValidationIssues]:
+) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
     issues = ValidationIssues()
     body_location = ("body",)
     body, issues_ = schema.parse(body)
@@ -347,7 +347,7 @@ class ResourceTypePOST:
         )
 
 
-def parse_request_sorting(query_string: Dict) -> Tuple[Optional[Sorter], ValidationIssues]:
+def parse_request_sorting(query_string: Dict) -> Tuple[Union[Invalid, Sorter], ValidationIssues]:
     issues = ValidationIssues()
 
     sort_by = query_string.get("sortBy")
@@ -357,7 +357,7 @@ def parse_request_sorting(query_string: Dict) -> Tuple[Optional[Sorter], Validat
                 issue=ValidationError.bad_type(get_scim_type(str), get_scim_type(type(sort_by))),
                 proceed=False,
             )
-        return None, issues
+        return Invalid, issues
 
     sort_order = query_string.get("sortOrder", "ascending")
     if sort_order not in ["ascending", "descending"]:
@@ -366,7 +366,7 @@ def parse_request_sorting(query_string: Dict) -> Tuple[Optional[Sorter], Validat
     return Sorter.parse(by=sort_by, asc=sort_order == "ascending")
 
 
-def parse_request_filtering(query_string: Dict) -> Tuple[Optional[Filter], ValidationIssues]:
+def parse_request_filtering(query_string: Dict) -> Tuple[Union[Invalid, Filter], ValidationIssues]:
     issues = ValidationIssues()
     filter_exp = query_string.get("filter")
     if not isinstance(filter_exp, str):
@@ -375,13 +375,13 @@ def parse_request_filtering(query_string: Dict) -> Tuple[Optional[Filter], Valid
                 issue=ValidationError.bad_type(get_scim_type(str), get_scim_type(type(filter_exp))),
                 proceed=False,
             )
-        return None, issues
+        return Invalid, issues
     return Filter.parse(filter_exp)
 
 
 def parse_requested_attributes(
     query_string: Dict[str, Any],
-) -> Tuple[Optional[AttributePresenceChecker], ValidationIssues]:
+) -> Tuple[Union[None, Invalid, AttributePresenceChecker], ValidationIssues]:
     issues = ValidationIssues()
     to_include = query_string.get("attributes", [])
     if to_include and isinstance(to_include, str):
@@ -390,9 +390,10 @@ def parse_requested_attributes(
     if to_exclude and isinstance(to_exclude, str):
         to_exclude = to_exclude.split(",")
 
-    if not (isinstance(to_include, List) and isinstance(to_exclude, List)) or not (
-        to_include or to_exclude
-    ):
+    if not (isinstance(to_include, List) and isinstance(to_exclude, List)):
+        return Invalid, issues
+
+    if not (to_include or to_exclude):
         return None, issues
 
     if to_include and to_exclude:
@@ -406,7 +407,7 @@ def parse_requested_attributes(
             proceed=False,
             location=("excludeAttributes",),
         )
-        return None, issues
+        return Invalid, issues
 
     attr_reps = to_include or to_exclude
     include = None if not any([to_include, to_exclude]) else bool(to_include)

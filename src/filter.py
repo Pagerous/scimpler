@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, TypeAlias, Union
 
 from src.data import operator as op
-from src.data.container import AttrRep, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.utils import (
     OP_REGEX,
@@ -82,7 +82,7 @@ class Filter:
         return self._operator
 
     @classmethod
-    def parse(cls, filter_exp: str) -> Tuple[Optional["Filter"], ValidationIssues]:
+    def parse(cls, filter_exp: str) -> Tuple[Union[Invalid, "Filter"], ValidationIssues]:
         issues = ValidationIssues()
 
         string_values = {}
@@ -133,7 +133,7 @@ class Filter:
                             proceed=False,
                         )
                     attr_rep = AttrRep.parse(complex_attr_rep)
-                    if attr_rep is None:
+                    if attr_rep is Invalid:
                         issues_.add(
                             issue=ValidationError.bad_attribute_name(complex_attr_rep),
                             proceed=False,
@@ -181,7 +181,7 @@ class Filter:
         if not issues.can_proceed():
             for parsed in parsed_complex_ops.values():
                 issues.merge(issues=parsed.issues)
-            return None, issues
+            return Invalid, issues
 
         if bracket_open_index and bracket_open_index not in parsed_complex_ops:
             issues.add(
@@ -192,7 +192,7 @@ class Filter:
         if not issues.can_proceed():
             for parsed in parsed_complex_ops.values():
                 issues.merge(issues=parsed.issues)
-            return None, issues
+            return Invalid, issues
 
         parsed_op, issues_ = Filter._parse_operator(
             op_exp=filter_exp,
@@ -201,7 +201,7 @@ class Filter:
         )
         issues.merge(issues=issues_)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         return cls(parsed_op), issues
 
     @staticmethod
@@ -209,7 +209,7 @@ class Filter:
         op_exp: str,
         string_values: Dict[int, str],
         parsed_complex_ops: Optional[Dict[int, _ParsedComplexAttributeOperator]] = None,
-    ) -> Tuple[Optional[_ParsedOperator], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, _ParsedOperator], ValidationIssues]:
         parsed_complex_ops = parsed_complex_ops or {}
         issues = ValidationIssues()
         ignore_processing = False
@@ -260,7 +260,7 @@ class Filter:
             issues.add(issue=ValidationError.empty_filter_expression(), proceed=False)
 
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
 
         parsed_op, issues_ = Filter._parsed_op_or_exp(
             or_exp=op_exp_preprocessed,
@@ -270,7 +270,7 @@ class Filter:
         )
         issues.merge(issues=issues_)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         return parsed_op, issues
 
     @staticmethod
@@ -279,7 +279,7 @@ class Filter:
         string_values: Dict[int, str],
         parsed_group_ops: Dict[int, _ParsedGroupOperator],
         parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
-    ) -> Tuple[Optional[_ParsedOperator], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, None, _ParsedOperator], ValidationIssues]:
         issues = ValidationIssues()
         or_operands, issues_ = Filter._split_exp_to_logical_operands(
             op_exp=or_exp,
@@ -307,7 +307,7 @@ class Filter:
             parsed_or_operands.append(parsed_or_operand)
 
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
 
         if len(parsed_or_operands) == 1:
             return parsed_or_operands[0], issues
@@ -319,7 +319,7 @@ class Filter:
         string_values: Dict[int, str],
         parsed_group_ops: Dict[int, _ParsedGroupOperator],
         parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
-    ) -> Tuple[Optional[_ParsedOperator], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, None, _ParsedOperator], ValidationIssues]:
         issues = ValidationIssues()
         and_operands, issues_ = Filter._split_exp_to_logical_operands(
             op_exp=and_exp,
@@ -375,7 +375,7 @@ class Filter:
             parsed_and_operands.append(parsed_and_operand)
 
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
 
         if len(parsed_and_operands) == 1:
             return parsed_and_operands[0], issues
@@ -456,7 +456,7 @@ class Filter:
         string_values: Dict[int, str],
         parsed_group_ops: Dict[int, _ParsedGroupOperator],
         parsed_complex_ops: Dict[int, _ParsedComplexAttributeOperator],
-    ) -> Tuple[Optional[_ParsedOperator], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, None, _ParsedOperator], ValidationIssues]:
         issues = ValidationIssues()
         attr_exp = attr_exp.strip()
         sub_or_complex = Filter._get_parsed_group_or_complex_op(
@@ -505,7 +505,7 @@ class Filter:
                         proceed=False,
                     )
             attr_rep = AttrRep.parse(components[0])
-            if attr_rep is None:
+            if attr_rep is Invalid:
                 issues.add(
                     issue=ValidationError.bad_attribute_name(
                         Filter._encode_placeholders(
@@ -518,7 +518,7 @@ class Filter:
                     proceed=False,
                 )
             if not issues.can_proceed():
-                return None, issues
+                return Invalid, issues
 
             if attr_rep.sub_attr:
                 operator = op.ComplexAttributeOperator(
@@ -551,7 +551,7 @@ class Filter:
                     proceed=False,
                 )
             attr_rep = AttrRep.parse(components[0])
-            if attr_rep is None:
+            if attr_rep is Invalid:
                 issues.add(
                     issue=ValidationError.bad_attribute_name(
                         Filter._encode_placeholders(
@@ -586,7 +586,7 @@ class Filter:
                 )
 
             if not issues.can_proceed():
-                return None, issues
+                return Invalid, issues
 
             if type(value) not in _ALLOWED_VALUE_TYPES_FOR_BINARY_OPERATORS[op_]:
                 issues.add(
@@ -595,7 +595,7 @@ class Filter:
                 )
 
             if not issues.can_proceed():
-                return None, issues
+                return Invalid, issues
 
             if attr_rep.sub_attr:
                 operator = op.ComplexAttributeOperator(
@@ -617,7 +617,7 @@ class Filter:
             ),
             proceed=False,
         )
-        return None, issues
+        return Invalid, issues
 
     @staticmethod
     def _get_parsed_group_or_complex_op(

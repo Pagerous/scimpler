@@ -1,6 +1,6 @@
 import pytest
 
-from src.data.container import AttrRep, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, SCIMDataContainer
 from src.resource.schemas.user import User
 from src.sorter import Sorter
 from tests.conftest import SchemaForTests
@@ -28,7 +28,7 @@ def test_sorter_parsing_fails_with_schema():
     expected = {"_errors": [{"code": 111}]}
     sorter, issues = Sorter.parse(by="bad.attr.name")
 
-    assert sorter is None
+    assert sorter is Invalid
     assert issues.to_dict() == expected
 
 

@@ -2,7 +2,7 @@ from typing import Optional
 
 import pytest
 
-from src.data.container import AttrRep
+from src.data.container import AttrRep, Invalid
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
 from src.filter import Filter
@@ -66,7 +66,7 @@ from src.filter import Filter
 def test_patch_path_parsing_failure(path, expected_issues):
     parsed, issues = PatchPath.parse(path)
 
-    assert parsed is None
+    assert parsed is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 

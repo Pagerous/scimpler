@@ -309,4 +309,4 @@ def test_attribute_identifier_is_parsed(
 def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
     attr_rep = AttrRep.parse(input_)
 
-    assert attr_rep is None
+    assert attr_rep is Invalid

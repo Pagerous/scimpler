@@ -1,6 +1,6 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 
-from src.data.container import AttrRep
+from src.data.container import AttrRep, Invalid
 from src.data.operator import ComplexAttributeOperator
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
@@ -50,7 +50,7 @@ class PatchPath:
         return self._complex_filter_attr_rep
 
     @classmethod
-    def parse(cls, path: str) -> Tuple[Optional["PatchPath"], ValidationIssues]:
+    def parse(cls, path: str) -> Tuple[Union[Invalid, "PatchPath"], ValidationIssues]:
         issues = ValidationIssues()
 
         string_values = {}
@@ -68,16 +68,16 @@ class PatchPath:
             or ("[" in path and "]" in path and path.index("[") > path.index("]"))
         ):
             issues.add(issue=ValidationError.bad_operation_path(), proceed=False)
-            return None, issues
+            return Invalid, issues
 
         if "[" in path and "]" in path:
             return cls._parse_complex_multivalued_path(path, string_values)
 
         path = cls._encode_string_values(path, string_values)
         attr_rep = AttrRep.parse(path)
-        if attr_rep is None:
+        if attr_rep is Invalid:
             issues.add(issue=ValidationError.bad_attribute_name(path), proceed=False)
-            return None, issues
+            return Invalid, issues
         return (
             PatchPath(attr_rep=attr_rep, complex_filter=None, complex_filter_attr_rep=None),
             issues,
@@ -86,11 +86,11 @@ class PatchPath:
     @classmethod
     def _parse_complex_multivalued_path(
         cls, path: str, string_values
-    ) -> Tuple[Optional["PatchPath"], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, "PatchPath"], ValidationIssues]:
         filter_exp = path[: path.index("]") + 1]
         filter_, issues = Filter.parse(cls._encode_string_values(filter_exp, string_values))
         if issues.has_issues():
-            return None, issues
+            return Invalid, issues
 
         value_sub_attr_rep = None
         value_sub_attr_rep_exp = path[path.index("]") + 1 :]
@@ -104,7 +104,7 @@ class PatchPath:
             )
 
         if issues.has_issues():
-            return None, issues
+            return Invalid, issues
         return (
             cls(
                 attr_rep=filter_.operator.attr_rep,
@@ -121,7 +121,7 @@ class PatchPath:
         sub_attr_rep_exp: str,
     ):
         sub_attr_rep = AttrRep.parse(sub_attr_rep_exp)
-        if sub_attr_rep is None:
+        if sub_attr_rep is Invalid:
             issues.add(issue=ValidationError.bad_attribute_name(sub_attr_rep_exp), proceed=False)
         elif sub_attr_rep.sub_attr:
             if attr_rep is not None and not attr_rep.top_level_equals(sub_attr_rep):

@@ -1,5 +1,6 @@
 import pytest
 
+from src.data.container import Invalid
 from src.filter import Filter
 
 
@@ -1096,7 +1097,7 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
 def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict() == expected_issues
 
 
@@ -1164,7 +1165,7 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
 def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict() == expected_issues
 
 
@@ -1654,7 +1655,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
 def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -1750,7 +1751,7 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
 def test_unknown_operator_causes_parsing_issues(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -1758,7 +1759,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
     expected_issues = {"_errors": [{"code": 109}]}
     filter_, issues = Filter.parse('emails[type eq work and phones[type eq "home"]]')
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict() == expected_issues
 
 
@@ -1897,7 +1898,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
 def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -1954,7 +1955,7 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
 def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -2003,7 +2004,7 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
 def test_lack_of_top_level_complex_attribute_name_is_discovered(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -2020,7 +2021,7 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
     expected_issues = {"_errors": [{"code": 109}]}
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict() == expected_issues
 
 
@@ -2058,7 +2059,7 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
 def test_no_expression_is_discovered(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict() == expected_issues
 
 
@@ -2220,7 +2221,7 @@ def test_operators_are_case_insensitive(filter_exp, expected_filter):
 def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -2332,7 +2333,7 @@ def test_binary_operator_non_compatible_comparison_values_are_discovered(
 ):
     filter_, issues = Filter.parse(filter_exp)
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict(ctx=True) == expected_issues
 
 
@@ -2341,7 +2342,7 @@ def test_complex_sub_attribute_is_discovered():
 
     filter_, issues = Filter.parse('attr.sub_attr[type eq "work"]')
 
-    assert filter_ is None
+    assert filter_ is Invalid
     assert issues.to_dict() == expected_issues
 
 

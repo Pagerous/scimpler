@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple, Union
 
 from src.data import type as at
 from src.data.attributes import (
@@ -23,7 +23,7 @@ def bulk_id_validator(value) -> Tuple[Any, ValidationIssues]:
             issue=ValidationError.reserved_keyword("bulkId"),
             proceed=False,
         )
-        return None, issues
+        return Invalid, issues
     return value, issues
 
 
@@ -210,21 +210,22 @@ class BaseSchema(abc.ABC):
     def __repr__(self) -> str:
         ...
 
-    def parse(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         return self._process(data, method="parse")
 
-    def dump(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         return self._process(data, method="dump")
 
     def _process(
         self, data: Any, method: str
-    ) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         issues = ValidationIssues()
         if data is None:
             issues.add(
                 issue=ValidationError.missing(),
                 proceed=False,
             )
+            data = Invalid
         elif not isinstance(data, (SCIMDataContainer, dict)):
             issues.add(
                 issue=ValidationError.bad_type(
@@ -380,7 +381,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
                     )
         self._attrs = Attributes(list(self._attrs) + bounded_attrs)
 
-    def dump(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
+    def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().dump(data)
         if not issues.can_proceed():
             return data, issues

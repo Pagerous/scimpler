@@ -1,19 +1,19 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 from src.attributes_presence import AttributePresenceChecker
 from src.data import type as type_
 from src.data.attributes import Attribute
-from src.data.container import AttrRep
+from src.data.container import AttrRep, Invalid, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
 from src.schemas import BaseSchema
 from src.sorter import Sorter
 
 
-def parse_attr_rep(value: str) -> Tuple[Optional[AttrRep], ValidationIssues]:
+def parse_attr_rep(value: str) -> Tuple[Union[Invalid, AttrRep], ValidationIssues]:
     issues = ValidationIssues()
     parsed = AttrRep.parse(value)
-    if parsed is None:
+    if parsed is Invalid:
         issues.add(
             issue=ValidationError.bad_attribute_name(str(value)),
             proceed=False,
@@ -110,7 +110,7 @@ class SearchRequest(BaseSchema):
     def __repr__(self) -> str:
         return "SearchRequest"
 
-    def parse(self, data: Any) -> Tuple[Optional[Dict[str, Any]], ValidationIssues]:
+    def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().parse(data)
         if not issues.can_proceed():
             return data, issues

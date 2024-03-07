@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Tuple, Union
 
 from src.data import type as type_
 from src.data.attributes import (
@@ -7,11 +7,12 @@ from src.data.attributes import (
     AttributeReturn,
     AttributeUniqueness,
 )
+from src.data.container import Invalid
 from src.error import ValidationError, ValidationIssues
 from src.schemas import BaseSchema
 
 
-def parse_error_status(value: str) -> Tuple[Optional[int], ValidationIssues]:
+def parse_error_status(value: str) -> Tuple[Union[Invalid, int], ValidationIssues]:
     issues = ValidationIssues()
     try:
         value = int(value)
@@ -20,7 +21,7 @@ def parse_error_status(value: str) -> Tuple[Optional[int], ValidationIssues]:
             issue=ValidationError.bad_error_status(value),
             proceed=False,
         )
-        return None, issues
+        return Invalid, issues
     if not 300 <= value < 600:
         issues.add(
             issue=ValidationError.bad_error_status(value),
@@ -29,7 +30,7 @@ def parse_error_status(value: str) -> Tuple[Optional[int], ValidationIssues]:
     return value, issues
 
 
-def validate_error_scim_type(value: str) -> Tuple[Optional[str], ValidationIssues]:
+def validate_error_scim_type(value: str) -> Tuple[Union[Invalid, str], ValidationIssues]:
     scim_types = [
         "invalidFilter",
         "tooMany",
@@ -48,7 +49,7 @@ def validate_error_scim_type(value: str) -> Tuple[Optional[str], ValidationIssue
             issue=ValidationError.must_be_one_of(scim_types, value),
             proceed=False,
         )
-        return None, issues
+        return Invalid, issues
     return value, issues
 
 

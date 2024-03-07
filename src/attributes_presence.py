@@ -1,4 +1,4 @@
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple, Union
 
 from src.data.attributes import Attribute, AttributeReturn, Attributes
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
@@ -27,7 +27,7 @@ class AttributePresenceChecker:
     @classmethod
     def parse(
         cls, attr_reps: Iterable[str], include: Optional[bool] = None
-    ) -> Tuple[Optional["AttributePresenceChecker"], ValidationIssues]:
+    ) -> Tuple[Union[Invalid, "AttributePresenceChecker"], ValidationIssues]:
         issues = ValidationIssues()
         parsed_attr_reps = []
         all_parsed = True
@@ -39,7 +39,7 @@ class AttributePresenceChecker:
                 )
             else:
                 attr_location = (attr_rep_,)
-            if attr_rep is None:
+            if attr_rep is Invalid:
                 issues.add(
                     issue=ValidationError.bad_attribute_name(attr_rep_),
                     location=attr_location,
@@ -53,7 +53,7 @@ class AttributePresenceChecker:
 
         if all_parsed:
             return AttributePresenceChecker(parsed_attr_reps, include), issues
-        return None, issues
+        return Invalid, issues
 
     def __call__(
         self,
