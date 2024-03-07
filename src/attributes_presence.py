@@ -1,7 +1,7 @@
 from typing import Any, Iterable, List, Optional, Tuple
 
 from src.data.attributes import Attribute, AttributeReturn, Attributes
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 
 
@@ -69,6 +69,9 @@ class AttributePresenceChecker:
 
             if attr.rep.sub_attr and top_attr.multi_valued:
                 value = data[top_attr_rep]
+                if value is Invalid:
+                    continue
+
                 if value in [None, Missing]:
                     issues.merge(
                         issues=self._check_presence(
@@ -81,6 +84,10 @@ class AttributePresenceChecker:
                     )
                 else:
                     for i, item in enumerate(value):
+                        item_value = item[AttrRep(attr=attr.rep.sub_attr)]
+                        if item_value is Invalid:
+                            continue
+
                         issues.merge(
                             issues=self._check_presence(
                                 value=item[AttrRep(attr=attr.rep.sub_attr)],
@@ -91,6 +98,10 @@ class AttributePresenceChecker:
                             location=(attr.rep.attr, i, attr.rep.sub_attr),
                         )
             else:
+                value = data[attr.rep]
+                if value is Invalid:
+                    continue
+
                 attr_location = (
                     (attr.rep.attr, attr.rep.sub_attr) if attr.rep.sub_attr else (attr.rep.attr,)
                 )

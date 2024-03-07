@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 from urllib.parse import urlparse
 
 from ..error import ValidationError, ValidationIssues
-from .container import SCIMDataContainer
+from .container import Invalid, SCIMDataContainer
 
 
 class AttributeType(abc.ABC):
@@ -27,7 +27,7 @@ class AttributeType(abc.ABC):
                 ),
                 proceed=False,
             )
-            value = None
+            value = Invalid
         return value, issues
 
     @classmethod
@@ -40,7 +40,7 @@ class AttributeType(abc.ABC):
                 ),
                 proceed=False,
             )
-            value = None
+            value = Invalid
         return value, issues
 
 
@@ -76,7 +76,7 @@ class Decimal(AttributeType):
     def parse(cls, value: t.Any) -> t.Tuple[t.Optional[float], ValidationIssues]:
         if isinstance(value, int):
             value, issues = Integer.parse(value)
-            if value is not None:
+            if value is not Invalid:
                 value = float(value)
             return value, issues
         return super().parse(value)
@@ -85,7 +85,7 @@ class Decimal(AttributeType):
     def dump(cls, value: t.Any) -> t.Tuple[t.Optional[float], ValidationIssues]:
         if isinstance(value, int):
             value, issues = Integer.dump(value)
-            if value is not None:
+            if value is not Invalid:
                 value = float(value)
             return value, issues
         return super().dump(value)
@@ -125,20 +125,20 @@ class Binary(String):
     def parse(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().parse(value)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         cls._validate_encoding(value, issues)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         return value, issues
 
     @classmethod
     def dump(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().dump(value)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         cls._validate_encoding(value, issues)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         return value, issues
 
     @classmethod
@@ -167,21 +167,21 @@ class ExternalReference(String):
     def parse(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().parse(value)
         if issues.can_proceed():
-            value, issues_ = validate_absolute_url(value)
+            issues_ = validate_absolute_url(value)
             issues.merge(issues=issues_)
         if issues.can_proceed():
             return value, issues
-        return None, issues
+        return Invalid, issues
 
     @classmethod
     def dump(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().dump(value)
         if issues.can_proceed():
-            value, issues_ = validate_absolute_url(value)
+            issues_ = validate_absolute_url(value)
             issues.merge(issues=issues_)
         if issues.can_proceed():
             return value, issues
-        return None, issues
+        return Invalid, issues
 
 
 class URIReference(String):
@@ -205,20 +205,21 @@ class DateTime(String):
     def parse(cls, value: t.Any) -> t.Tuple[t.Optional[datetime], ValidationIssues]:
         value, issues = super().parse(value)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         value = cls._parse_xsd_datetime(value)
         if value is None:
             issues.add(
                 issue=ValidationError.xsd_datetime_format_required(cls.SCIM_NAME),
                 proceed=False,
             )
+            return Invalid, issues
         return value, issues
 
     @classmethod
     def dump(cls, value: t.Any) -> t.Tuple[t.Optional[str], ValidationIssues]:
         value, issues = super().dump(value)
         if not issues.can_proceed():
-            return None, issues
+            return Invalid, issues
         return value.isoformat(), issues
 
     @staticmethod
@@ -250,7 +251,7 @@ def get_scim_type(type_: t.Type) -> str:
     return _TYPE_TO_SCIM_TYPE.get(type_, "unknown")
 
 
-def validate_absolute_url(value: str) -> Tuple[Optional[str], ValidationIssues]:
+def validate_absolute_url(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     try:
         result = urlparse(value)
@@ -260,11 +261,11 @@ def validate_absolute_url(value: str) -> Tuple[Optional[str], ValidationIssues]:
                 issue=ValidationError.bad_url(value),
                 proceed=False,
             )
-            return None, issues
+            return issues
     except ValueError:
         issues.add(
             issue=ValidationError.bad_url(value),
             proceed=False,
         )
-        return None, issues
-    return value, issues
+        return issues
+    return issues

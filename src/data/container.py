@@ -91,11 +91,22 @@ class AttrRep:
         return self.attr.lower() == other.attr.lower()
 
 
-class MissingType:
-    def __bool__(self):
+class InvalidType:
+    def __bool__(self) -> bool:
         return False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        return "Invalid"
+
+
+Invalid = InvalidType()
+
+
+class MissingType:
+    def __bool__(self) -> bool:
+        return False
+
+    def __repr__(self) -> str:
         return "Missing"
 
 

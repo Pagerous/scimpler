@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
 from src.filter import Filter
@@ -26,7 +26,7 @@ def test_bad_data_type_is_validated():
 
     data, issues = user.User().parse([])
 
-    assert data == []
+    assert data is Invalid
     assert issues.to_dict() == expected_issues
 
 
@@ -44,8 +44,8 @@ def test_user__parsing_fails_if_bad_types(user_data_parse):
     user_data_parse["userName"] = 123  # noqa
     user_data_parse["name"]["givenName"] = 123  # noqa
     expected_data = deepcopy(user_data_parse)
-    expected_data["userName"] = None
-    expected_data["name"]["givenName"] = None
+    expected_data["userName"] = Invalid
+    expected_data["name"]["givenName"] = Invalid
     expected_issues = {
         "userName": {
             "_errors": [
@@ -182,8 +182,8 @@ def test_list_response__dumping_resources_fails_if_bad_type(list_user_data, list
     schema = list_response.ListResponse(resource_schemas=[user.User()])
     list_user_data["Resources"][0]["userName"] = 123
     list_user_data["Resources"][1]["userName"] = 123
-    list_user_data_dumped["Resources"][0]["userName"] = None
-    list_user_data_dumped["Resources"][1]["userName"] = None
+    list_user_data_dumped["Resources"][0]["userName"] = Invalid
+    list_user_data_dumped["Resources"][1]["userName"] = Invalid
     expected_issues = {
         "Resources": {
             "0": {"userName": {"_errors": [{"code": 2}]}},
@@ -218,8 +218,8 @@ def test_dump_resources__resources_with_bad_type_are_reported(
     schema = list_response.ListResponse(resource_schemas=[user.User()])
     list_user_data["Resources"][0] = []
     list_user_data["Resources"][1]["userName"] = 123
-    list_user_data_dumped["Resources"][0] = None
-    list_user_data_dumped["Resources"][1]["userName"] = None
+    list_user_data_dumped["Resources"][0] = Invalid
+    list_user_data_dumped["Resources"][1]["userName"] = Invalid
     expected = {
         "Resources": {
             "0": {"_errors": [{"code": 2}]},
@@ -543,14 +543,14 @@ def test_parse_add_and_replace_operation_without_path__fails_for_incorrect_data(
                 "path": Missing,
                 "value": {
                     "name": {
-                        "formatted": None,
+                        "formatted": Invalid,
                     },
-                    "userName": None,
-                    "emails": [{"value": "bjensen@example.com", "type": None}],
+                    "userName": Invalid,
+                    "emails": [{"value": "bjensen@example.com", "type": Invalid}],
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-                        "department": None,
+                        "department": Invalid,
                         "manager": {
-                            "displayName": None,
+                            "displayName": Invalid,
                         },
                     },
                 },
@@ -621,49 +621,49 @@ def test_parse_add_and_replace_operation_without_path__fails_if_attribute_is_rea
         (
             "userName",
             123,
-            None,
+            Invalid,
             {"_errors": [{"code": 2}]},
         ),
         (
             "name.formatted",
             123,
-            None,
+            Invalid,
             {"_errors": [{"code": 2}]},
         ),
         (
             "name",
             {"formatted": 123, "familyName": 123},
-            {"formatted": None, "familyName": None},
+            {"formatted": Invalid, "familyName": Invalid},
             {"formatted": {"_errors": [{"code": 2}]}, "familyName": {"_errors": [{"code": 2}]}},
         ),
         (
             "name",
             123,
-            None,
+            Invalid,
             {"_errors": [{"code": 2}]},
         ),
         (
             "emails",
             123,
-            None,
+            Invalid,
             {"_errors": [{"code": 2}]},
         ),
         (
             "emails",
             [{"type": 123, "value": 123}],
-            [{"type": None, "value": None}],
+            [{"type": Invalid, "value": Invalid}],
             {"0": {"type": {"_errors": [{"code": 2}]}, "value": {"_errors": [{"code": 2}]}}},
         ),
         (
             "emails",
             {"type": "home", "value": "home@example.com"},
-            None,
+            Invalid,
             {"_errors": [{"code": 2}]},
         ),
         (
             'emails[type eq "work"].value',
             123,
-            None,
+            Invalid,
             {"_errors": [{"code": 2}]},
         ),
     ),

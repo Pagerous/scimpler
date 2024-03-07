@@ -2,7 +2,7 @@ import pytest
 
 from src.data import type as at
 from src.data.attributes import Attribute, ComplexAttribute
-from src.data.container import AttrRep, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, SCIMDataContainer
 
 
 def test_parsing_is_skipped_if_value_not_provided():
@@ -35,7 +35,7 @@ def test_multi_valued_attribute_parsing_fails_if_not_provided_list():
     )
 
     assert issues.to_dict() == {"_errors": [{"code": 2}]}
-    assert value is None
+    assert value is Invalid
 
 
 def test_multi_valued_attribute_dumping_fails_if_not_provided_list():
@@ -46,7 +46,7 @@ def test_multi_valued_attribute_dumping_fails_if_not_provided_list():
     )
 
     assert issues.to_dict() == {"_errors": [{"code": 2}]}
-    assert value is None
+    assert value is Invalid
 
 
 def test_multi_valued_attribute_parsing_succeeds_if_provided_list_or_tuple():
@@ -79,7 +79,7 @@ def test_multi_valued_attribute_values_are_parsed_separately():
     )
 
     assert issues.to_dict() == {"1": {"_errors": [{"code": 2}]}}
-    assert value == ["a", None]
+    assert value == ["a", Invalid]
 
 
 def test_multi_valued_attribute_values_are_dumped_separately():
@@ -90,7 +90,7 @@ def test_multi_valued_attribute_values_are_dumped_separately():
     )
 
     assert issues.to_dict() == {"1": {"_errors": [{"code": 2}]}}
-    assert value == ["a", None]
+    assert value == ["a", Invalid]
 
 
 def test_complex_attribute_sub_attributes_are_parsed_separately():
@@ -121,7 +121,7 @@ def test_complex_attribute_sub_attributes_are_parsed_separately():
     value, issues = attr.parse(value=SCIMDataContainer({"sub_attr_1": "123", "sub_attr_2": "123"}))
 
     assert issues.to_dict() == expected_issues
-    assert value.to_dict() == {"sub_attr_1": None, "sub_attr_2": None}
+    assert value.to_dict() == {"sub_attr_1": Invalid, "sub_attr_2": Invalid}
 
 
 def test_complex_attribute_sub_attributes_are_dumped_separately():
@@ -152,7 +152,7 @@ def test_complex_attribute_sub_attributes_are_dumped_separately():
     value, issues = attr.dump(value=SCIMDataContainer({"sub_attr_1": "123", "sub_attr_2": "123"}))
 
     assert issues.to_dict() == expected_issues
-    assert value.to_dict() == {"sub_attr_1": None, "sub_attr_2": None}
+    assert value.to_dict() == {"sub_attr_1": Invalid, "sub_attr_2": Invalid}
 
 
 def test_multivalued_complex_attribute_sub_attributes_are_parsed_separately():
@@ -201,8 +201,8 @@ def test_multivalued_complex_attribute_sub_attributes_are_parsed_separately():
 
     assert issues.to_dict() == expected_issues
     assert value == [
-        {"sub_attr_1": None, "sub_attr_2": None},
-        {"sub_attr_1": None, "sub_attr_2": 123},
+        {"sub_attr_1": Invalid, "sub_attr_2": Invalid},
+        {"sub_attr_1": Invalid, "sub_attr_2": 123},
     ]
 
 
@@ -252,8 +252,8 @@ def test_multivalued_complex_attribute_sub_attributes_are_dumped_separately():
 
     assert issues.to_dict() == expected_issues
     assert value == [
-        {"sub_attr_1": None, "sub_attr_2": None},
-        {"sub_attr_1": None, "sub_attr_2": 123},
+        {"sub_attr_1": Invalid, "sub_attr_2": Invalid},
+        {"sub_attr_1": Invalid, "sub_attr_2": 123},
     ]
 
 

@@ -1,11 +1,11 @@
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 from src.data import type as type_
 from src.data.attributes import Attribute
-from src.data.container import Missing, SCIMDataContainer
+from src.data.container import Invalid, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema, ResourceSchema, schemas
+from src.schemas import BaseSchema, ResourceSchema
 
 total_results = Attribute(
     name="totalResults",
@@ -83,7 +83,7 @@ class ListResponse(BaseSchema):
                     proceed=False,
                     location=(self.attrs.resources.rep.attr, i),
                 )
-                resource = None
+                resource = Invalid
             else:
                 resource, issues_ = schema.dump(resource)
                 issues.merge(issues_, location=(self.attrs.resources.rep.attr, i))

@@ -12,7 +12,7 @@ from typing import (
     Union,
 )
 
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.type import AttributeType, Complex, get_scim_type
 from src.error import ValidationError, ValidationIssues
 
@@ -167,7 +167,7 @@ class Attribute:
                     issue=ValidationError.bad_type(get_scim_type(list), get_scim_type(type(value))),
                     proceed=False,
                 )
-                return None, issues
+                return Invalid, issues
             parsed = []
             for i, item in enumerate(value):
                 item, issues_ = method(item)
@@ -187,7 +187,7 @@ class Attribute:
                     parsed, issues_ = postprocessor(parsed)
                     issues.merge(issues=issues_)
                 except:  # noqa: break on first failure
-                    parsed = None
+                    parsed = Invalid
                     break
         return parsed, issues
 
@@ -299,7 +299,7 @@ class ComplexAttribute(Attribute):
                     parsed, issues_ = postprocessor(parsed)
                     issues.merge(issues=issues_)
                 except Exception as e:  # noqa: break on first failure
-                    parsed = None
+                    parsed = Invalid
                     break
 
         return parsed, issues

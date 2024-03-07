@@ -11,7 +11,7 @@ from src.data.attributes import (
     AttributeUniqueness,
     ComplexAttribute,
 )
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 
@@ -232,6 +232,7 @@ class BaseSchema(abc.ABC):
                 ),
                 proceed=False,
             )
+            data = Invalid
 
         if issues:
             return data, issues
@@ -382,7 +383,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
     def dump(self, data: Any) -> Tuple[Optional[SCIMDataContainer], ValidationIssues]:
         data, issues = super().dump(data)
         if not issues.can_proceed():
-            return None, issues
+            return data, issues
 
         if issues.can_proceed(("meta", "resourceType")):
             resource_type = data[self.attrs.meta.attrs.resourcetype.rep]

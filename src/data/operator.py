@@ -17,7 +17,7 @@ from typing import (
 
 from src.data import type as at
 from src.data.attributes import Attribute, Attributes, ComplexAttribute
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 
 
 class MatchStatus(Enum):
@@ -234,7 +234,7 @@ class Present(AttributeOperator):
         elif isinstance(value, str):
             match = bool(value)
         else:
-            match = value is not None and value is not Missing
+            match = value not in [None, Missing, Invalid]
         return MatchResult.passed() if match else MatchResult.failed()
 
 
@@ -306,10 +306,12 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr is None:
             return MatchResult.failed_no_attr()
 
-        if value is None or value is Missing:
+        if value in [None, Missing]:
             if not strict:
                 return MatchResult.passed()
             return MatchResult.missing_data()
+        elif value is Invalid:
+            return MatchResult.failed()
 
         values = self._get_values_for_comparison(value, attr)
 

@@ -514,6 +514,21 @@ def test_correct_resource_type_post_request_passes_validation(user_data_parse):
     assert data.query_string["presence_checker"].include is True
 
 
+def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
+    user_data_parse,
+):
+    validator = ResourceTypePOST(user.User())
+    user_data_parse["userName"] = 123
+    expected_issues = {"body": {"userName": {"_errors": [{"code": 2}]}}}
+
+    data, issues = validator.parse_request(
+        body=user_data_parse,
+    )
+
+    assert issues.to_dict() == expected_issues
+    assert data.body is None
+
+
 def test_correct_resource_object_put_request_passes_validation(user_data_parse):
     validator = ResourceObjectPUT(user.User())
     user_data_parse["id"] = "anything"
