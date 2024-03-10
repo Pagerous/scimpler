@@ -200,9 +200,9 @@ class PatchOp(BaseSchema):
     ) -> Tuple[Any, ValidationIssues]:
         if path in [None, Missing]:
             value, issues = self._resource_schema.parse(value)
-            issues.drop(("schemas",), code=27)
-            issues.drop(("schemas",), code=28)
-            issues.drop(("schemas",), code=29)
+            issues.pop(("schemas",), code=27)
+            issues.pop(("schemas",), code=28)
+            issues.pop(("schemas",), code=29)
             for attr in self._resource_schema.attrs:
                 if (
                     value[attr.rep] is not Missing

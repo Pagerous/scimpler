@@ -183,12 +183,8 @@ class Attribute:
 
         if not issues.has_issues():
             for postprocessor in postprocessors:
-                try:
-                    parsed, issues_ = postprocessor(parsed)
-                    issues.merge(issues=issues_)
-                except:  # noqa: break on first failure
-                    parsed = Invalid
-                    break
+                parsed, issues_ = postprocessor(parsed)
+                issues.merge(issues=issues_)
         return parsed, issues
 
     def parse(self, value: Any) -> Tuple[Any, ValidationIssues]:
@@ -295,12 +291,8 @@ class ComplexAttribute(Attribute):
 
         if not issues:
             for postprocessor in postprocessors:
-                try:
-                    parsed, issues_ = postprocessor(parsed)
-                    issues.merge(issues=issues_)
-                except Exception as e:  # noqa: break on first failure
-                    parsed = Invalid
-                    break
+                parsed, issues_ = postprocessor(parsed)
+                issues.merge(issues=issues_)
 
         return parsed, issues
 

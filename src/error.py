@@ -4,6 +4,7 @@ from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Type, Unio
 
 class ValidationError:
     _message_for_code = {
+        1: "bad value syntax",
         2: "expected type '{expected}', got '{provided}' instead",
         3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
         4: "SCIM '{scim_type}' should be encoded as a valid xsd:dateTime",
@@ -62,6 +63,8 @@ class ValidationError:
         34: "resource type endpoint is required",
         35: "resource object endpoint is required",
         36: "unknown resource",
+        37: "too many operations (max {max})",
+        38: "too many errors (max {max})",
         100: "one of brackets is not opened / closed",
         102: "one of complex attribute brackets is not opened / closed",
         104: "missing operand for operator '{operator}' in expression '{expression}'",
@@ -86,6 +89,10 @@ class ValidationError:
         self._message = self._message_for_code[code].format(**context)
         self._context = context
         self._location: Optional[str] = None
+
+    @classmethod
+    def bad_value_syntax(cls):
+        return cls(code=1)
 
     @classmethod
     def bad_type(cls, expected: str, provided: str):
@@ -248,6 +255,14 @@ class ValidationError:
         return cls(code=36)
 
     @classmethod
+    def too_many_operations(cls, max_: int):
+        return cls(code=37, max=max_)
+
+    @classmethod
+    def too_many_errors(cls, max_: int):
+        return cls(code=38, max=max_)
+
+    @classmethod
     def bracket_not_opened_or_closed(cls):
         return cls(code=100)
 
@@ -372,25 +387,27 @@ class ValidationIssues:
         }
         return copy
 
-    def drop(self, *locations: Collection[Union[str, int]], code: int) -> None:
-        if not locations:
-            locations = [tuple()]
+    def pop(self, location: Collection[Union[str, int]], code: int) -> "ValidationIssues":
+        location = tuple(location)
 
-        for location in locations:
-            if location not in self._issues:
-                continue
+        if location not in self._issues:
+            return ValidationIssues()
 
-            for issue in self._issues[location]:
-                if issue.code == code:
-                    self._issues[location].remove(issue)
-                    if issue.code in self._stop_proceeding.get(location, set()):
-                        self._stop_proceeding[location].remove(issue.code)
+        popped = self.get(location)
 
-            if len(self._issues[location]) == 0:
-                self._issues.pop(location)
+        for issue in self._issues[location]:
+            if issue.code == code:
+                self._issues[location].remove(issue)
+                if issue.code in self._stop_proceeding.get(location, set()):
+                    self._stop_proceeding[location].remove(issue.code)
 
-            if location in self._stop_proceeding and len(self._stop_proceeding[location]) == 0:
-                self._stop_proceeding.pop(location)
+        if len(self._issues[location]) == 0:
+            self._issues.pop(location)
+
+        if location in self._stop_proceeding and len(self._stop_proceeding[location]) == 0:
+            self._stop_proceeding.pop(location)
+
+        return popped
 
     def can_proceed(self, *locations: Collection[Union[str, int]]) -> bool:
         if not locations:

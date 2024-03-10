@@ -956,7 +956,7 @@ def test_resource_object_delete_dumping_response_succeeds_if_status_204():
 
 
 def test_bulk_operations_request_is_parsed_if_correct_data():
-    validator = BulkOperations([user.User()])
+    validator = BulkOperations(4, [user.User()])
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "failOnErrors": 1,
@@ -1015,30 +1015,33 @@ def test_bulk_operations_request_is_parsed_if_correct_data():
 
 
 def test_bulk_operations_request_parsing_fails_for_bad_data():
-    validator = BulkOperations([user.User()])
+    validator = BulkOperations(2, [user.User()])
     expected_issues = {
-        "Operations": {
-            "0": {
-                "data": {
-                    "userName": {"_errors": [{"code": 15}]},
-                    "nickName": {"_errors": [{"code": 2}]},
-                }
-            },
-            "1": {
-                "data": {
-                    "schemas": {"_errors": [{"code": 15}]},
-                    "userName": {"_errors": [{"code": 2}]},
-                }
-            },
-            "2": {
-                "version": {"_errors": [{"code": 2}]},
-                "data": {
-                    "Operations": {
-                        "0": {"path": {"_errors": [{"code": 111}]}},
-                        "1": {"op": {"_errors": [{"code": 14}]}},
+        "body": {
+            "Operations": {
+                "_errors": [{"code": 37}],
+                "0": {
+                    "data": {
+                        "userName": {"_errors": [{"code": 15}]},
+                        "nickName": {"_errors": [{"code": 2}]},
                     }
                 },
-            },
+                "1": {
+                    "data": {
+                        "schemas": {"_errors": [{"code": 15}]},
+                        "userName": {"_errors": [{"code": 2}]},
+                    }
+                },
+                "2": {
+                    "version": {"_errors": [{"code": 2}]},
+                    "data": {
+                        "Operations": {
+                            "0": {"path": {"_errors": [{"code": 111}]}},
+                            "1": {"op": {"_errors": [{"code": 14}]}},
+                        }
+                    },
+                },
+            }
         }
     }
     data = {
@@ -1086,3 +1089,206 @@ def test_bulk_operations_request_parsing_fails_for_bad_data():
     data, issues = validator.parse_request(body=data)
 
     assert issues.to_dict() == expected_issues
+
+
+def test_bulk_operations_response_is_dumped_if_correct_data(user_data_dump):
+    validator = BulkOperations(4, [user.User()])
+
+    user_1 = deepcopy(user_data_dump)
+    user_1["id"] = "92b725cd-9465-4e7d-8c16-01f8e146b87a"
+    user_1["meta"]["location"] = "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a"
+    user_1["meta"]["version"] = 'W/"oY4m4wn58tkVjJxK"'
+
+    user_2 = deepcopy(user_data_dump)
+    user_2["id"] = "b7c14771-226c-4d05-8860-134711653041"
+    user_2["meta"]["location"] = "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041"
+    user_2["meta"]["version"] = 'W/"huJj29dMNgu3WXPD"'
+
+    user_3 = deepcopy(user_data_dump)
+    user_3["id"] = "5d8d29d3-342c-4b5f-8683-a3cb6763ffcc"
+    user_3["meta"]["location"] = "https://example.com/v2/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc"
+    user_3["meta"]["version"] = 'W/"huJj29dMNgu3WXPD"'
+
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "Operations": [
+            {
+                "location": "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a",
+                "method": "POST",
+                "bulkId": "qwerty",
+                "version": 'W/"oY4m4wn58tkVjJxK"',
+                "response": user_1,
+                "status": "201",
+            },
+            {
+                "location": "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041",
+                "method": "PUT",
+                "version": 'W/"huJj29dMNgu3WXPD"',
+                "response": user_2,
+                "status": "200",
+            },
+            {
+                "location": "https://example.com/v2/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
+                "method": "PATCH",
+                "version": 'W/"huJj29dMNgu3WXPD"',
+                "response": user_3,
+                "status": "200",
+            },
+            {
+                "location": "https://example.com/v2/Users/e9025315-6bea-44e1-899c-1e07454e468b",
+                "method": "DELETE",
+                "status": "204",
+            },
+        ],
+    }
+    expected_body: dict = deepcopy(data)
+    expected_body["Operations"][0]["response"]["meta"]["created"] = str(
+        expected_body["Operations"][0]["response"]["meta"]["created"].isoformat()
+    )
+    expected_body["Operations"][0]["response"]["meta"]["lastModified"] = str(
+        expected_body["Operations"][0]["response"]["meta"]["lastModified"].isoformat()
+    )
+    expected_body["Operations"][1]["response"]["meta"]["created"] = str(
+        expected_body["Operations"][1]["response"]["meta"]["created"].isoformat()
+    )
+    expected_body["Operations"][1]["response"]["meta"]["lastModified"] = str(
+        expected_body["Operations"][1]["response"]["meta"]["lastModified"].isoformat()
+    )
+    expected_body["Operations"][2]["response"]["meta"]["created"] = str(
+        expected_body["Operations"][2]["response"]["meta"]["created"].isoformat()
+    )
+    expected_body["Operations"][2]["response"]["meta"]["lastModified"] = str(
+        expected_body["Operations"][2]["response"]["meta"]["lastModified"].isoformat()
+    )
+
+    data, issues = validator.dump_response(body=data, status_code=200)
+
+    assert issues.to_dict(msg=True) == {}
+    assert data.body.to_dict() == expected_body
+
+
+def test_bulk_operations_response_dumping_fails_for_incorrect_data(user_data_dump):
+    validator = BulkOperations(4, [user.User()])
+
+    user_1 = deepcopy(user_data_dump)
+    user_1["id"] = "92b725cd-9465-4e7d-8c16-01f8e146b87a"
+    user_1["meta"]["location"] = "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a"
+    user_1["meta"]["version"] = 'W/"oY4m4wn58tkVjJxK"'
+    user_1["userName"] = 123
+    user_1.pop("id")
+
+    user_2 = deepcopy(user_data_dump)
+    user_2["id"] = "b7c14771-226c-4d05-8860-134711653041"
+    user_2["meta"]["location"] = "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041"
+    user_2["meta"]["version"] = 'W/"huJj29dMNgu3WXPD"'
+
+    expected_issues = {
+        "body": {
+            "Operations": {
+                "0": {
+                    "location": {"_errors": [{"code": 11}]},
+                    "response": {
+                        "id": {"_errors": [{"code": 15}]},
+                        "meta": {"location": {"_errors": [{"code": 11}]}},
+                        "userName": {"_errors": [{"code": 2}]},
+                    },
+                },
+                "1": {
+                    "version": {"_errors": [{"code": 11}]},
+                    "response": {"meta": {"version": {"_errors": [{"code": 11}]}}},
+                },
+                "2": {
+                    "method": {"_errors": [{"code": 14}]},
+                },
+                "3": {"location": {"_errors": [{"code": 36}]}},
+            }
+        }
+    }
+
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "Operations": [
+            {
+                "location": "https://example.com/v2/Users/82b725cd-9465-4e7d-8c16-01f8e146b87b",
+                "method": "POST",
+                "bulkId": "qwerty",
+                "version": 'W/"oY4m4wn58tkVjJxK"',
+                "response": user_1,
+                "status": "201",
+            },
+            {
+                "location": "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041",
+                "method": "PUT",
+                "version": 'W/"LuJj29dMNgu3WXPD"',
+                "response": user_2,
+                "status": "200",
+            },
+            {
+                "location": "https://example.com/v2/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
+                "method": "GO_TO_HELL",
+                "version": 'W/"huJj29dMNgu3WXPD"',
+                "status": "666",
+            },
+            {
+                "location": "https://example.com/v2/Unknown/e9025315-6bea-44e1-899c-1e07454e468b",
+                "method": "DELETE",
+                "status": "204",
+            },
+        ],
+    }
+    expected_body: dict = deepcopy(data)
+    expected_body["Operations"][0]["response"]["meta"]["created"] = str(
+        expected_body["Operations"][0]["response"]["meta"]["created"].isoformat()
+    )
+    expected_body["Operations"][0]["response"]["meta"]["lastModified"] = str(
+        expected_body["Operations"][0]["response"]["meta"]["lastModified"].isoformat()
+    )
+    expected_body["Operations"][1]["response"]["meta"]["created"] = str(
+        expected_body["Operations"][1]["response"]["meta"]["created"].isoformat()
+    )
+    expected_body["Operations"][1]["response"]["meta"]["lastModified"] = str(
+        expected_body["Operations"][1]["response"]["meta"]["lastModified"].isoformat()
+    )
+
+    data, issues = validator.dump_response(body=data, status_code=200, fail_on_errors=2)
+
+    assert issues.to_dict() == expected_issues
+    assert data.body is None
+
+
+def test_bulk_operations_response_dumping_fails_if_too_many_failed_operations(user_data_dump):
+    validator = BulkOperations(4, [user.User()])
+
+    expected_issues = {"body": {"Operations": {"_errors": [{"code": 38}]}}}
+
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "Operations": [
+            {
+                "method": "POST",
+                "bulkId": "qwerty",
+                "status": "400",
+                "response": {
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
+                    "scimType": "invalidSyntax",
+                    "detail": "Request is unparsable, syntactically incorrect, or violates schema.",
+                    "status": "400",
+                },
+            },
+            {
+                "location": "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041",
+                "method": "PUT",
+                "status": "412",
+                "response": {
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
+                    "detail": "Failed to update.  Resource changed on the server.",
+                    "status": "412",
+                },
+            },
+        ],
+    }
+
+    data, issues = validator.dump_response(body=data, status_code=200, fail_on_errors=1)
+
+    assert issues.to_dict() == expected_issues
+    assert data.body is None

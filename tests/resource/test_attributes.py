@@ -1,7 +1,7 @@
 import pytest
 
 from src.data.container import SCIMDataContainer
-from src.resource.schemas.bulk_ops import request_operations
+from src.resource.schemas.bulk_ops import request_operations, response_operations
 from src.resource.schemas.patch_op import operations
 
 
@@ -221,3 +221,119 @@ def test_parsing_bulk_request_delete_operation_succeeds():
     )
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_dumping_bulk_response_operation_fails_if_no_method():
+    expected_issues = {"0": {"method": {"_errors": [{"code": 15}]}}}
+
+    parsed, issues = response_operations.dump([SCIMDataContainer({"status": "200"})])
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_dumping_bulk_response_operation_fails_if_unknown_method():
+    expected_issues = {"0": {"method": {"_errors": [{"code": 14}]}}}
+
+    parsed, issues = response_operations.dump(
+        [
+            SCIMDataContainer(
+                {
+                    "method": "TERMINATE",
+                    "status": "200",
+                    "location": "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041",
+                }
+            )
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_dumping_bulk_response_operation_fails_if_no_bulk_id_for_post():
+    expected_issues = {"0": {"bulkId": {"_errors": [{"code": 15}]}}}
+
+    parsed, issues = response_operations.dump(
+        [
+            SCIMDataContainer(
+                {
+                    "method": "POST",
+                    "status": "200",
+                    "location": "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041",
+                }
+            )
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_dumping_bulk_response_operation_fails_if_no_status():
+    expected_issues = {"0": {"status": {"_errors": [{"code": 15}]}}}
+
+    parsed, issues = response_operations.dump(
+        [
+            SCIMDataContainer(
+                {
+                    "method": "POST",
+                    "bulkId": "qwerty",
+                    "location": "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041",
+                }
+            )
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_dumping_bulk_response_operation_fails_if_no_location_for_normal_completion():
+    expected_issues = {"0": {"location": {"_errors": [{"code": 15}]}}}
+
+    parsed, issues = response_operations.dump(
+        [SCIMDataContainer({"method": "POST", "bulkId": "qwerty", "status": "200"})]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_dumping_bulk_response_operation_succeeds_if_no_location_for_post_failure():
+    parsed, issues = response_operations.dump(
+        [
+            SCIMDataContainer(
+                {
+                    "method": "POST",
+                    "bulkId": "qwerty",
+                    "status": "400",
+                    "response": {
+                        "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
+                        "scimType": "invalidSyntax",
+                        "detail": (
+                            "Request is unparsable, syntactically incorrect, or violates schema."
+                        ),
+                        "status": "401",
+                    },
+                }
+            )
+        ]
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_dumping_bulk_response_operation_fails_if_no_response_for_failed_operation():
+    expected_issues = {"0": {"response": {"_errors": [{"code": 15}]}}}
+
+    parsed, issues = response_operations.dump(
+        [SCIMDataContainer({"method": "POST", "bulkId": "qwerty", "status": "401"})]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_dumping_bulk_response_operation_fails_if_bad_status_syntax():
+    expected_issues = {"0": {"status": {"_errors": [{"code": 1}]}}}
+
+    parsed, issues = response_operations.dump(
+        [SCIMDataContainer({"method": "POST", "bulkId": "qwerty", "status": "abc"})]
+    )
+
+    assert issues.to_dict() == expected_issues

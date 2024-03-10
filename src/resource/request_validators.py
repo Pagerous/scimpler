@@ -76,10 +76,9 @@ class Error:
             )
         issues.merge(validate_error_status_code(status_code))
 
-        if issues:
-            body = None
+        body = body.to_dict() if not issues else None
 
-        return ResponseData(headers=headers, body=body.to_dict()), issues
+        return ResponseData(headers=headers, body=body), issues
 
 
 def validate_error_status_code_consistency(
@@ -925,7 +924,8 @@ class ResourceObjectDELETE:
 
 
 class BulkOperations:
-    def __init__(self, resource_schemas: Sequence[ResourceSchema]):
+    def __init__(self, max_operations: int, resource_schemas: Sequence[ResourceSchema]):
+        self._max_operations = max_operations
         self._validators = {
             "GET": {},
             "POST": {},
@@ -947,9 +947,18 @@ class BulkOperations:
         self._response_schema = bulk_ops.BulkResponse()
 
     def parse_request(self, *, body: Any = None, headers: Any = None, query_string: Any = None):
-        body, issues = self._request_schema.parse(body)
-        if not issues.can_proceed(_location(self._request_schema.attrs.operations.rep)):
-            return RequestData(headers=headers, query_string=query_string, body=body), issues
+        issues = ValidationIssues()
+        body_location = ("body",)
+        body, issues_ = self._request_schema.parse(body)
+        issues.merge(issues_, location=body_location)
+        issues.merge(
+            issues=AttributePresenceChecker()(body, self._request_schema.attrs, "RESPONSE"),
+            location=body_location,
+        )
+        if not issues_.can_proceed(
+            body_location + _location(self._request_schema.attrs.operations.rep)
+        ):
+            return RequestData(headers=headers, query_string=query_string, body=None), issues
 
         path_rep = self._request_schema.attrs.operations__path.rep
         data_rep = self._request_schema.attrs.operations__data.rep
@@ -958,8 +967,8 @@ class BulkOperations:
         data = body[data_rep]
         methods = body[method_rep]
         for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
-            path_location = (path_rep.attr, i, path_rep.sub_attr)
-            data_item_location = (data_rep.attr, i, data_rep.sub_attr)
+            path_location = body_location + (path_rep.attr, i, path_rep.sub_attr)
+            data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)
             if issues.can_proceed(
                 path_location,
                 data_item_location,
@@ -986,9 +995,152 @@ class BulkOperations:
                     data_rep.sub_attr
                 ] = resource_data.body
 
+        if len(body[self._request_schema.attrs.operations.rep]) > self._max_operations:
+            issues.add(
+                issue=ValidationError.too_many_operations(self._max_operations),
+                proceed=True,
+                location=body_location + _location(self._response_schema.attrs.operations.rep),
+            )
+
         if issues.has_issues():
             return RequestData(headers=headers, query_string=query_string, body=None), issues
         return RequestData(headers=headers, query_string=query_string, body=body), issues
+
+    def dump_response(
+        self,
+        *,
+        status_code: int,
+        body: Any = None,
+        headers: Any = None,
+        fail_on_errors: Optional[int] = None,
+    ):
+        issues = ValidationIssues()
+        body_location = ("body",)
+        body, issues_ = self._response_schema.dump(body)
+        issues.merge(issues_, location=body_location)
+        issues.merge(
+            issues=AttributePresenceChecker()(body, self._response_schema.attrs, "RESPONSE"),
+            location=body_location,
+        )
+        issues.merge(
+            issues=validate_status_code(200, status_code),
+            location=("status",),
+        )
+        if not issues.can_proceed(
+            body_location + _location(self._response_schema.attrs.operations.rep)
+        ):
+            return ResponseData(headers=headers, body=None), issues
+
+        operations_location = body_location + _location(self._response_schema.attrs.operations.rep)
+        status_rep = self._response_schema.attrs.operations__status.rep
+        response_rep = self._response_schema.attrs.operations__response.rep
+        location_rep = self._response_schema.attrs.operations__location.rep
+        method_rep = self._request_schema.attrs.operations__method.rep
+        version_rep = self._response_schema.attrs.operations__version.rep
+        statuses = body[status_rep]
+        responses = body[response_rep]
+        locations = body[location_rep]
+        methods = body[method_rep]
+        versions = body[version_rep]
+        error_validator = Error()
+        n_errors = 0
+        for i, (method, status, response, location, version) in enumerate(
+            zip(methods, statuses, responses, locations, versions)
+        ):
+            if not method:
+                continue
+
+            response_location = operations_location + (i, response_rep.sub_attr)
+            status_location = operations_location + (i, status_rep.sub_attr)
+            location_location = operations_location + (i, location_rep.sub_attr)
+            version_location = operations_location + (i, version_rep.sub_attr)
+
+            resource_validator = None
+            if location:
+                for resource_plural_name, resource_validator in self._validators[method].items():
+                    if f"/{resource_plural_name}/" in location:
+                        resource_validator = resource_validator
+                        break
+                else:
+                    issues.add(
+                        issue=ValidationError.unknown_resource(),
+                        proceed=False,
+                        location=location_location,
+                    )
+
+            if not (status and response):
+                continue
+
+            status = int(status)
+            if status >= 300:
+                n_errors += 1
+                error_response, issues_ = error_validator.dump_response(
+                    status_code=status,
+                    body=response,
+                )
+                issues.merge(
+                    issues=issues_.get(("body",)),
+                    location=response_location,
+                )
+                issues.merge(
+                    issues=issues_.get(("status",)),
+                    location=status_location,
+                )
+                body[self._request_schema.attrs.operations.rep][i][
+                    response_rep.sub_attr
+                ] = error_response.body
+            elif all([location, method, resource_validator]):
+                resource_data, issues_ = resource_validator.dump_response(
+                    body=response,
+                    status_code=status,
+                    headers={"Location": location},
+                )
+                meta_location_missmatch = issues_.pop(("body", "meta", "location"), code=11)
+                header_location_mismatch = issues_.pop(("headers", "Location"), code=11)
+                issues.merge(issues_.get(("body",)), location=response_location)
+                if meta_location_missmatch and header_location_mismatch:
+                    issues.add(
+                        issue=ValidationError.must_be_equal_to("operation's location"),
+                        proceed=True,
+                        location=response_location + ("meta", "location"),
+                    )
+                    issues.add(
+                        issue=ValidationError.must_be_equal_to("'response.meta.location'"),
+                        proceed=True,
+                        location=location_location,
+                    )
+
+                if resource_data.body is not None:
+                    resource_body = SCIMDataContainer(resource_data.body)
+                    resource_version = resource_body["meta.version"]
+                    if version and resource_version and version != resource_version:
+                        issues.add(
+                            issue=ValidationError.must_be_equal_to("operation's version"),
+                            proceed=True,
+                            location=response_location + ("meta", "version"),
+                        )
+                        issues.add(
+                            issue=ValidationError.must_be_equal_to("'response.meta.version'"),
+                            proceed=True,
+                            location=version_location,
+                        )
+                else:
+                    resource_body = None
+
+                body[self._request_schema.attrs.operations.rep][i][
+                    response_rep.sub_attr
+                ] = resource_body
+
+        if fail_on_errors is not None and n_errors > fail_on_errors:
+            issues.add(
+                issue=ValidationError.too_many_errors(fail_on_errors),
+                proceed=True,
+                location=body_location + _location(self._response_schema.attrs.operations.rep),
+            )
+
+        if issues.has_issues():
+            return ResponseData(headers=headers, body=None), issues
+        return ResponseData(headers=headers, body=body), issues
 
 
 def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:
