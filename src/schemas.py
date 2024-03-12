@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, Iterable, List, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 from src.data import type as at
 from src.data.attributes import (
@@ -331,19 +331,27 @@ def validate_resource_type_consistency(
 
 
 class ResourceSchema(BaseSchema, abc.ABC):
-    def __init__(self, schema: str, attrs: Iterable[Attribute], name: str, plural_name: str):
+    def __init__(
+        self,
+        schema: str,
+        attrs: Iterable[Attribute],
+        name: str,
+        plural_name: Optional[str] = None,
+        attr_overrides: Optional[Dict[str, Attribute]] = None,
+    ):
+        attr_overrides = attr_overrides or {}
         super().__init__(
             schema=schema,
             attrs=[
-                id_,
-                external_id,
-                meta,
+                attr_overrides.get("id") or id_,
+                attr_overrides.get("externalId") or external_id,
+                attr_overrides.get("meta") or meta,
                 *attrs,
             ],
         )
         self._schema_extensions: Dict[str, bool] = {}
         self._name = name
-        self._plural_name = plural_name
+        self._plural_name = plural_name or name
 
     @property
     def name(self) -> str:
