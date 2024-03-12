@@ -20,7 +20,7 @@ from tests.conftest import SchemaForTests
 def test_sorter_is_parsed(sort_by):
     sorter, issues = Sorter.parse(by=sort_by)
 
-    assert not issues
+    assert issues.to_dict(msg=True) == {}
     assert sorter is not None
 
 

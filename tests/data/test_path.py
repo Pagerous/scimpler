@@ -115,7 +115,7 @@ def test_patch_path_parsing_success(
 ):
     parsed, issues = PatchPath.parse(path)
 
-    assert not issues
+    assert issues.to_dict(msg=True) == {}
     assert parsed.attr_rep == expected_attr_rep
     if expected_multivalued_filter is not None:
         assert isinstance(parsed.complex_filter, type(expected_multivalued_filter))
@@ -215,5 +215,5 @@ def test_patch_path_object_construction_fails_if_broken_constraints(kwargs):
 def test_complex_filter_string_values_can_contain_anything(path, expected_filter_value):
     parsed, issues = PatchPath.parse(path)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert parsed.complex_filter.operator.sub_operator.value == expected_filter_value

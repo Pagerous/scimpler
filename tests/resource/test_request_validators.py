@@ -130,7 +130,7 @@ def test_validate_resource_location_consistency__succeeds_if_consistency(user_da
         user_data_dump["meta"]["location"],
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 @pytest.mark.parametrize(
@@ -192,7 +192,7 @@ def test_validate_number_of_resources__succeeds_if_correct_number_of_resources(
         resources=[SCIMDataContainer(r) for r in list_user_data["Resources"]],
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 def test_validate_pagination_info__fails_if_start_index_is_missing_when_pagination(list_user_data):
@@ -241,7 +241,7 @@ def test_validate_pagination_info__correct_data_when_pagination(list_user_data):
         items_per_page=1,
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 def test_validate_start_index_consistency__fails_if_start_index_bigger_than_requested():
@@ -255,7 +255,7 @@ def test_validate_start_index_consistency__fails_if_start_index_bigger_than_requ
 def test_validate_start_index_consistency__succeeds_if_correct_data():
     issues = validate_start_index_consistency(start_index=1, start_index_body=1)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 @pytest.mark.parametrize(
@@ -465,7 +465,7 @@ def test_correct_error_response_passes_validation(error_data):
 
     data, issues = validator.dump_response(status_code=400, body=error_data)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is not None
 
 
@@ -476,7 +476,7 @@ def test_correct_resource_object_get_request_passes_validation():
         body=None, headers=None, query_string={"attributes": "name.familyName"}
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is None
     assert data.headers is None
     assert data.query_string["presence_checker"].attr_reps == [
@@ -496,7 +496,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_dump):
         presence_checker=AttributePresenceChecker(attr_reps=[AttrRep(attr="name")], include=False),
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is not None
     assert data.headers is not None
 
@@ -509,7 +509,7 @@ def test_correct_resource_type_post_request_passes_validation(user_data_parse):
         query_string={"attributes": "name.familyName"},
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is not None
     assert data.query_string["presence_checker"].attr_reps == [
         AttrRep(attr="name", sub_attr="familyName")
@@ -541,7 +541,7 @@ def test_correct_resource_object_put_request_passes_validation(user_data_parse):
         query_string={"attributes": "name.familyName"},
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is not None
     assert data.query_string["presence_checker"].attr_reps == [
         AttrRep(attr="name", sub_attr="familyName")
@@ -573,7 +573,7 @@ def test_resource_object_put_request__not_required_read_only_fields_are_ignored(
 
     data, issues = validator.parse_request(body=user_data_parse)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert "meta" not in data.body.to_dict()
 
 
@@ -586,7 +586,7 @@ def test_correct_resource_object_put_response_passes_validation(user_data_dump):
         headers={"Location": user_data_dump["meta"]["location"]},
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is not None
     assert data.headers is not None
 
@@ -600,7 +600,7 @@ def test_correct_resource_type_post_response_passes_validation(user_data_dump):
         headers={"Location": user_data_dump["meta"]["location"]},
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is not None
     assert data.headers is not None
 
@@ -627,7 +627,7 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
         presence_checker=AttributePresenceChecker(attr_reps=[AttrRep(attr="name")], include=False),
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is not None
 
 
@@ -706,7 +706,7 @@ def test_correct_search_request_passes_validation():
         }
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body["presence_checker"].attr_reps == [
         AttrRep(attr="userName"),
         AttrRep(attr="name"),
@@ -875,7 +875,7 @@ def test_remove_operations_are_parsed():
         }
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body == expected_body
 
 
@@ -903,7 +903,7 @@ def test_resource_object_patch_dumping_response_succeeds_if_204_and_no_attribute
         presence_checker=None,
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.body is None
 
 

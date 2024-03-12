@@ -289,7 +289,7 @@ class ComplexAttribute(Attribute):
                 )
                 parsed[sub_attr.rep] = parsed_attr
 
-        if not issues:
+        if not issues.has_issues():
             for postprocessor in postprocessors:
                 parsed, issues_ = postprocessor(parsed)
                 issues.merge(issues=issues_)

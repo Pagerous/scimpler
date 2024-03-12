@@ -460,6 +460,3 @@ class ValidationIssues:
                             current_level[part]["_errors"].append(item)  # noqa
                     current_level = current_level[part]
         return output
-
-    def __bool__(self) -> bool:
-        return bool(len(self._issues))

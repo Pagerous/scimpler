@@ -46,7 +46,7 @@ def test_restricted_attributes_can_be_sent_with_request(user_data_parse):
 
     issues = checker(SCIMDataContainer(user_data_parse), User().attrs, "REQUEST")
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
@@ -221,7 +221,7 @@ def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
 
     issues = checker(data, User().attrs, "RESPONSE")
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exclusion():

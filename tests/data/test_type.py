@@ -445,7 +445,7 @@ def test_parse_valid(input_value, type_, expected):
     actual, issues = type_.parse(input_value)
 
     assert actual == expected
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 @pytest.mark.parametrize(
@@ -509,4 +509,4 @@ def test_dump_valid(input_value, type_, expected):
     actual, issues = type_.dump(input_value)
 
     assert actual == expected
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}

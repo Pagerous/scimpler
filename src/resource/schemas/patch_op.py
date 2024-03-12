@@ -137,7 +137,7 @@ class PatchOp(BaseSchema):
         self, path: PatchPath
     ) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         issues = validate_operation_path(self._resource_schema, path)
-        if issues:
+        if issues.has_issues():
             return Invalid, issues
 
         attr = self._resource_schema.attrs.get(path.attr_rep)
@@ -184,7 +184,7 @@ class PatchOp(BaseSchema):
         issues = ValidationIssues()
         if path not in [None, Missing]:
             issues_ = validate_operation_path(self._resource_schema, path)
-            if issues_:
+            if issues_.has_issues():
                 issues.merge(issues_, location=(self.attrs.operations__path.rep.sub_attr,))
                 return Invalid, issues
 
@@ -246,7 +246,7 @@ class PatchOp(BaseSchema):
             return Invalid, issues
 
         parsed_attr_value, issues_ = attr.parse(attr_value)
-        if issues_:
+        if issues_.has_issues():
             issues.merge(issues_)
 
         elif isinstance(attr, ComplexAttribute) and not attr.multi_valued:

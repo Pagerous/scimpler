@@ -76,7 +76,7 @@ class Error:
             )
         issues.merge(validate_error_status_code(status_code))
 
-        body = body.to_dict() if not issues else None
+        body = body.to_dict() if not issues.has_issues() else None
 
         return ResponseData(headers=headers, body=body), issues
 
@@ -221,7 +221,7 @@ def _dump_resource_output_body(
             ),
         )
 
-    body = body.to_dict() if not issues else None
+    body = body.to_dict() if not issues.has_issues() else None
     return ResponseData(headers=headers, body=body), issues
 
 
@@ -236,7 +236,7 @@ class ResourceObjectGET:
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_:
+            if not issues_.has_issues():
                 query_string["presence_checker"] = checker
         return RequestData(body=body, headers=headers, query_string=query_string), issues
 
@@ -270,13 +270,13 @@ class ResourceObjectPUT:
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_:
+            if not issues_.has_issues():
                 query_string["presence_checker"] = checker
 
         body, issues_ = _parse_body(schema=self._schema, body=body)
         issues.merge(issues=issues_)
 
-        if issues:
+        if issues.has_issues():
             body = None
         else:
             for attr in self._schema.attrs:
@@ -315,7 +315,7 @@ class ResourceTypePOST:
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_:
+            if not issues_.has_issues():
                 query_string["presence_checker"] = checker
 
         required_to_ignore = []
@@ -325,7 +325,7 @@ class ResourceTypePOST:
 
         body, issues_ = _parse_body(self._schema, body, required_to_ignore)
         issues.merge(issues=issues_)
-        if issues:
+        if issues.has_issues():
             body = None
         return RequestData(body=body, headers=headers, query_string=query_string), issues
 
@@ -557,7 +557,7 @@ def _parse_resources_get_request(
             location=query_string_location,
         )
 
-    if issues:
+    if issues.has_issues():
         return RequestData(headers=headers, query_string=query_string, body=body), issues
 
     filter_, issues_ = parse_request_filtering(query_string)
@@ -575,7 +575,7 @@ def _parse_resources_get_request(
     )
 
     checker, issues_ = parse_requested_attributes(query_string)
-    if not issues_:
+    if not issues_.has_issues():
         query_string["presence_checker"] = checker
     issues.merge(
         issues=issues_,
@@ -708,7 +708,7 @@ def _dump_resources_get_response(
         location=resources_location,
     )
 
-    if issues:
+    if issues.has_issues():
         return ResponseData(headers=headers, body=None), issues
 
     return ResponseData(headers=headers, body=body.to_dict()), issues
@@ -764,7 +764,7 @@ class SearchRequestPOST:
         issues = ValidationIssues()
         body, issues_ = self._schema.parse(body)
         issues.merge(issues_, location=("body",))
-        if issues_:
+        if issues_.has_issues():
             body = None
         return RequestData(headers=headers, query_string=query_string, body=body), issues
 
@@ -806,7 +806,7 @@ class ResourceObjectPATCH:
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_:
+            if not issues_.has_issues():
                 query_string["presence_checker"] = checker
 
         body, issues_ = _parse_body(self._schema, body)
@@ -846,7 +846,7 @@ class ResourceObjectPATCH:
                     value_location=value_location,
                 )
 
-        if issues:
+        if issues.has_issues():
             body = None
         return RequestData(body=body, headers=headers, query_string=query_string), issues
 
@@ -1098,7 +1098,7 @@ class BulkOperations:
                 meta_location_missmatch = issues_.pop(("body", "meta", "location"), code=11)
                 header_location_mismatch = issues_.pop(("headers", "Location"), code=11)
                 issues.merge(issues_.get(("body",)), location=response_location)
-                if meta_location_missmatch and header_location_mismatch:
+                if meta_location_missmatch.has_issues() and header_location_mismatch.has_issues():
                     issues.add(
                         issue=ValidationError.must_be_equal_to("operation's location"),
                         proceed=True,

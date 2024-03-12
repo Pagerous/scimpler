@@ -12,7 +12,7 @@ def test_parsing_is_skipped_if_value_not_provided():
         value=None,
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert value is None
 
 
@@ -23,7 +23,7 @@ def test_dumping_is_skipped_if_value_not_provided():
         value=None,
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert value is None
 
 
@@ -56,7 +56,7 @@ def test_multi_valued_attribute_parsing_succeeds_if_provided_list_or_tuple():
         value=["a", "b", "c"],
     )
 
-    assert not issues
+    assert issues.to_dict(msg=True) == {}
     assert value == ["a", "b", "c"]
 
 
@@ -67,7 +67,7 @@ def test_multi_valued_attribute_dumping_succeeds_if_provided_list_or_tuple():
         value=["a", "b", "c"],
     )
 
-    assert not issues
+    assert issues.to_dict(msg=True) == {}
     assert value == ["a", "b", "c"]
 
 

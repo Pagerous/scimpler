@@ -36,7 +36,7 @@ def test_user__correct_user_data_can_be_parsed(user_data_parse):
 
     data, issues = user.User().parse(user_data_parse)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.to_dict() == expected_data
 
 
@@ -152,7 +152,7 @@ def test_validate_resource_type_consistency__fails_if_no_consistency():
 def test_validate_resource_type_consistency__succeeds_if_consistency(user_data_dump):
     issues = validate_resource_type_consistency("User", "User")
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):
@@ -175,7 +175,7 @@ def test_validate_items_per_page_consistency__succeeds_if_correct_data(list_user
         items_per_page_=2,
     )
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
 
 
 def test_list_response__dumping_resources_fails_if_bad_type(list_user_data, list_user_data_dumped):
@@ -208,7 +208,7 @@ def test_list_response__dumping_resources_succeeds_for_correct_data(
 
     data, issues = schema.dump(list_user_data)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert data.to_dict() == list_user_data_dumped
 
 
@@ -507,7 +507,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_parsed(op):
 
     actual_data, issues = schema.parse(input_data)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert actual_data.to_dict() == expected_data
 
 
@@ -775,7 +775,7 @@ def test_parse_add_and_replace_operation__succeeds_on_correct_data(
 
     actual_data, issues = schema.parse(input_data)
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict(msg=True) == {}
     assert actual_data["Operations"][0]["value"] == expected_value
     assert actual_data["Operations"][0]["path"].attr_rep == expected_path.attr_rep
     if expected_path.complex_filter:

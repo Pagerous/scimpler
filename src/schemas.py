@@ -235,7 +235,7 @@ class BaseSchema(abc.ABC):
             )
             data = Invalid
 
-        if issues:
+        if issues.has_issues():
             return data, issues
 
         data, issues_ = self._process_data(data, method)
