@@ -572,7 +572,7 @@ _groups_value = Attribute(
 
 _groups_ref = Attribute(
     name="$ref",
-    type_=type_.SCIMReference,
+    type_=type_.URIReference,
     required=False,
     case_exact=False,
     multi_valued=False,
