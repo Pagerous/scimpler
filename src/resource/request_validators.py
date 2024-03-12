@@ -934,14 +934,19 @@ class BulkOperations:
             "DELETE": {},
         }
         for resource_schema in resource_schemas:
-            resource_name_plural = (
-                repr(resource_schema) + "s"
-            )  # TODO: make it explicit attribute of schema
-            self._validators["GET"][resource_name_plural] = ResourceObjectGET(resource_schema)
-            self._validators["POST"][resource_name_plural] = ResourceTypePOST(resource_schema)
-            self._validators["PUT"][resource_name_plural] = ResourceObjectPUT(resource_schema)
-            self._validators["PATCH"][resource_name_plural] = ResourceObjectPATCH(resource_schema)
-            self._validators["DELETE"][resource_name_plural] = ResourceObjectDELETE()
+            self._validators["GET"][resource_schema.plural_name] = ResourceObjectGET(
+                resource_schema
+            )
+            self._validators["POST"][resource_schema.plural_name] = ResourceTypePOST(
+                resource_schema
+            )
+            self._validators["PUT"][resource_schema.plural_name] = ResourceObjectPUT(
+                resource_schema
+            )
+            self._validators["PATCH"][resource_schema.plural_name] = ResourceObjectPATCH(
+                resource_schema
+            )
+            self._validators["DELETE"][resource_schema.plural_name] = ResourceObjectDELETE()
 
         self._request_schema = bulk_ops.BulkRequest()
         self._response_schema = bulk_ops.BulkResponse()

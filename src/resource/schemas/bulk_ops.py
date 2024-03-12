@@ -146,9 +146,6 @@ class BulkRequest(BaseSchema):
             attrs=[fail_on_errors, request_operations],
         )
 
-    def __repr__(self) -> str:
-        return "BulkRequest"
-
 
 def validate_response_operations(
     operations_data: List[SCIMDataContainer],
@@ -245,6 +242,3 @@ class BulkResponse(BaseSchema):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:BulkResponse", attrs=[response_operations]
         )
-
-    def __repr__(self) -> str:
-        return "BulkResponse"

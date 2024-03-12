@@ -206,10 +206,6 @@ class BaseSchema(abc.ABC):
     def schema(self) -> str:
         return self._schema
 
-    @abc.abstractmethod
-    def __repr__(self) -> str:
-        ...
-
     def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         return self._process(data, method="parse")
 
@@ -335,7 +331,7 @@ def validate_resource_type_consistency(
 
 
 class ResourceSchema(BaseSchema, abc.ABC):
-    def __init__(self, schema: str, attrs: Iterable[Attribute]):
+    def __init__(self, schema: str, attrs: Iterable[Attribute], name: str, plural_name: str):
         super().__init__(
             schema=schema,
             attrs=[
@@ -346,6 +342,16 @@ class ResourceSchema(BaseSchema, abc.ABC):
             ],
         )
         self._schema_extensions: Dict[str, bool] = {}
+        self._name = name
+        self._plural_name = plural_name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def plural_name(self) -> str:
+        return self._plural_name
 
     @property
     def schemas(self) -> List[str]:
@@ -392,7 +398,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
                 issues.merge(
                     validate_resource_type_consistency(
                         resource_type=resource_type,
-                        expected=repr(self),
+                        expected=self.name,
                     )
                 )
         return data, issues

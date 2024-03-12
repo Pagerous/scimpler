@@ -42,9 +42,6 @@ class ListResponse(BaseSchema):
         )
         self._resource_schemas = resource_schemas
 
-    def __repr__(self) -> str:
-        return "ListResponse"
-
     def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().dump(data)
         if not issues.can_proceed():

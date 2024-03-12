@@ -101,6 +101,3 @@ class Error(BaseSchema):
                 detail,
             ],
         )
-
-    def __repr__(self) -> str:
-        return "Error"

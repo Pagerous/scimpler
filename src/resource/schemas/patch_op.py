@@ -96,9 +96,6 @@ class PatchOp(BaseSchema):
         )
         self._resource_schema = resource_schema
 
-    def __repr__(self) -> str:
-        return "PatchOp"
-
     def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().parse(data)
         if not issues.can_proceed((self.attrs.operations.rep.attr,)):

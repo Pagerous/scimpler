@@ -248,7 +248,6 @@ class SchemaForTests(ResourceSchema):
                 Attribute(name="userName", type_=at.String, case_exact=True),
                 Attribute(name="title", type_=at.Integer),
             ],
+            name="SchemaForTests",
+            plural_name="SchemasForTests",
         )
-
-    def __repr__(self):
-        return "SchemaForTests"

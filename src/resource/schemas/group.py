@@ -8,7 +8,6 @@ display_name = Attribute(
     required=True,
 )
 
-
 _members_value = Attribute(
     name="value",
     type_=type_.String,
@@ -40,7 +39,6 @@ class Group(ResourceSchema):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:Group",
             attrs=[display_name, members],
+            name="Group",
+            plural_name="Groups",
         )
-
-    def __repr__(self) -> str:
-        return "Group"

@@ -107,9 +107,6 @@ class SearchRequest(BaseSchema):
             ],
         )
 
-    def __repr__(self) -> str:
-        return "SearchRequest"
-
     def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().parse(data)
         if not issues.can_proceed():

@@ -931,6 +931,8 @@ class User(ResourceSchema):
                 roles,
                 x509_certificates,
             ],
+            name="User",
+            plural_name="Users",
         )
         self.with_extension(
             SchemaExtension(
@@ -945,6 +947,3 @@ class User(ResourceSchema):
                 ],
             )
         )
-
-    def __repr__(self) -> str:
-        return "User"
