@@ -169,7 +169,7 @@ from src.data.container import SCIMDataContainer
         (
             "2022/05/05 12:34:56",
             at.DateTime,
-            {"_errors": [{"code": 4, "context": {"scim_type": "dateTime"}}]},
+            {"_errors": [{"code": 1, "context": {}}]},
         ),
         (
             123,

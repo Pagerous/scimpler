@@ -208,7 +208,7 @@ class DateTime(String):
         value = cls._parse_xsd_datetime(value)
         if value is None:
             issues.add(
-                issue=ValidationError.xsd_datetime_format_required(cls.SCIM_NAME),
+                issue=ValidationError.bad_value_syntax(),
                 proceed=False,
             )
             return Invalid, issues

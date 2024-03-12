@@ -7,15 +7,6 @@ class ValidationError:
         1: "bad value syntax",
         2: "expected type '{expected}', got '{provided}' instead",
         3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
-        4: "SCIM '{scim_type}' should be encoded as a valid xsd:dateTime",
-        5: (
-            "SCIM '{scim_type}' can contain the values of these types only when parsing: "
-            "{allowed_types}, but got '{provided_type}' instead"
-        ),
-        6: (
-            "multi-valued attribute should be of type 'list' or 'tuple', "
-            "but got '{provided_type}' instead"
-        ),
         7: "'{keyword}' is SCIM reserved keyword that MUST NOT occur in a attribute value",
         8: "'{value}' is not a valid URL",
         9: (
@@ -40,7 +31,6 @@ class ValidationError:
             "but provided '{provided}'"
         ),
         19: "should not be returned",
-        20: "provided 'schemas' do not correspond to the resource {resource_type!r}",
         21: "too many results, must {must}",
         22: "total results ({total_results}) do not match number of resources ({n_resources})",
         23: "too little results, must {must}",
@@ -55,10 +45,6 @@ class ValidationError:
         28: "main schema not included",
         29: "extension {extension!r} is missing",
         30: "can not be used together with {other!r}",
-        32: (  # TODO: change code to 6
-            "SCIM '{scim_type}' can contain the values of these types only when dumping: "
-            "{allowed_types}, but got '{provided_type}' instead"
-        ),
         33: "complex sub-attribute {sub_attr!r} of {attr!r} can not be complex",
         34: "resource type endpoint is required",
         35: "resource object endpoint is required",
@@ -77,7 +63,6 @@ class ValidationError:
         112: "bad comparison value {value!r}",
         113: "comparison value {value!r} is not compatible with {operator!r} operator",
         300: "bad operation path",
-        302: "bad multivalued attribute filter",
         303: "unknown operation target",
         304: "attribute can not be modified",
         305: "can not use complex filter without sub-attribute specified for 'add' operation",
@@ -101,25 +86,6 @@ class ValidationError:
     @classmethod
     def base_64_encoding_required(cls, scim_type: str):
         return cls(code=3, scim_type=scim_type)
-
-    @classmethod
-    def xsd_datetime_format_required(cls, scim_type: str):
-        return cls(code=4, scim_type=scim_type)
-
-    @classmethod
-    def bad_sub_attribute_parse_type(
-        cls, scim_type: str, allowed_types: Collection[Type], provided_type: Type
-    ):
-        return cls(
-            code=5,
-            scim_type=scim_type,
-            allowed_types=sorted({type_.__name__ for type_ in allowed_types}),
-            provided_type=provided_type.__name__,
-        )
-
-    @classmethod
-    def bad_multivalued_attribute_type(cls, provided_type: Type):
-        return cls(code=6, provided_type=provided_type.__name__)
 
     @classmethod
     def reserved_keyword(cls, keyword: str):
@@ -168,10 +134,6 @@ class ValidationError:
     @classmethod
     def restricted_or_not_requested(cls):
         return cls(code=19)
-
-    @classmethod
-    def bad_schema(cls, resource_type: str):  # TODO: remove it
-        return cls(code=20, resource_type=resource_type)
 
     @classmethod
     def too_many_results(cls, must: str):
@@ -226,17 +188,6 @@ class ValidationError:
     @classmethod
     def can_not_be_used_together(cls, other: str):
         return cls(code=30, other=other)
-
-    @classmethod
-    def bad_sub_attribute_dump_type(
-        cls, scim_type: str, allowed_types: Collection[Type], provided_type: Type
-    ):
-        return cls(
-            code=32,
-            scim_type=scim_type,
-            allowed_types=sorted({type_.__name__ for type_ in allowed_types}),
-            provided_type=provided_type.__name__,
-        )
 
     @classmethod
     def complex_sub_attribute(cls, attr: str, sub_attr: str):
@@ -314,10 +265,6 @@ class ValidationError:
     @classmethod
     def bad_operation_path(cls):
         return cls(code=300)
-
-    @classmethod
-    def bad_multivalued_attribute_filter(cls):
-        return cls(code=302)
 
     @classmethod
     def unknown_operation_target(cls):
@@ -432,17 +379,7 @@ class ValidationIssues:
     def to_dict(self, msg: bool = False, ctx: bool = False):
         output = {}
         for location, errors in self._issues.items():
-            if not location:
-                if "_errors" not in output:
-                    output["_errors"] = []
-                for error in errors:
-                    item = {"code": error.code}
-                    if msg:
-                        item["error"] = str(error)
-                    if ctx:
-                        item["context"] = error.context
-                    output["_errors"].append(item)
-            else:
+            if location:
                 current_level = output
                 for i, part in enumerate(location):
                     part = str(part)
@@ -459,4 +396,15 @@ class ValidationIssues:
                                 item["context"] = error.context
                             current_level[part]["_errors"].append(item)  # noqa
                     current_level = current_level[part]
+            else:
+                if "_errors" not in output:
+                    output["_errors"] = []
+                for error in errors:
+                    item = {"code": error.code}
+                    if msg:
+                        item["error"] = str(error)
+                    if ctx:
+                        item["context"] = error.context
+                    output["_errors"].append(item)
+
         return output
