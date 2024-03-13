@@ -1,7 +1,9 @@
+import abc
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+from src.assets.config import ServiceProviderConfig
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import (
     Attribute,
@@ -225,9 +227,19 @@ def _dump_resource_output_body(
     return ResponseData(headers=headers, body=body), issues
 
 
-class ResourceObjectGET:
-    def __init__(self, schema: ResourceSchema):
-        self._schema = schema
+class Validator(abc.ABC):
+    def __init__(self, config: ServiceProviderConfig):
+        self._config = config
+
+    @property
+    def config(self) -> ServiceProviderConfig:
+        return self._config
+
+
+class ResourceObjectGET(Validator):
+    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+        super().__init__(config)
+        self._schema = resource_schema
 
     def parse_request(  # noqa
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
@@ -259,9 +271,10 @@ class ResourceObjectGET:
         )
 
 
-class ResourceObjectPUT:
-    def __init__(self, schema: ResourceSchema):
-        self._schema = schema
+class ResourceObjectPUT(Validator):
+    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+        super().__init__(config)
+        self._schema = resource_schema
 
     def parse_request(
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
@@ -304,9 +317,10 @@ class ResourceObjectPUT:
         )
 
 
-class ResourceTypePOST:
-    def __init__(self, schema: ResourceSchema):
-        self._schema = schema
+class ResourceTypePOST(Validator):
+    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+        super().__init__(config)
+        self._schema = resource_schema
 
     def parse_request(
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
@@ -714,8 +728,11 @@ def _dump_resources_get_response(
     return ResponseData(headers=headers, body=body.to_dict()), issues
 
 
-class ServerRootResourceGET:
-    def __init__(self, resource_schemas: Sequence[ResourceSchema]):
+class ServerRootResourceGET(Validator):
+    def __init__(
+        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
+    ):
+        super().__init__(config)
         self._schema = list_response.ListResponse(resource_schemas)
 
     def parse_request(  # noqa
@@ -749,12 +766,15 @@ class ServerRootResourceGET:
 
 
 class ResourceTypeGET(ServerRootResourceGET):
-    def __init__(self, resource_schema: ResourceSchema):
-        super().__init__([resource_schema])
+    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+        super().__init__(config, resource_schemas=[resource_schema])
 
 
-class SearchRequestPOST:
-    def __init__(self, resource_schemas: Sequence[ResourceSchema]):
+class SearchRequestPOST(Validator):
+    def __init__(
+        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
+    ):
+        super().__init__(config)
         self._schema = search_request.SearchRequest()
         self._list_response_schema = list_response.ListResponse(resource_schemas)
 
@@ -793,8 +813,9 @@ class SearchRequestPOST:
         )
 
 
-class ResourceObjectPATCH:
-    def __init__(self, resource_schema: ResourceSchema):
+class ResourceObjectPATCH(Validator):
+    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+        super().__init__(config)
         self._schema = patch_op.PatchOp(resource_schema)
         self._resource_schema = resource_schema
 
@@ -906,7 +927,7 @@ class ResourceObjectPATCH:
         )
 
 
-class ResourceObjectDELETE:
+class ResourceObjectDELETE(Validator):
     @staticmethod
     def dump_response(
         *,
@@ -923,9 +944,11 @@ class ResourceObjectDELETE:
         return ResponseData(headers=headers, body=None), issues
 
 
-class BulkOperations:
-    def __init__(self, max_operations: int, resource_schemas: Sequence[ResourceSchema]):
-        self._max_operations = max_operations
+class BulkOperations(Validator):
+    def __init__(
+        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
+    ):
+        super().__init__(config)
         self._validators = {
             "GET": {},
             "POST": {},
@@ -935,18 +958,18 @@ class BulkOperations:
         }
         for resource_schema in resource_schemas:
             self._validators["GET"][resource_schema.plural_name] = ResourceObjectGET(
-                resource_schema
+                config, resource_schema=resource_schema
             )
             self._validators["POST"][resource_schema.plural_name] = ResourceTypePOST(
-                resource_schema
+                config, resource_schema=resource_schema
             )
             self._validators["PUT"][resource_schema.plural_name] = ResourceObjectPUT(
-                resource_schema
+                config, resource_schema=resource_schema
             )
             self._validators["PATCH"][resource_schema.plural_name] = ResourceObjectPATCH(
-                resource_schema
+                config, resource_schema=resource_schema
             )
-            self._validators["DELETE"][resource_schema.plural_name] = ResourceObjectDELETE()
+            self._validators["DELETE"][resource_schema.plural_name] = ResourceObjectDELETE(config)
 
         self._request_schema = bulk_ops.BulkRequest()
         self._response_schema = bulk_ops.BulkResponse()
@@ -1000,9 +1023,9 @@ class BulkOperations:
                     data_rep.sub_attr
                 ] = resource_data.body
 
-        if len(body[self._request_schema.attrs.operations.rep]) > self._max_operations:
+        if len(body[self._request_schema.attrs.operations.rep]) > self.config.bulk.max_operations:
             issues.add(
-                issue=ValidationError.too_many_operations(self._max_operations),
+                issue=ValidationError.too_many_operations(self.config.bulk.max_operations),
                 proceed=True,
                 location=body_location + _location(self._response_schema.attrs.operations.rep),
             )

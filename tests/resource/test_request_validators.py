@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pytest
 
+from src.assets.config import create_service_provider_config
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present
@@ -37,6 +38,15 @@ from src.resource.request_validators import (
 from src.resource.schemas import group, list_response, service_provider_config, user
 from src.sorter import Sorter
 from tests.conftest import SchemaForTests
+
+CONFIG = create_service_provider_config(
+    patch={"supported": True},
+    bulk={"max_operations": 10, "max_payload_size": 4242, "supported": True},
+    filter_={"max_results": 100, "supported": True},
+    change_password={"supported": True},
+    sort={"supported": True},
+    etag={"supported": True},
+)
 
 
 @pytest.mark.parametrize(
@@ -471,7 +481,7 @@ def test_correct_error_response_passes_validation(error_data):
 
 
 def test_correct_resource_object_get_request_passes_validation():
-    validator = ResourceObjectGET(user.User())
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User())
 
     data, issues = validator.parse_request(
         body=None, headers=None, query_string={"attributes": "name.familyName"}
@@ -487,7 +497,7 @@ def test_correct_resource_object_get_request_passes_validation():
 
 
 def test_correct_resource_object_get_response_passes_validation(user_data_dump):
-    validator = ResourceObjectGET(user.User())
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User())
     user_data_dump.pop("name")
 
     data, issues = validator.dump_response(
@@ -503,7 +513,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_dump):
 
 
 def test_correct_resource_type_post_request_passes_validation(user_data_parse):
-    validator = ResourceTypePOST(user.User())
+    validator = ResourceTypePOST(CONFIG, resource_schema=user.User())
 
     data, issues = validator.parse_request(
         body=user_data_parse,
@@ -521,7 +531,7 @@ def test_correct_resource_type_post_request_passes_validation(user_data_parse):
 def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
     user_data_parse,
 ):
-    validator = ResourceTypePOST(user.User())
+    validator = ResourceTypePOST(CONFIG, resource_schema=user.User())
     user_data_parse["userName"] = 123
     expected_issues = {"body": {"userName": {"_errors": [{"code": 2}]}}}
 
@@ -534,7 +544,7 @@ def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_vali
 
 
 def test_correct_resource_object_put_request_passes_validation(user_data_parse):
-    validator = ResourceObjectPUT(user.User())
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user.User())
     user_data_parse["id"] = "anything"
 
     data, issues = validator.parse_request(
@@ -551,7 +561,7 @@ def test_correct_resource_object_put_request_passes_validation(user_data_parse):
 
 
 def test_resource_object_put_request__fails_when_missing_required_field(user_data_parse):
-    validator = ResourceObjectPUT(user.User())
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user.User())
     # user_data_parse misses 'id' and 'meta'
     expected_issues = {"body": {"id": {"_errors": [{"code": 15}]}}}
 
@@ -570,7 +580,7 @@ def test_resource_object_put_request__not_required_read_only_fields_are_ignored(
         "version": r'W\/"3694e05e9dff591"',
         "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
     }
-    validator = ResourceObjectPUT(user.User())
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user.User())
 
     data, issues = validator.parse_request(body=user_data_parse)
 
@@ -579,7 +589,7 @@ def test_resource_object_put_request__not_required_read_only_fields_are_ignored(
 
 
 def test_correct_resource_object_put_response_passes_validation(user_data_dump):
-    validator = ResourceObjectPUT(user.User())
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user.User())
 
     data, issues = validator.dump_response(
         status_code=200,
@@ -593,7 +603,7 @@ def test_correct_resource_object_put_response_passes_validation(user_data_dump):
 
 
 def test_correct_resource_type_post_response_passes_validation(user_data_dump):
-    validator = ResourceTypePOST(user.User())
+    validator = ResourceTypePOST(CONFIG, resource_schema=user.User())
 
     data, issues = validator.dump_response(
         status_code=201,
@@ -609,9 +619,9 @@ def test_correct_resource_type_post_response_passes_validation(user_data_dump):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(user.User()),
-        ServerRootResourceGET([user.User()]),
-        SearchRequestPOST([user.User()]),
+        ResourceTypeGET(CONFIG, resource_schema=user.User()),
+        ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
+        SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
 )
 def test_correct_list_response_passes_validation(validator, list_user_data):
@@ -635,9 +645,9 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(user.User()),
-        ServerRootResourceGET([user.User()]),
-        SearchRequestPOST([user.User()]),
+        ResourceTypeGET(CONFIG, resource_schema=user.User()),
+        ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
+        SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
 )
 def test_attributes_existence_is_validated_in_list_response(validator):
@@ -662,9 +672,9 @@ def test_attributes_existence_is_validated_in_list_response(validator):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(user.User()),
-        ServerRootResourceGET([user.User()]),
-        SearchRequestPOST([user.User()]),
+        ResourceTypeGET(CONFIG, resource_schema=user.User()),
+        ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
+        SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
 )
 def test_attributes_presence_is_validated_in_resources_in_list_response(validator):
@@ -694,7 +704,7 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
 
 
 def test_correct_search_request_passes_validation():
-    validator = SearchRequestPOST([user.User()])
+    validator = SearchRequestPOST(CONFIG, resource_schemas=[user.User()])
 
     data, issues = validator.parse_request(
         body={
@@ -725,7 +735,7 @@ def test_correct_search_request_passes_validation():
 
 
 def test_search_request_validation_fails_if_attributes_and_exclude_attributes_provided():
-    validator = SearchRequestPOST([user.User()])
+    validator = SearchRequestPOST(CONFIG, resource_schemas=[user.User()])
     expected_issues = {
         "body": {
             "attributes": {"_errors": [{"code": 30}]},
@@ -745,7 +755,7 @@ def test_search_request_validation_fails_if_attributes_and_exclude_attributes_pr
 
 @pytest.mark.parametrize("op", ("add", "replace"))
 def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_items(op):
-    validator = ResourceObjectPATCH(SchemaForTests())
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests())
     expected_issues = {
         "body": {
             "Operations": {
@@ -782,7 +792,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_items(o
 
 @pytest.mark.parametrize("op", ("add", "replace"))
 def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op):
-    validator = ResourceObjectPATCH(SchemaForTests())
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests())
     expected_issues = {
         "body": {
             "Operations": {
@@ -821,7 +831,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op
 
 
 def test_remove_operations_are_parsed():
-    validator = ResourceObjectPATCH(SchemaForTests())
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests())
     expected_body = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -881,7 +891,7 @@ def test_remove_operations_are_parsed():
 
 
 def test_resource_object_patch_dumping_response_fails_if_204_but_attributes_requested():
-    validator = ResourceObjectPATCH(user.User())
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user.User())
 
     data, issues = validator.dump_response(
         status_code=204,
@@ -896,7 +906,7 @@ def test_resource_object_patch_dumping_response_fails_if_204_but_attributes_requ
 
 
 def test_resource_object_patch_dumping_response_succeeds_if_204_and_no_attributes_requested():
-    validator = ResourceObjectPATCH(user.User())
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user.User())
 
     data, issues = validator.dump_response(
         status_code=204,
@@ -909,7 +919,7 @@ def test_resource_object_patch_dumping_response_succeeds_if_204_and_no_attribute
 
 
 def test_resource_object_patch_dumping_response_succeeds_if_200_and_user_data(user_data_dump):
-    validator = ResourceObjectPATCH(user.User())
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user.User())
 
     data, issues = validator.dump_response(
         status_code=200,
@@ -923,7 +933,7 @@ def test_resource_object_patch_dumping_response_succeeds_if_200_and_user_data(us
 def test_resource_object_patch_dumping_response_succeeds_if_200_and_selected_attributes(
     user_data_dump,
 ):
-    validator = ResourceObjectPATCH(user.User())
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user.User())
 
     data, issues = validator.dump_response(
         status_code=200,
@@ -941,7 +951,7 @@ def test_resource_object_patch_dumping_response_succeeds_if_200_and_selected_att
 
 
 def test_resource_object_delete_dumping_response_fails_if_status_different_than_204():
-    validator = ResourceObjectDELETE()
+    validator = ResourceObjectDELETE(CONFIG)
 
     data, issues = validator.dump_response(status_code=200)
 
@@ -949,7 +959,7 @@ def test_resource_object_delete_dumping_response_fails_if_status_different_than_
 
 
 def test_resource_object_delete_dumping_response_succeeds_if_status_204():
-    validator = ResourceObjectDELETE()
+    validator = ResourceObjectDELETE(CONFIG)
 
     data, issues = validator.dump_response(status_code=204)
 
@@ -957,7 +967,7 @@ def test_resource_object_delete_dumping_response_succeeds_if_status_204():
 
 
 def test_bulk_operations_request_is_parsed_if_correct_data():
-    validator = BulkOperations(4, [user.User()])
+    validator = BulkOperations(CONFIG, resource_schemas=[user.User()])
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "failOnErrors": 1,
@@ -1016,7 +1026,12 @@ def test_bulk_operations_request_is_parsed_if_correct_data():
 
 
 def test_bulk_operations_request_parsing_fails_for_bad_data():
-    validator = BulkOperations(2, [user.User()])
+    validator = BulkOperations(
+        config=create_service_provider_config(
+            bulk={"max_operations": 2, "max_payload_size": 1024, "supported": True}
+        ),
+        resource_schemas=[user.User()],
+    )
     expected_issues = {
         "body": {
             "Operations": {
@@ -1093,7 +1108,7 @@ def test_bulk_operations_request_parsing_fails_for_bad_data():
 
 
 def test_bulk_operations_response_is_dumped_if_correct_data(user_data_dump):
-    validator = BulkOperations(4, [user.User()])
+    validator = BulkOperations(CONFIG, resource_schemas=[user.User()])
 
     user_1 = deepcopy(user_data_dump)
     user_1["id"] = "92b725cd-9465-4e7d-8c16-01f8e146b87a"
@@ -1169,7 +1184,7 @@ def test_bulk_operations_response_is_dumped_if_correct_data(user_data_dump):
 
 
 def test_bulk_operations_response_dumping_fails_for_incorrect_data(user_data_dump):
-    validator = BulkOperations(4, [user.User()])
+    validator = BulkOperations(CONFIG, resource_schemas=[user.User()])
 
     user_1 = deepcopy(user_data_dump)
     user_1["id"] = "92b725cd-9465-4e7d-8c16-01f8e146b87a"
@@ -1258,7 +1273,7 @@ def test_bulk_operations_response_dumping_fails_for_incorrect_data(user_data_dum
 
 
 def test_bulk_operations_response_dumping_fails_if_too_many_failed_operations(user_data_dump):
-    validator = BulkOperations(4, [user.User()])
+    validator = BulkOperations(CONFIG, resource_schemas=[user.User()])
 
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 38}]}}}
 
@@ -1296,7 +1311,9 @@ def test_bulk_operations_response_dumping_fails_if_too_many_failed_operations(us
 
 
 def test_service_provider_configuration_is_dumped_correctly():
-    validator = ResourceObjectGET(service_provider_config.ServiceProviderConfig())
+    validator = ResourceObjectGET(
+        CONFIG, resource_schema=service_provider_config.ServiceProviderConfig()
+    )
     input_ = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
         "documentationUri": "http://example.com/help/scim.html",
@@ -1342,7 +1359,7 @@ def test_service_provider_configuration_is_dumped_correctly():
 
 
 def test_group_is_dumped_correctly():
-    validator = ResourceObjectGET(group.Group())
+    validator = ResourceObjectGET(CONFIG, resource_schema=group.Group())
     input_ = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
         "id": "e9e30dba-f08f-4109-8486-d5c6a331660a",
