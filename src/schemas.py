@@ -401,7 +401,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
             return data, issues
 
         if issues.can_proceed(("meta", "resourceType")):
-            resource_type = data[self.attrs.meta.attrs.resourcetype.rep]
+            resource_type = data[self.attrs.meta__resourcetype.rep]
             if resource_type is not Missing:
                 issues.merge(
                     validate_resource_type_consistency(

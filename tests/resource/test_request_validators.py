@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import datetime
 
 import pytest
 
@@ -33,7 +34,7 @@ from src.resource.request_validators import (
     validate_start_index_consistency,
     validate_status_code,
 )
-from src.resource.schemas import list_response, user
+from src.resource.schemas import group, list_response, service_provider_config, user
 from src.sorter import Sorter
 from tests.conftest import SchemaForTests
 
@@ -1292,3 +1293,85 @@ def test_bulk_operations_response_dumping_fails_if_too_many_failed_operations(us
 
     assert issues.to_dict() == expected_issues
     assert data.body is None
+
+
+def test_service_provider_configuration_is_dumped_correctly():
+    validator = ResourceObjectGET(service_provider_config.ServiceProviderConfig())
+    input_ = {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
+        "documentationUri": "http://example.com/help/scim.html",
+        "patch": {"supported": True},
+        "bulk": {"supported": True, "maxOperations": 1000, "maxPayloadSize": 1048576},
+        "filter": {"supported": True, "maxResults": 200},
+        "changePassword": {"supported": True},
+        "sort": {"supported": True},
+        "etag": {"supported": True},
+        "authenticationSchemes": [
+            {
+                "name": "OAuth Bearer Token",
+                "description": "Authentication scheme using the OAuth Bearer Token Standard",
+                "specUri": "https://www.rfc-editor.org/info/rfc6750",
+                "documentationUri": "https://example.com/help/oauth.html",
+                "type": "oauthbearertoken",
+                "primary": True,
+            },
+            {
+                "name": "HTTP Basic",
+                "description": "Authentication scheme using the HTTP Basic Standard",
+                "specUri": "https://www.rfc-editor.org/info/rfc2617",
+                "documentationUri": "https://example.com/help/httpBasic.html",
+                "type": "httpbasic",
+            },
+        ],
+        "meta": {
+            "location": "https://example.com/v2/ServiceProviderConfig",
+            "resourceType": "ServiceProviderConfig",
+            "created": datetime(2010, 1, 23, 4, 56, 22),
+            "lastModified": datetime(2011, 5, 13, 4, 42, 34),
+            "version": 'W/"3694e05e9dff594"',
+        },
+    }
+
+    _, issues = validator.dump_response(
+        status_code=200,
+        body=input_,
+        headers={"Location": "https://example.com/v2/ServiceProviderConfig"},
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_group_is_dumped_correctly():
+    validator = ResourceObjectGET(group.Group())
+    input_ = {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "e9e30dba-f08f-4109-8486-d5c6a331660a",
+        "displayName": "Tour Guides",
+        "members": [
+            {
+                "value": "2819c223-7f76-453a-919d-413861904646",
+                "$ref": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+                "display": "Babs Jensen",
+            },
+            {
+                "value": "902c246b-6245-4190-8e05-00816be7344a",
+                "$ref": "https://example.com/v2/Users/902c246b-6245-4190-8e05-00816be7344a",
+                "display": "Mandy Pepperidge",
+            },
+        ],
+        "meta": {
+            "location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
+            "resourceType": "Group",
+            "created": datetime(2010, 1, 23, 4, 56, 22),
+            "lastModified": datetime(2011, 5, 13, 4, 42, 34),
+            "version": 'W/"3694e05e9dff594"',
+        },
+    }
+
+    _, issues = validator.dump_response(
+        status_code=200,
+        body=input_,
+        headers={"Location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a"},
+    )
+
+    assert issues.to_dict(msg=True) == {}

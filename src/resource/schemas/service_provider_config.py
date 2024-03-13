@@ -5,7 +5,7 @@ from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
 from src.schemas import ResourceSchema, id_
 
 id_ = deepcopy(id_)
-id_.required = False
+id_._required = False
 
 documentation_uri = Attribute(
     name="documentationUri",
