@@ -2,9 +2,9 @@ from datetime import datetime
 
 import pytest
 
+from src.assets.resource.user import User
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, SCIMDataContainer
-from src.resource.schemas.user import User
 
 
 @pytest.mark.parametrize(

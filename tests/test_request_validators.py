@@ -4,12 +4,13 @@ from datetime import datetime
 import pytest
 
 from src.assets.config import create_service_provider_config
+from src.assets.resource import group, list_response, service_provider_config, user
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present
 from src.data.path import PatchPath
 from src.filter import Filter
-from src.resource.request_validators import (
+from src.request_validators import (
     BulkOperations,
     Error,
     ResourceObjectDELETE,
@@ -35,7 +36,6 @@ from src.resource.request_validators import (
     validate_start_index_consistency,
     validate_status_code,
 )
-from src.resource.schemas import group, list_response, service_provider_config, user
 from src.sorter import Sorter
 from tests.conftest import SchemaForTests
 

@@ -2,12 +2,11 @@ from copy import deepcopy
 
 import pytest
 
+from src.assets.resource import list_response, patch_op, user
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
 from src.filter import Filter
-from src.resource.schemas import list_response, patch_op, user
-from src.resource.schemas.list_response import validate_items_per_page_consistency
 from src.schemas import validate_resource_type_consistency, validate_schemas_field
 from tests.conftest import SchemaForTests
 
@@ -161,7 +160,7 @@ def test_validate_items_per_page_consistency__fails_if_not_matching_resources(li
         "Resources": {"_errors": [{"code": 11}]},
     }
 
-    issues = validate_items_per_page_consistency(
+    issues = list_response.validate_items_per_page_consistency(
         resources_=list_user_data["Resources"],
         items_per_page_=1,
     )
@@ -170,7 +169,7 @@ def test_validate_items_per_page_consistency__fails_if_not_matching_resources(li
 
 
 def test_validate_items_per_page_consistency__succeeds_if_correct_data(list_user_data):
-    issues = validate_items_per_page_consistency(
+    issues = list_response.validate_items_per_page_consistency(
         resources_=list_user_data["Resources"],
         items_per_page_=2,
     )

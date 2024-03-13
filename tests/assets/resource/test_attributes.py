@@ -1,8 +1,8 @@
 import pytest
 
+from src.assets.resource.bulk_ops import request_operations, response_operations
+from src.assets.resource.patch_op import operations
 from src.data.container import SCIMDataContainer
-from src.resource.schemas.bulk_ops import request_operations, response_operations
-from src.resource.schemas.patch_op import operations
 
 
 @pytest.mark.parametrize(

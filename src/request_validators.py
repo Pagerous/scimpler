@@ -4,6 +4,7 @@ from functools import wraps
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.assets.config import ServiceProviderConfig
+from src.assets.resource import bulk_ops, error, list_response, patch_op, search_request
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import (
     Attribute,
@@ -15,13 +16,6 @@ from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
-from src.resource.schemas import (
-    bulk_ops,
-    error,
-    list_response,
-    patch_op,
-    search_request,
-)
 from src.schemas import BaseSchema, ResourceSchema
 from src.sorter import Sorter
 
