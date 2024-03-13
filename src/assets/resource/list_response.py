@@ -3,9 +3,9 @@ from typing import Any, List, Optional, Sequence, Tuple, Union
 from src.data import type as type_
 from src.data.attributes import Attribute
 from src.data.container import Invalid, Missing, SCIMDataContainer
+from src.data.schemas import BaseSchema, ResourceSchema
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema, ResourceSchema
 
 total_results = Attribute(
     name="totalResults",

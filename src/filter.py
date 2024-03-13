@@ -15,7 +15,7 @@ from src.utils import (
 )
 
 if TYPE_CHECKING:
-    from src.schemas import BaseSchema
+    from src.data.schemas import BaseSchema
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)

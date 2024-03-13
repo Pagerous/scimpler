@@ -8,8 +8,8 @@ from src.data.attributes import (
     AttributeUniqueness,
 )
 from src.data.container import Invalid
+from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema
 
 
 def parse_error_status(value: str) -> Tuple[Union[Invalid, int], ValidationIssues]:

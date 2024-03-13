@@ -13,10 +13,10 @@ from src.data.attributes import (
     ComplexAttribute,
 )
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.schemas import BaseSchema, ResourceSchema
 from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
-from src.schemas import BaseSchema, ResourceSchema
 from src.sorter import Sorter
 
 

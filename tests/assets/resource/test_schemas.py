@@ -6,8 +6,8 @@ from src.assets.resource import list_response, patch_op, user
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
+from src.data.schemas import validate_resource_type_consistency, validate_schemas_field
 from src.filter import Filter
-from src.schemas import validate_resource_type_consistency, validate_schemas_field
 from tests.conftest import SchemaForTests
 
 

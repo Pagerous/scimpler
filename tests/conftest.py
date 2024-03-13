@@ -5,7 +5,7 @@ import pytest
 
 from src.data import type as at
 from src.data.attributes import Attribute, ComplexAttribute
-from src.schemas import ResourceSchema
+from src.data.schemas import ResourceSchema
 
 
 @pytest.fixture

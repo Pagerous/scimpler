@@ -4,8 +4,8 @@ from typing import Any, List, Tuple, Union
 from src.data import type as type_
 from src.data.attributes import Attribute, ComplexAttribute
 from src.data.container import Invalid, Missing, SCIMDataContainer
+from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema
 
 _RESOURCE_TYPE_REGEX = re.compile(r"/\w+")
 _RESOURCE_OBJECT_REGEX = re.compile(r"/\w+/.*")

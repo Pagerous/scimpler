@@ -4,9 +4,9 @@ from src.attributes_presence import AttributePresenceChecker
 from src.data import type as type_
 from src.data.attributes import Attribute
 from src.data.container import AttrRep, Invalid, SCIMDataContainer
+from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
-from src.schemas import BaseSchema
 from src.sorter import Sorter
 
 

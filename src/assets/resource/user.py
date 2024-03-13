@@ -6,7 +6,7 @@ from src.data.attributes import (
     AttributeUniqueness,
     ComplexAttribute,
 )
-from src.schemas import ResourceSchema, SchemaExtension
+from src.data.schemas import ResourceSchema, SchemaExtension
 
 user_name = Attribute(
     name="userName",

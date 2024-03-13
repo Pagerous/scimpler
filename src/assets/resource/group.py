@@ -1,6 +1,6 @@
 from src.data import type as type_
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
-from src.schemas import ResourceSchema
+from src.data.schemas import ResourceSchema
 
 display_name = Attribute(
     name="displayName",

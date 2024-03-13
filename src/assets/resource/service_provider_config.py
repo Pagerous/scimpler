@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from src.data import type as type_
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
-from src.schemas import ResourceSchema, id_
+from src.data.schemas import ResourceSchema, id_
 
 id_ = deepcopy(id_)
 id_._required = False
