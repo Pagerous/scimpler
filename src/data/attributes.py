@@ -14,7 +14,13 @@ from typing import (
 )
 
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
-from src.data.type import AttributeType, Complex, get_scim_type
+from src.data.type import (
+    AttributeType,
+    Complex,
+    ExternalReference,
+    URIReference,
+    get_scim_type,
+)
 from src.error import ValidationError, ValidationIssues
 
 if TYPE_CHECKING:
@@ -72,7 +78,19 @@ class Attribute:
         self._rep = AttrRep(attr=name) if isinstance(name, str) else name
         self._type = type_
         self._description = description
-        self._reference_types = list(reference_types or [])  # TODO validate applicability
+        self._reference_types = list(reference_types or [])
+        if not self._reference_types:
+            if type_ == ExternalReference:
+                self._reference_types = ["external"]
+            elif type_ == URIReference:
+                self._reference_types = ["uri"]
+        else:
+            if type_ == ExternalReference and self._reference_types != ["external"]:
+                raise ValueError(
+                    "'external' is the only valid reference type for ExternalReference"
+                )
+            elif type_ == URIReference and self._reference_types != ["uri"]:
+                raise ValueError("'uri' is the only valid reference type for URIReference")
         self._issuer = issuer
         self._required = required
         self._case_exact = case_exact
