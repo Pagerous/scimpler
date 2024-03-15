@@ -335,7 +335,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
         self,
         schema: str,
         attrs: Iterable[Attribute],
-        name: str,
+        name: str = "",
         description: str = "",
         plural_name: Optional[str] = None,
         attr_overrides: Optional[Dict[str, Attribute]] = None,
@@ -427,7 +427,13 @@ class ResourceSchema(BaseSchema, abc.ABC):
 
 
 class SchemaExtension:
-    def __init__(self, schema: str, attrs: Iterable[Attribute], name: str, description: str = ""):
+    def __init__(
+        self,
+        schema: str,
+        attrs: Iterable[Attribute],
+        name: str = "",
+        description: str = "",
+    ):
         self._schema = schema
         self._attrs = Attributes(attrs)
         self._name = name
