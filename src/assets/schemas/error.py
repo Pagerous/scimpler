@@ -30,29 +30,6 @@ def parse_error_status(value: str) -> Tuple[Union[Invalid, int], ValidationIssue
     return value, issues
 
 
-def validate_error_scim_type(value: str) -> Tuple[Union[Invalid, str], ValidationIssues]:
-    scim_types = [
-        "invalidFilter",
-        "tooMany",
-        "uniqueness",
-        "mutability",
-        "invalidSyntax",
-        "invalidPath",
-        "noTarget",
-        "invalidValue",
-        "invalidVers",
-        "sensitive",
-    ]
-    issues = ValidationIssues()
-    if value not in scim_types:
-        issues.add(
-            issue=ValidationError.must_be_one_of(scim_types, value),
-            proceed=False,
-        )
-        return Invalid, issues
-    return value, issues
-
-
 status = Attribute(
     name="status",
     type_=type_.String,
@@ -72,11 +49,22 @@ scim_type = Attribute(
     required=False,
     case_exact=False,
     multi_valued=False,
+    canonical_values=[
+        "invalidFilter",
+        "tooMany",
+        "uniqueness",
+        "mutability",
+        "invalidSyntax",
+        "invalidPath",
+        "noTarget",
+        "invalidValue",
+        "invalidVers",
+        "sensitive",
+    ],
+    validate_canonical_values=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[validate_error_scim_type],
-    dumpers=[validate_error_scim_type],
 )
 
 detail = Attribute(

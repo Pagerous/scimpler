@@ -7,25 +7,12 @@ from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
-
-def parse_operation_type(op: str) -> Tuple[Union[Invalid, str], ValidationIssues]:
-    issues = ValidationIssues()
-    allowed_ops = ["add", "remove", "replace"]
-    if op not in allowed_ops:
-        issues.add(
-            issue=ValidationError.must_be_one_of(allowed_ops, op),
-            proceed=False,
-        )
-        return Invalid, issues
-    return op, issues
-
-
 _operations_op = Attribute(
     name="op",
     type_=at.String,
+    canonical_values=["add", "remove", "replace"],
+    validate_canonical_values=True,
     required=True,
-    case_exact=True,
-    parsers=[parse_operation_type],
 )
 
 
@@ -33,7 +20,6 @@ _operations_path = Attribute(
     name="path",
     type_=at.String,
     required=False,
-    case_exact=True,
     parsers=[PatchPath.parse],
 )
 

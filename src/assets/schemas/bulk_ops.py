@@ -22,18 +22,6 @@ def _validate_operation_method_existence(method: Any) -> ValidationIssues:
     return issues
 
 
-def _validate_operation_method_value(method: Any) -> Tuple[Union[Invalid, str], ValidationIssues]:
-    issues = ValidationIssues()
-    allowed = ["GET", "POST", "PATCH", "PUT", "DELETE"]
-    if method not in allowed:
-        issues.add(
-            issue=ValidationError.must_be_one_of(allowed, method),
-            proceed=False,
-        )
-        method = Invalid
-    return method, issues
-
-
 def validate_request_operations(
     operations_data: List[SCIMDataContainer],
 ) -> Tuple[List[SCIMDataContainer], ValidationIssues]:
@@ -93,8 +81,7 @@ _operation__method = Attribute(
     type_=type_.String,
     required=True,
     canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
-    parsers=[_validate_operation_method_value],
-    dumpers=[_validate_operation_method_value],
+    validate_canonical_values=True,
 )
 
 _operation__bulk_id = Attribute(

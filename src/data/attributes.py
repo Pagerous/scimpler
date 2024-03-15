@@ -62,6 +62,7 @@ class Attribute:
         case_exact: bool = False,
         multi_valued: bool = False,
         canonical_values: Optional[Collection] = None,
+        validate_canonical_values: bool = False,
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
@@ -75,7 +76,15 @@ class Attribute:
         self._issuer = issuer
         self._required = required
         self._case_exact = case_exact
-        self._canonical_values = list(canonical_values) if canonical_values else canonical_values
+        self._canonical_values = (
+            [
+                item.lower() if isinstance(item, str) and not case_exact else item
+                for item in canonical_values
+            ]
+            if canonical_values
+            else canonical_values
+        )
+        self._validate_canonical_values = validate_canonical_values
         self._multi_valued = multi_valued
         self._mutability = mutability
         self._returned = returned
@@ -160,6 +169,7 @@ class Attribute:
                 self._uniqueness == other._uniqueness,
                 self._parsers == other._parsers,
                 self._dumpers == other._dumpers,
+                self._validate_canonical_values == other._validate_canonical_values,
             ]
         )
 
@@ -175,24 +185,49 @@ class Attribute:
                     proceed=False,
                 )
                 return Invalid, issues
+
             parsed = []
             for i, item in enumerate(value):
                 item, issues_ = method(item)
                 issues.merge(location=(i,), issues=issues_)
-                if self._canonical_values is not None and item not in self._canonical_values:
-                    pass  # TODO: warn about non-canonical value
+                if not self._is_canonical(item):
+                    if self._validate_canonical_values:
+                        issues.add(
+                            issue=ValidationError.must_be_one_of(self._canonical_values, item),
+                            proceed=False,
+                            location=(i,),
+                        )
+                        item = Invalid
+                    else:
+                        pass  # TODO: warn about non-canonical value
                 parsed.append(item)
         else:
             parsed, issues_ = method(value)
             issues.merge(issues=issues_)
-            if self._canonical_values is not None and parsed not in self._canonical_values:
-                pass  # TODO: warn about non-canonical value
+            if not self._is_canonical(parsed):
+                if self._validate_canonical_values:
+                    issues.add(
+                        issue=ValidationError.must_be_one_of(self._canonical_values, parsed),
+                        proceed=False,
+                    )
+                    parsed = Invalid
+                else:
+                    pass  # TODO: warn about non-canonical value
 
         if not issues.has_issues():
             for postprocessor in postprocessors:
                 parsed, issues_ = postprocessor(parsed)
                 issues.merge(issues=issues_)
         return parsed, issues
+
+    def _is_canonical(self, value: Any) -> bool:
+        if value is Invalid or self._canonical_values is None:
+            return True
+
+        if isinstance(value, str) and not self._case_exact:
+            value = value.lower()
+
+        return value in self._canonical_values
 
     def parse(self, value: Any) -> Tuple[Any, ValidationIssues]:
         return self._process(
