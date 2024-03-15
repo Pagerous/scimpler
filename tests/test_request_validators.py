@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 
 from src.assets.config import create_service_provider_config
-from src.assets.resource import group, list_response, service_provider_config, user
+from src.assets.schemas import group, list_response, service_provider_config, user
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present

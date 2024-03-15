@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from src.assets.resource.user import User
+from src.assets.schemas.user import User
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, SCIMDataContainer
 

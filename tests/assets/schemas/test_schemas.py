@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from src.assets.resource import list_response, patch_op, user
+from src.assets.schemas import list_response, patch_op, user
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath

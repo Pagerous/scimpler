@@ -1,6 +1,6 @@
 import pytest
 
-from src.assets.resource.user import User
+from src.assets.schemas.user import User
 from src.data.container import AttrRep, Invalid, SCIMDataContainer
 from src.sorter import Sorter
 from tests.conftest import SchemaForTests

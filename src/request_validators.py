@@ -4,7 +4,7 @@ from functools import wraps
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.assets.config import ServiceProviderConfig
-from src.assets.resource import bulk_ops, error, list_response, patch_op, search_request
+from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import (
     Attribute,
