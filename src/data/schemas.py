@@ -336,6 +336,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
         schema: str,
         attrs: Iterable[Attribute],
         name: str,
+        description: str = "",
         plural_name: Optional[str] = None,
         attr_overrides: Optional[Dict[str, Attribute]] = None,
     ):
@@ -352,10 +353,15 @@ class ResourceSchema(BaseSchema, abc.ABC):
         self._schema_extensions: Dict[str, bool] = {}
         self._name = name
         self._plural_name = plural_name or name
+        self._description = description
 
     @property
     def name(self) -> str:
         return self._name
+
+    @property
+    def description(self) -> str:
+        return self._description
 
     @property
     def plural_name(self) -> str:
@@ -411,16 +417,42 @@ class ResourceSchema(BaseSchema, abc.ABC):
                 )
         return data, issues
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.schema,
+            "name": self.name,
+            "description": self.description,
+            "attributes": [attr.to_dict() for attr in self.attrs],
+        }
+
 
 class SchemaExtension:
-    def __init__(self, schema: str, attrs: Iterable[Attribute]):
+    def __init__(self, schema: str, attrs: Iterable[Attribute], name: str, description: str = ""):
         self._schema = schema
-        self._attrs = list(attrs)
+        self._attrs = Attributes(attrs)
+        self._name = name
+        self._description = description
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def description(self) -> str:
+        return self._description
 
     @property
     def schema(self) -> str:
         return self._schema
 
     @property
-    def attrs(self) -> List[Attribute]:
+    def attrs(self) -> Attributes:
         return self._attrs
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.schema,
+            "name": self.name,
+            "description": self.description,
+            "attributes": [attr.to_dict() for attr in self.attrs],
+        }

@@ -4,6 +4,7 @@ from typing import (
     Any,
     Callable,
     Collection,
+    Dict,
     Iterable,
     List,
     Optional,
@@ -35,7 +36,7 @@ class AttributeReturn(str, Enum):
 
 
 class AttributeUniqueness(str, Enum):
-    NONE = ("none",)
+    NONE = "none"
     SERVER = "server"
     GLOBAL = "global"
 
@@ -54,6 +55,7 @@ class Attribute:
         self,
         name: Union[str, AttrRep],
         type_: Type[AttributeType],
+        description: str = "",
         reference_types: Optional[Iterable[str]] = None,
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
         required: bool = False,
@@ -68,6 +70,7 @@ class Attribute:
     ):
         self._rep = AttrRep(attr=name) if isinstance(name, str) else name
         self._type = type_
+        self._description = description
         self._reference_types = list(reference_types or [])  # TODO validate applicability
         self._issuer = issuer
         self._required = required
@@ -87,6 +90,10 @@ class Attribute:
     @property
     def type(self) -> Type[AttributeType]:
         return self._type
+
+    @property
+    def description(self) -> str:
+        return self._description
 
     @property
     def reference_types(self) -> List[str]:
@@ -201,6 +208,24 @@ class Attribute:
             postprocessors=self._dumpers,
         )
 
+    def to_dict(self) -> Dict:
+        output = {
+            "name": self.rep.attr,
+            "type": self.type.SCIM_NAME,
+            "multiValued": self._multi_valued,
+            "description": self.description,
+            "required": self.required,
+            "caseExact": self.case_exact,
+            "mutability": self.mutability.value,
+            "returned": self.returned.value,
+            "uniqueness": self.uniqueness.value,
+        }
+        if self.canonical_values:
+            output["canonicalValues"] = self.canonical_values
+        if self.reference_types:
+            output["referenceTypes"] = self.reference_types
+        return output
+
 
 _ComplexAttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
 
@@ -210,6 +235,7 @@ class ComplexAttribute(Attribute):
         self,
         sub_attributes: Collection[Attribute],
         name: Union[str, AttrRep],
+        description: str = "",
         required: bool = False,
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
         multi_valued: bool = False,
@@ -224,6 +250,7 @@ class ComplexAttribute(Attribute):
         super().__init__(
             name=name,
             type_=Complex,
+            description=description,
             issuer=issuer,
             required=required,
             multi_valued=multi_valued,
@@ -305,6 +332,11 @@ class ComplexAttribute(Attribute):
         self, value: Any
     ) -> Tuple[Union[Invalid, SCIMDataContainer, List[SCIMDataContainer]], ValidationIssues]:
         return self._process_complex(value, "dump", self._complex_dumpers)
+
+    def to_dict(self) -> Dict[str, Any]:
+        output = super().to_dict()
+        output["subAttributes"] = [sub_attr.to_dict() for sub_attr in self.attrs]
+        return output
 
 
 def validate_single_primary_value(

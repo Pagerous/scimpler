@@ -945,5 +945,6 @@ class User(ResourceSchema):
                     organization,
                     manager,
                 ],
+                name="Enterprise User",
             )
         )
