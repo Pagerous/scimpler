@@ -72,7 +72,7 @@ _attributes__multi_valued = Attribute(
 _attributes__description = Attribute(
     name="description",
     type_=type_.String,
-    required=True,
+    required=False,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
@@ -149,7 +149,7 @@ def dump_attributes(
     for i, item in enumerate(value):
         attr_type = item[_attributes__type.rep]
         sub_attributes = item[_attributes__sub_attributes.rep]
-        if sub_attributes is not None:
+        if sub_attributes not in [Missing, None]:
             if attr_type != "complex":
                 del item[_attributes__sub_attributes.rep]
             else:
@@ -158,7 +158,7 @@ def dump_attributes(
                     issues_,
                     location=(i, _attributes__sub_attributes.rep.attr),
                 )
-                item[_attributes__type.rep] = dumped
+                item[_attributes__sub_attributes.rep] = dumped
         if attr_type == "string":
             if item[_attributes__case_exact.rep] in [None, Missing]:
                 issues.add(

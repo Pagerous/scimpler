@@ -9,6 +9,7 @@ from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present
 from src.data.path import PatchPath
+from src.data.schemas import get_schema_rep
 from src.filter import Filter
 from src.request_validators import (
     BulkOperations,
@@ -19,6 +20,8 @@ from src.request_validators import (
     ResourceObjectPUT,
     ResourceTypeGET,
     ResourceTypePOST,
+    SchemaGET,
+    SchemasGET,
     SearchRequestPOST,
     ServerRootResourceGET,
     parse_request_filtering,
@@ -1390,5 +1393,38 @@ def test_group_is_dumped_correctly():
         body=input_,
         headers={"Location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a"},
     )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_schemas_can_be_dumped():
+    validator = SchemasGET(CONFIG)
+    body = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "totalResults": 2,
+        "itemsPerPage": 2,
+        "startIndex": 1,
+        "Resources": [get_schema_rep(user.User()), get_schema_rep(group.Group())],
+    }
+
+    data, issues = validator.dump_response(status_code=200, body=body)
+
+    assert issues.to_dict(msg=True) == {}
+    assert data.body is not None
+
+
+def test_schemas_request_parsing_fails_if_requested_filtering():
+    validator = SchemasGET(CONFIG)
+    expected_issues = {"query_string": {"filter": {"_errors": [{"code": 39}]}}}
+
+    _, issues = validator.parse_request(query_string={"filter": 'description sw "Hello, World!"'})
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_schema_can_be_dumped():
+    validator = SchemaGET(CONFIG)
+
+    data, issues = validator.dump_response(status_code=200, body=get_schema_rep(user.User()))
 
     assert issues.to_dict(msg=True) == {}

@@ -51,6 +51,7 @@ class ValidationError:
         36: "unknown resource",
         37: "too many operations (max {max})",
         38: "too many errors (max {max})",
+        39: "value or operation not supported",
         100: "one of brackets is not opened / closed",
         102: "one of complex attribute brackets is not opened / closed",
         104: "missing operand for operator '{operator}' in expression '{expression}'",
@@ -212,6 +213,10 @@ class ValidationError:
     @classmethod
     def too_many_errors(cls, max_: int):
         return cls(code=38, max=max_)
+
+    @classmethod
+    def not_supported(cls):
+        return cls(code=39)
 
     @classmethod
     def bracket_not_opened_or_closed(cls):

@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
+from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import (
     Attribute,
@@ -1162,6 +1163,61 @@ class BulkOperations(Validator):
 
         if issues.has_issues():
             return ResponseData(headers=headers, body=None), issues
+        return ResponseData(headers=headers, body=body), issues
+
+
+class SchemasGET(Validator):
+    def __init__(self, config: ServiceProviderConfig):
+        super().__init__(config)
+        self._list_response_schema = list_response.ListResponse([Schema()])
+
+    def parse_request(
+        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        issues = ValidationIssues()
+        if isinstance(query_string, Dict) and "filter" in query_string:
+            issues.add(
+                issue=ValidationError.not_supported(),
+                proceed=False,
+                location=("query_string", "filter"),
+            )
+        return RequestData(headers=headers, query_string=query_string, body=None), issues
+
+    def dump_response(
+        self,
+        *,
+        status_code: int,
+        body: Any = None,
+        headers: Any = None,
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        return _dump_resources_get_response(
+            schema=self._list_response_schema,
+            status_code=status_code,
+            body=body,
+            headers=headers,
+        )
+
+
+class SchemaGET(Validator):
+    def __init__(self, config: ServiceProviderConfig):
+        super().__init__(config)
+        self._schema = Schema()
+
+    def dump_response(
+        self,
+        *,
+        status_code: int,
+        body: Any = None,
+        headers: Any = None,
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        issues = ValidationIssues()
+        body, issues_ = self._schema.dump(body)
+        issues.merge(issues_, location=("body",))
+        issues.merge(
+            issues=validate_status_code(200, status_code),
+            location=("status",),
+        )
+        body = body.to_dict() if not issues.has_issues() else None
         return ResponseData(headers=headers, body=body), issues
 
 

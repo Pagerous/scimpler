@@ -30,7 +30,7 @@ resources = Attribute(
 
 
 class ListResponse(BaseSchema):
-    def __init__(self, resource_schemas: Sequence[ResourceSchema]):
+    def __init__(self, schemas: Sequence[BaseSchema]):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:ListResponse",
             attrs=[
@@ -40,7 +40,7 @@ class ListResponse(BaseSchema):
                 resources,
             ],
         )
-        self._resource_schemas = resource_schemas
+        self._schemas = schemas
 
     def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
         data, issues = super().dump(data)
@@ -91,10 +91,10 @@ class ListResponse(BaseSchema):
 
     def get_schemas_for_resources(self, resources_: List[Any]) -> List[Optional[ResourceSchema]]:
         schemas_ = []
-        n_schemas = len(self._resource_schemas)
+        n_schemas = len(self._schemas)
         for resource in resources_:
             if n_schemas == 1:
-                schemas_.append(self._resource_schemas[0])
+                schemas_.append(self._schemas[0])
             else:
                 schemas_.append(self._infer_schema_from_data(resource))
         return schemas_
@@ -108,7 +108,7 @@ class ListResponse(BaseSchema):
             schemas_value = {
                 item.lower() if isinstance(item, str) else item for item in schemas_value
             }
-            for schema in self._resource_schemas:
+            for schema in self._schemas:
                 if not schemas_value.difference({s.lower() for s in schema.schemas}):
                     return schema
         return None

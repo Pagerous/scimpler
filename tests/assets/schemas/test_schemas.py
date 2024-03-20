@@ -178,7 +178,7 @@ def test_validate_items_per_page_consistency__succeeds_if_correct_data(list_user
 
 
 def test_list_response__dumping_resources_fails_if_bad_type(list_user_data, list_user_data_dumped):
-    schema = list_response.ListResponse(resource_schemas=[user.User()])
+    schema = list_response.ListResponse([user.User()])
     list_user_data["Resources"][0]["userName"] = 123
     list_user_data["Resources"][1]["userName"] = 123
     list_user_data_dumped["Resources"][0]["userName"] = Invalid
@@ -199,7 +199,7 @@ def test_list_response__dumping_resources_fails_if_bad_type(list_user_data, list
 def test_list_response__dumping_resources_succeeds_for_correct_data(
     list_user_data, list_user_data_dumped
 ):
-    schema = list_response.ListResponse(resource_schemas=[user.User()])
+    schema = list_response.ListResponse([user.User()])
     # below fields should be filtered-out
     list_user_data["unexpected"] = 123
     list_user_data["Resources"][0]["unexpected"] = 123
@@ -214,7 +214,7 @@ def test_list_response__dumping_resources_succeeds_for_correct_data(
 def test_dump_resources__resources_with_bad_type_are_reported(
     list_user_data, list_user_data_dumped
 ):
-    schema = list_response.ListResponse(resource_schemas=[user.User()])
+    schema = list_response.ListResponse([user.User()])
     list_user_data["Resources"][0] = []
     list_user_data["Resources"][1]["userName"] = 123
     list_user_data_dumped["Resources"][0] = Invalid
@@ -283,7 +283,7 @@ def test_dump_resources__resources_with_bad_type_are_reported(
     ),
 )
 def test_list_response__get_schema_for_resources(data, expected):
-    schema = list_response.ListResponse(resource_schemas=[user.User(), user.User()])
+    schema = list_response.ListResponse([user.User(), user.User()])
 
     actual = schema.get_schemas_for_resources(data)
 
@@ -342,7 +342,7 @@ def test_list_response__get_schema_for_resources(data, expected):
 def test_list_response__get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(
     data, expected
 ):
-    schema = list_response.ListResponse(resource_schemas=[user.User()])
+    schema = list_response.ListResponse([user.User()])
 
     actual = schema.get_schemas_for_resources(data)
 

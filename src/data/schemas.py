@@ -417,13 +417,15 @@ class ResourceSchema(BaseSchema, abc.ABC):
                 )
         return data, issues
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "id": self.schema,
-            "name": self.name,
-            "description": self.description,
-            "attributes": [attr.to_dict() for attr in self.attrs],
-        }
+
+def get_schema_rep(schema: ResourceSchema) -> Dict[str, Any]:
+    return {
+        "id": schema.schema,
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
+        "name": schema.name,
+        "description": schema.description,
+        "attributes": [attr.to_dict() for attr in schema.attrs.top_level],
+    }
 
 
 class SchemaExtension:
