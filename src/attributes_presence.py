@@ -69,7 +69,7 @@ class AttributePresenceChecker:
 
             if attr.rep.sub_attr and top_attr.multi_valued:
                 value = data[top_attr_rep]
-                if value is Invalid:
+                if value in [Invalid, Missing]:
                     continue
 
                 if value in [None, Missing]:

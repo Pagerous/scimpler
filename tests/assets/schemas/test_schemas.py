@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from src.assets.schemas import list_response, patch_op, user
+from src.assets.schemas import list_response, patch_op, resource_type, user
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
@@ -920,3 +920,30 @@ def test_parse_remove_operation__fails_if_attribute_is_readonly_or_required(
 
     assert issues.to_dict() == expected_issues
     assert actual_data.to_dict() == expected_data
+
+
+def test_resource_type_schema_is_dumped():
+    schema = resource_type.ResourceType()
+    input_ = {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+        "id": "User",
+        "name": "User",
+        "endpoint": "/Users",
+        "description": "User Account",
+        "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+        "schemaExtensions": [
+            {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": True,
+            }
+        ],
+        "meta": {
+            "location": "https://example.com/v2/ResourceTypes/User",
+            "resourceType": "ResourceType",
+        },
+    }
+
+    data, issues = schema.dump(input_)
+
+    assert issues.to_dict(msg=True) == {}
+    assert data.to_dict() == input_

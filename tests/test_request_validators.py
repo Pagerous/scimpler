@@ -5,6 +5,8 @@ import pytest
 
 from src.assets.config import create_service_provider_config
 from src.assets.schemas import group, list_response, service_provider_config, user
+from src.assets.schemas.resource_type import ResourceType
+from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present
@@ -18,9 +20,9 @@ from src.request_validators import (
     ResourceObjectGET,
     ResourceObjectPATCH,
     ResourceObjectPUT,
-    ResourceTypeGET,
-    ResourceTypePOST,
-    SchemaGET,
+    ResourcesGET,
+    ResourcesPOST,
+    ResourceTypesGET,
     SchemasGET,
     SearchRequestPOST,
     ServerRootResourceGET,
@@ -516,7 +518,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_dump):
 
 
 def test_correct_resource_type_post_request_passes_validation(user_data_parse):
-    validator = ResourceTypePOST(CONFIG, resource_schema=user.User())
+    validator = ResourcesPOST(CONFIG, resource_schema=user.User())
 
     data, issues = validator.parse_request(
         body=user_data_parse,
@@ -534,7 +536,7 @@ def test_correct_resource_type_post_request_passes_validation(user_data_parse):
 def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
     user_data_parse,
 ):
-    validator = ResourceTypePOST(CONFIG, resource_schema=user.User())
+    validator = ResourcesPOST(CONFIG, resource_schema=user.User())
     user_data_parse["userName"] = 123
     expected_issues = {"body": {"userName": {"_errors": [{"code": 2}]}}}
 
@@ -606,7 +608,7 @@ def test_correct_resource_object_put_response_passes_validation(user_data_dump):
 
 
 def test_correct_resource_type_post_response_passes_validation(user_data_dump):
-    validator = ResourceTypePOST(CONFIG, resource_schema=user.User())
+    validator = ResourcesPOST(CONFIG, resource_schema=user.User())
 
     data, issues = validator.dump_response(
         status_code=201,
@@ -622,7 +624,7 @@ def test_correct_resource_type_post_response_passes_validation(user_data_dump):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(CONFIG, resource_schema=user.User()),
+        ResourcesGET(CONFIG, resource_schema=user.User()),
         ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
         SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
@@ -648,7 +650,7 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(CONFIG, resource_schema=user.User()),
+        ResourcesGET(CONFIG, resource_schema=user.User()),
         ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
         SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
@@ -675,7 +677,7 @@ def test_attributes_existence_is_validated_in_list_response(validator):
 @pytest.mark.parametrize(
     "validator",
     (
-        ResourceTypeGET(CONFIG, resource_schema=user.User()),
+        ResourcesGET(CONFIG, resource_schema=user.User()),
         ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
         SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
@@ -1319,7 +1321,7 @@ def test_service_provider_configuration_is_dumped_correctly():
     )
     input_ = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
-        "documentationUri": "http://example.com/help/scim.html",
+        "documentationUri": "https://example.com/help/scim.html",
         "patch": {"supported": True},
         "bulk": {"supported": True, "maxOperations": 1000, "maxPayloadSize": 1048576},
         "filter": {"supported": True, "maxResults": 200},
@@ -1413,8 +1415,8 @@ def test_schemas_can_be_dumped():
     assert data.body is not None
 
 
-def test_schemas_request_parsing_fails_if_requested_filtering():
-    validator = SchemasGET(CONFIG)
+@pytest.mark.parametrize("validator", [SchemasGET(CONFIG), ResourceTypesGET(CONFIG)])
+def test_service_config_request_parsing_fails_if_requested_filtering(validator):
     expected_issues = {"query_string": {"filter": {"_errors": [{"code": 39}]}}}
 
     _, issues = validator.parse_request(query_string={"filter": 'description sw "Hello, World!"'})
@@ -1423,8 +1425,82 @@ def test_schemas_request_parsing_fails_if_requested_filtering():
 
 
 def test_schema_can_be_dumped():
-    validator = SchemaGET(CONFIG)
+    validator = ResourceObjectGET(CONFIG, resource_schema=Schema())
 
     data, issues = validator.dump_response(status_code=200, body=get_schema_rep(user.User()))
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_resource_type_can_be_dumped():
+    validator = ResourceObjectGET(CONFIG, resource_schema=ResourceType())
+    body = {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+        "id": "User",
+        "name": "User",
+        "endpoint": "/Users",
+        "description": "User Account",
+        "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+        "schemaExtensions": [
+            {
+                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "required": True,
+            }
+        ],
+        "meta": {
+            "location": "https://example.com/v2/ResourceTypes/User",
+            "resourceType": "ResourceType",
+        },
+    }
+
+    data, issues = validator.dump_response(status_code=200, body=body)
+
+    assert issues.to_dict(msg=True) == {}
+    assert data.body == body
+
+
+def test_resource_types_can_be_dumped():
+    validator = ResourceTypesGET(CONFIG)
+    body = {
+        "totalResults": 2,
+        "itemsPerPage": 2,
+        "startIndex": 1,
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "Resources": [
+            {
+                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+                "id": "User",
+                "name": "User",
+                "endpoint": "/Users",
+                "description": "User Account",
+                "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
+                "schemaExtensions": [
+                    {
+                        "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                        "required": True,
+                    }
+                ],
+                "meta": {
+                    "location": "https://example.com/v2/ResourceTypes/User",
+                    "resourceType": "ResourceType",
+                },
+            },
+            {
+                "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
+                "id": "Group",
+                "name": "Group",
+                "endpoint": "/Groups",
+                "description": "Group",
+                "schema": "urn:ietf:params:scim:schemas:core:2.0:Group",
+                "meta": {
+                    "location": "https://example.com/v2/ResourceTypes/Group",
+                    "resourceType": "ResourceType",
+                },
+            },
+        ],
+    }
+
+    data, issues = validator.dump_response(status_code=200, body=body)
+
+    assert issues.to_dict(msg=True) == {}
+    assert data.body == body

@@ -425,6 +425,9 @@ def get_schema_rep(schema: ResourceSchema) -> Dict[str, Any]:
         "name": schema.name,
         "description": schema.description,
         "attributes": [attr.to_dict() for attr in schema.attrs.top_level],
+        "meta": {
+            "resourceType": "Schema",
+        },
     }
 
 

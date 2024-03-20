@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
+from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import (
@@ -257,7 +258,7 @@ class ResourceObjectGET(Validator):
     ) -> Tuple[ResponseData, ValidationIssues]:
         return _dump_resource_output_body(
             schema=self._schema,
-            location_header_required=True,
+            location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
             body=body,
@@ -312,7 +313,7 @@ class ResourceObjectPUT(Validator):
         )
 
 
-class ResourceTypePOST(Validator):
+class ResourcesPOST(Validator):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
         super().__init__(config)
         self._schema = resource_schema
@@ -760,7 +761,7 @@ class ServerRootResourceGET(Validator):
         )
 
 
-class ResourceTypeGET(ServerRootResourceGET):
+class ResourcesGET(ServerRootResourceGET):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
         super().__init__(config, resource_schemas=[resource_schema])
 
@@ -955,7 +956,7 @@ class BulkOperations(Validator):
             self._validators["GET"][resource_schema.plural_name] = ResourceObjectGET(
                 config, resource_schema=resource_schema
             )
-            self._validators["POST"][resource_schema.plural_name] = ResourceTypePOST(
+            self._validators["POST"][resource_schema.plural_name] = ResourcesPOST(
                 config, resource_schema=resource_schema
             )
             self._validators["PUT"][resource_schema.plural_name] = ResourceObjectPUT(
@@ -1166,10 +1167,11 @@ class BulkOperations(Validator):
         return ResponseData(headers=headers, body=body), issues
 
 
-class SchemasGET(Validator):
-    def __init__(self, config: ServiceProviderConfig):
-        super().__init__(config)
-        self._list_response_schema = list_response.ListResponse([Schema()])
+class _ServiceProviderConfig(ResourcesGET):
+    def __init__(
+        self, config: ServiceProviderConfig, *, resource_schema: Union[Schema, ResourceType]
+    ):
+        super().__init__(config, resource_schema=resource_schema)
 
     def parse_request(
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
@@ -1181,44 +1183,17 @@ class SchemasGET(Validator):
                 proceed=False,
                 location=("query_string", "filter"),
             )
-        return RequestData(headers=headers, query_string=query_string, body=None), issues
-
-    def dump_response(
-        self,
-        *,
-        status_code: int,
-        body: Any = None,
-        headers: Any = None,
-    ) -> Tuple[ResponseData, ValidationIssues]:
-        return _dump_resources_get_response(
-            schema=self._list_response_schema,
-            status_code=status_code,
-            body=body,
-            headers=headers,
-        )
+        return RequestData(headers=headers, query_string=None, body=None), issues
 
 
-class SchemaGET(Validator):
+class SchemasGET(_ServiceProviderConfig):
     def __init__(self, config: ServiceProviderConfig):
-        super().__init__(config)
-        self._schema = Schema()
+        super().__init__(config, resource_schema=Schema())
 
-    def dump_response(
-        self,
-        *,
-        status_code: int,
-        body: Any = None,
-        headers: Any = None,
-    ) -> Tuple[ResponseData, ValidationIssues]:
-        issues = ValidationIssues()
-        body, issues_ = self._schema.dump(body)
-        issues.merge(issues_, location=("body",))
-        issues.merge(
-            issues=validate_status_code(200, status_code),
-            location=("status",),
-        )
-        body = body.to_dict() if not issues.has_issues() else None
-        return ResponseData(headers=headers, body=body), issues
+
+class ResourceTypesGET(_ServiceProviderConfig):
+    def __init__(self, config: ServiceProviderConfig):
+        super().__init__(config, resource_schema=ResourceType())
 
 
 def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:

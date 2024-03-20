@@ -8,7 +8,7 @@ from src.data.attributes import (
     ComplexAttribute,
 )
 from src.data.container import Invalid, Missing, SCIMDataContainer
-from src.data.schemas import BaseSchema
+from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
 id_ = Attribute(
@@ -193,9 +193,11 @@ attributes = ComplexAttribute(
 )
 
 
-class Schema(BaseSchema):
+class Schema(ResourceSchema):
     def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
-            attrs=[id_, name, description, attributes],
+            attrs=[name, description, attributes],
+            name="Schema",
+            attr_overrides={"id": id_},
         )
