@@ -1,6 +1,5 @@
 import abc
 from dataclasses import dataclass
-from functools import wraps
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.assets.config import ServiceProviderConfig
@@ -24,38 +23,71 @@ from src.sorter import Sorter
 
 @dataclass
 class RequestData:
-    headers: Optional[Dict[str, Any]]
-    query_string: Optional[Dict[str, Any]]
     body: Optional[SCIMDataContainer]
+    options: Dict[str, Any]
 
 
 @dataclass
 class ResponseData:
-    headers: Optional[Dict[str, Any]]
     body: Optional[Dict[str, Any]]
 
 
-def skip_if_bad_data(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs) -> ValidationIssues():
-        try:
-            return func(*args, **kwargs)
-        except (TypeError, AttributeError, IndexError, ValueError):
-            return ValidationIssues()
+class Validator(abc.ABC):
+    def __init__(self, config: ServiceProviderConfig):
+        self._config = config
 
-    return wrapper
+    @property
+    def config(self) -> ServiceProviderConfig:
+        return self._config
+
+    @property
+    def request_schema(self) -> Union[BaseSchema, NotImplemented]:
+        return NotImplemented
+
+    @property
+    def response_schema(self) -> Union[BaseSchema, NotImplemented]:
+        return NotImplemented
+
+    @abc.abstractmethod
+    def parse_request(
+        self, *, body: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        ...
+
+    @abc.abstractmethod
+    def dump_response(
+        self,
+        *,
+        status_code: int,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ) -> Tuple[ResponseData, ValidationIssues]:
+        ...
 
 
-class Error:
-    def __init__(self):
+class Error(Validator):
+    def __init__(self, config: ServiceProviderConfig):
+        super().__init__(config)
         self._schema = error.Error()
 
+    @property
+    def response_schema(self) -> error.Error:
+        return self._schema
+
+    def parse_request(self, *, body: Any = None, query_string: Any = None) -> RequestData:
+        raise NotImplementedError
+
     def dump_response(
-        self, *, status_code: int, body: Any = None, headers: Any = None
+        self,
+        *,
+        status_code: int,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         body_location = ("body",)
         issues = ValidationIssues()
-
         body, issues_ = self._schema.dump(body)
         issues.merge(issues_, location=body_location)
         if issues.can_proceed(body_location):
@@ -73,10 +105,8 @@ class Error:
                 )
             )
         issues.merge(validate_error_status_code(status_code))
-
         body = body.to_dict() if not issues.has_issues() else None
-
-        return ResponseData(headers=headers, body=body), issues
+        return ResponseData(body=body), issues
 
 
 def validate_error_status_code_consistency(
@@ -220,16 +250,7 @@ def _dump_resource_output_body(
         )
 
     body = body.to_dict() if not issues.has_issues() else None
-    return ResponseData(headers=headers, body=body), issues
-
-
-class Validator(abc.ABC):
-    def __init__(self, config: ServiceProviderConfig):
-        self._config = config
-
-    @property
-    def config(self) -> ServiceProviderConfig:
-        return self._config
+    return ResponseData(body=body), issues
 
 
 class ResourceObjectGET(Validator):
@@ -237,24 +258,28 @@ class ResourceObjectGET(Validator):
         super().__init__(config)
         self._schema = resource_schema
 
-    def parse_request(  # noqa
-        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    @property
+    def response_schema(self) -> ResourceSchema:
+        return self._schema
+
+    def parse_request(
+        self, *, body: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
-        issues = ValidationIssues()
+        issues, options = ValidationIssues(), {}
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_.has_issues():
-                query_string["presence_checker"] = checker
-        return RequestData(body=body, headers=headers, query_string=query_string), issues
+            if checker:
+                options["presence_checker"] = checker
+        return RequestData(body=body, options=options), issues
 
     def dump_response(
         self,
         *,
         status_code: int,
-        body: Any = None,
-        headers: Any = None,
-        presence_checker: Optional[AttributePresenceChecker] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         return _dump_resource_output_body(
             schema=self._schema,
@@ -263,7 +288,7 @@ class ResourceObjectGET(Validator):
             status_code=status_code,
             body=body,
             headers=headers,
-            presence_checker=presence_checker,
+            presence_checker=kwargs.get("presence_checker"),
         )
 
 
@@ -272,15 +297,23 @@ class ResourceObjectPUT(Validator):
         super().__init__(config)
         self._schema = resource_schema
 
+    @property
+    def request_schema(self) -> ResourceSchema:
+        return self._schema
+
+    @property
+    def response_schema(self) -> ResourceSchema:
+        return self._schema
+
     def parse_request(
-        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+        self, *, body: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
-        issues = ValidationIssues()
+        issues, options = ValidationIssues(), {}
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_.has_issues():
-                query_string["presence_checker"] = checker
+            if checker:
+                options["presence_checker"] = checker
 
         body, issues_ = _parse_body(schema=self._schema, body=body)
         issues.merge(issues=issues_)
@@ -292,15 +325,15 @@ class ResourceObjectPUT(Validator):
                 if attr.mutability == AttributeMutability.READ_ONLY:
                     del body[attr.rep]
 
-        return RequestData(body=body, headers=headers, query_string=query_string), issues
+        return RequestData(body=body, options=options), issues
 
     def dump_response(
         self,
         *,
         status_code: int,
-        body: Any = None,
-        headers: Any = None,
-        presence_checker: Optional[AttributePresenceChecker] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         return _dump_resource_output_body(
             schema=self._schema,
@@ -309,7 +342,7 @@ class ResourceObjectPUT(Validator):
             status_code=status_code,
             body=body,
             headers=headers,
-            presence_checker=presence_checker,
+            presence_checker=kwargs.get("presence_checker"),
         )
 
 
@@ -318,15 +351,23 @@ class ResourcesPOST(Validator):
         super().__init__(config)
         self._schema = resource_schema
 
+    @property
+    def request_schema(self) -> ResourceSchema:
+        return self._schema
+
+    @property
+    def response_schema(self) -> ResourceSchema:
+        return self._schema
+
     def parse_request(
-        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+        self, *, body: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
-        issues = ValidationIssues()
+        issues, options = ValidationIssues(), {}
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_.has_issues():
-                query_string["presence_checker"] = checker
+            if checker:
+                options["presence_checker"] = checker
 
         required_to_ignore = []
         for attr in self._schema.attrs:
@@ -337,19 +378,19 @@ class ResourcesPOST(Validator):
         issues.merge(issues=issues_)
         if issues.has_issues():
             body = None
-        return RequestData(body=body, headers=headers, query_string=query_string), issues
+        return RequestData(body=body, options=options), issues
 
     def dump_response(
         self,
         *,
         status_code: int,
-        body: Any = None,
-        headers: Any = None,
-        presence_checker: Optional[AttributePresenceChecker] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         issues = ValidationIssues()
         if not body:
-            return ResponseData(headers=headers, body=None), issues  # TODO: warn missing body
+            return ResponseData(body=None), issues  # TODO: warn missing body
 
         return _dump_resource_output_body(
             schema=self._schema,
@@ -358,7 +399,7 @@ class ResourcesPOST(Validator):
             status_code=status_code,
             body=body,
             headers=headers,
-            presence_checker=presence_checker,
+            presence_checker=kwargs.get("presence_checker"),
         )
 
 
@@ -431,7 +472,6 @@ def parse_requested_attributes(
     return checker, issues
 
 
-@skip_if_bad_data
 def validate_resources_sorted(
     sorter: Sorter,
     resources: List[Any],
@@ -487,7 +527,6 @@ def validate_number_of_resources(
     return issues
 
 
-@skip_if_bad_data
 def validate_pagination_info(
     schema: list_response.ListResponse,
     count: Optional[int],
@@ -534,7 +573,6 @@ def validate_start_index_consistency(
     return issues
 
 
-@skip_if_bad_data
 def validate_resources_filtered(
     resources: List[Any], filter_: Filter, resource_schemas: Sequence[ResourceSchema], strict: bool
 ) -> ValidationIssues:
@@ -550,9 +588,10 @@ def validate_resources_filtered(
 
 
 def _parse_resources_get_request(
-    body: Any = None, headers: Any = None, query_string: Any = None
+    body: Any = None, query_string: Any = None
 ) -> Tuple[RequestData, ValidationIssues]:
     issues = ValidationIssues()
+    options = {}
     query_string_location = ("query_string",)
     if query_string is None:
         issues.add(
@@ -568,17 +607,17 @@ def _parse_resources_get_request(
         )
 
     if issues.has_issues():
-        return RequestData(headers=headers, query_string=query_string, body=body), issues
+        return RequestData(body=body, options=options), issues
 
     filter_, issues_ = parse_request_filtering(query_string)
-    query_string["filter"] = filter_
+    options["filter"] = filter_
     issues.merge(
         issues=issues_,
         location=("query_string", "filter"),
     )
 
     sorter, issues_ = parse_request_sorting(query_string)
-    query_string["sorter"] = sorter
+    options["sorter"] = sorter
     issues.merge(
         issues=issues_,
         location=("query_string", "sortby"),
@@ -586,7 +625,7 @@ def _parse_resources_get_request(
 
     checker, issues_ = parse_requested_attributes(query_string)
     if not issues_.has_issues():
-        query_string["presence_checker"] = checker
+        options["presence_checker"] = checker
     issues.merge(
         issues=issues_,
         location=("query_string",),
@@ -595,7 +634,7 @@ def _parse_resources_get_request(
     count = query_string.get("count")
     if count is not None:
         try:
-            query_string["count"] = int(count)
+            options["count"] = int(count)
         except ValueError:
             issues.add(
                 issue=ValidationError.bad_type(get_scim_type(int), get_scim_type(type(count))),
@@ -606,7 +645,7 @@ def _parse_resources_get_request(
     start_index = query_string.get("startIndex")
     if start_index is not None:
         try:
-            query_string["startIndex"] = int(start_index)
+            options["startIndex"] = int(start_index)
         except ValueError:
             issues.add(
                 issue=ValidationError.bad_type(
@@ -615,14 +654,13 @@ def _parse_resources_get_request(
                 location=("query_string", "startIndex"),
                 proceed=False,
             )
-    return RequestData(headers=headers, query_string=query_string, body=body), issues
+    return RequestData(body=body, options=options), issues
 
 
 def _dump_resources_get_response(
     schema: list_response.ListResponse,
     status_code: int,
     body: Any = None,
-    headers: Any = None,
     start_index: int = 1,
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
@@ -639,7 +677,7 @@ def _dump_resources_get_response(
     body, issues_ = schema.dump(body)
     issues.merge(issues_, location=body_location)
     if not issues.can_proceed(body_location):
-        return ResponseData(headers=headers, body=None), issues
+        return ResponseData(body=None), issues
 
     issues.merge(
         issues=AttributePresenceChecker()(body, schema.attrs, "RESPONSE"),
@@ -658,7 +696,7 @@ def _dump_resources_get_response(
             )
 
     if not issues.can_proceed(resources_location):
-        return ResponseData(headers=headers, body=None), issues
+        return ResponseData(body=None), issues
 
     total_results_rep = schema.attrs.totalresults.rep
     total_results_location = body_location + _location(total_results_rep)
@@ -696,7 +734,7 @@ def _dump_resources_get_response(
             )
 
     if issues.has_issues(resources_location):
-        return ResponseData(headers=headers, body=None), issues
+        return ResponseData(body=None), issues
 
     resource_schemas = schema.get_schemas_for_resources(resources)
     if filter_ is not None:
@@ -718,10 +756,7 @@ def _dump_resources_get_response(
         location=resources_location,
     )
 
-    if issues.has_issues():
-        return ResponseData(headers=headers, body=None), issues
-
-    return ResponseData(headers=headers, body=body.to_dict()), issues
+    return ResponseData(body=None if issues.has_issues() else body.to_dict()), issues
 
 
 class ServerRootResourceGET(Validator):
@@ -731,33 +766,32 @@ class ServerRootResourceGET(Validator):
         super().__init__(config)
         self._schema = list_response.ListResponse(resource_schemas)
 
-    def parse_request(  # noqa
-        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+    @property
+    def response_schema(self) -> list_response.ListResponse:
+        return self._schema
+
+    def parse_request(
+        self, *, body: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
-        return _parse_resources_get_request(body, headers, query_string)
+        return _parse_resources_get_request(body, query_string)
 
     def dump_response(
         self,
         *,
         status_code: int,
-        body: Any = None,
-        headers: Any = None,
-        start_index: int = 1,
-        count: Optional[int] = None,
-        filter_: Optional[Filter] = None,
-        sorter: Optional[Sorter] = None,
-        presence_checker: Optional[AttributePresenceChecker] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         return _dump_resources_get_response(
             schema=self._schema,
             status_code=status_code,
             body=body,
-            headers=headers,
-            start_index=start_index,
-            count=count,
-            filter_=filter_,
-            sorter=sorter,
-            resource_presence_checker=presence_checker,
+            start_index=kwargs.get("start_index", 1),
+            count=kwargs.get("count"),
+            filter_=kwargs.get("filter"),
+            sorter=kwargs.get("sorter"),
+            resource_presence_checker=kwargs.get("presence_checker"),
         )
 
 
@@ -774,6 +808,14 @@ class SearchRequestPOST(Validator):
         self._schema = search_request.SearchRequest()
         self._list_response_schema = list_response.ListResponse(resource_schemas)
 
+    @property
+    def request_schema(self) -> search_request.SearchRequest:
+        return self._schema
+
+    @property
+    def response_schema(self) -> list_response.ListResponse:
+        return self._list_response_schema
+
     def parse_request(
         self, *, body: Any = None, headers: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
@@ -782,30 +824,25 @@ class SearchRequestPOST(Validator):
         issues.merge(issues_, location=("body",))
         if issues_.has_issues():
             body = None
-        return RequestData(headers=headers, query_string=query_string, body=body), issues
+        return RequestData(body=body, options={}), issues
 
     def dump_response(
         self,
         *,
         status_code: int,
-        body: Any = None,
-        headers: Any = None,
-        start_index: int = 1,
-        count: Optional[int] = None,
-        filter_: Optional[Filter] = None,
-        sorter: Optional[Sorter] = None,
-        presence_checker: Optional[AttributePresenceChecker] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         return _dump_resources_get_response(
             schema=self._list_response_schema,
             status_code=status_code,
             body=body,
-            headers=headers,
-            start_index=start_index,
-            count=count,
-            filter_=filter_,
-            sorter=sorter,
-            resource_presence_checker=presence_checker,
+            start_index=kwargs.get("start_index", 1),
+            count=kwargs.get("count"),
+            filter_=kwargs.get("filter"),
+            sorter=kwargs.get("sorter"),
+            resource_presence_checker=kwargs.get("presence_checker"),
         )
 
 
@@ -815,23 +852,30 @@ class ResourceObjectPATCH(Validator):
         self._schema = patch_op.PatchOp(resource_schema)
         self._resource_schema = resource_schema
 
-    def parse_request(  # noqa
-        self, *, body: Any = None, headers: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
-        issues = ValidationIssues()
+    @property
+    def request_schema(self) -> patch_op.PatchOp:
+        return self._schema
 
+    @property
+    def response_schema(self) -> ResourceSchema:
+        return self._resource_schema
+
+    def parse_request(
+        self, *, body: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        issues, options = ValidationIssues(), {}
         if isinstance(query_string, Dict):
             checker, issues_ = parse_requested_attributes(query_string)
             issues.merge(issues=issues_, location=("query_string",))
-            if not issues_.has_issues():
-                query_string["presence_checker"] = checker
+            if checker:
+                options["presence_checker"] = checker
 
         body, issues_ = _parse_body(self._schema, body)
         issues.merge(issues_)
         operations_location = ("body", *_location(self._schema.attrs.operations.rep))
 
         if not issues.can_proceed(operations_location):
-            return RequestData(body=None, headers=headers, query_string=query_string), issues
+            return RequestData(body=None, options=options), issues
 
         values = body[self._schema.attrs.operations__value.rep]
         paths = body[self._schema.attrs.operations__path.rep]
@@ -865,7 +909,7 @@ class ResourceObjectPATCH(Validator):
 
         if issues.has_issues():
             body = None
-        return RequestData(body=body, headers=headers, query_string=query_string), issues
+        return RequestData(body=body, options=options), issues
 
     @staticmethod
     def _check_complex_sub_attrs_presence(
@@ -899,11 +943,12 @@ class ResourceObjectPATCH(Validator):
         self,
         *,
         status_code: int,
-        body: Any = None,
-        headers: Any = None,
-        presence_checker: Optional[AttributePresenceChecker] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         issues = ValidationIssues()
+        presence_checker = kwargs.get("presence_checker")
         if status_code == 204:
             if presence_checker is not None and presence_checker.attr_reps:
                 issues.add(
@@ -911,7 +956,7 @@ class ResourceObjectPATCH(Validator):
                     proceed=True,
                     location=("status",),
                 )
-            return ResponseData(headers=headers, body=None), issues
+            return ResponseData(body=None), issues
         return _dump_resource_output_body(
             schema=self._resource_schema,
             location_header_required=False,
@@ -924,11 +969,18 @@ class ResourceObjectPATCH(Validator):
 
 
 class ResourceObjectDELETE(Validator):
-    @staticmethod
+    def parse_request(
+        self, *, body: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
+        raise NotImplementedError
+
     def dump_response(
+        self,
         *,
         status_code: int,
-        headers: Any = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ) -> Tuple[ResponseData, ValidationIssues]:
         issues = ValidationIssues()
         if status_code != 204:
@@ -937,7 +989,7 @@ class ResourceObjectDELETE(Validator):
                 proceed=True,
                 location=("status",),
             )
-        return ResponseData(headers=headers, body=None), issues
+        return ResponseData(body=None), issues
 
 
 class BulkOperations(Validator):
@@ -969,8 +1021,19 @@ class BulkOperations(Validator):
 
         self._request_schema = bulk_ops.BulkRequest()
         self._response_schema = bulk_ops.BulkResponse()
+        self._error_validator = Error(config)
 
-    def parse_request(self, *, body: Any = None, headers: Any = None, query_string: Any = None):
+    @property
+    def request_schema(self) -> bulk_ops.BulkRequest:
+        return self._request_schema
+
+    @property
+    def response_schema(self) -> bulk_ops.BulkResponse:
+        return self._response_schema
+
+    def parse_request(
+        self, *, body: Any = None, query_string: Any = None
+    ) -> Tuple[RequestData, ValidationIssues]:
         issues = ValidationIssues()
         body_location = ("body",)
         body, issues_ = self._request_schema.parse(body)
@@ -982,7 +1045,7 @@ class BulkOperations(Validator):
         if not issues_.can_proceed(
             body_location + _location(self._request_schema.attrs.operations.rep)
         ):
-            return RequestData(headers=headers, query_string=query_string, body=None), issues
+            return RequestData(body=None, options={}), issues
 
         path_rep = self._request_schema.attrs.operations__path.rep
         data_rep = self._request_schema.attrs.operations__data.rep
@@ -1026,17 +1089,15 @@ class BulkOperations(Validator):
                 location=body_location + _location(self._response_schema.attrs.operations.rep),
             )
 
-        if issues.has_issues():
-            return RequestData(headers=headers, query_string=query_string, body=None), issues
-        return RequestData(headers=headers, query_string=query_string, body=body), issues
+        return RequestData(body=None if issues.has_issues() else body, options={}), issues
 
     def dump_response(
         self,
         *,
         status_code: int,
-        body: Any = None,
-        headers: Any = None,
-        fail_on_errors: Optional[int] = None,
+        body: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+        **kwargs,
     ):
         issues = ValidationIssues()
         body_location = ("body",)
@@ -1053,7 +1114,7 @@ class BulkOperations(Validator):
         if not issues.can_proceed(
             body_location + _location(self._response_schema.attrs.operations.rep)
         ):
-            return ResponseData(headers=headers, body=None), issues
+            return ResponseData(body=None), issues
 
         operations_location = body_location + _location(self._response_schema.attrs.operations.rep)
         status_rep = self._response_schema.attrs.operations__status.rep
@@ -1066,7 +1127,6 @@ class BulkOperations(Validator):
         locations = body[location_rep]
         methods = body[method_rep]
         versions = body[version_rep]
-        error_validator = Error()
         n_errors = 0
         for i, (method, status, response, location, version) in enumerate(
             zip(methods, statuses, responses, locations, versions)
@@ -1098,7 +1158,7 @@ class BulkOperations(Validator):
             status = int(status)
             if status >= 300:
                 n_errors += 1
-                error_response, issues_ = error_validator.dump_response(
+                error_response, issues_ = self._error_validator.dump_response(
                     status_code=status,
                     body=response,
                 )
@@ -1155,16 +1215,14 @@ class BulkOperations(Validator):
                     response_rep.sub_attr
                 ] = resource_body
 
+        fail_on_errors = kwargs.get("fail_on_errors")
         if fail_on_errors is not None and n_errors > fail_on_errors:
             issues.add(
                 issue=ValidationError.too_many_errors(fail_on_errors),
                 proceed=True,
                 location=body_location + _location(self._response_schema.attrs.operations.rep),
             )
-
-        if issues.has_issues():
-            return ResponseData(headers=headers, body=None), issues
-        return ResponseData(headers=headers, body=body), issues
+        return ResponseData(body=body.to_dict()), issues
 
 
 class _ServiceProviderConfig(ResourcesGET):
@@ -1174,7 +1232,7 @@ class _ServiceProviderConfig(ResourcesGET):
         super().__init__(config, resource_schema=resource_schema)
 
     def parse_request(
-        self, *, body: Any = None, headers: Any = None, query_string: Any = None
+        self, *, body: Any = None, query_string: Any = None
     ) -> Tuple[RequestData, ValidationIssues]:
         issues = ValidationIssues()
         if isinstance(query_string, Dict) and "filter" in query_string:
@@ -1183,7 +1241,7 @@ class _ServiceProviderConfig(ResourcesGET):
                 proceed=False,
                 location=("query_string", "filter"),
             )
-        return RequestData(headers=headers, query_string=None, body=None), issues
+        return RequestData(body=None, options={}), issues
 
 
 class SchemasGET(_ServiceProviderConfig):

@@ -477,7 +477,7 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
 
 
 def test_correct_error_response_passes_validation(error_data):
-    validator = Error()
+    validator = Error(CONFIG)
 
     data, issues = validator.dump_response(status_code=400, body=error_data)
 
@@ -489,16 +489,15 @@ def test_correct_resource_object_get_request_passes_validation():
     validator = ResourceObjectGET(CONFIG, resource_schema=user.User())
 
     data, issues = validator.parse_request(
-        body=None, headers=None, query_string={"attributes": "name.familyName"}
+        body=None, query_string={"attributes": "name.familyName"}
     )
 
     assert issues.to_dict(msg=True) == {}
     assert data.body is None
-    assert data.headers is None
-    assert data.query_string["presence_checker"].attr_reps == [
+    assert data.options["presence_checker"].attr_reps == [
         AttrRep(attr="name", sub_attr="familyName")
     ]
-    assert data.query_string["presence_checker"].include is True
+    assert data.options["presence_checker"].include is True
 
 
 def test_correct_resource_object_get_response_passes_validation(user_data_dump):
@@ -514,7 +513,6 @@ def test_correct_resource_object_get_response_passes_validation(user_data_dump):
 
     assert issues.to_dict(msg=True) == {}
     assert data.body is not None
-    assert data.headers is not None
 
 
 def test_correct_resource_type_post_request_passes_validation(user_data_parse):
@@ -527,10 +525,10 @@ def test_correct_resource_type_post_request_passes_validation(user_data_parse):
 
     assert issues.to_dict(msg=True) == {}
     assert data.body is not None
-    assert data.query_string["presence_checker"].attr_reps == [
+    assert data.options["presence_checker"].attr_reps == [
         AttrRep(attr="name", sub_attr="familyName")
     ]
-    assert data.query_string["presence_checker"].include is True
+    assert data.options["presence_checker"].include is True
 
 
 def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
@@ -559,10 +557,10 @@ def test_correct_resource_object_put_request_passes_validation(user_data_parse):
 
     assert issues.to_dict(msg=True) == {}
     assert data.body is not None
-    assert data.query_string["presence_checker"].attr_reps == [
+    assert data.options["presence_checker"].attr_reps == [
         AttrRep(attr="name", sub_attr="familyName")
     ]
-    assert data.query_string["presence_checker"].include is True
+    assert data.options["presence_checker"].include is True
 
 
 def test_resource_object_put_request__fails_when_missing_required_field(user_data_parse):
@@ -604,7 +602,6 @@ def test_correct_resource_object_put_response_passes_validation(user_data_dump):
 
     assert issues.to_dict(msg=True) == {}
     assert data.body is not None
-    assert data.headers is not None
 
 
 def test_correct_resource_type_post_response_passes_validation(user_data_dump):
@@ -618,7 +615,6 @@ def test_correct_resource_type_post_response_passes_validation(user_data_dump):
 
     assert issues.to_dict(msg=True) == {}
     assert data.body is not None
-    assert data.headers is not None
 
 
 @pytest.mark.parametrize(
@@ -1185,7 +1181,7 @@ def test_bulk_operations_response_is_dumped_if_correct_data(user_data_dump):
     data, issues = validator.dump_response(body=data, status_code=200)
 
     assert issues.to_dict(msg=True) == {}
-    assert data.body.to_dict() == expected_body
+    assert data.body == expected_body
 
 
 def test_bulk_operations_response_dumping_fails_for_incorrect_data(user_data_dump):
@@ -1274,7 +1270,6 @@ def test_bulk_operations_response_dumping_fails_for_incorrect_data(user_data_dum
     data, issues = validator.dump_response(body=data, status_code=200, fail_on_errors=2)
 
     assert issues.to_dict() == expected_issues
-    assert data.body is None
 
 
 def test_bulk_operations_response_dumping_fails_if_too_many_failed_operations(user_data_dump):
@@ -1312,7 +1307,6 @@ def test_bulk_operations_response_dumping_fails_if_too_many_failed_operations(us
     data, issues = validator.dump_response(body=data, status_code=200, fail_on_errors=1)
 
     assert issues.to_dict() == expected_issues
-    assert data.body is None
 
 
 def test_service_provider_configuration_is_dumped_correctly():
