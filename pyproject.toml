@@ -7,7 +7,10 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+marshmallow = {version = "^3.21.1", optional = true}
 
+[tool.poetry.extras]
+marshmallow = ["marshmallow"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.3.2"

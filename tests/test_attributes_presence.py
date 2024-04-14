@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pytest
 
 from src.assets.schemas.user import User
@@ -15,16 +13,16 @@ from src.data.container import AttrRep, SCIMDataContainer
     ),
 )
 def test_attribute_presence_checker_parsing(attr_reps, expected):
-    _, issues = AttributePresenceChecker.parse(attr_reps, include=True)
+    issues = AttributePresenceChecker.validate(attr_reps)
 
     assert issues.to_dict() == expected
 
 
 def test_presence_checker_fails_if_returned_attribute_that_never_should_be_returned(
-    user_data_dump,
+    user_data_server,
 ):
     checker = AttributePresenceChecker()
-    user_data_dump["password"] = "1234"
+    user_data_server["password"] = "1234"
     expected = {
         "password": {
             "_errors": [
@@ -35,16 +33,16 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
         }
     }
 
-    issues = checker(SCIMDataContainer(user_data_dump), User().attrs, "RESPONSE")
+    issues = checker(SCIMDataContainer(user_data_server), User().attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
 
 
-def test_restricted_attributes_can_be_sent_with_request(user_data_parse):
+def test_restricted_attributes_can_be_sent_with_request(user_data_client):
     checker = AttributePresenceChecker(ignore_required=[AttrRep(attr="id")])
-    user_data_parse["password"] = "1234"
+    user_data_client["password"] = "1234"
 
-    issues = checker(SCIMDataContainer(user_data_parse), User().attrs, "REQUEST")
+    issues = checker(SCIMDataContainer(user_data_client), User().attrs, "REQUEST")
 
     assert issues.to_dict(msg=True) == {}
 
@@ -76,14 +74,13 @@ def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
             "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
             "meta": {
                 "resourceType": "User",
-                "created": datetime(2011, 8, 1, 18, 29, 49),
-                "lastModified": datetime(2011, 8, 1, 18, 29, 49),
+                "created": "2011-05-13T04:42:34Z",
+                "lastModified": "2011-05-13T04:42:34Z",
                 "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
                 "version": r"W\/\"f250dd84f0671c3\"",
             },
         }
     )
-
     expected = {
         "meta": {
             "_errors": [{"code": 19}],

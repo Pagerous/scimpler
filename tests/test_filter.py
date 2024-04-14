@@ -1,6 +1,5 @@
 import pytest
 
-from src.data.container import Invalid
 from src.filter import Filter
 
 
@@ -16,9 +15,10 @@ def test_parse_basic_binary_attribute_filter(attr_rep, operator):
     expected = {"op": operator, "attr_rep": attr_rep, "value": "bjensen"}
     filter_exp = f'{attr_rep} {operator} "bjensen"'
 
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -45,9 +45,10 @@ def test_parse_basic_binary_complex_attribute_filter(full_attr_rep, operator):
     }
     filter_exp = f'{full_attr_rep} {operator} "bjensen"'
 
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -66,9 +67,10 @@ def test_parse_basic_unary_attribute_filter(attr_rep, operator):
     }
     filter_exp = f"{attr_rep} {operator}"
 
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -94,9 +96,10 @@ def test_parse_basic_unary_attribute_filter_with_complex_attribute(full_attr_rep
     }
     filter_exp = f"{full_attr_rep} {operator}"
 
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -112,9 +115,10 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
     expected = {"op": "eq", "attr_rep": attr_rep, "value": f"bjen{sequence}sen"}
     filter_exp = f'{attr_rep}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
 
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -145,9 +149,10 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_w
 
     filter_exp = f'{full_attr_rep}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
 
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -168,14 +173,16 @@ def test_basic_filters_can_be_combined_with_and_operator():
             },
         ],
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         'userName eq "bjensen" '
         'and name.formatted ne "Crazy" '
         'and urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"'
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -196,14 +203,16 @@ def test_basic_filters_can_be_combined_with_or_operator():
             },
         ],
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         'userName eq "bjensen" '
         'or name.formatted ne "Crazy" '
         'or urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"'
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -216,10 +225,12 @@ def test_basic_filter_can_be_combined_with_not_operator():
             "value": "bjensen",
         },
     }
+    filter_exp = 'not userName eq "bjensen"'
 
-    filter_, issues = Filter.parse('not userName eq "bjensen"')
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -252,14 +263,16 @@ def test_precedence_of_logical_operators_is_preserved():
             },
         ],
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         'userName eq "bjensen" '
         'or name.formatted ne "Crazy" '
         'and not urn:ietf:params:scim:schemas:core:2.0:User:nickName co "bj"'
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -292,14 +305,16 @@ def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_f
             },
         ],
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         'userName\t eq   "bjen\tsen" '
         'or\t  name.formatted    ne "Craz\ny" '
         'and \t\nnot  urn:ietf:params:scim:schemas:core:2.0:User:nickName co "b j"'
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -339,8 +354,7 @@ def test_filter_groups_are_parsed():
             },
         ],
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         'userName eq "bjensen" '
         "and "
         "("
@@ -349,7 +363,10 @@ def test_filter_groups_are_parsed():
         ")"
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -390,8 +407,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
             },
         ],
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         '\tuserName   eq \n"bjen  sen" '
         "and "
         "("
@@ -402,7 +418,10 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
         ")"
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -416,10 +435,12 @@ def test_basic_complex_attribute_filter_is_parsed():
             "value": "work",
         },
     }
+    filter_exp = 'emails[type eq "work"]'
 
-    filter_, issues = Filter.parse('emails[type eq "work"]')
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -443,10 +464,12 @@ def test_complex_attribute_filter_with_logical_operators_is_parsed():
             ],
         },
     }
+    filter_exp = 'emails[type eq "work" and value co "@example.com"]'
 
-    filter_, issues = Filter.parse('emails[type eq "work" and value co "@example.com"]')
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -493,8 +516,7 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
             ],
         },
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         "urn:ietf:params:scim:schemas:core:2.0:User:emails["
         '(type eq "work" or primary pr) and '
         "("
@@ -504,7 +526,10 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
         "]"
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -555,8 +580,7 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
             ],
         },
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         " \turn:ietf:params:scim:schemas:core:2.0:User:emails[  "
         "("
         'type \neq "work" or\t\t emails.primary pr'
@@ -568,7 +592,10 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
         "]"
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -695,8 +722,7 @@ def test_gargantuan_filter():
             },
         ],
     }
-
-    filter_, issues = Filter.parse(
+    filter_exp = (
         'userName eq "bjensen" and '
         "("
         'name.formatted ne "Crazy" or '
@@ -717,7 +743,10 @@ def test_gargantuan_filter():
         ")"
     )
 
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1029,9 +1058,10 @@ def test_gargantuan_filter():
     ),
 )
 def test_rfc_7644_exemplary_filter(filter_exp, expected):
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1095,10 +1125,11 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
     ),
 )
 def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1137,9 +1168,10 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
     ),
 )
 def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_exp, expected):
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1163,10 +1195,11 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
     ),
 )
 def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1207,9 +1240,10 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_is
 def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_value(
     filter_exp, expected
 ):
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1653,10 +1687,11 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
     ),
 )
 def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1749,18 +1784,21 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
     ),
 )
 def test_unknown_operator_causes_parsing_issues(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 def test_putting_complex_attribute_operator_inside_other_complex_attribute_operator_fails():
     expected_issues = {"_errors": [{"code": 109}]}
-    filter_, issues = Filter.parse('emails[type eq work and phones[type eq "home"]]')
-
-    assert filter_ is Invalid
+    filter_exp = 'emails[type eq work and phones[type eq "home"]]'
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1896,10 +1934,11 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
     ),
 )
 def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1953,10 +1992,11 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
     ),
 )
 def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2002,10 +2042,11 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
     ),
 )
 def test_lack_of_top_level_complex_attribute_name_is_discovered(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2019,10 +2060,11 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
     filter_exp,
 ):
     expected_issues = {"_errors": [{"code": 109}]}
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2057,10 +2099,11 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
     ),
 )
 def test_no_expression_is_discovered(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2075,14 +2118,14 @@ def test_no_expression_is_discovered(filter_exp, expected_issues):
     ),
 )
 def test_operators_are_case_insensitive(filter_exp):
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
-    assert filter_ is not None
+
+    assert Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
-    ("filter_exp", "expected_filter"),
+    ("filter_exp", "expected"),
     (
         (
             'attr eq "John"',
@@ -2142,11 +2185,12 @@ def test_operators_are_case_insensitive(filter_exp):
         ),
     ),
 )
-def test_operators_are_case_insensitive(filter_exp, expected_filter):
-    filter_, issues = Filter.parse(filter_exp)
-
+def test_operators_are_case_insensitive(filter_exp, expected):
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
-    assert filter_.to_dict() == expected_filter
+
+    filter_ = Filter.parse(filter_exp)
+    assert filter_.to_dict() == expected
 
 
 @pytest.mark.parametrize(
@@ -2219,10 +2263,11 @@ def test_operators_are_case_insensitive(filter_exp, expected_filter):
     ),
 )
 def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2331,19 +2376,21 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
 def test_binary_operator_non_compatible_comparison_values_are_discovered(
     filter_exp, expected_issues
 ):
-    filter_, issues = Filter.parse(filter_exp)
-
-    assert filter_ is Invalid
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 def test_complex_sub_attribute_is_discovered():
     expected_issues = {"_errors": [{"code": 33}]}
-
-    filter_, issues = Filter.parse('attr.sub_attr[type eq "work"]')
-
-    assert filter_ is Invalid
+    filter_exp = 'attr.sub_attr[type eq "work"]'
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
+
+    with pytest.raises(ValueError, match="invalid filter expression"):
+        Filter.parse(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2394,7 +2441,8 @@ def test_complex_sub_attribute_is_discovered():
     ),
 )
 def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, expected):
-    filter_, issues = Filter.parse(filter_exp)
-
+    issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
+
+    filter_ = Filter.parse(filter_exp)
     assert filter_.to_dict() == expected

@@ -1,6 +1,8 @@
 import re
 from typing import Any, Dict, List, Optional, Union
 
+from src.error import ValidationError, ValidationIssues
+
 _ATTR_NAME = re.compile(r"(\w+|\$ref)")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
 _ATTR_REP = re.compile(rf"({_URI_PREFIX.pattern})?({_ATTR_NAME.pattern}(\.\w+)?)")
@@ -50,11 +52,26 @@ class AttrRep:
         return True
 
     @classmethod
-    def parse(cls, attr_rep: str) -> Union["Invalid", "AttrRep"]:
+    def validate(cls, attr_rep: str) -> ValidationIssues:
+        issues = ValidationIssues()
         match = _ATTR_REP.fullmatch(attr_rep)
         if not match:
-            return Invalid
+            issues.add(
+                issue=ValidationError.bad_attribute_name(attr_rep),
+                proceed=False,
+            )
+        return issues
 
+    @classmethod
+    def parse(cls, attr_rep: str) -> "AttrRep":
+        try:
+            return cls._parse(attr_rep)
+        except Exception:
+            raise ValueError(f"{attr_rep!r} is not valid attribute representation")
+
+    @classmethod
+    def _parse(cls, attr_rep: str) -> "AttrRep":
+        match = _ATTR_REP.fullmatch(attr_rep)
         schema, attr = match.group(1), match.group(2)
         schema = schema[:-1] if schema else ""
         if "." in attr:
@@ -197,30 +214,30 @@ class SCIMDataContainer:
             return Missing
         return self._data[attr]
 
-    def __delitem__(self, attr_rep: Union["AttrRep", str]):
+    def pop(self, attr_rep: Union["AttrRep", str]):
         if isinstance(attr_rep, str):
             attr_rep = self._to_attr_rep(attr_rep)
 
         extension = self._lower_case_to_original.get(attr_rep.schema.lower())
         if extension is not None:
-            del self._data[extension][AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)]
-            return
+            return self._data[extension].pop(
+                AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
+            )
 
         attr = self._lower_case_to_original.get(attr_rep.attr.lower())
         if attr is None:
-            return
+            return None
 
         if attr_rep.sub_attr:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMDataContainer):
-                del attr_value[AttrRep(attr=attr_rep.sub_attr)]
+                return attr_value.pop(attr_rep.sub_attr)
             elif isinstance(attr_value, List):
-                for item in attr_value:
-                    del item[AttrRep(attr=attr_rep.sub_attr)]
-            return
+                return [item.pop(attr_rep.sub_attr) for item in attr_value]
+            return None
 
-        self._data.pop(attr)
         self._lower_case_to_original.pop(attr_rep.attr.lower())
+        return self._data.pop(attr)
 
     @staticmethod
     def _can_assign_to_complex(current_value, new_value) -> bool:

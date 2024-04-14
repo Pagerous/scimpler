@@ -1,9 +1,10 @@
 import re
-from typing import Any, List, Tuple, Union
+from copy import deepcopy
+from typing import Any, List
 
 from src.data import type as type_
 from src.data.attributes import Attribute, ComplexAttribute
-from src.data.container import Invalid, Missing, SCIMDataContainer
+from src.data.container import Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 
@@ -18,30 +19,25 @@ def _validate_operation_method_existence(method: Any) -> ValidationIssues:
             issue=ValidationError.missing(),
             proceed=False,
         )
-
     return issues
 
 
-def validate_request_operations(
-    operations_data: List[SCIMDataContainer],
-) -> Tuple[List[SCIMDataContainer], ValidationIssues]:
+def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
-    for i, operation_data in enumerate(operations_data):
-        method = operation_data[_operation__method.rep]
+    for i, item in enumerate(value):
+        method = item[_operation__method.rep]
         issues.merge(
             issues=_validate_operation_method_existence(method),
             location=(i, _operation__method.rep.attr),
         )
-        bulk_id = operation_data[_operation__bulk_id.rep]
+        bulk_id = item[_operation__bulk_id.rep]
         if method == "POST" and bulk_id in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__bulk_id.rep.attr),
             )
-        if method in ["GET", "DELETE"]:
-            del operation_data[_operation__data.rep]
-        path = operation_data[_operation__path.rep]
+        path = item[_operation__path.rep]
         if path in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
@@ -66,14 +62,23 @@ def validate_request_operations(
                     proceed=False,
                     location=(i, _operation__path.rep.attr),
                 )
-        data = operation_data[_operation__data.rep]
+        data = item[_operation__data.rep]
         if method in ["POST", "PUT", "PATCH"] and data in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__data.rep.attr),
             )
-    return operations_data, issues
+    return issues
+
+
+def parse_request_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+    value = deepcopy(value)
+    for i, item in enumerate(value):
+        method = item[_operation__method.rep]
+        if method in ["GET", "DELETE"]:
+            item.pop(_operation__data.rep)
+    return value
 
 
 _operation__method = Attribute(
@@ -117,7 +122,8 @@ request_operations = ComplexAttribute(
     name="Operations",
     required=True,
     multi_valued=True,
-    complex_parsers=[validate_request_operations],
+    validators=[validate_request_operations],
+    parser=parse_request_operations,
 )
 
 fail_on_errors = Attribute(
@@ -134,33 +140,31 @@ class BulkRequest(BaseSchema):
         )
 
 
-def validate_response_operations(
-    operations_data: List[SCIMDataContainer],
-) -> Tuple[List[SCIMDataContainer], ValidationIssues]:
+def validate_response_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
-    for i, operation_data in enumerate(operations_data):
-        method = operation_data[_operation__method.rep]
+    for i, item in enumerate(value):
+        method = item[_operation__method.rep]
         issues.merge(
             issues=_validate_operation_method_existence(method),
             location=(i, _operation__method.rep.attr),
         )
-        bulk_id = operation_data[_operation__bulk_id.rep]
+        bulk_id = item[_operation__bulk_id.rep]
         if method == "POST" and bulk_id in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__bulk_id.rep.attr),
             )
-        status = operation_data[_operation__status.rep]
+        status = item[_operation__status.rep]
         if status:
-            location = operation_data[_operation__location.rep]
+            location = item[_operation__location.rep]
             if location in [None, Missing] and method and (method != "POST" or int(status) < 300):
                 issues.add(
                     issue=ValidationError.missing(),
                     proceed=False,
                     location=(i, _operation__location.rep.attr),
                 )
-            response = operation_data[_operation__response.rep]
+            response = item[_operation__response.rep]
             if response in [None, Missing] and int(status) >= 300:
                 issues.add(
                     issue=ValidationError.missing(),
@@ -173,7 +177,7 @@ def validate_response_operations(
                 proceed=False,
                 location=(i, _operation__status.rep.attr),
             )
-    return operations_data, issues
+    return issues
 
 
 _operation__location = Attribute(
@@ -187,7 +191,7 @@ _operation__response = Attribute(
 )
 
 
-def _validate_status(value: Any) -> Tuple[Union[Invalid, str], ValidationIssues]:
+def _validate_status(value: Any) -> ValidationIssues:
     issues = ValidationIssues()
     try:
         int(value)
@@ -196,15 +200,14 @@ def _validate_status(value: Any) -> Tuple[Union[Invalid, str], ValidationIssues]
             issue=ValidationError.bad_value_syntax(),
             proceed=False,
         )
-        value = Invalid
-    return value, issues
+    return issues
 
 
 _operation__status = Attribute(
     name="status",
     type_=type_.String,
     required=True,
-    dumpers=[_validate_status],
+    validators=[_validate_status],
 )
 
 
@@ -220,7 +223,7 @@ response_operations = ComplexAttribute(
     name="Operations",
     required=True,
     multi_valued=True,
-    complex_dumpers=[validate_response_operations],
+    validators=[validate_response_operations],
 )
 
 

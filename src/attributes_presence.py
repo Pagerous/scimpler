@@ -1,4 +1,4 @@
-from typing import Any, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from src.data.attributes import Attribute, AttributeReturn, Attributes
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
@@ -25,43 +25,35 @@ class AttributePresenceChecker:
         return self._include
 
     @classmethod
-    def parse(
-        cls, attr_reps: Iterable[str], include: Optional[bool] = None
-    ) -> Tuple[Union[Invalid, "AttributePresenceChecker"], ValidationIssues]:
+    def validate(cls, attr_reps: Iterable[str]) -> ValidationIssues:
         issues = ValidationIssues()
-        parsed_attr_reps = []
-        all_parsed = True
-        for attr_rep_ in attr_reps:
-            attr_rep = AttrRep.parse(attr_rep_)
-            if attr_rep:
-                attr_location = (
-                    (attr_rep.attr, attr_rep.sub_attr) if attr_rep.sub_attr else (attr_rep.attr,)
-                )
-            else:
-                attr_location = (attr_rep_,)
-            if attr_rep is Invalid:
+        for attr_rep in attr_reps:
+            try:
+                AttrRep.parse(attr_rep)
+            except ValueError:
                 issues.add(
-                    issue=ValidationError.bad_attribute_name(attr_rep_),
-                    location=attr_location,
+                    issue=ValidationError.bad_attribute_name(attr_rep),
+                    location=(attr_rep,),
                     proceed=False,
                 )
+        return issues
 
-            if issues.can_proceed(attr_location):
-                parsed_attr_reps.append(attr_rep)
-            else:
-                all_parsed = False
-
-        if all_parsed:
-            return AttributePresenceChecker(parsed_attr_reps, include), issues
-        return Invalid, issues
+    @classmethod
+    def parse(
+        cls, attr_reps: Iterable[str], include: Optional[bool] = None
+    ) -> "AttributePresenceChecker":
+        return AttributePresenceChecker(
+            [AttrRep.parse(attr_rep) for attr_rep in attr_reps], include
+        )
 
     def __call__(
         self,
-        data: SCIMDataContainer,
+        data: Union[Dict[str, Any], SCIMDataContainer],
         attrs: Attributes,
         direction: str,
     ) -> ValidationIssues:
         issues = ValidationIssues()
+        data = SCIMDataContainer(data)
 
         for attr in attrs:
             top_attr_rep = AttrRep(schema=attr.rep.schema, attr=attr.rep.attr)

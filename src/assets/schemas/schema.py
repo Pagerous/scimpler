@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import List
 
 from src.data import type as type_
 from src.data.attributes import (
@@ -7,8 +7,8 @@ from src.data.attributes import (
     AttributeMutability,
     ComplexAttribute,
 )
-from src.data.container import Invalid, Missing, SCIMDataContainer
-from src.data.schemas import BaseSchema, ResourceSchema
+from src.data.container import Missing, SCIMDataContainer
+from src.data.schemas import ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
 id_ = Attribute(
@@ -142,33 +142,38 @@ _attributes__reference_types = Attribute(
 )
 
 
-def dump_attributes(
-    value: List[SCIMDataContainer],
-) -> Tuple[List[Union[Invalid, SCIMDataContainer]], ValidationIssues]:
+def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         attr_type = item[_attributes__type.rep]
         sub_attributes = item[_attributes__sub_attributes.rep]
         if sub_attributes not in [Missing, None]:
-            if attr_type != "complex":
-                del item[_attributes__sub_attributes.rep]
-            else:
-                dumped, issues_ = attributes.dump(sub_attributes)
+            if attr_type == "complex":
                 issues.merge(
-                    issues_,
+                    attributes.validate(sub_attributes),
                     location=(i, _attributes__sub_attributes.rep.attr),
                 )
-                item[_attributes__sub_attributes.rep] = dumped
-        if attr_type == "string":
-            if item[_attributes__case_exact.rep] in [None, Missing]:
-                issues.add(
-                    issue=ValidationError.missing(),
-                    location=(i, _attributes__case_exact.rep),
-                    proceed=False,
-                )
-        else:
-            del item[_attributes__case_exact.rep]
-    return value, issues
+        if attr_type == "string" and item[_attributes__case_exact.rep] in [None, Missing]:
+            issues.add(
+                issue=ValidationError.missing(),
+                location=(i, _attributes__case_exact.rep),
+                proceed=False,
+            )
+    return issues
+
+
+def dump_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+    for i, item in enumerate(value):
+        attr_type = item[_attributes__type.rep]
+        sub_attributes = item[_attributes__sub_attributes.rep]
+        if sub_attributes not in [Missing, None]:
+            if attr_type != "complex":
+                item.pop(_attributes__sub_attributes.rep)
+            else:
+                item[_attributes__sub_attributes.rep] = attributes.dump(sub_attributes)
+        if attr_type != "string":
+            item.pop(_attributes__case_exact.rep)
+    return value
 
 
 attributes = ComplexAttribute(
@@ -189,7 +194,8 @@ attributes = ComplexAttribute(
     name="attributes",
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
-    complex_dumpers=[dump_attributes],
+    validators=[validate_attributes],
+    dumper=dump_attributes,
 )
 
 

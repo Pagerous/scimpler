@@ -15,10 +15,7 @@ class ValidationError:
         ),
         10: "header '{header}' is required",
         11: "must be equal to {value!r}",
-        12: (
-            "error status should be greater or equal to 300 and lesser than 600, "
-            "but provided {provided}"
-        ),
+        12: "error status must be greater or equal to 300 and lesser than 600",
         13: (
             "HTTP response status ({response_status}) and error status in body "
             "({body_status}) must match"
@@ -109,8 +106,8 @@ class ValidationError:
         return cls(code=11, value=value)
 
     @classmethod
-    def bad_error_status(cls, provided: int):
-        return cls(code=12, provided=provided)
+    def bad_error_status(cls):
+        return cls(code=12)
 
     @classmethod
     def error_status_mismatch(cls, response_status: str, body_status: str):

@@ -1,9 +1,9 @@
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 from src.attributes_presence import AttributePresenceChecker
 from src.data import type as type_
 from src.data.attributes import Attribute
-from src.data.container import AttrRep, Invalid, SCIMDataContainer
+from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
@@ -21,16 +21,15 @@ def parse_attr_rep(value: str) -> Tuple[Union[Invalid, AttrRep], ValidationIssue
     return parsed, issues
 
 
-def parse_attr_rep_multi(
-    value: List[str],
-) -> Tuple[List[Optional[AttrRep]], ValidationIssues]:
+def validate_attr_reps(value: List[str]) -> ValidationIssues:
     issues = ValidationIssues()
-    parsed = []
     for i, item in enumerate(value):
-        parsed_item, issues_ = parse_attr_rep(item)
-        issues.merge(issues=issues_, location=(i,))
-        parsed.append(parsed_item)
-    return parsed, issues
+        issues.merge(issues=AttrRep.validate(item), location=(i,))
+    return issues
+
+
+def parse_attr_reps(value: List[str]) -> List[AttrRep]:
+    return [AttrRep.parse(item) for item in value]
 
 
 attributes = Attribute(
@@ -39,7 +38,8 @@ attributes = Attribute(
     required=False,
     case_exact=False,
     multi_valued=True,
-    parsers=[parse_attr_rep_multi],
+    validators=[validate_attr_reps],
+    parser=parse_attr_reps,
 )
 
 
@@ -49,7 +49,8 @@ exclude_attributes = Attribute(
     required=False,
     case_exact=False,
     multi_valued=True,
-    parsers=[parse_attr_rep_multi],
+    validators=[validate_attr_reps],
+    parser=parse_attr_reps,
 )
 
 
@@ -57,7 +58,8 @@ filter_ = Attribute(
     name="filter",
     type_=type_.String,
     required=False,
-    parsers=[Filter.parse],
+    validators=[Filter.validate],
+    parser=Filter.parse,
 )
 
 
@@ -65,7 +67,8 @@ sort_by = Attribute(
     name="sortBy",
     type_=type_.String,
     required=False,
-    parsers=[parse_attr_rep],
+    validators=[AttrRep.validate],
+    parser=AttrRep.parse,
 )
 
 
@@ -107,39 +110,36 @@ class SearchRequest(BaseSchema):
             ],
         )
 
-    def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
-        data, issues = super().parse(data)
-        if not issues.can_proceed():
-            return data, issues
+    def parse(self, data: Any) -> SCIMDataContainer:
+        data = super().parse(data)
+        to_include = data.pop(self.attrs.attributes.rep)
+        to_exclude = data.pop(self.attrs.excludeattributes.rep)
+        if to_include or to_exclude:
+            data["presence_checker"] = AttributePresenceChecker(
+                attr_reps=to_include or to_exclude, include=bool(to_include)
+            )
+        if sort_by_ := data.pop(self.attrs.sortby.rep):
+            data["sorter"] = Sorter(
+                attr_rep=sort_by_,
+                asc=data.pop(self.attrs.sortorder.rep) == "ascending",
+            )
+        return data
 
-        if issues.can_proceed(
-            (self.attrs.attributes.rep.attr,), (self.attrs.excludeattributes.rep.attr,)
-        ):
-            to_include = data[self.attrs.attributes.rep]
-            to_exclude = data[self.attrs.excludeattributes.rep]
-            if to_include and to_exclude:
-                issues.add(
-                    issue=ValidationError.can_not_be_used_together(
-                        self.attrs.excludeattributes.rep.attr
-                    ),
-                    proceed=False,
-                    location=(self.attrs.attributes.rep.attr,),
-                )
-                issues.add(
-                    issue=ValidationError.can_not_be_used_together(self.attrs.attributes.rep.attr),
-                    proceed=False,
-                    location=(self.attrs.excludeattributes.rep.attr,),
-                )
-            if to_include or to_include:
-                data[AttrRep(attr="presence_checker")] = AttributePresenceChecker(
-                    attr_reps=to_include or to_exclude, include=bool(to_include)
-                )
-
-        if issues.can_proceed((self.attrs.sortby.rep.attr,)):
-            sort_by_ = data[self.attrs.sortby.rep]
-            if sort_by_:
-                data[AttrRep(attr="sorter")] = Sorter(
-                    attr_rep=sort_by_, asc=data[self.attrs.sortby.rep] == "ascending"
-                )
-
-        return data, issues
+    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+        issues = ValidationIssues()
+        to_include = data[self.attrs.attributes.rep]
+        to_exclude = data[self.attrs.excludeattributes.rep]
+        if to_include not in [None, Missing] and to_exclude not in [None, Missing]:
+            issues.add(
+                issue=ValidationError.can_not_be_used_together(
+                    self.attrs.excludeattributes.rep.attr
+                ),
+                proceed=False,
+                location=(self.attrs.attributes.rep.attr,),
+            )
+            issues.add(
+                issue=ValidationError.can_not_be_used_together(self.attrs.attributes.rep.attr),
+                proceed=False,
+                location=(self.attrs.excludeattributes.rep.attr,),
+            )
+        return issues

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -53,7 +54,8 @@ class AttributeIssuer(Enum):
     NOT_SPECIFIED = "NOT_SPECIFIED"
 
 
-_AttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
+_AttributeProcessor = Callable[[Any], Any]
+_AttributeValidator = Callable[[Any], ValidationIssues]
 
 
 class Attribute:
@@ -72,8 +74,9 @@ class Attribute:
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        parsers: Optional[Collection[_AttributeProcessor]] = None,
-        dumpers: Optional[Collection[_AttributeProcessor]] = None,
+        validators: Optional[List[_AttributeValidator]] = None,
+        parser: Optional[_AttributeProcessor] = None,
+        dumper: Optional[_AttributeProcessor] = None,
     ):
         self._rep = AttrRep(attr=name) if isinstance(name, str) else name
         self._type = type_
@@ -107,8 +110,9 @@ class Attribute:
         self._mutability = mutability
         self._returned = returned
         self._uniqueness = uniqueness
-        self._parsers = parsers or []
-        self._dumpers = dumpers or []
+        self._validators = validators or []
+        self._parser = parser
+        self._dumper = dumper
 
     @property
     def rep(self) -> AttrRep:
@@ -159,12 +163,16 @@ class Attribute:
         return self._uniqueness
 
     @property
-    def parsers(self) -> List[_AttributeProcessor]:
-        return self._parsers
+    def validators(self) -> List[_AttributeValidator]:
+        return self._validators
 
     @property
-    def dumpers(self) -> List[_AttributeProcessor]:
-        return self._dumpers
+    def parser(self) -> Optional[_AttributeProcessor]:
+        return self._parser
+
+    @property
+    def dumper(self) -> Optional[_AttributeProcessor]:
+        return self._dumper
 
     def __repr__(self) -> str:
         return f"Attribute(name={self._rep}, type={self._type.__name__})"
@@ -185,61 +193,15 @@ class Attribute:
                 self._mutability == other._mutability,
                 self._returned == other._returned,
                 self._uniqueness == other._uniqueness,
-                self._parsers == other._parsers,
-                self._dumpers == other._dumpers,
+                self._validators == other._validators,
+                self._parser == other._parser,
+                self._dumper == other._dumper,
                 self._validate_canonical_values == other._validate_canonical_values,
             ]
         )
 
-    def _process(self, value: Any, method, postprocessors) -> Tuple[Any, ValidationIssues]:
-        issues = ValidationIssues()
-        if value is None:
-            return value, issues
-
-        if self._multi_valued:
-            if not isinstance(value, list):
-                issues.add(
-                    issue=ValidationError.bad_type(get_scim_type(list), get_scim_type(type(value))),
-                    proceed=False,
-                )
-                return Invalid, issues
-
-            parsed = []
-            for i, item in enumerate(value):
-                item, issues_ = method(item)
-                issues.merge(location=(i,), issues=issues_)
-                if not self._is_canonical(item):
-                    if self._validate_canonical_values:
-                        issues.add(
-                            issue=ValidationError.must_be_one_of(self._canonical_values, item),
-                            proceed=False,
-                            location=(i,),
-                        )
-                        item = Invalid
-                    else:
-                        pass  # TODO: warn about non-canonical value
-                parsed.append(item)
-        else:
-            parsed, issues_ = method(value)
-            issues.merge(issues=issues_)
-            if not self._is_canonical(parsed):
-                if self._validate_canonical_values:
-                    issues.add(
-                        issue=ValidationError.must_be_one_of(self._canonical_values, parsed),
-                        proceed=False,
-                    )
-                    parsed = Invalid
-                else:
-                    pass  # TODO: warn about non-canonical value
-
-        if not issues.has_issues():
-            for postprocessor in postprocessors:
-                parsed, issues_ = postprocessor(parsed)
-                issues.merge(issues=issues_)
-        return parsed, issues
-
     def _is_canonical(self, value: Any) -> bool:
-        if value is Invalid or self._canonical_values is None:
+        if self._canonical_values is None:
             return True
 
         if isinstance(value, str) and not self._case_exact:
@@ -247,19 +209,63 @@ class Attribute:
 
         return value in self._canonical_values
 
-    def parse(self, value: Any) -> Tuple[Any, ValidationIssues]:
-        return self._process(
-            value=value,
-            method=self._type.parse,
-            postprocessors=self._parsers,
-        )
+    def validate(self, value: Any) -> ValidationIssues:
+        issues = ValidationIssues()
+        if value is None:
+            return issues
 
-    def dump(self, value: Any) -> Tuple[Any, ValidationIssues]:
-        return self._process(
-            value=value,
-            method=self._type.dump,
-            postprocessors=self._dumpers,
-        )
+        if self._multi_valued:
+            if not isinstance(value, list):
+                issues.add(
+                    issue=ValidationError.bad_type(get_scim_type(list), get_scim_type(type(value))),
+                    proceed=False,
+                )
+                return issues
+
+            for i, item in enumerate(value):
+                issues_ = self._type.validate(item)
+                issues.merge(location=(i,), issues=issues_)
+                if not issues_.can_proceed():
+                    continue
+                if not self._is_canonical(item):
+                    if self._validate_canonical_values:
+                        issues.add(
+                            issue=ValidationError.must_be_one_of(self._canonical_values, item),
+                            proceed=False,
+                            location=(i,),
+                        )
+                    else:
+                        pass  # TODO: warn about non-canonical value
+        else:
+            issues_ = self._type.validate(value)
+            issues.merge(issues=issues_)
+            if not issues_.can_proceed():
+                return issues
+
+            elif not self._is_canonical(value):
+                if self._validate_canonical_values:
+                    issues.add(
+                        issue=ValidationError.must_be_one_of(self._canonical_values, value),
+                        proceed=False,
+                    )
+                else:
+                    pass  # TODO: warn about non-canonical value
+
+        for validator in self.validators:
+            if not issues.can_proceed():
+                break
+            issues.merge(validator(value))
+        return issues
+
+    def dump(self, value: Any) -> Any:
+        if self._dumper is not None:
+            return self._dumper(value)
+        return value
+
+    def parse(self, value: Any) -> Any:
+        if self._parser is not None:
+            return self._parser(value)
+        return value
 
     def to_dict(self) -> Dict:
         output = {
@@ -295,10 +301,9 @@ class ComplexAttribute(Attribute):
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
-        parsers: Optional[Collection[_AttributeProcessor]] = None,
-        dumpers: Optional[Collection[_AttributeProcessor]] = None,
-        complex_parsers: Optional[Collection[_ComplexAttributeProcessor]] = None,
-        complex_dumpers: Optional[Collection[_ComplexAttributeProcessor]] = None,
+        validators: Optional[List[_AttributeValidator]] = None,
+        parser: Optional[_AttributeProcessor] = None,
+        dumper: Optional[_AttributeProcessor] = None,
     ):
         super().__init__(
             name=name,
@@ -310,38 +315,57 @@ class ComplexAttribute(Attribute):
             mutability=mutability,
             returned=returned,
             uniqueness=uniqueness,
-            parsers=parsers,
-            dumpers=dumpers,
+            parser=parser,
+            dumper=dumper,
         )
         self._sub_attributes = Attributes(sub_attributes)
 
-        complex_parsers, complex_dumpers = complex_parsers or [], complex_dumpers or []
+        validators = list(validators or [])
         if multi_valued:
-            if validate_single_primary_value not in complex_parsers:
-                complex_parsers.append(validate_single_primary_value)
-            if validate_single_primary_value not in complex_dumpers:
-                complex_dumpers.append(validate_single_primary_value)
-        self._complex_parsers = complex_parsers
-        self._complex_dumpers = complex_dumpers
+            if validate_single_primary_value not in validators:
+                validators.append(validate_single_primary_value)
+        self._complex_validators = validators
 
     @property
     def attrs(self) -> "Attributes":
         return self._sub_attributes
 
-    @property
-    def complex_parsers(self) -> List[_ComplexAttributeProcessor]:
-        return self._complex_parsers
-
-    @property
-    def complex_dumpers(self) -> List[_ComplexAttributeProcessor]:
-        return self._complex_dumpers
-
-    def _process_complex(
-        self, value: Any, method: str, postprocessors
-    ) -> Tuple[Any, ValidationIssues]:
-        value, issues = getattr(super(), method)(value)
+    def validate(self, value: Any) -> ValidationIssues:
+        issues = super().validate(value)
         if not issues.can_proceed() or value is None:
-            return value, issues
+            return issues
+        if self.multi_valued:
+            for i, item in enumerate(value):
+                item = SCIMDataContainer(item)
+                for sub_attr in self._sub_attributes:
+                    sub_attr_value = item[sub_attr.rep]
+                    if sub_attr_value is Missing:
+                        continue
+                    issues_ = sub_attr.validate(sub_attr_value)
+                    if not issues_.can_proceed():
+                        item[sub_attr.rep] = Invalid
+                    issues.merge(location=(i, sub_attr.rep.attr), issues=issues_)
+        else:
+            value = SCIMDataContainer(value)
+            for sub_attr in self._sub_attributes:
+                sub_attr_value = value[sub_attr.rep]
+                if sub_attr_value is Missing:
+                    continue
+                issues_ = sub_attr.validate(sub_attr_value)
+                if not issues_.can_proceed():
+                    value[sub_attr.rep] = Invalid
+                issues.merge(
+                    location=(sub_attr.rep.attr,),
+                    issues=issues_,
+                )
+
+        for validator in self._complex_validators:
+            if not issues.can_proceed():
+                break
+            issues.merge(validator(value))
+        return issues
+
+    def parse(self, value: Any) -> Any:
         if self.multi_valued:
             parsed = []
             for i, item in enumerate(value):
@@ -351,9 +375,7 @@ class ComplexAttribute(Attribute):
                     sub_attr_value = item[sub_attr.rep]
                     if sub_attr_value is Missing:
                         continue
-                    parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
-                    issues.merge(location=(i, sub_attr.rep.attr), issues=issues_)
-                    parsed_item[sub_attr.rep] = parsed_attr
+                    parsed_item[sub_attr.rep] = sub_attr.parse(sub_attr_value)
                 parsed.append(parsed_item)
         else:
             value = SCIMDataContainer(value)
@@ -362,29 +384,30 @@ class ComplexAttribute(Attribute):
                 sub_attr_value = value[sub_attr.rep]
                 if sub_attr_value is Missing:
                     continue
-                parsed_attr, issues_ = getattr(sub_attr, method)(sub_attr_value)
-                issues.merge(
-                    location=(sub_attr.rep.attr,),
-                    issues=issues_,
-                )
-                parsed[sub_attr.rep] = parsed_attr
+                parsed[sub_attr.rep] = sub_attr.parse(sub_attr_value)
+        return super().parse(parsed)
 
-        if not issues.has_issues():
-            for postprocessor in postprocessors:
-                parsed, issues_ = postprocessor(parsed)
-                issues.merge(issues=issues_)
-
-        return parsed, issues
-
-    def parse(
-        self, value: Any
-    ) -> Tuple[Union[Invalid, SCIMDataContainer, List[SCIMDataContainer]], ValidationIssues]:
-        return self._process_complex(value, "parse", self._complex_parsers)
-
-    def dump(
-        self, value: Any
-    ) -> Tuple[Union[Invalid, SCIMDataContainer, List[SCIMDataContainer]], ValidationIssues]:
-        return self._process_complex(value, "dump", self._complex_dumpers)
+    def dump(self, value: Any) -> Any:
+        if self.multi_valued:
+            dumped = []
+            for i, item in enumerate(value):
+                item = SCIMDataContainer(item)
+                parsed_item = SCIMDataContainer()
+                for sub_attr in self._sub_attributes:
+                    sub_attr_value = item[sub_attr.rep]
+                    if sub_attr_value is Missing:
+                        continue
+                    parsed_item[sub_attr.rep] = sub_attr.dump(sub_attr_value)
+                dumped.append(parsed_item)
+        else:
+            value = SCIMDataContainer(value)
+            dumped = SCIMDataContainer()
+            for sub_attr in self._sub_attributes:
+                sub_attr_value = value[sub_attr.rep]
+                if sub_attr_value is Missing:
+                    continue
+                dumped[sub_attr.rep] = sub_attr.dump(sub_attr_value)
+        return super().dump(dumped)
 
     def to_dict(self) -> Dict[str, Any]:
         output = super().to_dict()
@@ -392,9 +415,7 @@ class ComplexAttribute(Attribute):
         return output
 
 
-def validate_single_primary_value(
-    value: Collection[SCIMDataContainer],
-) -> Tuple[List[SCIMDataContainer], ValidationIssues]:
+def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     primary_entries = set()
     for i, item in enumerate(value):
@@ -406,21 +427,35 @@ def validate_single_primary_value(
             proceed=True,
         )
     # TODO: warn if a given type-value pair appears more than once
-    return list(value), issues
+    return issues
 
 
 class Attributes:
     def __init__(self, attrs: Iterable[Attribute]):
         self._top_level: List[Attribute] = []
+        self._base_top_level: List[Attribute] = []
+        self._extensions: Dict[str, List[Attribute]] = defaultdict(list)
         self._attrs = {}
         for attr in attrs:
             self._attrs[attr.rep.schema, attr.rep.attr, attr.rep.sub_attr] = attr
             if not attr.rep.sub_attr:
                 self._top_level.append(attr)
+                if not attr.rep.extension:
+                    self._base_top_level.append(attr)
+            if attr.rep.extension:
+                self._extensions[attr.rep.schema.lower()].append(attr)
 
     @property
     def top_level(self) -> List[Attribute]:
         return self._top_level
+
+    @property
+    def base_top_level(self) -> List[Attribute]:
+        return self._base_top_level
+
+    @property
+    def extensions(self) -> Dict[str, List[Attribute]]:
+        return self._extensions
 
     def __getattr__(self, name: str) -> Attribute:
         parts = name.split("__", 1)

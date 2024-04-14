@@ -1,11 +1,26 @@
-from copy import deepcopy
-
 from src.data import type as type_
-from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
-from src.data.schemas import ResourceSchema, id_
+from src.data.attributes import (
+    Attribute,
+    AttributeIssuer,
+    AttributeMutability,
+    AttributeReturn,
+    AttributeUniqueness,
+    ComplexAttribute,
+)
+from src.data.schemas import ResourceSchema, bulk_id_validator
 
-id_ = deepcopy(id_)
-id_._required = False
+id_ = Attribute(
+    name="id",
+    type_=type_.String,
+    required=False,
+    issuer=AttributeIssuer.SERVER,
+    case_exact=True,
+    multi_valued=False,
+    mutability=AttributeMutability.READ_ONLY,
+    returned=AttributeReturn.ALWAYS,
+    uniqueness=AttributeUniqueness.SERVER,
+    validators=[bulk_id_validator],
+)
 
 documentation_uri = Attribute(
     name="documentationUri",

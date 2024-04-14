@@ -1,5 +1,3 @@
-from typing import Tuple, Union
-
 from src.data import type as type_
 from src.data.attributes import (
     Attribute,
@@ -7,27 +5,26 @@ from src.data.attributes import (
     AttributeReturn,
     AttributeUniqueness,
 )
-from src.data.container import Invalid
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 
 
-def parse_error_status(value: str) -> Tuple[Union[Invalid, int], ValidationIssues]:
+def validate_error_status(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     try:
         value = int(value)
     except ValueError:
         issues.add(
-            issue=ValidationError.bad_error_status(value),
+            issue=ValidationError.bad_error_status(),
             proceed=False,
         )
-        return Invalid, issues
+        return issues
     if not 300 <= value < 600:
         issues.add(
-            issue=ValidationError.bad_error_status(value),
+            issue=ValidationError.bad_error_status(),
             proceed=True,
         )
-    return value, issues
+    return issues
 
 
 status = Attribute(
@@ -39,7 +36,7 @@ status = Attribute(
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,
-    parsers=[parse_error_status],
+    validators=[validate_error_status],
 )
 
 

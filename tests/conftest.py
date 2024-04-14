@@ -9,7 +9,7 @@ from src.data.schemas import ResourceSchema
 
 
 @pytest.fixture
-def user_data_parse():
+def user_data_client():
     return {
         "schemas": [
             "urn:ietf:params:scim:schemas:core:2.0:User",
@@ -128,13 +128,13 @@ def user_data_parse():
 
 
 @pytest.fixture
-def user_data_dump(user_data_parse):
-    data = deepcopy(user_data_parse)
+def user_data_server(user_data_client):
+    data = deepcopy(user_data_client)
     data["id"] = "2819c223-7f76-453a-919d-413861904646"
     data["meta"] = {
         "resourceType": "User",
-        "created": datetime.fromisoformat("2010-01-23T04:56:22Z"),
-        "lastModified": datetime.fromisoformat("2011-05-13T04:42:34Z"),
+        "created": "2010-01-23T04:56:22Z",
+        "lastModified": "2011-05-13T04:42:34Z",
         "version": r'W\/"3694e05e9dff591"',
         "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
     }
@@ -143,11 +143,8 @@ def user_data_dump(user_data_parse):
 
 
 @pytest.fixture
-def list_user_data(user_data_dump):
-    resources = [
-        deepcopy(user_data_dump),
-        deepcopy(user_data_dump),
-    ]
+def list_user_data(user_data_server):
+    resources = [deepcopy(user_data_server), deepcopy(user_data_server)]
     resources[0]["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]["manager"][
         "displayName"
     ] = "Jan Kowalski"
@@ -176,20 +173,6 @@ def list_user_data(user_data_dump):
         "startIndex": 1,
         "Resources": resources,
     }
-
-
-@pytest.fixture
-def list_user_data_dumped(list_user_data):
-    data: dict = deepcopy(list_user_data)
-    data["Resources"][0]["meta"]["created"] = data["Resources"][0]["meta"]["created"].isoformat()
-    data["Resources"][1]["meta"]["created"] = data["Resources"][1]["meta"]["created"].isoformat()
-    data["Resources"][0]["meta"]["lastModified"] = data["Resources"][0]["meta"][
-        "lastModified"
-    ].isoformat()
-    data["Resources"][1]["meta"]["lastModified"] = data["Resources"][1]["meta"][
-        "lastModified"
-    ].isoformat()
-    return data
 
 
 @pytest.fixture

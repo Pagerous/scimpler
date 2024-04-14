@@ -63,8 +63,8 @@ from src.data.container import AttrRep, Missing, SCIMDataContainer
         ),
     ),
 )
-def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, user_data_dump):
-    actual = SCIMDataContainer(user_data_dump)[attr_rep]
+def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, user_data_server):
+    actual = SCIMDataContainer(user_data_server)[attr_rep]
 
     assert actual == expected
 

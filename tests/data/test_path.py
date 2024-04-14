@@ -2,7 +2,7 @@ from typing import Optional
 
 import pytest
 
-from src.data.container import AttrRep, Invalid
+from src.data.container import AttrRep
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
 from src.filter import Filter
@@ -64,10 +64,11 @@ from src.filter import Filter
     ),
 )
 def test_patch_path_parsing_failure(path, expected_issues):
-    parsed, issues = PatchPath.parse(path)
-
-    assert parsed is Invalid
+    issues = PatchPath.validate(path)
     assert issues.to_dict(ctx=True) == expected_issues
+
+    with pytest.raises(ValueError, match="invalid path expression"):
+        PatchPath.parse(path)
 
 
 @pytest.mark.parametrize(
@@ -113,9 +114,10 @@ def test_patch_path_parsing_success(
     expected_multivalued_filter: Optional[Filter],
     expected_complex_filter_attr_rep: Optional[AttrRep],
 ):
-    parsed, issues = PatchPath.parse(path)
-
+    issues = PatchPath.validate(path)
     assert issues.to_dict(msg=True) == {}
+
+    parsed = PatchPath.parse(path)
     assert parsed.attr_rep == expected_attr_rep
     if expected_multivalued_filter is not None:
         assert isinstance(parsed.complex_filter, type(expected_multivalued_filter))
@@ -213,7 +215,8 @@ def test_patch_path_object_construction_fails_if_broken_constraints(kwargs):
     ),
 )
 def test_complex_filter_string_values_can_contain_anything(path, expected_filter_value):
-    parsed, issues = PatchPath.parse(path)
-
+    issues = PatchPath.validate(path)
     assert issues.to_dict(msg=True) == {}
+
+    parsed = PatchPath.parse(path)
     assert parsed.complex_filter.operator.sub_operator.value == expected_filter_value

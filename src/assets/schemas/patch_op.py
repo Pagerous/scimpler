@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Union
 
 from src.data import type as at
 from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
@@ -20,7 +20,8 @@ _operations_path = Attribute(
     name="path",
     type_=at.String,
     required=False,
-    parsers=[PatchPath.parse],
+    validators=[PatchPath.validate],
+    parser=PatchPath.parse,
 )
 
 
@@ -30,35 +31,43 @@ _operations_value = Attribute(
 )
 
 
-def validate_operations(
-    operations_data: List[SCIMDataContainer],
-) -> Tuple[List[SCIMDataContainer], ValidationIssues]:
+def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
-    for i, operation_data in enumerate(operations_data):
-        type_ = operation_data[_operations_op.rep]
-        path: PatchPath = operation_data[_operations_path.rep]
-        value = operation_data[_operations_value.rep]
+    for i, item in enumerate(value):
+        type_ = item[_operations_op.rep]
+        path = item[_operations_path.rep]
+        op_value = item[_operations_value.rep]
         if type_ == "remove" and path in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operations_path.rep.attr),
             )
-            del operation_data[_operations_value.rep]
         elif type_ == "add":
-            if value in [None, Missing]:
+            if op_value in [None, Missing]:
                 issues.add(
                     issue=ValidationError.missing(),
                     proceed=False,
                     location=(i, _operations_value.rep.attr),
                 )
-            if path and path.complex_filter is not None and path.complex_filter_attr_rep is None:
+            if (
+                path
+                and (path := PatchPath.parse(path)).complex_filter is not None
+                and path.complex_filter_attr_rep is None
+            ):
                 issues.add(
                     issue=ValidationError.complex_filter_without_sub_attr_for_add_op(),
                     proceed=False,
                     location=(i, _operations_path.rep.attr),
                 )
-    return operations_data, issues
+    return issues
+
+
+def parse_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+    for i, item in enumerate(value):
+        if item == "remove":
+            item.pop(_operations_value.rep)
+    return value
 
 
 operations = ComplexAttribute(
@@ -70,7 +79,8 @@ operations = ComplexAttribute(
     name="Operations",
     required=True,
     multi_valued=True,
-    complex_parsers=[validate_operations],
+    validators=[validate_operations],
+    parser=parse_operations,
 )
 
 
@@ -82,46 +92,35 @@ class PatchOp(BaseSchema):
         )
         self._resource_schema = resource_schema
 
-    def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
-        data, issues = super().parse(data)
-        if not issues.can_proceed((self.attrs.operations.rep.attr,)):
-            return data, issues
-
-        parsed = []
+    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+        issues = ValidationIssues()
         ops = data[self.attrs.operations__op.rep]
         paths = data[self.attrs.operations__path.rep]
         values = data[self.attrs.operations__value.rep]
 
         for i, (op, path, value) in enumerate(zip(ops, paths, values)):
-            if issues.has_issues((operations.rep.attr, i)):
-                parsed_op = SCIMDataContainer(
-                    {
-                        "op": op,
-                        "path": path,
-                        "value": value,
-                    }
-                )
-                parsed.append(parsed_op)
+            if Invalid in (op, path, value):
                 continue
 
+            if path is not Missing:
+                path = PatchPath.parse(path)
             if op in ["add", "replace"]:
-                parsed_op, issues_ = self._parse_add_or_replace_operation(op, path, value)
-                issues.merge(issues_, location=(self.attrs.operations.rep.attr, i))
-                parsed.append(parsed_op)
+                issues.merge(
+                    issues=self._validate_add_or_replace_operation(path, value),
+                    location=(self.attrs.operations.rep.attr, i),
+                )
             else:
-                parsed_op, issues_ = self._parse_remove_operation(path)
-                issues.merge(issues_, location=(self.attrs.operations.rep.attr, i))
-                parsed.append(parsed_op)
+                issues.merge(
+                    issues=self._validate_remove_operation(path),
+                    location=(self.attrs.operations.rep.attr, i),
+                )
 
-        data[operations.rep] = parsed
-        return data, issues
+        return issues
 
-    def _parse_remove_operation(
-        self, path: PatchPath
-    ) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
+    def _validate_remove_operation(self, path: PatchPath) -> ValidationIssues:
         issues = validate_operation_path(self._resource_schema, path)
         if issues.has_issues():
-            return Invalid, issues
+            return issues
 
         attr = self._resource_schema.attrs.get(path.attr_rep)
         path_location = (self.attrs.operations__path.rep.sub_attr,)
@@ -159,30 +158,27 @@ class PatchOp(BaseSchema):
                     location=path_location,
                 )
 
-        return SCIMDataContainer({"op": "remove", "path": path}), issues
+        return issues
 
-    def _parse_add_or_replace_operation(
-        self, op: str, path: Union[PatchPath, None, Missing], value: Any
-    ) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
+    def _validate_add_or_replace_operation(
+        self, path: Union[PatchPath, None, Missing], value: Any
+    ) -> ValidationIssues:
         issues = ValidationIssues()
         if path not in [None, Missing]:
             issues_ = validate_operation_path(self._resource_schema, path)
             if issues_.has_issues():
                 issues.merge(issues_, location=(self.attrs.operations__path.rep.sub_attr,))
-                return Invalid, issues
+                return issues
 
-        value, issues_ = self._parse_operation_value(path, value)
         issues.merge(
-            issues_,
+            issues=self._validate_operation_value(path, value),
             location=(self.attrs.operations__value.rep.sub_attr,),
         )
-        return SCIMDataContainer({"op": op, "path": path, "value": value}), issues
+        return issues
 
-    def _parse_operation_value(
-        self, path: Optional[PatchPath], value: Any
-    ) -> Tuple[Any, ValidationIssues]:
+    def _validate_operation_value(self, path: Optional[PatchPath], value: Any) -> ValidationIssues:
         if path in [None, Missing]:
-            value, issues = self._resource_schema.parse(value)
+            issues = self._resource_schema.validate(value)
             issues.pop(("schemas",), code=27)
             issues.pop(("schemas",), code=28)
             issues.pop(("schemas",), code=29)
@@ -201,7 +197,7 @@ class PatchOp(BaseSchema):
                         proceed=False,
                         location=location,
                     )
-            return value, issues
+            return issues
 
         # sub-attribute of filtered multivalued complex attribute
         if (
@@ -209,42 +205,75 @@ class PatchOp(BaseSchema):
             and path.complex_filter
             and path.complex_filter_attr_rep
         ):
-            return self._parse_update_attr_value(path.complex_filter_attr_rep, value)
-        return self._parse_update_attr_value(path.attr_rep, value)
+            attr_rep = path.complex_filter_attr_rep
+        else:
+            attr_rep = path.attr_rep
+        return self._validate_update_attr_value(attr_rep, value)
 
-    def _parse_update_attr_value(
-        self, attr_rep: AttrRep, attr_value: Any
-    ) -> Tuple[Any, ValidationIssues]:
+    def _validate_update_attr_value(self, attr_rep: AttrRep, attr_value: Any) -> ValidationIssues:
         issues = ValidationIssues()
 
         attr = self._resource_schema.attrs.get(attr_rep)
         if attr is None:
-            return Invalid, issues
+            return issues
 
         if attr.mutability == AttributeMutability.READ_ONLY:
             issues.add(
                 issue=ValidationError.attribute_can_not_be_modified(),
                 proceed=False,
             )
-            return Invalid, issues
+            return issues
 
-        parsed_attr_value, issues_ = attr.parse(attr_value)
-        if issues_.has_issues():
-            issues.merge(issues_)
+        issues_ = attr.validate(attr_value)
+        issues.merge(issues_)
+        if not issues_.can_proceed():
+            return issues
 
         elif isinstance(attr, ComplexAttribute) and not attr.multi_valued:
             for sub_attr in attr.attrs:
                 if sub_attr.mutability != AttributeMutability.READ_ONLY:
                     # non-read-only attributes can be updated
                     continue
-                v = parsed_attr_value[sub_attr.rep]
-                if v is not Missing:
+                if attr_value[sub_attr.rep] is not Missing:
                     issues.add(
                         issue=ValidationError.attribute_can_not_be_modified(),
                         proceed=False,
                         location=(sub_attr.rep.sub_attr,),
                     )
-        return parsed_attr_value, issues
+        return issues
+
+    def parse(self, data: Any) -> SCIMDataContainer:
+        data = super().parse(data)
+        ops = data[self.attrs.operations__op.rep]
+        paths = data[self.attrs.operations__path.rep]
+        values = data[self.attrs.operations__value.rep]
+        parsed = []
+        for i, (op, path, value) in enumerate(zip(ops, paths, values)):
+            if op in ["add", "replace"]:
+                parsed.append(
+                    SCIMDataContainer(
+                        {"op": op, "path": path, "value": self._parse_operation_value(path, value)}
+                    )
+                )
+            else:
+                parsed.append(SCIMDataContainer({"op": "remove", "path": path}))
+        data[operations.rep] = parsed
+        return data
+
+    def _parse_operation_value(self, path: Optional[PatchPath], value: Any) -> Any:
+        if path in [None, Missing]:
+            return self._resource_schema.parse(value)
+
+        # sub-attribute of filtered multivalued complex attribute
+        if (
+            isinstance(self._resource_schema.attrs.get(path.attr_rep), ComplexAttribute)
+            and path.complex_filter
+            and path.complex_filter_attr_rep
+        ):
+            attr_rep = path.complex_filter_attr_rep
+        else:
+            attr_rep = path.attr_rep
+        return self._resource_schema.attrs.get(attr_rep).parse(value)
 
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:
