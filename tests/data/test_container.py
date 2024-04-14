@@ -64,7 +64,7 @@ from src.data.container import AttrRep, Missing, SCIMDataContainer
     ),
 )
 def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, user_data_server):
-    actual = SCIMDataContainer(user_data_server)[attr_rep]
+    actual = SCIMDataContainer(user_data_server).get(attr_rep)
 
     assert actual == expected
 
@@ -162,7 +162,7 @@ def test_attr_value_in_container_can_be_reassigned():
 
     container["KEY"] = 456
 
-    assert container["key"] == 456
+    assert container.get("key") == 456
 
 
 def test_sub_attr_value_in_container_can_be_reassigned():
@@ -171,7 +171,7 @@ def test_sub_attr_value_in_container_can_be_reassigned():
 
     container["KEY.SUBKEY"] = 456
 
-    assert container["key.subkey"] == 456
+    assert container.get("key.subkey") == 456
 
 
 def test_sub_attr_bigger_list_value_in_container_can_be_reassigned():
@@ -180,7 +180,7 @@ def test_sub_attr_bigger_list_value_in_container_can_be_reassigned():
 
     container["KEY.SUBKEY"] = [4, 5, 6]
 
-    assert container["key.subkey"] == [4, 5, 6]
+    assert container.get("key.subkey") == [4, 5, 6]
 
 
 def test_sub_attr_smaller_list_value_in_container_can_be_reassigned():
@@ -189,7 +189,7 @@ def test_sub_attr_smaller_list_value_in_container_can_be_reassigned():
 
     container["KEY.SUBKEY"] = [4, 5]
 
-    assert container["key.subkey"] == [4, 5, 3]
+    assert container.get("key.subkey") == [4, 5, 3]
 
 
 def test_assigning_sub_attr_to_non_complex_attr_fails():

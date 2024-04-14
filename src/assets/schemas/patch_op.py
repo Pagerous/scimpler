@@ -34,9 +34,9 @@ _operations_value = Attribute(
 def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        type_ = item[_operations_op.rep]
-        path = item[_operations_path.rep]
-        op_value = item[_operations_value.rep]
+        type_ = item.get(_operations_op.rep)
+        path = item.get(_operations_path.rep)
+        op_value = item.get(_operations_value.rep)
         if type_ == "remove" and path in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
@@ -94,9 +94,9 @@ class PatchOp(BaseSchema):
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
-        ops = data[self.attrs.operations__op.rep]
-        paths = data[self.attrs.operations__path.rep]
-        values = data[self.attrs.operations__value.rep]
+        ops = data.get(self.attrs.operations__op.rep)
+        paths = data.get(self.attrs.operations__path.rep)
+        values = data.get(self.attrs.operations__value.rep)
 
         for i, (op, path, value) in enumerate(zip(ops, paths, values)):
             if Invalid in (op, path, value):
@@ -184,7 +184,7 @@ class PatchOp(BaseSchema):
             issues.pop(("schemas",), code=29)
             for attr in self._resource_schema.attrs:
                 if (
-                    value[attr.rep] is not Missing
+                    value.get(attr.rep) is not Missing
                     and attr.mutability == AttributeMutability.READ_ONLY
                 ):
                     location = (attr.rep.attr,)
@@ -244,9 +244,9 @@ class PatchOp(BaseSchema):
 
     def parse(self, data: Any) -> SCIMDataContainer:
         data = super().parse(data)
-        ops = data[self.attrs.operations__op.rep]
-        paths = data[self.attrs.operations__path.rep]
-        values = data[self.attrs.operations__value.rep]
+        ops = data.get(self.attrs.operations__op.rep)
+        paths = data.get(self.attrs.operations__path.rep)
+        values = data.get(self.attrs.operations__value.rep)
         parsed = []
         for i, (op, path, value) in enumerate(zip(ops, paths, values)):
             if op in ["add", "replace"]:

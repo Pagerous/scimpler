@@ -145,15 +145,15 @@ _attributes__reference_types = Attribute(
 def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        attr_type = item[_attributes__type.rep]
-        sub_attributes = item[_attributes__sub_attributes.rep]
+        attr_type = item.get(_attributes__type.rep)
+        sub_attributes = item.get(_attributes__sub_attributes.rep)
         if sub_attributes not in [Missing, None]:
             if attr_type == "complex":
                 issues.merge(
                     attributes.validate(sub_attributes),
                     location=(i, _attributes__sub_attributes.rep.attr),
                 )
-        if attr_type == "string" and item[_attributes__case_exact.rep] in [None, Missing]:
+        if attr_type == "string" and item.get(_attributes__case_exact.rep) in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
                 location=(i, _attributes__case_exact.rep),
@@ -164,8 +164,8 @@ def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
 
 def dump_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     for i, item in enumerate(value):
-        attr_type = item[_attributes__type.rep]
-        sub_attributes = item[_attributes__sub_attributes.rep]
+        attr_type = item.get(_attributes__type.rep)
+        sub_attributes = item.get(_attributes__sub_attributes.rep)
         if sub_attributes not in [Missing, None]:
             if attr_type != "complex":
                 item.pop(_attributes__sub_attributes.rep)

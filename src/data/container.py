@@ -193,13 +193,15 @@ class SCIMDataContainer:
             self._lower_case_to_original[attr_rep.attr.lower()] = attr_rep.attr
             self._data[attr_rep.attr] = value
 
-    def __getitem__(self, attr_rep: Union["AttrRep", str]):
+    def get(self, attr_rep: Union["AttrRep", str]):
         if isinstance(attr_rep, str):
             attr_rep = self._to_attr_rep(attr_rep)
 
         extension = self._lower_case_to_original.get(attr_rep.schema.lower())
         if extension is not None:
-            return self._data[extension][AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)]
+            return self._data[extension].get(
+                AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
+            )
 
         attr = self._lower_case_to_original.get(attr_rep.attr.lower())
         if attr is None:
@@ -208,9 +210,9 @@ class SCIMDataContainer:
         if attr_rep.sub_attr:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMDataContainer):
-                return attr_value[AttrRep(attr=attr_rep.sub_attr)]
+                return attr_value.get(AttrRep(attr=attr_rep.sub_attr))
             if isinstance(attr_value, List):
-                return [item[AttrRep(attr=attr_rep.sub_attr)] for item in attr_value]
+                return [item.get(AttrRep(attr=attr_rep.sub_attr)) for item in attr_value]
             return Missing
         return self._data[attr]
 
@@ -289,7 +291,7 @@ class SCIMDataContainer:
             return False
 
         for key, value in self._data.items():
-            if other[key] != value:
+            if other.get(key) != value:
                 return False
 
         return True

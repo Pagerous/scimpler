@@ -127,8 +127,8 @@ class SearchRequest(BaseSchema):
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
-        to_include = data[self.attrs.attributes.rep]
-        to_exclude = data[self.attrs.excludeattributes.rep]
+        to_include = data.get(self.attrs.attributes.rep)
+        to_exclude = data.get(self.attrs.excludeattributes.rep)
         if to_include not in [None, Missing] and to_exclude not in [None, Missing]:
             issues.add(
                 issue=ValidationError.can_not_be_used_together(

@@ -96,7 +96,7 @@ class Error(Validator):
             issues.merge(
                 validate_error_status_code_consistency(
                     status_code_attr_name=status_attr_rep.attr,
-                    status_code_body=body[status_attr_rep],
+                    status_code_body=body.get(status_attr_rep),
                     status_code=status_code,
                 )
             )
@@ -232,7 +232,7 @@ def _validate_resource_output_body(
     ):
         issues.merge(
             issues=validate_resource_location_consistency(
-                meta_location=body[meta_location],
+                meta_location=body.get(meta_location),
                 headers_location=location_header,
             ),
         )
@@ -548,7 +548,7 @@ def _validate_resources_get_response(
         location=("status",),
     )
     if issues.can_proceed(start_index_location):
-        start_index_body = body[start_index_rep]
+        start_index_body = body.get(start_index_rep)
         if start_index_body:
             issues.merge(
                 issues=validate_start_index_consistency(start_index, start_index_body),
@@ -564,12 +564,12 @@ def _validate_resources_get_response(
     items_per_page_rep = schema.attrs.itemsperpage.rep
     items_per_page_location = body_location + _location(items_per_page_rep)
 
-    resources = body[schema.attrs.resources.rep]
+    resources = body.get(schema.attrs.resources.rep)
     if resources is Missing:
         resources = []
 
     if issues.can_proceed(total_results_location):
-        total_results = body[total_results_rep]
+        total_results = body.get(total_results_rep)
         issues.merge(
             issues=validate_number_of_resources(
                 count=count,
@@ -579,8 +579,8 @@ def _validate_resources_get_response(
             location=resources_location,
         )
         if issues.can_proceed(start_index_location, items_per_page_location):
-            start_index_body = body[start_index_rep]
-            items_per_page = body[items_per_page_rep]
+            start_index_body = body.get(start_index_rep)
+            items_per_page = body.get(items_per_page_rep)
             issues.merge(
                 issues=validate_pagination_info(
                     schema=schema,
@@ -756,9 +756,9 @@ class ResourceObjectPATCH(Validator):
         if not issues.can_proceed(operations_location):
             return issues
 
-        values = body[self._schema.attrs.operations__value.rep]
-        paths = body[self._schema.attrs.operations__path.rep]
-        ops = body[self._schema.attrs.operations__op.rep]
+        values = body.get(self._schema.attrs.operations__value.rep)
+        paths = body.get(self._schema.attrs.operations__path.rep)
+        ops = body.get(self._schema.attrs.operations__op.rep)
 
         for i, (op, value, path) in enumerate(zip(ops, values, paths)):
             if op == "remove":
@@ -773,7 +773,7 @@ class ResourceObjectPATCH(Validator):
                     self._check_complex_sub_attrs_presence(
                         issues=issues,
                         attr=attr,
-                        value=value[attr.rep],
+                        value=value.get(attr.rep),
                         value_location=value_location + _location(attr.rep),
                     )
 
@@ -935,9 +935,9 @@ class BulkOperations(Validator):
         path_rep = self._request_schema.attrs.operations__path.rep
         data_rep = self._request_schema.attrs.operations__data.rep
         method_rep = self._request_schema.attrs.operations__method.rep
-        paths = body[path_rep]
-        data = body[data_rep]
-        methods = body[method_rep]
+        paths = body.get(path_rep)
+        data = body.get(data_rep)
+        methods = body.get(method_rep)
         for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
             path_location = body_location + (path_rep.attr, i, path_rep.sub_attr)
             data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)
@@ -963,7 +963,10 @@ class BulkOperations(Validator):
                     continue
                 issues_ = validator.validate_request(body=data_item)
                 issues.merge(issues_.get(("body",)), location=data_item_location)
-        if len(body[self._request_schema.attrs.operations.rep]) > self.config.bulk.max_operations:
+        if (
+            len(body.get(self._request_schema.attrs.operations.rep))
+            > self.config.bulk.max_operations
+        ):
             issues.add(
                 issue=ValidationError.too_many_operations(self.config.bulk.max_operations),
                 proceed=True,
@@ -1004,11 +1007,11 @@ class BulkOperations(Validator):
         location_rep = self._response_schema.attrs.operations__location.rep
         method_rep = self._request_schema.attrs.operations__method.rep
         version_rep = self._response_schema.attrs.operations__version.rep
-        statuses = body[status_rep]
-        responses = body[response_rep]
-        locations = body[location_rep]
-        methods = body[method_rep]
-        versions = body[version_rep]
+        statuses = body.get(status_rep)
+        responses = body.get(response_rep)
+        locations = body.get(location_rep)
+        methods = body.get(method_rep)
+        versions = body.get(version_rep)
         n_errors = 0
         for i, (method, status, response, location, version) in enumerate(
             zip(methods, statuses, responses, locations, versions)
@@ -1074,7 +1077,7 @@ class BulkOperations(Validator):
                     )
 
                 if response:
-                    resource_version = response["meta.version"]
+                    resource_version = response.get("meta.version")
                     if version and resource_version and version != resource_version:
                         issues.add(
                             issue=ValidationError.must_be_equal_to("operation's version"),

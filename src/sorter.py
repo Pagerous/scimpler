@@ -70,7 +70,7 @@ class Sorter:
         data: List[SCIMDataContainer],
         schema: Union[ResourceSchema, Sequence[ResourceSchema]],
     ) -> List[SCIMDataContainer]:
-        if not any(item[self._attr_rep] for item in data):
+        if not any(item.get(self._attr_rep) for item in data):
             return data
 
         if not isinstance(schema, ResourceSchema) and len(set(schema)) == 1:
@@ -106,11 +106,11 @@ class Sorter:
         attr = schema.attrs.get(self._attr_rep)
         value = None
         if attr is not None:
-            item_value = item[self._attr_rep]
+            item_value = item.get(self._attr_rep)
             if item_value is not Missing and attr.multi_valued:
                 if isinstance(attr, ComplexAttribute):
                     for v in item_value:
-                        primary = v["primary"]
+                        primary = v.get("primary")
                         if primary is True:
                             for sub_attr in attr.attrs:
                                 if sub_attr.rep.attr.lower() == "value":
@@ -118,7 +118,7 @@ class Sorter:
                                     break
                             else:
                                 attr = None
-                            value = v["value"]
+                            value = v.get("value")
                             break
                 else:
                     value = item_value[0]

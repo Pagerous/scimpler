@@ -64,7 +64,7 @@ class ListResponse(BaseSchema):
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
-        resources_ = data[self.attrs.resources.rep]
+        resources_ = data.get(self.attrs.resources.rep)
         if resources_ is Missing:
             return issues
 
@@ -78,7 +78,7 @@ class ListResponse(BaseSchema):
             )
             return issues
 
-        if (items_per_page_ := data[self.attrs.itemsperpage.rep]) is not Invalid:
+        if (items_per_page_ := data.get(self.attrs.itemsperpage.rep)) is not Invalid:
             issues.merge(
                 validate_items_per_page_consistency(
                     resources_=resources_,
@@ -103,7 +103,7 @@ class ListResponse(BaseSchema):
 
     def dump(self, data: Any) -> SCIMDataContainer:
         data = super().dump(data)
-        resources_ = data[self.attrs.resources.rep]
+        resources_ = data.get(self.attrs.resources.rep)
         if resources_ is Missing:
             return data
         schemas_ = self.get_schemas_for_resources(resources_)
@@ -127,7 +127,7 @@ class ListResponse(BaseSchema):
         if not isinstance(data, SCIMDataContainer):
             return None
 
-        schemas_value = data[self.attrs.schemas.rep]
+        schemas_value = data.get(self.attrs.schemas.rep)
         if isinstance(schemas_value, List) and len(schemas_value) > 0:
             schemas_value = {
                 item.lower() if isinstance(item, str) else item for item in schemas_value

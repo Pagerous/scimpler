@@ -444,13 +444,16 @@ def test_parse_add_and_replace_operation__succeeds_on_correct_data(
     assert issues.to_dict(msg=True) == {}
 
     actual_data = schema.parse(input_data)
-    assert actual_data["Operations"][0]["value"] == expected_value
-    assert actual_data["Operations"][0]["path"].attr_rep == expected_path.attr_rep
+    assert actual_data.get("Operations")[0].get("value") == expected_value
+    assert actual_data.get("Operations")[0].get("path").attr_rep == expected_path.attr_rep
     if expected_path.complex_filter:
-        assert actual_data["Operations"][0]["path"].complex_filter == expected_path.complex_filter
+        assert (
+            actual_data.get("Operations")[0].get("path").complex_filter
+            == expected_path.complex_filter
+        )
     if expected_path.complex_filter_attr_rep:
         assert (
-            actual_data["Operations"][0]["path"].complex_filter_attr_rep
+            actual_data.get("Operations")[0].get("path").complex_filter_attr_rep
             == expected_path.complex_filter_attr_rep
         )
 

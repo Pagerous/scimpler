@@ -105,7 +105,7 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
             if isinstance(sub_operator, LogicalOperator):
                 yield sub_operator.match(value, attrs, strict)
             else:
-                yield sub_operator.match(value[sub_operator.attr_rep], attrs, strict)
+                yield sub_operator.match(value.get(sub_operator.attr_rep), attrs, strict)
 
 
 class And(MultiOperandLogicalOperator):
@@ -181,7 +181,7 @@ class Not(LogicalOperator):
             if match.status == MatchStatus.FAILED:
                 return MatchResult.passed()
             return MatchResult.failed()
-        match = self._sub_operator.match(value[self._sub_operator.attr_rep], attrs, strict=True)
+        match = self._sub_operator.match(value.get(self._sub_operator.attr_rep), attrs, strict=True)
         if (
             match.status == MatchStatus.FAILED
             or not strict
@@ -276,7 +276,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             if not attr.multi_valued:
                 return None
 
-            value = [item["value"] for item in value]
+            value = [item.get("value") for item in value]
 
         if attr.type.SCIM_NAME == "dateTime":
             try:
@@ -506,7 +506,7 @@ class ComplexAttributeOperator:
         if isinstance(self._sub_operator, AttributeOperator):
             has_value = False
             for item in value:
-                item_value = item[self._sub_operator.attr_rep]
+                item_value = item.get(self._sub_operator.attr_rep)
                 if item_value not in [None, Missing]:
                     has_value = True
                 match = self._sub_operator.match(item_value, attr.attrs, strict)

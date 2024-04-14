@@ -25,19 +25,19 @@ def _validate_operation_method_existence(method: Any) -> ValidationIssues:
 def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        method = item[_operation__method.rep]
+        method = item.get(_operation__method.rep)
         issues.merge(
             issues=_validate_operation_method_existence(method),
             location=(i, _operation__method.rep.attr),
         )
-        bulk_id = item[_operation__bulk_id.rep]
+        bulk_id = item.get(_operation__bulk_id.rep)
         if method == "POST" and bulk_id in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__bulk_id.rep.attr),
             )
-        path = item[_operation__path.rep]
+        path = item.get(_operation__path.rep)
         if path in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
@@ -62,7 +62,7 @@ def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIss
                     proceed=False,
                     location=(i, _operation__path.rep.attr),
                 )
-        data = item[_operation__data.rep]
+        data = item.get(_operation__data.rep)
         if method in ["POST", "PUT", "PATCH"] and data in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
@@ -75,7 +75,7 @@ def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIss
 def parse_request_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     value = deepcopy(value)
     for i, item in enumerate(value):
-        method = item[_operation__method.rep]
+        method = item.get(_operation__method.rep)
         if method in ["GET", "DELETE"]:
             item.pop(_operation__data.rep)
     return value
@@ -143,28 +143,28 @@ class BulkRequest(BaseSchema):
 def validate_response_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        method = item[_operation__method.rep]
+        method = item.get(_operation__method.rep)
         issues.merge(
             issues=_validate_operation_method_existence(method),
             location=(i, _operation__method.rep.attr),
         )
-        bulk_id = item[_operation__bulk_id.rep]
+        bulk_id = item.get(_operation__bulk_id.rep)
         if method == "POST" and bulk_id in [None, Missing]:
             issues.add(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__bulk_id.rep.attr),
             )
-        status = item[_operation__status.rep]
+        status = item.get(_operation__status.rep)
         if status:
-            location = item[_operation__location.rep]
+            location = item.get(_operation__location.rep)
             if location in [None, Missing] and method and (method != "POST" or int(status) < 300):
                 issues.add(
                     issue=ValidationError.missing(),
                     proceed=False,
                     location=(i, _operation__location.rep.attr),
                 )
-            response = item[_operation__response.rep]
+            response = item.get(_operation__response.rep)
             if response in [None, Missing] and int(status) >= 300:
                 issues.add(
                     issue=ValidationError.missing(),

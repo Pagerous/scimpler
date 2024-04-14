@@ -1,4 +1,4 @@
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 from src.data.attributes import Attribute, AttributeReturn, Attributes
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
@@ -60,7 +60,7 @@ class AttributePresenceChecker:
             top_attr = attrs.get(top_attr_rep)
 
             if attr.rep.sub_attr and top_attr.multi_valued:
-                value = data[top_attr_rep]
+                value = data.get(top_attr_rep)
                 if value in [Invalid, Missing]:
                     continue
 
@@ -76,13 +76,13 @@ class AttributePresenceChecker:
                     )
                 else:
                     for i, item in enumerate(value):
-                        item_value = item[AttrRep(attr=attr.rep.sub_attr)]
+                        item_value = item.get(AttrRep(attr=attr.rep.sub_attr))
                         if item_value is Invalid:
                             continue
 
                         issues.merge(
                             issues=self._check_presence(
-                                value=item[AttrRep(attr=attr.rep.sub_attr)],
+                                value=item.get(AttrRep(attr=attr.rep.sub_attr)),
                                 direction=direction,
                                 attr=attr,
                                 attr_rep=attr.rep,
@@ -90,7 +90,7 @@ class AttributePresenceChecker:
                             location=(attr.rep.attr, i, attr.rep.sub_attr),
                         )
             else:
-                value = data[attr.rep]
+                value = data.get(attr.rep)
                 if value is Invalid:
                     continue
 
@@ -99,7 +99,7 @@ class AttributePresenceChecker:
                 )
                 issues.merge(
                     issues=self._check_presence(
-                        value=data[attr.rep],
+                        value=data.get(attr.rep),
                         direction=direction,
                         attr=attr,
                         attr_rep=attr.rep,

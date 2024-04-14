@@ -12,7 +12,6 @@ from src.data.attributes import (
     ComplexAttribute,
 )
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
-from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 
 
@@ -208,7 +207,7 @@ class BaseSchema(abc.ABC):
         data = SCIMDataContainer(data)
         parsed = SCIMDataContainer()
         for attr in self.attrs.top_level:
-            value = data[attr.rep]
+            value = data.get(attr.rep)
             if value is not Missing:
                 parsed[attr.rep] = attr.parse(value)
         return parsed
@@ -217,7 +216,7 @@ class BaseSchema(abc.ABC):
         data = SCIMDataContainer(data)
         dumped = SCIMDataContainer()
         for attr in self.attrs.top_level:
-            value = data[attr.rep]
+            value = data.get(attr.rep)
             if value is not Missing:
                 dumped[attr.rep] = attr.dump(value)
         return dumped
@@ -228,7 +227,7 @@ class BaseSchema(abc.ABC):
             data = SCIMDataContainer(data)
         issues.merge(self._validate_data(data))
 
-        schemas_ = data[self._attrs.schemas.rep]
+        schemas_ = data.get(self._attrs.schemas.rep)
         if issues.can_proceed(("schemas",)) and schemas_:
             issues.merge(
                 validate_schemas_field(
@@ -249,7 +248,7 @@ class BaseSchema(abc.ABC):
     def _validate_data(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
         for attr in self.attrs.top_level:
-            value = data[attr.rep]
+            value = data.get(attr.rep)
             if value is Missing:
                 continue
             issues_ = attr.validate(value)
@@ -393,7 +392,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
-        resource_type = data[self.attrs.meta__resourcetype.rep]
+        resource_type = data.get(self.attrs.meta__resourcetype.rep)
         if resource_type not in [Missing, Invalid]:
             issues.merge(
                 validate_resource_type_consistency(

@@ -516,7 +516,7 @@ class Filter:
         self, data: SCIMDataContainer, schema: "BaseSchema", strict: bool = True
     ) -> op.MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
-            data = data[self._operator.attr_rep]
+            data = data.get(self._operator.attr_rep)
         return self._operator.match(data, schema.attrs, strict)
 
     def __eq__(self, other) -> bool:

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 
 
 class ValidationError:
