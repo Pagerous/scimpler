@@ -115,13 +115,19 @@ class SearchRequest(BaseSchema):
         to_include = data.pop(self.attrs.attributes.rep)
         to_exclude = data.pop(self.attrs.excludeattributes.rep)
         if to_include or to_exclude:
-            data["presence_checker"] = AttributePresenceChecker(
-                attr_reps=to_include or to_exclude, include=bool(to_include)
+            data.set(
+                "presence_checker",
+                AttributePresenceChecker(
+                    attr_reps=to_include or to_exclude, include=bool(to_include)
+                ),
             )
         if sort_by_ := data.pop(self.attrs.sortby.rep):
-            data["sorter"] = Sorter(
-                attr_rep=sort_by_,
-                asc=data.pop(self.attrs.sortorder.rep) == "ascending",
+            data.set(
+                "sorter",
+                Sorter(
+                    attr_rep=sort_by_,
+                    asc=data.pop(self.attrs.sortorder.rep) == "ascending",
+                ),
             )
         return data
 

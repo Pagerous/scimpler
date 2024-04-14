@@ -257,7 +257,7 @@ class PatchOp(BaseSchema):
                 )
             else:
                 parsed.append(SCIMDataContainer({"op": "remove", "path": path}))
-        data[operations.rep] = parsed
+        data.set(operations.rep, parsed)
         return data
 
     def _parse_operation_value(self, path: Optional[PatchPath], value: Any) -> Any:

@@ -343,7 +343,7 @@ class ComplexAttribute(Attribute):
                         continue
                     issues_ = sub_attr.validate(sub_attr_value)
                     if not issues_.can_proceed():
-                        item[sub_attr.rep] = Invalid
+                        item.set(sub_attr.rep, Invalid)
                     issues.merge(location=(i, sub_attr.rep.attr), issues=issues_)
         else:
             value = SCIMDataContainer(value)
@@ -353,7 +353,7 @@ class ComplexAttribute(Attribute):
                     continue
                 issues_ = sub_attr.validate(sub_attr_value)
                 if not issues_.can_proceed():
-                    value[sub_attr.rep] = Invalid
+                    value.set(sub_attr.rep, Invalid)
                 issues.merge(
                     location=(sub_attr.rep.attr,),
                     issues=issues_,
@@ -375,7 +375,7 @@ class ComplexAttribute(Attribute):
                     sub_attr_value = item.get(sub_attr.rep)
                     if sub_attr_value is Missing:
                         continue
-                    parsed_item[sub_attr.rep] = sub_attr.parse(sub_attr_value)
+                    parsed_item.set(sub_attr.rep, sub_attr.parse(sub_attr_value))
                 parsed.append(parsed_item)
         else:
             value = SCIMDataContainer(value)
@@ -384,7 +384,7 @@ class ComplexAttribute(Attribute):
                 sub_attr_value = value.get(sub_attr.rep)
                 if sub_attr_value is Missing:
                     continue
-                parsed[sub_attr.rep] = sub_attr.parse(sub_attr_value)
+                parsed.set(sub_attr.rep, sub_attr.parse(sub_attr_value))
         return super().parse(parsed)
 
     def dump(self, value: Any) -> Any:
@@ -397,7 +397,7 @@ class ComplexAttribute(Attribute):
                     sub_attr_value = item.get(sub_attr.rep)
                     if sub_attr_value is Missing:
                         continue
-                    parsed_item[sub_attr.rep] = sub_attr.dump(sub_attr_value)
+                    parsed_item.set(sub_attr.rep, sub_attr.dump(sub_attr_value))
                 dumped.append(parsed_item)
         else:
             value = SCIMDataContainer(value)
@@ -406,7 +406,7 @@ class ComplexAttribute(Attribute):
                 sub_attr_value = value.get(sub_attr.rep)
                 if sub_attr_value is Missing:
                     continue
-                dumped[sub_attr.rep] = sub_attr.dump(sub_attr_value)
+                dumped.set(sub_attr.rep, sub_attr.dump(sub_attr_value))
         return super().dump(dumped)
 
     def to_dict(self) -> Dict[str, Any]:

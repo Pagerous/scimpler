@@ -151,50 +151,50 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
 def test_value_can_be_inserted_to_scim_data_container(attr_rep, value, expected):
     container = SCIMDataContainer()
 
-    container[attr_rep] = value
+    container.set(attr_rep, value)
 
     assert container.to_dict() == expected
 
 
 def test_attr_value_in_container_can_be_reassigned():
     container = SCIMDataContainer()
-    container["key"] = 123
+    container.set("key", 123)
 
-    container["KEY"] = 456
+    container.set("KEY", 456)
 
     assert container.get("key") == 456
 
 
 def test_sub_attr_value_in_container_can_be_reassigned():
     container = SCIMDataContainer()
-    container["key.subkey"] = 123
+    container.set("key.subkey", 123)
 
-    container["KEY.SUBKEY"] = 456
+    container.set("KEY.SUBKEY", 456)
 
     assert container.get("key.subkey") == 456
 
 
 def test_sub_attr_bigger_list_value_in_container_can_be_reassigned():
     container = SCIMDataContainer()
-    container["key.subkey"] = [1, 2]
+    container.set("key.subkey", [1, 2])
 
-    container["KEY.SUBKEY"] = [4, 5, 6]
+    container.set("KEY.SUBKEY", [4, 5, 6])
 
     assert container.get("key.subkey") == [4, 5, 6]
 
 
 def test_sub_attr_smaller_list_value_in_container_can_be_reassigned():
     container = SCIMDataContainer()
-    container["key.subkey"] = [1, 2, 3]
+    container.set("key.subkey", [1, 2, 3])
 
-    container["KEY.SUBKEY"] = [4, 5]
+    container.set("KEY.SUBKEY", [4, 5])
 
     assert container.get("key.subkey") == [4, 5, 3]
 
 
 def test_assigning_sub_attr_to_non_complex_attr_fails():
     container = SCIMDataContainer()
-    container["key"] = 1
+    container.set("key", 1)
 
     with pytest.raises(KeyError, match=r"can not assign \(subkey, \[1, 2, 3\]\) to 'key'"):
-        container["key.subkey"] = [1, 2, 3]
+        container.set("key.subkey", [1, 2, 3])

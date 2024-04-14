@@ -154,7 +154,7 @@ class SCIMDataContainer:
             self._data = d._data
             self._lower_case_to_original = d._lower_case_to_original
 
-    def __setitem__(self, attr_rep: Union["AttrRep", str], value):
+    def set(self, attr_rep: Union["AttrRep", str], value):
         if isinstance(attr_rep, str):
             attr_rep = self._to_attr_rep(attr_rep)
 
@@ -163,9 +163,9 @@ class SCIMDataContainer:
             if extension_key is None:
                 self._lower_case_to_original[attr_rep.schema.lower()] = attr_rep.schema
                 self._data[attr_rep.schema] = SCIMDataContainer()
-            self._data[attr_rep.schema][
-                AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
-            ] = value
+            self._data[attr_rep.schema].set(
+                AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr), value
+            )
         elif attr_rep.sub_attr:
             initial_key = self._lower_case_to_original.get(attr_rep.attr.lower())
             if initial_key is None:
@@ -186,9 +186,9 @@ class SCIMDataContainer:
                     self._data[initial_key].extend([SCIMDataContainer() for _ in range(to_create)])
                 for item, container in zip(value, self._data[initial_key]):
                     if item is not Missing:
-                        container[AttrRep(attr=attr_rep.sub_attr)] = item
+                        container.set(AttrRep(attr=attr_rep.sub_attr), item)
             else:
-                self._data[initial_key][AttrRep(attr=attr_rep.sub_attr)] = value
+                self._data[initial_key].set(AttrRep(attr=attr_rep.sub_attr), value)
         else:
             self._lower_case_to_original[attr_rep.attr.lower()] = attr_rep.attr
             self._data[attr_rep.attr] = value

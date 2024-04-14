@@ -209,7 +209,7 @@ class BaseSchema(abc.ABC):
         for attr in self.attrs.top_level:
             value = data.get(attr.rep)
             if value is not Missing:
-                parsed[attr.rep] = attr.parse(value)
+                parsed.set(attr.rep, attr.parse(value))
         return parsed
 
     def dump(self, data: Any) -> SCIMDataContainer:
@@ -218,7 +218,7 @@ class BaseSchema(abc.ABC):
         for attr in self.attrs.top_level:
             value = data.get(attr.rep)
             if value is not Missing:
-                dumped[attr.rep] = attr.dump(value)
+                dumped.set(attr.rep, attr.dump(value))
         return dumped
 
     def validate(self, data: Union[SCIMDataContainer, Dict[str, Any]]) -> ValidationIssues:
