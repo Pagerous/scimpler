@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pytest
 
+from src.assets.config import create_service_provider_config
 from src.data import type as at
 from src.data.attributes import Attribute, ComplexAttribute
 from src.data.schemas import ResourceSchema
@@ -234,3 +235,13 @@ class SchemaForTests(ResourceSchema):
             name="SchemaForTests",
             plural_name="SchemasForTests",
         )
+
+
+CONFIG = create_service_provider_config(
+    patch={"supported": True},
+    bulk={"max_operations": 10, "max_payload_size": 4242, "supported": True},
+    filter_={"max_results": 100, "supported": True},
+    change_password={"supported": True},
+    sort={"supported": True},
+    etag={"supported": True},
+)

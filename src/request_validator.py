@@ -32,12 +32,6 @@ class Validator(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        ...
-
-    @abc.abstractmethod
     def validate_request(
         self,
         *,
@@ -67,11 +61,6 @@ class Error(Validator):
     @property
     def response_schema(self) -> error.Error:
         return self._schema
-
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        raise NotImplementedError
 
     def validate_request(
         self,
@@ -259,21 +248,6 @@ class ResourceObjectGET(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._schema
 
-    def parse_query_string(self, *, query_string: Optional[Dict[str, Any]] = None) -> Dict:
-        query_string = query_string or {}
-        return (
-            search_request.SearchRequest()
-            .parse(
-                SCIMDataContainer(
-                    {
-                        "attributes": query_string.get("attributes", Missing),
-                        "excludeAttributes": query_string.get("excludeAttributes", Missing),
-                    }
-                )
-            )
-            .to_dict()
-        )
-
     def validate_request(
         self,
         *,
@@ -325,21 +299,6 @@ class ResourceObjectPUT(Validator):
     @property
     def response_schema(self) -> ResourceSchema:
         return self._schema
-
-    def parse_query_string(self, *, query_string: Optional[Dict[str, Any]] = None) -> Dict:
-        query_string = query_string or {}
-        return (
-            search_request.SearchRequest()
-            .parse(
-                SCIMDataContainer(
-                    {
-                        "attributes": query_string.get("attributes", Missing),
-                        "excludeAttributes": query_string.get("excludeAttributes", Missing),
-                    }
-                )
-            )
-            .to_dict()
-        )
 
     def validate_request(
         self,
@@ -396,21 +355,6 @@ class ResourcesPOST(Validator):
     @property
     def response_schema(self) -> ResourceSchema:
         return self._schema
-
-    def parse_query_string(self, *, query_string: Optional[Dict[str, Any]] = None) -> Dict:
-        query_string = query_string or {}
-        return (
-            search_request.SearchRequest()
-            .parse(
-                SCIMDataContainer(
-                    {
-                        "attributes": query_string.get("attributes", Missing),
-                        "excludeAttributes": query_string.get("excludeAttributes", Missing),
-                    }
-                )
-            )
-            .to_dict()
-        )
 
     def validate_request(
         self,
@@ -675,7 +619,7 @@ def _validate_resources_get_response(
     return issues
 
 
-class ServerRootResourceGET(Validator):
+class ServerRootResourcesGET(Validator):
     def __init__(
         self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
     ):
@@ -685,11 +629,6 @@ class ServerRootResourceGET(Validator):
     @property
     def response_schema(self) -> list_response.ListResponse:
         return self._schema
-
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        return search_request.SearchRequest().parse(SCIMDataContainer(query_string or {})).to_dict()
 
     def validate_request(
         self,
@@ -726,7 +665,7 @@ class ServerRootResourceGET(Validator):
         )
 
 
-class ResourcesGET(ServerRootResourceGET):
+class ResourcesGET(ServerRootResourcesGET):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
         super().__init__(config, resource_schemas=[resource_schema])
 
@@ -746,11 +685,6 @@ class SearchRequestPOST(Validator):
     @property
     def response_schema(self) -> list_response.ListResponse:
         return self._list_response_schema
-
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        raise NotImplementedError
 
     def validate_request(
         self,
@@ -796,23 +730,6 @@ class ResourceObjectPATCH(Validator):
     @property
     def response_schema(self) -> ResourceSchema:
         return self._resource_schema
-
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        query_string = query_string or {}
-        return (
-            search_request.SearchRequest()
-            .parse(
-                SCIMDataContainer(
-                    {
-                        "attributes": query_string.get("attributes", Missing),
-                        "excludeAttributes": query_string.get("excludeAttributes", Missing),
-                    }
-                )
-            )
-            .to_dict()
-        )
 
     def validate_request(
         self,
@@ -928,11 +845,6 @@ class ResourceObjectPATCH(Validator):
 
 
 class ResourceObjectDELETE(Validator):
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        raise NotImplementedError
-
     def validate_request(
         self,
         *,
@@ -998,11 +910,6 @@ class BulkOperations(Validator):
     @property
     def response_schema(self) -> bulk_ops.BulkResponse:
         return self._response_schema
-
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        raise NotImplementedError
 
     def validate_request(
         self,
@@ -1195,11 +1102,6 @@ class _ServiceProviderConfig(ResourcesGET):
         self, config: ServiceProviderConfig, *, resource_schema: Union[Schema, ResourceType]
     ):
         super().__init__(config, resource_schema=resource_schema)
-
-    def parse_query_string(
-        self, *, query_string: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        raise NotImplementedError
 
     def validate_request(
         self,

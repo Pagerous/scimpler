@@ -28,5 +28,5 @@ def test_search_request_is_parsed():
     }
     assert data["sorter"].attr_rep == AttrRep(attr="name", sub_attr="familyName")
     assert data["sorter"].asc is False
-    assert data["startindex"] == 2
+    assert data["startIndex"] == 2
     assert data["count"] == 10

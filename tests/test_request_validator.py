@@ -12,7 +12,7 @@ from src.data.operator import Present
 from src.data.path import PatchPath
 from src.data.schemas import get_schema_rep
 from src.filter import Filter
-from src.request_validators import (
+from src.request_validator import (
     BulkOperations,
     Error,
     ResourceObjectDELETE,
@@ -24,7 +24,7 @@ from src.request_validators import (
     ResourceTypesGET,
     SchemasGET,
     SearchRequestPOST,
-    ServerRootResourceGET,
+    ServerRootResourcesGET,
     validate_error_status_code,
     validate_error_status_code_consistency,
     validate_number_of_resources,
@@ -38,16 +38,7 @@ from src.request_validators import (
     validate_status_code,
 )
 from src.sorter import Sorter
-from tests.conftest import SchemaForTests
-
-CONFIG = create_service_provider_config(
-    patch={"supported": True},
-    bulk={"max_operations": 10, "max_payload_size": 4242, "supported": True},
-    filter_={"max_results": 100, "supported": True},
-    change_password={"supported": True},
-    sort={"supported": True},
-    etag={"supported": True},
-)
+from tests.conftest import CONFIG, SchemaForTests
 
 
 @pytest.mark.parametrize(
@@ -457,21 +448,6 @@ def test_correct_resource_type_post_request_passes_validation(user_data_client):
     assert issues.to_dict(msg=True) == {}
 
 
-@pytest.mark.parametrize(
-    "validator",
-    (
-        ResourceObjectGET(CONFIG, resource_schema=user.User()),
-        ResourcesPOST(CONFIG, resource_schema=user.User()),
-        ResourceObjectPUT(CONFIG, resource_schema=user.User()),
-    ),
-)
-def test_presence_checker_is_parsed_from_query_string(validator):
-    parsed = validator.parse_query_string(query_string={"attributes": ["name.familyName"]})
-
-    assert parsed["presence_checker"].attr_reps == [AttrRep(attr="name", sub_attr="familyName")]
-    assert parsed["presence_checker"].include is True
-
-
 def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
     user_data_client,
 ):
@@ -536,7 +512,7 @@ def test_correct_resource_type_post_response_passes_validation(user_data_server)
     "validator",
     (
         ResourcesGET(CONFIG, resource_schema=user.User()),
-        ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
+        ServerRootResourcesGET(CONFIG, resource_schemas=[user.User()]),
         SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
 )
@@ -561,7 +537,7 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
     "validator",
     (
         ResourcesGET(CONFIG, resource_schema=user.User()),
-        ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
+        ServerRootResourcesGET(CONFIG, resource_schemas=[user.User()]),
         SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
 )
@@ -587,7 +563,7 @@ def test_attributes_existence_is_validated_in_list_response(validator):
     "validator",
     (
         ResourcesGET(CONFIG, resource_schema=user.User()),
-        ServerRootResourceGET(CONFIG, resource_schemas=[user.User()]),
+        ServerRootResourcesGET(CONFIG, resource_schemas=[user.User()]),
         SearchRequestPOST(CONFIG, resource_schemas=[user.User()]),
     ),
 )
