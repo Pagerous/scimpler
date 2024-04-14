@@ -1,352 +1,53 @@
-from copy import deepcopy
-
 import pytest
 
-from src.assets.schemas import list_response, patch_op, resource_type, user
+from src.assets.schemas import patch_op, user
+from src.assets.schemas.patch_op import operations
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
-from src.data.schemas import validate_resource_type_consistency, validate_schemas_field
 from src.filter import Filter
 from tests.conftest import SchemaForTests
 
 
-def test_lack_of_data_is_validated():
-    expected_issues = {"_errors": [{"code": 15}]}
-
-    data, issues = user.User().parse(None)
-
-    assert data is Invalid
-    assert issues.to_dict() == expected_issues
-
-
-def test_bad_data_type_is_validated():
-    expected_issues = {"_errors": [{"code": 2}]}
-
-    data, issues = user.User().parse([])
-
-    assert data is Invalid
-    assert issues.to_dict() == expected_issues
-
-
-def test_user__correct_user_data_can_be_parsed(user_data_parse):
-    expected_data = deepcopy(user_data_parse)
-    user_data_parse["unexpected"] = 123  # should be filtered-out
-
-    data, issues = user.User().parse(user_data_parse)
-
-    assert issues.to_dict(msg=True) == {}
-    assert data.to_dict() == expected_data
-
-
-def test_user__parsing_fails_if_bad_types(user_data_parse):
-    user_data_parse["userName"] = 123  # noqa
-    user_data_parse["name"]["givenName"] = 123  # noqa
-    expected_data = deepcopy(user_data_parse)
-    expected_data["userName"] = Invalid
-    expected_data["name"]["givenName"] = Invalid
-    expected_issues = {
-        "userName": {
-            "_errors": [
-                {
-                    "code": 2,
-                }
-            ]
-        },
-        "name": {
-            "givenName": {
-                "_errors": [
-                    {
-                        "code": 2,
-                    }
-                ]
-            }
-        },
-    }
-
-    data, issues = user.User().parse(user_data_parse)
-
-    assert issues.to_dict() == expected_issues
-    assert data.to_dict() == expected_data
-
-
-def test_validate_schemas_field__unknown_additional_field_is_validated(user_data_parse):
-    user_data_parse["schemas"].append("bad:user:schema")
-    expected_issues = {"schemas": {"_errors": [{"code": 27}]}}
-    schema = user.User()
-
-    issues = validate_schemas_field(
-        SCIMDataContainer(user_data_parse),
-        schemas_=user_data_parse["schemas"],
-        main_schema=schema.schema,
-        known_schemas=schema.schemas,
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data_parse):
-    user_data_parse["schemas"] = ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
-    expected_issues = {"schemas": {"_errors": [{"code": 28}]}}
-    schema = user.User()
-
-    issues = validate_schemas_field(
-        SCIMDataContainer(user_data_parse),
-        schemas_=user_data_parse["schemas"],
-        main_schema=schema.schema,
-        known_schemas=schema.schemas,
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_validate_schemas_field__fails_if_extension_schema_is_missing(user_data_parse):
-    user_data_parse["schemas"] = ["urn:ietf:params:scim:schemas:core:2.0:User"]
-    expected_issues = {"schemas": {"_errors": [{"code": 29}]}}
-    schema = user.User()
-
-    issues = validate_schemas_field(
-        SCIMDataContainer(user_data_parse),
-        schemas_=user_data_parse["schemas"],
-        main_schema=schema.schema,
-        known_schemas=schema.schemas,
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_validate_schemas_field__multiple_errors(user_data_parse):
-    user_data_parse["schemas"] = ["bad:user:schema"]
-    expected_issues = {"schemas": {"_errors": [{"code": 27}, {"code": 28}, {"code": 29}]}}
-    schema = user.User()
-
-    issues = validate_schemas_field(
-        SCIMDataContainer(user_data_parse),
-        schemas_=user_data_parse["schemas"],
-        main_schema=schema.schema,
-        known_schemas=schema.schemas,
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_validate_resource_type_consistency__fails_if_no_consistency():
-    expected = {
-        "meta": {
-            "resourceType": {
-                "_errors": [
-                    {
-                        "code": 17,
-                    }
-                ]
-            }
-        }
-    }
-
-    issues = validate_resource_type_consistency("Group", "User")
-
-    assert issues.to_dict() == expected
-
-
-def test_validate_resource_type_consistency__succeeds_if_consistency(user_data_dump):
-    issues = validate_resource_type_consistency("User", "User")
-
-    assert issues.to_dict(msg=True) == {}
-
-
-def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):
-    expected = {
-        "itemsPerPage": {"_errors": [{"code": 11}]},
-        "Resources": {"_errors": [{"code": 11}]},
-    }
-
-    issues = list_response.validate_items_per_page_consistency(
-        resources_=list_user_data["Resources"],
-        items_per_page_=1,
-    )
-
-    assert issues.to_dict() == expected
-
-
-def test_validate_items_per_page_consistency__succeeds_if_correct_data(list_user_data):
-    issues = list_response.validate_items_per_page_consistency(
-        resources_=list_user_data["Resources"],
-        items_per_page_=2,
-    )
-
-    assert issues.to_dict(msg=True) == {}
-
-
-def test_list_response__dumping_resources_fails_if_bad_type(list_user_data, list_user_data_dumped):
-    schema = list_response.ListResponse([user.User()])
-    list_user_data["Resources"][0]["userName"] = 123
-    list_user_data["Resources"][1]["userName"] = 123
-    list_user_data_dumped["Resources"][0]["userName"] = Invalid
-    list_user_data_dumped["Resources"][1]["userName"] = Invalid
-    expected_issues = {
-        "Resources": {
-            "0": {"userName": {"_errors": [{"code": 2}]}},
-            "1": {"userName": {"_errors": [{"code": 2}]}},
-        }
-    }
-
-    data, issues = schema.dump(list_user_data)
-
-    assert issues.to_dict() == expected_issues
-    assert data.to_dict() == list_user_data_dumped
-
-
-def test_list_response__dumping_resources_succeeds_for_correct_data(
-    list_user_data, list_user_data_dumped
-):
-    schema = list_response.ListResponse([user.User()])
-    # below fields should be filtered-out
-    list_user_data["unexpected"] = 123
-    list_user_data["Resources"][0]["unexpected"] = 123
-    list_user_data["Resources"][1]["name"]["unexpected"] = 123
-
-    data, issues = schema.dump(list_user_data)
-
-    assert issues.to_dict(msg=True) == {}
-    assert data.to_dict() == list_user_data_dumped
-
-
-def test_dump_resources__resources_with_bad_type_are_reported(
-    list_user_data, list_user_data_dumped
-):
-    schema = list_response.ListResponse([user.User()])
-    list_user_data["Resources"][0] = []
-    list_user_data["Resources"][1]["userName"] = 123
-    list_user_data_dumped["Resources"][0] = Invalid
-    list_user_data_dumped["Resources"][1]["userName"] = Invalid
-    expected = {
-        "Resources": {
-            "0": {"_errors": [{"code": 2}]},
-            "1": {"userName": {"_errors": [{"code": 2}]}},
-        }
-    }
-
-    data, issues = schema.dump(list_user_data)
-
-    assert issues.to_dict() == expected
-    assert data.to_dict() == list_user_data_dumped
-
-
 @pytest.mark.parametrize(
-    ("data", "expected"),
+    ("value", "expected_issues"),
     (
         (
             [
-                SCIMDataContainer(
-                    {
-                        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-                        "userName": "bjensen",
-                    }
-                )
+                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
+                SCIMDataContainer({"op": "unknown"}),
             ],
-            [user.User()],
+            {"1": {"op": {"_errors": [{"code": 14}]}}},
         ),
         (
             [
-                # only "schemas" attribute is used
-                SCIMDataContainer(
-                    {
-                        "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
-                    }
-                )
+                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
+                SCIMDataContainer({"op": "remove", "path": None}),
             ],
-            [None],
+            {"1": {"path": {"_errors": [{"code": 15}]}}},
         ),
         (
             [
-                SCIMDataContainer(
-                    {
-                        "userName": "bjensen",
-                    }
-                )
+                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
+                SCIMDataContainer({"op": "add", "value": None}),
             ],
-            [None],
+            {"1": {"value": {"_errors": [{"code": 15}]}}},
         ),
         (
             [
-                # extensions are ignored
+                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
                 SCIMDataContainer(
-                    {
-                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-                            "employeeNumber": "2",
-                        }
-                    }
-                )
+                    {"op": "add", "path": 'emails[type eq "work"]', "value": {"primary": True}}
+                ),
             ],
-            [None],
+            {"1": {"path": {"_errors": [{"code": 305}]}}},
         ),
     ),
 )
-def test_list_response__get_schema_for_resources(data, expected):
-    schema = list_response.ListResponse([user.User(), user.User()])
+def test_validate_patch_operations(value, expected_issues):
+    issues = operations.validate(value)
 
-    actual = schema.get_schemas_for_resources(data)
-
-    assert isinstance(actual, type(expected))
-
-
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    (
-        (
-            [
-                SCIMDataContainer(
-                    {
-                        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-                        "userName": "bjensen",
-                    }
-                )
-            ],
-            [user.User()],
-        ),
-        (
-            [
-                SCIMDataContainer(
-                    {
-                        "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
-                    }
-                )
-            ],
-            [user.User()],
-        ),
-        (
-            [
-                SCIMDataContainer(
-                    {
-                        "userName": "bjensen",
-                    }
-                )
-            ],
-            [user.User()],
-        ),
-        (
-            [
-                # extensions are ignored
-                SCIMDataContainer(
-                    {
-                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-                            "employeeNumber": "2",
-                        }
-                    }
-                )
-            ],
-            [user.User()],
-        ),
-    ),
-)
-def test_list_response__get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(
-    data, expected
-):
-    schema = list_response.ListResponse([user.User()])
-
-    actual = schema.get_schemas_for_resources(data)
-
-    assert isinstance(actual, type(expected))
+    assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize(
@@ -504,14 +205,15 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_parsed(op):
         ],
     }
 
-    actual_data, issues = schema.parse(input_data)
-
+    issues = schema.validate(input_data)
     assert issues.to_dict(msg=True) == {}
+
+    actual_data = schema.parse(input_data)
     assert actual_data.to_dict() == expected_data
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_parse_add_and_replace_operation_without_path__fails_for_incorrect_data(op):
+def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_data(op):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -534,28 +236,6 @@ def test_parse_add_and_replace_operation_without_path__fails_for_incorrect_data(
             },
         ],
     }
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [
-            {
-                "op": op,
-                "path": Missing,
-                "value": {
-                    "name": {
-                        "formatted": Invalid,
-                    },
-                    "userName": Invalid,
-                    "emails": [{"value": "bjensen@example.com", "type": Invalid}],
-                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-                        "department": Invalid,
-                        "manager": {
-                            "displayName": Invalid,
-                        },
-                    },
-                },
-            }
-        ],
-    }
     expected_issues = {
         "Operations": {
             "0": {
@@ -572,14 +252,12 @@ def test_parse_add_and_replace_operation_without_path__fails_for_incorrect_data(
         }
     }
 
-    actual_data, issues = schema.parse(input_data)
-
+    issues = schema.validate(input_data)
     assert issues.to_dict() == expected_issues
-    assert actual_data.to_dict() == expected_data
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_parse_add_and_replace_operation_without_path__fails_if_attribute_is_readonly(op):
+def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_readonly(op):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -590,27 +268,22 @@ def test_parse_add_and_replace_operation_without_path__fails_if_attribute_is_rea
             }
         ],
     }
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": op, "path": Missing, "value": {"meta": {"resourceType": "Users"}}}],
-    }
     expected_issues = {
         "Operations": {
             "0": {
                 "value": {
                     "meta": {
                         "_errors": [{"code": 304}],
-                        "resourceType": {"_errors": [{"code": 304}]},
+                        "resourceType": {"_errors": [{"code": 17}, {"code": 304}]},
                     },
                 }
             }
         }
     }
 
-    actual_data, issues = schema.parse(input_data)
+    issues = schema.validate(input_data)
 
     assert issues.to_dict() == expected_issues
-    assert actual_data.to_dict() == expected_data
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
@@ -667,7 +340,7 @@ def test_parse_add_and_replace_operation_without_path__fails_if_attribute_is_rea
         ),
     ),
 )
-def test_parse_add_and_replace_operation__fails_for_incorrect_data(
+def test_validate_add_and_replace_operation__fails_for_incorrect_data(
     op, path, input_value, expected_value, expected_value_issues
 ):
     schema = patch_op.PatchOp(resource_schema=user.User())
@@ -682,15 +355,10 @@ def test_parse_add_and_replace_operation__fails_for_incorrect_data(
         ],
     }
     expected_issues = {"Operations": {"0": {"value": expected_value_issues}}}
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": op, "path": PatchPath.parse(path)[0], "value": expected_value}],
-    }
 
-    actual_data, issues = schema.parse(input_data)
+    issues = schema.validate(input_data)
 
     assert issues.to_dict() == expected_issues
-    assert actual_data.to_dict() == expected_data
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
@@ -772,9 +440,10 @@ def test_parse_add_and_replace_operation__succeeds_on_correct_data(
         ],
     }
 
-    actual_data, issues = schema.parse(input_data)
-
+    issues = schema.validate(input_data)
     assert issues.to_dict(msg=True) == {}
+
+    actual_data = schema.parse(input_data)
     assert actual_data["Operations"][0]["value"] == expected_value
     assert actual_data["Operations"][0]["path"].attr_rep == expected_path.attr_rep
     if expected_path.complex_filter:
@@ -800,7 +469,7 @@ def test_parse_add_and_replace_operation__succeeds_on_correct_data(
         ('groups[type eq "direct"].value', "admins"),
     ),
 )
-def test_parse_add_operation__fails_if_attribute_is_readonly(op, path, value):
+def test_add_operation__fails_if_attribute_is_readonly(op, path, value):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -812,16 +481,11 @@ def test_parse_add_operation__fails_if_attribute_is_readonly(op, path, value):
             }
         ],
     }
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": op, "path": PatchPath.parse(path)[0], "value": Invalid}],
-    }
     expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 304}]}}}}
 
-    actual_data, issues = schema.parse(input_data)
+    issues = schema.validate(input_data)
 
     assert issues.to_dict() == expected_issues
-    assert actual_data.to_dict() == expected_data
 
 
 @pytest.mark.parametrize(
@@ -834,7 +498,7 @@ def test_parse_add_operation__fails_if_attribute_is_readonly(op, path, value):
         "emails[type eq 'work'].value",
     ),
 )
-def test_parse_remove_operation__succeeds_if_correct_path(path):
+def test_remove_operation__succeeds_if_correct_path(path):
     schema = patch_op.PatchOp(resource_schema=user.User())
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -847,17 +511,16 @@ def test_parse_remove_operation__succeeds_if_correct_path(path):
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.parse(path)[0]}],
+        "Operations": [{"op": "remove", "path": PatchPath.parse(path)}],
     }
-    expected_issues = {}
 
-    actual_data, issues = schema.parse(input_data)
+    assert schema.validate(input_data).to_dict(msg=True) == {}
 
-    assert issues.to_dict() == expected_issues
+    actual_data = schema.parse(input_data)
     assert actual_data.to_dict() == expected_data
 
 
-def test_parse_remove_operation__path_can_point_at_item_of_simple_multivalued_attribute():
+def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribute():
     schema = patch_op.PatchOp(resource_schema=SchemaForTests())
     path = "str_mv[value sw 'a']"
     input_data = {
@@ -871,13 +534,12 @@ def test_parse_remove_operation__path_can_point_at_item_of_simple_multivalued_at
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.parse(path)[0]}],
+        "Operations": [{"op": "remove", "path": PatchPath.parse(path)}],
     }
-    expected_issues = {}
 
-    actual_data, issues = schema.parse(input_data)
+    assert schema.validate(input_data).to_dict(msg=True) == {}
 
-    assert issues.to_dict() == expected_issues
+    actual_data = schema.parse(input_data)
     assert actual_data.to_dict() == expected_data
 
 
@@ -897,7 +559,7 @@ def test_parse_remove_operation__path_can_point_at_item_of_simple_multivalued_at
         ("c2_mv[int eq 1].bool", [{"code": 306}], SchemaForTests()),
     ),
 )
-def test_parse_remove_operation__fails_if_attribute_is_readonly_or_required(
+def test_remove_operation__fails_if_attribute_is_readonly_or_required(
     path, expected_path_issue_codes, resource_schema
 ):
     schema = patch_op.PatchOp(resource_schema)
@@ -912,38 +574,9 @@ def test_parse_remove_operation__fails_if_attribute_is_readonly_or_required(
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.parse(path)[0]}],
+        "Operations": [{"op": "remove", "path": PatchPath.parse(path)}],
     }
     expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
 
-    actual_data, issues = schema.parse(input_data)
-
-    assert issues.to_dict() == expected_issues
-    assert actual_data.to_dict() == expected_data
-
-
-def test_resource_type_schema_is_dumped():
-    schema = resource_type.ResourceType()
-    input_ = {
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
-        "id": "User",
-        "name": "User",
-        "endpoint": "/Users",
-        "description": "User Account",
-        "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
-        "schemaExtensions": [
-            {
-                "schema": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                "required": True,
-            }
-        ],
-        "meta": {
-            "location": "https://example.com/v2/ResourceTypes/User",
-            "resourceType": "ResourceType",
-        },
-    }
-
-    data, issues = schema.dump(input_)
-
-    assert issues.to_dict(msg=True) == {}
-    assert data.to_dict() == input_
+    assert schema.validate(input_data).to_dict() == expected_issues
+    assert schema.parse(input_data).to_dict() == expected_data

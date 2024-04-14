@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence
 
 from src.data import type as type_
 from src.data.attributes import Attribute
@@ -23,9 +23,25 @@ items_per_page = Attribute(
     type_=type_.Integer,
 )
 
+
+def validate_resources_type(value) -> ValidationIssues:
+    issues = ValidationIssues()
+    for i, item in enumerate(value):
+        if not isinstance(item, SCIMDataContainer):
+            issues.add(
+                issue=ValidationError.bad_type(get_scim_type(dict), get_scim_type(type(value))),
+                proceed=True,
+                location=(i,),
+            )
+            value[0] = Invalid
+    return issues
+
+
 resources = Attribute(
     name="Resources",
     type_=type_.Unknown,
+    multi_valued=True,
+    validators=[validate_resources_type],
 )
 
 
@@ -42,16 +58,17 @@ class ListResponse(BaseSchema):
         )
         self._schemas = schemas
 
-    def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
-        data, issues = super().dump(data)
-        if not issues.can_proceed():
-            return data, issues
+    @property
+    def schemas(self) -> Sequence[BaseSchema]:
+        return self._schemas
 
+    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+        issues = ValidationIssues()
         resources_ = data[self.attrs.resources.rep]
         if resources_ is Missing:
-            return data, issues
+            return issues
 
-        if not (resources_ is Missing or isinstance(resources_, List)):
+        if not isinstance(resources_, List):
             issues.add(
                 issue=ValidationError.bad_type(
                     get_scim_type(list), get_scim_type(type(resources_))
@@ -59,10 +76,9 @@ class ListResponse(BaseSchema):
                 location=(self.attrs.resources.rep.attr,),
                 proceed=False,
             )
-            return data, issues
+            return issues
 
-        if issues.can_proceed((self.attrs.itemsperpage.rep.attr,)):
-            items_per_page_ = data[self.attrs.itemsperpage.rep]
+        if (items_per_page_ := data[self.attrs.itemsperpage.rep]) is not Invalid:
             issues.merge(
                 validate_items_per_page_consistency(
                     resources_=resources_,
@@ -71,8 +87,6 @@ class ListResponse(BaseSchema):
             )
 
         schemas_ = self.get_schemas_for_resources(resources_)
-
-        dumped_resources = []
         for i, (resource, schema) in enumerate(zip(resources_, schemas_)):
             if schema is None:
                 issues.add(
@@ -80,14 +94,24 @@ class ListResponse(BaseSchema):
                     proceed=False,
                     location=(self.attrs.resources.rep.attr, i),
                 )
-                resource = Invalid
-            else:
-                resource, issues_ = schema.dump(resource)
-                issues.merge(issues_, location=(self.attrs.resources.rep.attr, i))
-            dumped_resources.append(resource)
-        data[self.attrs.resources.rep] = dumped_resources
+            elif resource is not Invalid:
+                issues.merge(
+                    issues=schema.validate(resource),
+                    location=(self.attrs.resources.rep.attr, i),
+                )
+        return issues
 
-        return data, issues
+    def dump(self, data: Any) -> SCIMDataContainer:
+        data = super().dump(data)
+        resources_ = data[self.attrs.resources.rep]
+        if resources_ is Missing:
+            return data
+        schemas_ = self.get_schemas_for_resources(resources_)
+        dumped_resources = []
+        for i, (resource, schema) in enumerate(zip(resources_, schemas_)):
+            dumped_resources.append(schema.dump(resource))
+        data[self.attrs.resources.rep] = dumped_resources
+        return data
 
     def get_schemas_for_resources(self, resources_: List[Any]) -> List[Optional[ResourceSchema]]:
         schemas_ = []

@@ -1,9 +1,9 @@
 import functools
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Union
 
 from src.data import type as at
 from src.data.attributes import Attribute, ComplexAttribute
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
@@ -50,19 +50,20 @@ class Sorter:
         return self._asc
 
     @classmethod
-    def parse(cls, by: str, asc: bool = True) -> Tuple[Union[Invalid, "Sorter"], ValidationIssues]:
+    def parse(cls, by: str, asc: bool = True) -> "Sorter":
+        return Sorter(attr_rep=AttrRep.parse(by), asc=asc)
+
+    @classmethod
+    def validate(cls, by: str) -> ValidationIssues:
         issues = ValidationIssues()
-        attr_rep = AttrRep.parse(by)
-        if attr_rep is Invalid:
+        try:
+            AttrRep.parse(by)
+        except ValueError:
             issues.add(
                 issue=ValidationError.bad_attribute_name(by),
                 proceed=False,
             )
-            return Invalid, issues
-        return (
-            Sorter(attr_rep=attr_rep, asc=asc),
-            issues,
-        )
+        return issues
 
     def __call__(
         self,

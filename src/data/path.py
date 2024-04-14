@@ -1,10 +1,10 @@
-from typing import Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional
 
-from src.data.container import AttrRep, Invalid
+from src.data.container import AttrRep
 from src.data.operator import ComplexAttributeOperator
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
-from src.utils import PLACEHOLDER_REGEX, STRING_VALUES_REGEX, get_placeholder
+from src.utils import decode_placeholders, encode_strings
 
 
 class PatchPath:
@@ -50,16 +50,9 @@ class PatchPath:
         return self._complex_filter_attr_rep
 
     @classmethod
-    def parse(cls, path: str) -> Tuple[Union[Invalid, "PatchPath"], ValidationIssues]:
+    def validate(cls, path: str) -> ValidationIssues:
         issues = ValidationIssues()
-
-        string_values = {}
-        for match in STRING_VALUES_REGEX.finditer(path):
-            start, stop = match.span()
-            string_value = match.string[start:stop]
-            string_values[start] = string_value
-            path = path.replace(string_value, get_placeholder(start), 1)
-
+        path, placeholders = encode_strings(path)
         if (
             path.count("[") > 1
             or path.count("]") > 1
@@ -68,83 +61,94 @@ class PatchPath:
             or ("[" in path and "]" in path and path.index("[") > path.index("]"))
         ):
             issues.add(issue=ValidationError.bad_operation_path(), proceed=False)
-            return Invalid, issues
+            return issues
 
         if "[" in path and "]" in path:
-            return cls._parse_complex_multivalued_path(path, string_values)
+            return cls._validate_complex_multivalued_path(path, placeholders)
 
-        path = cls._encode_string_values(path, string_values)
-        attr_rep = AttrRep.parse(path)
-        if attr_rep is Invalid:
-            issues.add(issue=ValidationError.bad_attribute_name(path), proceed=False)
-            return Invalid, issues
-        return (
-            PatchPath(attr_rep=attr_rep, complex_filter=None, complex_filter_attr_rep=None),
-            issues,
-        )
+        path = decode_placeholders(path, placeholders)
+        issues.merge(AttrRep.validate(path))
+        return issues
 
     @classmethod
-    def _parse_complex_multivalued_path(
-        cls, path: str, string_values
-    ) -> Tuple[Union[Invalid, "PatchPath"], ValidationIssues]:
-        filter_exp = path[: path.index("]") + 1]
-        filter_, issues = Filter.parse(cls._encode_string_values(filter_exp, string_values))
+    def _validate_complex_multivalued_path(
+        cls, path: str, placeholders: Dict[str, Any]
+    ) -> ValidationIssues:
+        filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
+        issues = Filter.validate(filter_exp)
         if issues.has_issues():
-            return Invalid, issues
-
-        value_sub_attr_rep = None
+            return issues
+        filter_ = Filter.parse(filter_exp)
         value_sub_attr_rep_exp = path[path.index("]") + 1 :]
         if value_sub_attr_rep_exp:
             if value_sub_attr_rep_exp.startswith("."):
                 value_sub_attr_rep_exp = value_sub_attr_rep_exp[1:]
-            value_sub_attr_rep = cls._get_sub_attr_rep(
-                issues=issues,
-                attr_rep=filter_.operator.attr_rep,
-                sub_attr_rep_exp=cls._encode_string_values(value_sub_attr_rep_exp, string_values),
+            issues.merge(
+                cls._validate_sub_attr_rep(
+                    attr_rep=filter_.operator.attr_rep,
+                    sub_attr_rep_exp=decode_placeholders(value_sub_attr_rep_exp, placeholders),
+                )
             )
-
-        if issues.has_issues():
-            return Invalid, issues
-        return (
-            cls(
-                attr_rep=filter_.operator.attr_rep,
-                complex_filter=filter_,
-                complex_filter_attr_rep=value_sub_attr_rep,
-            ),
-            issues,
-        )
+        return issues
 
     @staticmethod
-    def _get_sub_attr_rep(
-        issues: ValidationIssues,
-        attr_rep: Optional[AttrRep],
-        sub_attr_rep_exp: str,
-    ):
-        sub_attr_rep = AttrRep.parse(sub_attr_rep_exp)
-        if sub_attr_rep is Invalid:
-            issues.add(issue=ValidationError.bad_attribute_name(sub_attr_rep_exp), proceed=False)
-        elif sub_attr_rep.sub_attr:
-            if attr_rep is not None and not attr_rep.top_level_equals(sub_attr_rep):
+    def _validate_sub_attr_rep(attr_rep: AttrRep, sub_attr_rep_exp: str) -> ValidationIssues:
+        issues = ValidationIssues()
+        try:
+            sub_attr_rep = AttrRep.parse(sub_attr_rep_exp)
+            if sub_attr_rep.sub_attr and not attr_rep.top_level_equals(sub_attr_rep):
                 issues.add(
                     issue=ValidationError.complex_sub_attribute(attr_rep.attr, sub_attr_rep.attr),
                     proceed=False,
                 )
-        elif attr_rep is not None:
-            sub_attr_rep = AttrRep(
-                schema=attr_rep.schema,
-                attr=attr_rep.attr,
-                sub_attr=sub_attr_rep.attr,
-            )
-        return sub_attr_rep
+        except ValueError:
+            issues.add(issue=ValidationError.bad_attribute_name(sub_attr_rep_exp), proceed=False)
+        return issues
 
-    @staticmethod
-    def _encode_string_values(exp: str, string_values: Dict[int, str]):
-        encoded = exp
-        for match in PLACEHOLDER_REGEX.finditer(exp):
-            index = int(match.group(1))
-            if index in (string_values or {}):
-                encoded = encoded.replace(match.group(0), string_values[index])
-        return encoded
+    @classmethod
+    def parse(cls, path: str) -> "PatchPath":
+        try:
+            return cls._parse(path)
+        except Exception:
+            raise ValueError("invalid path expression")
+
+    @classmethod
+    def _parse(cls, path: str) -> "PatchPath":
+        path, placeholders = encode_strings(path)
+        if "[" in path and "]" in path:
+            return cls._parse_complex_multivalued_path(path, placeholders)
+
+        assert "[" not in path and "]" not in path
+        return PatchPath(
+            attr_rep=AttrRep.parse(decode_placeholders(path, placeholders)),
+            complex_filter=None,
+            complex_filter_attr_rep=None,
+        )
+
+    @classmethod
+    def _parse_complex_multivalued_path(
+        cls, path: str, placeholders: Dict[str, Any]
+    ) -> "PatchPath":
+        filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
+        filter_ = Filter.parse(filter_exp)
+        val_attr_rep = None
+        val_attr_exp = path[path.index("]") + 1 :]
+        if val_attr_exp:
+            if val_attr_exp.startswith("."):
+                val_attr_exp = val_attr_exp[1:]
+            val_attr_exp = decode_placeholders(val_attr_exp, placeholders)
+            val_attr_rep = AttrRep.parse(val_attr_exp)
+            assert not val_attr_rep.sub_attr
+            val_attr_rep = AttrRep(
+                schema=filter_.operator.attr_rep.schema,
+                attr=filter_.operator.attr_rep.attr,
+                sub_attr=val_attr_rep.attr,
+            )
+        return cls(
+            attr_rep=filter_.operator.attr_rep,
+            complex_filter=filter_,
+            complex_filter_attr_rep=val_attr_rep,
+        )
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, PatchPath):

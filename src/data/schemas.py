@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
 from src.data import type as at
 from src.data.attributes import (
@@ -16,15 +16,14 @@ from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 
 
-def bulk_id_validator(value) -> Tuple[Any, ValidationIssues]:
+def bulk_id_validator(value) -> ValidationIssues:
     issues = ValidationIssues()
     if "bulkId" in value:
         issues.add(
             issue=ValidationError.reserved_keyword("bulkId"),
             proceed=False,
         )
-        return Invalid, issues
-    return value, issues
+    return issues
 
 
 schemas = Attribute(
@@ -49,8 +48,7 @@ id_ = Attribute(
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.SERVER,
-    parsers=[bulk_id_validator],
-    dumpers=[bulk_id_validator],
+    validators=[bulk_id_validator],
 )
 
 external_id = Attribute(
@@ -173,10 +171,9 @@ class BaseSchema(abc.ABC):
                 mutability=attr.mutability,
                 returned=attr.returned,
                 uniqueness=attr.uniqueness,
-                parsers=attr.parsers,
-                dumpers=attr.dumpers,
-                complex_parsers=attr.complex_parsers,
-                complex_dumpers=attr.complex_dumpers,
+                validators=attr.validators,
+                parser=attr.parser,
+                dumper=attr.dumper,
             )
         return Attribute(
             name=attr_rep,
@@ -190,8 +187,9 @@ class BaseSchema(abc.ABC):
             mutability=attr.mutability,
             returned=attr.returned,
             uniqueness=attr.uniqueness,
-            parsers=attr.parsers,
-            dumpers=attr.dumpers,
+            validators=attr.validators,
+            parser=attr.parser,
+            dumper=attr.dumper,
         )
 
     @property
@@ -206,36 +204,29 @@ class BaseSchema(abc.ABC):
     def schema(self) -> str:
         return self._schema
 
-    def parse(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
-        return self._process(data, method="parse")
+    def parse(self, data: Any) -> SCIMDataContainer:
+        data = SCIMDataContainer(data)
+        parsed = SCIMDataContainer()
+        for attr in self.attrs.top_level:
+            value = data[attr.rep]
+            if value is not Missing:
+                parsed[attr.rep] = attr.parse(value)
+        return parsed
 
-    def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
-        return self._process(data, method="dump")
+    def dump(self, data: Any) -> SCIMDataContainer:
+        data = SCIMDataContainer(data)
+        dumped = SCIMDataContainer()
+        for attr in self.attrs.top_level:
+            value = data[attr.rep]
+            if value is not Missing:
+                dumped[attr.rep] = attr.dump(value)
+        return dumped
 
-    def _process(
-        self, data: Any, method: str
-    ) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
+    def validate(self, data: Union[SCIMDataContainer, Dict[str, Any]]) -> ValidationIssues:
         issues = ValidationIssues()
-        if data is None:
-            issues.add(
-                issue=ValidationError.missing(),
-                proceed=False,
-            )
-            data = Invalid
-        elif not isinstance(data, (SCIMDataContainer, dict)):
-            issues.add(
-                issue=ValidationError.bad_type(
-                    get_scim_type(SCIMDataContainer), get_scim_type(type(data))
-                ),
-                proceed=False,
-            )
-            data = Invalid
-
-        if issues.has_issues():
-            return data, issues
-
-        data, issues_ = self._process_data(data, method)
-        issues.merge(issues_)
+        if isinstance(data, Dict):
+            data = SCIMDataContainer(data)
+        issues.merge(self._validate_data(data))
 
         schemas_ = data[self._attrs.schemas.rep]
         if issues.can_proceed(("schemas",)) and schemas_:
@@ -244,24 +235,24 @@ class BaseSchema(abc.ABC):
                     data=data,
                     schemas_=schemas_,
                     main_schema=self.schema,
-                    known_schemas=self.schemas,
+                    known_schemas=schemas_,
                 )
             )
-        return data, issues
 
-    def _process_data(
-        self,
-        data: Dict[str, Any],
-        method: str,
-    ) -> Tuple[SCIMDataContainer, ValidationIssues]:
+        if issues.can_proceed():
+            issues.merge(self._validate(data))
+        return issues
+
+    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+        return ValidationIssues()
+
+    def _validate_data(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
-        data = SCIMDataContainer(data)
-        processed = SCIMDataContainer()
         for attr in self.attrs.top_level:
             value = data[attr.rep]
             if value is Missing:
                 continue
-            value, issues_ = getattr(attr, method)(value)
+            issues_ = attr.validate(value)
             location = (attr.rep.attr,)
             if attr.rep.extension:
                 location = (attr.rep.schema,) + location
@@ -269,8 +260,7 @@ class BaseSchema(abc.ABC):
                 issues=issues_,
                 location=location,
             )
-            processed[attr.rep] = value
-        return processed, issues
+        return issues
 
 
 def validate_schemas_field(
@@ -401,21 +391,17 @@ class ResourceSchema(BaseSchema, abc.ABC):
                     )
         self._attrs = Attributes(list(self._attrs) + bounded_attrs)
 
-    def dump(self, data: Any) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
-        data, issues = super().dump(data)
-        if not issues.can_proceed():
-            return data, issues
-
-        if issues.can_proceed(("meta", "resourceType")):
-            resource_type = data[self.attrs.meta__resourcetype.rep]
-            if resource_type is not Missing:
-                issues.merge(
-                    validate_resource_type_consistency(
-                        resource_type=resource_type,
-                        expected=self.name,
-                    )
+    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+        issues = ValidationIssues()
+        resource_type = data[self.attrs.meta__resourcetype.rep]
+        if resource_type not in [Missing, Invalid]:
+            issues.merge(
+                validate_resource_type_consistency(
+                    resource_type=resource_type,
+                    expected=self.name,
                 )
-        return data, issues
+            )
+        return issues
 
 
 def get_schema_rep(schema: ResourceSchema) -> Dict[str, Any]:

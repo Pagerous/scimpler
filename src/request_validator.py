@@ -1,5 +1,4 @@
 import abc
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from src.assets.config import ServiceProviderConfig
@@ -7,29 +6,13 @@ from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
-from src.data.attributes import (
-    Attribute,
-    AttributeIssuer,
-    AttributeMutability,
-    ComplexAttribute,
-)
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.attributes import Attribute, AttributeIssuer, ComplexAttribute
+from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
 from src.sorter import Sorter
-
-
-@dataclass
-class RequestData:
-    body: Optional[SCIMDataContainer]
-    options: Dict[str, Any]
-
-
-@dataclass
-class ResponseData:
-    body: Optional[Dict[str, Any]]
 
 
 class Validator(abc.ABC):
@@ -41,28 +24,32 @@ class Validator(abc.ABC):
         return self._config
 
     @property
-    def request_schema(self) -> Union[BaseSchema, NotImplemented]:
-        return NotImplemented
+    def request_schema(self) -> BaseSchema:
+        raise NotImplementedError
 
     @property
-    def response_schema(self) -> Union[BaseSchema, NotImplemented]:
-        return NotImplemented
+    def response_schema(self) -> BaseSchema:
+        raise NotImplementedError
 
     @abc.abstractmethod
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
         ...
 
     @abc.abstractmethod
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
+    ) -> ValidationIssues:
         ...
 
 
@@ -75,26 +62,35 @@ class Error(Validator):
     def response_schema(self) -> error.Error:
         return self._schema
 
-    def parse_request(self, *, body: Any = None, query_string: Any = None) -> RequestData:
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
         raise NotImplementedError
 
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
+    ) -> ValidationIssues:
         body_location = ("body",)
         issues = ValidationIssues()
-        body, issues_ = self._schema.dump(body)
+        body = SCIMDataContainer(body or {})
+        issues_ = self._schema.validate(body)
         issues.merge(issues_, location=body_location)
-        if issues.can_proceed(body_location):
-            issues.merge(
-                issues=AttributePresenceChecker()(body, self._schema.attrs, "RESPONSE"),
-                location=body_location,
-            )
+        if not issues.can_proceed(body_location):
+            return issues
+
+        issues.merge(
+            issues=AttributePresenceChecker()(body, self._schema.attrs, "RESPONSE"),
+            location=body_location,
+        )
         status_attr_rep = self._schema.attrs.status.rep
         if issues.can_proceed(body_location + _location(status_attr_rep)):
             issues.merge(
@@ -105,8 +101,7 @@ class Error(Validator):
                 )
             )
         issues.merge(validate_error_status_code(status_code))
-        body = body.to_dict() if not issues.has_issues() else None
-        return ResponseData(body=body), issues
+        return issues
 
 
 def validate_error_status_code_consistency(
@@ -133,7 +128,7 @@ def validate_error_status_code(status_code: int) -> ValidationIssues:
     issues = ValidationIssues()
     if not 200 <= status_code < 600:
         issues.add(
-            issue=ValidationError.bad_error_status(status_code),
+            issue=ValidationError.bad_value_syntax(),
             location=("status",),
             proceed=True,
         )
@@ -185,39 +180,33 @@ def validate_status_code(expected: int, actual: int) -> ValidationIssues:
     return issues
 
 
-def _parse_body(
+def _validate_body(
     schema: BaseSchema,
-    body: Any,
+    body: SCIMDataContainer,
     required_attrs_to_ignore: Optional[Sequence[AttrRep]] = None,
-) -> Tuple[Union[Invalid, SCIMDataContainer], ValidationIssues]:
-    issues = ValidationIssues()
-    body_location = ("body",)
-    body, issues_ = schema.parse(body)
-    issues.merge(issues_, location=body_location)
-    if issues.can_proceed(body_location):
+) -> ValidationIssues:
+    issues = schema.validate(body)
+    if issues.can_proceed():
         issues.merge(
             issues=AttributePresenceChecker(ignore_required=required_attrs_to_ignore)(
                 body, schema.attrs, "REQUEST"
             ),
-            location=body_location,
         )
-    return body, issues
+    return issues
 
 
-def _dump_resource_output_body(
+def _validate_resource_output_body(
     schema: ResourceSchema,
     location_header_required: bool,
     expected_status_code: int,
     status_code: int,
-    body: Any = None,
-    headers: Any = None,
-    presence_checker: Optional[AttributePresenceChecker] = None,
-) -> Tuple[ResponseData, ValidationIssues]:
+    body: SCIMDataContainer,
+    headers: Dict[str, Any],
+    presence_checker: Optional[AttributePresenceChecker],
+) -> ValidationIssues:
     issues = ValidationIssues()
-    headers = headers or {}
     body_location = ("body",)
-    body, issues_ = schema.dump(body)
-    issues.merge(issues_, location=body_location)
+    issues.merge(schema.validate(body), location=body_location)
 
     issues.merge(
         issues=validate_resource_location_in_header(headers, location_header_required),
@@ -227,15 +216,14 @@ def _dump_resource_output_body(
         issues=validate_status_code(expected_status_code, status_code),
         location=("status",),
     )
-    if issues.can_proceed(body_location):
-        issues.merge(
-            issues=(presence_checker or AttributePresenceChecker())(
-                data=body,
-                attrs=schema.attrs,
-                direction="RESPONSE",
-            ),
-            location=body_location,
-        )
+    issues.merge(
+        issues=(presence_checker or AttributePresenceChecker())(
+            data=body,
+            attrs=schema.attrs,
+            direction="RESPONSE",
+        ),
+        location=body_location,
+    )
     meta_location = schema.attrs.meta__location.rep
     location_header = headers.get("Location")
     if (
@@ -248,9 +236,7 @@ def _dump_resource_output_body(
                 headers_location=location_header,
             ),
         )
-
-    body = body.to_dict() if not issues.has_issues() else None
-    return ResponseData(body=body), issues
+    return issues
 
 
 class ResourceObjectGET(Validator):
@@ -262,32 +248,41 @@ class ResourceObjectGET(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._schema
 
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
-        issues, options = ValidationIssues(), {}
-        if isinstance(query_string, Dict):
-            checker, issues_ = parse_requested_attributes(query_string)
-            issues.merge(issues=issues_, location=("query_string",))
-            if checker:
-                options["presence_checker"] = checker
-        return RequestData(body=body, options=options), issues
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        query_string = query_string or {}
+        issues.merge(
+            search_request.SearchRequest().validate(
+                {
+                    "attributes": query_string.get("attributes"),
+                    "excludeAttributes": query_string.get("excludeAttributes"),
+                }
+            ),
+            location=("query_string",),
+        )
+        return issues
 
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
-        return _dump_resource_output_body(
+    ) -> ValidationIssues:
+        return _validate_resource_output_body(
             schema=self._schema,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=body,
-            headers=headers,
+            body=SCIMDataContainer(body or {}),
+            headers=headers or {},
             presence_checker=kwargs.get("presence_checker"),
         )
 
@@ -305,43 +300,45 @@ class ResourceObjectPUT(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._schema
 
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
-        issues, options = ValidationIssues(), {}
-        if isinstance(query_string, Dict):
-            checker, issues_ = parse_requested_attributes(query_string)
-            issues.merge(issues=issues_, location=("query_string",))
-            if checker:
-                options["presence_checker"] = checker
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        query_string = query_string or {}
+        issues.merge(
+            search_request.SearchRequest().validate(
+                {
+                    "attributes": query_string.get("attributes"),
+                    "excludeAttributes": query_string.get("excludeAttributes"),
+                }
+            ),
+            location=("query_string",),
+        )
+        issues.merge(
+            issues=_validate_body(schema=self._schema, body=SCIMDataContainer(body or {})),
+            location=("body",),
+        )
+        return issues
 
-        body, issues_ = _parse_body(schema=self._schema, body=body)
-        issues.merge(issues=issues_)
-
-        if issues.has_issues():
-            body = None
-        else:
-            for attr in self._schema.attrs:
-                if attr.mutability == AttributeMutability.READ_ONLY:
-                    del body[attr.rep]
-
-        return RequestData(body=body, options=options), issues
-
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
-        return _dump_resource_output_body(
+    ) -> ValidationIssues:
+        return _validate_resource_output_body(
             schema=self._schema,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=body,
-            headers=headers,
+            body=SCIMDataContainer(body or {}),
+            headers=headers or {},
             presence_checker=kwargs.get("presence_checker"),
         )
 
@@ -359,117 +356,53 @@ class ResourcesPOST(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._schema
 
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
-        issues, options = ValidationIssues(), {}
-        if isinstance(query_string, Dict):
-            checker, issues_ = parse_requested_attributes(query_string)
-            issues.merge(issues=issues_, location=("query_string",))
-            if checker:
-                options["presence_checker"] = checker
-
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        body, query_string = SCIMDataContainer(body or {}), query_string or {}
+        issues.merge(
+            search_request.SearchRequest().validate(
+                {
+                    "attributes": query_string.get("attributes"),
+                    "excludeAttributes": query_string.get("excludeAttributes"),
+                }
+            ),
+            location=("query_string",),
+        )
         required_to_ignore = []
         for attr in self._schema.attrs:
             if attr.required and attr.issuer == AttributeIssuer.SERVER:
                 required_to_ignore.append(attr.rep)
+        issues.merge(
+            issues=_validate_body(self._schema, body, required_to_ignore), location=("body",)
+        )
+        return issues
 
-        body, issues_ = _parse_body(self._schema, body, required_to_ignore)
-        issues.merge(issues=issues_)
-        if issues.has_issues():
-            body = None
-        return RequestData(body=body, options=options), issues
-
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
+    ) -> ValidationIssues:
         issues = ValidationIssues()
         if not body:
-            return ResponseData(body=None), issues  # TODO: warn missing body
-
-        return _dump_resource_output_body(
+            return issues  # TODO: warn missing body
+        return _validate_resource_output_body(
             schema=self._schema,
             location_header_required=True,
             expected_status_code=201,
             status_code=status_code,
-            body=body,
-            headers=headers,
+            body=SCIMDataContainer(body),
+            headers=headers or {},
             presence_checker=kwargs.get("presence_checker"),
         )
-
-
-def parse_request_sorting(query_string: Dict) -> Tuple[Union[Invalid, Sorter], ValidationIssues]:
-    issues = ValidationIssues()
-
-    sort_by = query_string.get("sortBy")
-    if not isinstance(sort_by, str):
-        if sort_by is not None:
-            issues.add(
-                issue=ValidationError.bad_type(get_scim_type(str), get_scim_type(type(sort_by))),
-                proceed=False,
-            )
-        return Invalid, issues
-
-    sort_order = query_string.get("sortOrder", "ascending")
-    if sort_order not in ["ascending", "descending"]:
-        pass  # TODO add warning here
-
-    return Sorter.parse(by=sort_by, asc=sort_order == "ascending")
-
-
-def parse_request_filtering(query_string: Dict) -> Tuple[Union[Invalid, Filter], ValidationIssues]:
-    issues = ValidationIssues()
-    filter_exp = query_string.get("filter")
-    if not isinstance(filter_exp, str):
-        if filter_exp is not None:
-            issues.add(
-                issue=ValidationError.bad_type(get_scim_type(str), get_scim_type(type(filter_exp))),
-                proceed=False,
-            )
-        return Invalid, issues
-    return Filter.parse(filter_exp)
-
-
-def parse_requested_attributes(
-    query_string: Dict[str, Any],
-) -> Tuple[Union[None, Invalid, AttributePresenceChecker], ValidationIssues]:
-    issues = ValidationIssues()
-    to_include = query_string.get("attributes", [])
-    if to_include and isinstance(to_include, str):
-        to_include = to_include.split(",")
-    to_exclude = query_string.get("excludeAttributes", [])
-    if to_exclude and isinstance(to_exclude, str):
-        to_exclude = to_exclude.split(",")
-
-    if not (isinstance(to_include, List) and isinstance(to_exclude, List)):
-        return Invalid, issues
-
-    if not (to_include or to_exclude):
-        return None, issues
-
-    if to_include and to_exclude:
-        issues.add(
-            issue=ValidationError.can_not_be_used_together("excludeAttributes"),
-            proceed=False,
-            location=("attributes",),
-        )
-        issues.add(
-            issue=ValidationError.can_not_be_used_together("attributes"),
-            proceed=False,
-            location=("excludeAttributes",),
-        )
-        return Invalid, issues
-
-    attr_reps = to_include or to_exclude
-    include = None if not any([to_include, to_exclude]) else bool(to_include)
-    checker, issues_ = AttributePresenceChecker.parse(attr_reps, include)
-    issues.merge(issues=issues_, location=("attributes" if include else "excludeAttributes",))
-    return checker, issues
 
 
 def validate_resources_sorted(
@@ -587,86 +520,16 @@ def validate_resources_filtered(
     return issues
 
 
-def _parse_resources_get_request(
-    body: Any = None, query_string: Any = None
-) -> Tuple[RequestData, ValidationIssues]:
-    issues = ValidationIssues()
-    options = {}
-    query_string_location = ("query_string",)
-    if query_string is None:
-        issues.add(
-            issue=ValidationError.missing(),
-            proceed=False,
-            location=query_string_location,
-        )
-    elif not isinstance(query_string, Dict):
-        issues.add(
-            issue=ValidationError.bad_type(dict.__name__, type(query_string_location).__name__),
-            proceed=False,
-            location=query_string_location,
-        )
-
-    if issues.has_issues():
-        return RequestData(body=body, options=options), issues
-
-    filter_, issues_ = parse_request_filtering(query_string)
-    options["filter"] = filter_
-    issues.merge(
-        issues=issues_,
-        location=("query_string", "filter"),
-    )
-
-    sorter, issues_ = parse_request_sorting(query_string)
-    options["sorter"] = sorter
-    issues.merge(
-        issues=issues_,
-        location=("query_string", "sortby"),
-    )
-
-    checker, issues_ = parse_requested_attributes(query_string)
-    if not issues_.has_issues():
-        options["presence_checker"] = checker
-    issues.merge(
-        issues=issues_,
-        location=("query_string",),
-    )
-
-    count = query_string.get("count")
-    if count is not None:
-        try:
-            options["count"] = int(count)
-        except ValueError:
-            issues.add(
-                issue=ValidationError.bad_type(get_scim_type(int), get_scim_type(type(count))),
-                location=("query_string", "count"),
-                proceed=False,
-            )
-
-    start_index = query_string.get("startIndex")
-    if start_index is not None:
-        try:
-            options["startIndex"] = int(start_index)
-        except ValueError:
-            issues.add(
-                issue=ValidationError.bad_type(
-                    get_scim_type(int), get_scim_type(type(start_index))
-                ),
-                location=("query_string", "startIndex"),
-                proceed=False,
-            )
-    return RequestData(body=body, options=options), issues
-
-
-def _dump_resources_get_response(
+def _validate_resources_get_response(
     schema: list_response.ListResponse,
     status_code: int,
-    body: Any = None,
+    body: SCIMDataContainer,
     start_index: int = 1,
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
     resource_presence_checker: Optional[AttributePresenceChecker] = None,
-) -> Tuple[ResponseData, ValidationIssues]:
+) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
     resources_location = body_location + _location(schema.attrs.resources.rep)
@@ -674,11 +537,8 @@ def _dump_resources_get_response(
     start_index_rep = schema.attrs.startindex.rep
     start_index_location = body_location + _location(start_index_rep)
 
-    body, issues_ = schema.dump(body)
+    issues_ = schema.validate(body)
     issues.merge(issues_, location=body_location)
-    if not issues.can_proceed(body_location):
-        return ResponseData(body=None), issues
-
     issues.merge(
         issues=AttributePresenceChecker()(body, schema.attrs, "RESPONSE"),
         location=body_location,
@@ -696,7 +556,7 @@ def _dump_resources_get_response(
             )
 
     if not issues.can_proceed(resources_location):
-        return ResponseData(body=None), issues
+        return issues
 
     total_results_rep = schema.attrs.totalresults.rep
     total_results_location = body_location + _location(total_results_rep)
@@ -734,7 +594,7 @@ def _dump_resources_get_response(
             )
 
     if issues.has_issues(resources_location):
-        return ResponseData(body=None), issues
+        return issues
 
     resource_schemas = schema.get_schemas_for_resources(resources)
     if filter_ is not None:
@@ -756,10 +616,10 @@ def _dump_resources_get_response(
         location=resources_location,
     )
 
-    return ResponseData(body=None if issues.has_issues() else body.to_dict()), issues
+    return issues
 
 
-class ServerRootResourceGET(Validator):
+class ServerRootResourcesGET(Validator):
     def __init__(
         self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
     ):
@@ -770,23 +630,33 @@ class ServerRootResourceGET(Validator):
     def response_schema(self) -> list_response.ListResponse:
         return self._schema
 
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
-        return _parse_resources_get_request(body, query_string)
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        query_string = query_string or {}
+        issues.merge(
+            search_request.SearchRequest().validate(query_string),
+            location=("query_string",),
+        )
+        return issues
 
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
-        return _dump_resources_get_response(
+    ) -> ValidationIssues:
+        return _validate_resources_get_response(
             schema=self._schema,
             status_code=status_code,
-            body=body,
+            body=SCIMDataContainer(body or {}),
             start_index=kwargs.get("start_index", 1),
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
@@ -795,7 +665,7 @@ class ServerRootResourceGET(Validator):
         )
 
 
-class ResourcesGET(ServerRootResourceGET):
+class ResourcesGET(ServerRootResourcesGET):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
         super().__init__(config, resource_schemas=[resource_schema])
 
@@ -816,28 +686,29 @@ class SearchRequestPOST(Validator):
     def response_schema(self) -> list_response.ListResponse:
         return self._list_response_schema
 
-    def parse_request(
-        self, *, body: Any = None, headers: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
         issues = ValidationIssues()
-        body, issues_ = self._schema.parse(body)
-        issues.merge(issues_, location=("body",))
-        if issues_.has_issues():
-            body = None
-        return RequestData(body=body, options={}), issues
+        issues.merge(self._schema.validate(SCIMDataContainer(body or {})), location=("body",))
+        return issues
 
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
-        return _dump_resources_get_response(
+    ) -> ValidationIssues:
+        return _validate_resources_get_response(
             schema=self._list_response_schema,
             status_code=status_code,
-            body=body,
+            body=SCIMDataContainer(body or {}),
             start_index=kwargs.get("start_index", 1),
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
@@ -860,22 +731,30 @@ class ResourceObjectPATCH(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._resource_schema
 
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
-        issues, options = ValidationIssues(), {}
-        if isinstance(query_string, Dict):
-            checker, issues_ = parse_requested_attributes(query_string)
-            issues.merge(issues=issues_, location=("query_string",))
-            if checker:
-                options["presence_checker"] = checker
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        body, query_string = SCIMDataContainer(body or {}), query_string or {}
+        issues.merge(
+            search_request.SearchRequest().validate(
+                {
+                    "attributes": query_string.get("attributes"),
+                    "excludeAttributes": query_string.get("excludeAttributes"),
+                }
+            ),
+            location=("query_string",),
+        )
 
-        body, issues_ = _parse_body(self._schema, body)
-        issues.merge(issues_)
+        issues.merge(_validate_body(self._schema, body), location=("body",))
         operations_location = ("body", *_location(self._schema.attrs.operations.rep))
 
         if not issues.can_proceed(operations_location):
-            return RequestData(body=None, options=options), issues
+            return issues
 
         values = body[self._schema.attrs.operations__value.rep]
         paths = body[self._schema.attrs.operations__path.rep]
@@ -899,17 +778,14 @@ class ResourceObjectPATCH(Validator):
                     )
 
             else:
-                attr = self._resource_schema.attrs.get_by_path(path)
+                attr = self._resource_schema.attrs.get_by_path(PatchPath.parse(path))
                 self._check_complex_sub_attrs_presence(
                     issues=issues,
                     attr=attr,
                     value=value,
                     value_location=value_location,
                 )
-
-        if issues.has_issues():
-            body = None
-        return RequestData(body=body, options=options), issues
+        return issues
 
     @staticmethod
     def _check_complex_sub_attrs_presence(
@@ -939,14 +815,14 @@ class ResourceObjectPATCH(Validator):
                     location=item_location,
                 )
 
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
+    ) -> ValidationIssues:
         issues = ValidationIssues()
         presence_checker = kwargs.get("presence_checker")
         if status_code == 204:
@@ -956,32 +832,36 @@ class ResourceObjectPATCH(Validator):
                     proceed=True,
                     location=("status",),
                 )
-            return ResponseData(body=None), issues
-        return _dump_resource_output_body(
+            return issues
+        return _validate_resource_output_body(
             schema=self._resource_schema,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=body,
-            headers=headers,
+            body=SCIMDataContainer(body or {}),
+            headers=headers or {},
             presence_checker=presence_checker,
         )
 
 
 class ResourceObjectDELETE(Validator):
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
-        raise NotImplementedError
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        return ValidationIssues()
 
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ) -> Tuple[ResponseData, ValidationIssues]:
+    ) -> ValidationIssues:
         issues = ValidationIssues()
         if status_code != 204:
             issues.add(
@@ -989,7 +869,7 @@ class ResourceObjectDELETE(Validator):
                 proceed=True,
                 location=("status",),
             )
-        return ResponseData(body=None), issues
+        return issues
 
 
 class BulkOperations(Validator):
@@ -1031,12 +911,17 @@ class BulkOperations(Validator):
     def response_schema(self) -> bulk_ops.BulkResponse:
         return self._response_schema
 
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
         issues = ValidationIssues()
         body_location = ("body",)
-        body, issues_ = self._request_schema.parse(body)
+        body = SCIMDataContainer(body or {})
+        issues_ = self._request_schema.validate(body)
         issues.merge(issues_, location=body_location)
         issues.merge(
             issues=AttributePresenceChecker()(body, self._request_schema.attrs, "RESPONSE"),
@@ -1045,7 +930,7 @@ class BulkOperations(Validator):
         if not issues_.can_proceed(
             body_location + _location(self._request_schema.attrs.operations.rep)
         ):
-            return RequestData(body=None, options={}), issues
+            return issues
 
         path_rep = self._request_schema.attrs.operations__path.rep
         data_rep = self._request_schema.attrs.operations__data.rep
@@ -1076,12 +961,8 @@ class BulkOperations(Validator):
                         location=path_location,
                     )
                     continue
-                resource_data, issues_ = validator.parse_request(body=data_item)
+                issues_ = validator.validate_request(body=data_item)
                 issues.merge(issues_.get(("body",)), location=data_item_location)
-                body[self._request_schema.attrs.operations.rep][i][
-                    data_rep.sub_attr
-                ] = resource_data.body
-
         if len(body[self._request_schema.attrs.operations.rep]) > self.config.bulk.max_operations:
             issues.add(
                 issue=ValidationError.too_many_operations(self.config.bulk.max_operations),
@@ -1089,19 +970,20 @@ class BulkOperations(Validator):
                 location=body_location + _location(self._response_schema.attrs.operations.rep),
             )
 
-        return RequestData(body=None if issues.has_issues() else body, options={}), issues
+        return issues
 
-    def dump_response(
+    def validate_response(
         self,
         *,
         status_code: int,
         body: Optional[Dict[str, Any]] = None,
         headers: Optional[Dict[str, Any]] = None,
         **kwargs,
-    ):
+    ) -> ValidationIssues:
         issues = ValidationIssues()
+        body = SCIMDataContainer(body or {})
         body_location = ("body",)
-        body, issues_ = self._response_schema.dump(body)
+        issues_ = self._response_schema.validate(body)
         issues.merge(issues_, location=body_location)
         issues.merge(
             issues=AttributePresenceChecker()(body, self._response_schema.attrs, "RESPONSE"),
@@ -1114,7 +996,7 @@ class BulkOperations(Validator):
         if not issues.can_proceed(
             body_location + _location(self._response_schema.attrs.operations.rep)
         ):
-            return ResponseData(body=None), issues
+            return issues
 
         operations_location = body_location + _location(self._response_schema.attrs.operations.rep)
         status_rep = self._response_schema.attrs.operations__status.rep
@@ -1158,7 +1040,7 @@ class BulkOperations(Validator):
             status = int(status)
             if status >= 300:
                 n_errors += 1
-                error_response, issues_ = self._error_validator.dump_response(
+                issues_ = self._error_validator.validate_response(
                     status_code=status,
                     body=response,
                 )
@@ -1170,11 +1052,8 @@ class BulkOperations(Validator):
                     issues=issues_.get(("status",)),
                     location=status_location,
                 )
-                body[self._request_schema.attrs.operations.rep][i][
-                    response_rep.sub_attr
-                ] = error_response.body
             elif all([location, method, resource_validator]):
-                resource_data, issues_ = resource_validator.dump_response(
+                issues_ = resource_validator.validate_response(
                     body=response,
                     status_code=status,
                     headers={"Location": location},
@@ -1194,9 +1073,8 @@ class BulkOperations(Validator):
                         location=location_location,
                     )
 
-                if resource_data.body is not None:
-                    resource_body = SCIMDataContainer(resource_data.body)
-                    resource_version = resource_body["meta.version"]
+                if response:
+                    resource_version = response["meta.version"]
                     if version and resource_version and version != resource_version:
                         issues.add(
                             issue=ValidationError.must_be_equal_to("operation's version"),
@@ -1208,12 +1086,6 @@ class BulkOperations(Validator):
                             proceed=True,
                             location=version_location,
                         )
-                else:
-                    resource_body = None
-
-                body[self._request_schema.attrs.operations.rep][i][
-                    response_rep.sub_attr
-                ] = resource_body
 
         fail_on_errors = kwargs.get("fail_on_errors")
         if fail_on_errors is not None and n_errors > fail_on_errors:
@@ -1222,7 +1094,7 @@ class BulkOperations(Validator):
                 proceed=True,
                 location=body_location + _location(self._response_schema.attrs.operations.rep),
             )
-        return ResponseData(body=body.to_dict()), issues
+        return issues
 
 
 class _ServiceProviderConfig(ResourcesGET):
@@ -1231,17 +1103,22 @@ class _ServiceProviderConfig(ResourcesGET):
     ):
         super().__init__(config, resource_schema=resource_schema)
 
-    def parse_request(
-        self, *, body: Any = None, query_string: Any = None
-    ) -> Tuple[RequestData, ValidationIssues]:
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
         issues = ValidationIssues()
-        if isinstance(query_string, Dict) and "filter" in query_string:
+        query_string = query_string or {}
+        if "filter" in query_string:
             issues.add(
                 issue=ValidationError.not_supported(),
                 proceed=False,
                 location=("query_string", "filter"),
             )
-        return RequestData(body=None, options={}), issues
+        return issues
 
 
 class SchemasGET(_ServiceProviderConfig):
