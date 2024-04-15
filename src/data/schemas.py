@@ -18,7 +18,7 @@ from src.error import ValidationError, ValidationIssues
 def bulk_id_validator(value) -> ValidationIssues:
     issues = ValidationIssues()
     if "bulkId" in value:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.reserved_keyword("bulkId"),
             proceed=False,
         )
@@ -279,7 +279,7 @@ def validate_schemas_field(
             main_schema_included = True
 
         elif schema not in known_schemas and not mismatch:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.unknown_schema(),
                 proceed=True,
                 location=(schemas.rep.attr,),
@@ -287,14 +287,14 @@ def validate_schemas_field(
             mismatch = True
 
     if not main_schema_included:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.missing_main_schema(), proceed=True, location=(schemas.rep.attr,)
         )
 
     for k, v in data.to_dict().items():
         k_lower = k.lower()
         if k_lower in known_schemas and k_lower not in schemas_:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing_schema_extension(k),
                 proceed=True,
                 location=(schemas.rep.attr,),
@@ -308,7 +308,7 @@ def validate_resource_type_consistency(
 ) -> ValidationIssues:
     issues = ValidationIssues()
     if resource_type != expected:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.resource_type_mismatch(
                 resource_type=expected,
                 provided=resource_type,

@@ -31,7 +31,7 @@ class AttributePresenceChecker:
             try:
                 AttrRep.parse(attr_rep)
             except ValueError:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.bad_attribute_name(attr_rep),
                     location=(attr_rep,),
                     proceed=False,
@@ -122,7 +122,7 @@ class AttributePresenceChecker:
                 return issues
 
             if attr.returned == AttributeReturn.NEVER:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.restricted_or_not_requested(),
                     proceed=True,
                 )
@@ -135,7 +135,7 @@ class AttributePresenceChecker:
                     and self._include is True
                 )
             ):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.restricted_or_not_requested(),
                     proceed=True,
                 )
@@ -149,7 +149,7 @@ class AttributePresenceChecker:
                     or (direction == "RESPONSE" and attr.returned == AttributeReturn.ALWAYS)
                 )
             ):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
                 )

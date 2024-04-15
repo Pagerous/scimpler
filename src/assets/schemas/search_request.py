@@ -14,7 +14,7 @@ def parse_attr_rep(value: str) -> Tuple[Union[Invalid, AttrRep], ValidationIssue
     issues = ValidationIssues()
     parsed = AttrRep.parse(value)
     if parsed is Invalid:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.bad_attribute_name(str(value)),
             proceed=False,
         )
@@ -136,14 +136,14 @@ class SearchRequest(BaseSchema):
         to_include = data.get(self.attrs.attributes.rep)
         to_exclude = data.get(self.attrs.excludeattributes.rep)
         if to_include not in [None, Missing] and to_exclude not in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.can_not_be_used_together(
                     self.attrs.excludeattributes.rep.attr
                 ),
                 proceed=False,
                 location=(self.attrs.attributes.rep.attr,),
             )
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.can_not_be_used_together(self.attrs.attributes.rep.attr),
                 proceed=False,
                 location=(self.attrs.excludeattributes.rep.attr,),

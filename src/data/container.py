@@ -58,7 +58,7 @@ class AttrRep:
         issues = ValidationIssues()
         match = _ATTR_REP.fullmatch(attr_rep)
         if not match:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_attribute_name(attr_rep),
                 proceed=False,
             )

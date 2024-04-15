@@ -93,7 +93,7 @@ class Filter:
                 complex_attr_rep += char
             elif char == "[":
                 if bracket_open_index is not None:
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.inner_complex_attribute_or_square_bracket(),
                         proceed=False,
                     )
@@ -102,7 +102,7 @@ class Filter:
                     bracket_open_index = i
             elif char == "]":
                 if bracket_open_index is None:
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.complex_attribute_bracket_not_opened_or_closed(),
                         proceed=False,
                     )
@@ -111,7 +111,7 @@ class Filter:
                     complex_attr_exp = f"{complex_attr_rep}[{sub_ops_exp}]"
                     issues_ = ValidationIssues()
                     if sub_ops_exp.strip() == "":
-                        issues_.add(
+                        issues_.add_error(
                             issue=ValidationError.empty_complex_attribute_expression(
                                 complex_attr_rep
                             ),
@@ -120,14 +120,14 @@ class Filter:
                     try:
                         attr_rep = AttrRep.parse(complex_attr_rep)
                         if attr_rep.sub_attr:
-                            issues_.add(
+                            issues_.add_error(
                                 issue=ValidationError.complex_sub_attribute(
                                     attr=attr_rep.attr, sub_attr=attr_rep.sub_attr
                                 ),
                                 proceed=False,
                             )
                     except ValueError:
-                        issues_.add(
+                        issues_.add_error(
                             issue=ValidationError.bad_attribute_name(complex_attr_rep),
                             proceed=False,
                         )
@@ -149,7 +149,7 @@ class Filter:
                 complex_attr_rep = ""
 
         if issues.can_proceed() and bracket_open_index is not None:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.complex_attribute_bracket_not_opened_or_closed(),
                 proceed=False,
             )
@@ -180,7 +180,9 @@ class Filter:
                 if bracket_open:
                     bracket_cnt -= 1
                 else:
-                    issues.add(issue=ValidationError.bracket_not_opened_or_closed(), proceed=False)
+                    issues.add_error(
+                        issue=ValidationError.bracket_not_opened_or_closed(), proceed=False
+                    )
             if bracket_open and bracket_cnt == 0:
                 group_op_exp = exp[bracket_open_index : i + 1]
                 issues_ = Filter._validate_operator(
@@ -197,11 +199,11 @@ class Filter:
                 bracket_open_index = None
 
         if bracket_open and bracket_open_index is not None:
-            issues.add(issue=ValidationError.bracket_not_opened_or_closed(), proceed=False)
+            issues.add_error(issue=ValidationError.bracket_not_opened_or_closed(), proceed=False)
 
         op_exp_preprocessed = op_exp_preprocessed.strip()
         if op_exp_preprocessed == "":
-            issues.add(issue=ValidationError.empty_filter_expression(), proceed=False)
+            issues.add_error(issue=ValidationError.empty_filter_expression(), proceed=False)
 
         if not issues.can_proceed():
             return issues
@@ -243,7 +245,7 @@ class Filter:
             if match:
                 not_operand = match.group(1)
                 if not not_operand:
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.missing_operand_for_operator(
                             operator="not",
                             expression=decode_placeholders(and_operand, placeholders),
@@ -293,7 +295,7 @@ class Filter:
                 invalid_exp = (left_expression + match.group(0)).strip()
 
             if invalid_exp is not None:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.missing_operand_for_operator(
                         operator=operator_name,
                         expression=decode_placeholders(invalid_exp, placeholders),
@@ -326,7 +328,7 @@ class Filter:
             op_ = _UNARY_ATTR_OPERATORS.get(op_exp)
             if op_ is None:
                 if op_exp in _BINARY_ATTR_OPERATORS:
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.missing_operand_for_operator(
                             operator=op_exp,
                             expression=decode_placeholders(attr_exp, placeholders),
@@ -334,7 +336,7 @@ class Filter:
                         proceed=False,
                     )
                 else:
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.unknown_operator(
                             operator_type="unary",
                             operator=decode_placeholders(components[1], placeholders),
@@ -349,7 +351,7 @@ class Filter:
         elif len(components) == 3:
             op_ = _BINARY_ATTR_OPERATORS.get(components[1].lower())
             if op_ is None:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.unknown_operator(
                         operator_type="binary",
                         operator=decode_placeholders(components[1], placeholders),
@@ -364,7 +366,7 @@ class Filter:
                 value = parse_comparison_value(value)
             except ValueError:
                 value = None
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.bad_comparison_value(
                         decode_placeholders(components[2], placeholders)
                     ),
@@ -375,7 +377,7 @@ class Filter:
                 return issues
 
             if type(value) not in _ALLOWED_VALUE_TYPES_FOR_BINARY_OPERATORS[op_]:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.non_compatible_comparison_value(value, op_.SCIM_OP),
                     proceed=False,
                 )
@@ -385,7 +387,7 @@ class Filter:
 
             return issues
 
-        issues.add(
+        issues.add_error(
             issue=ValidationError.unknown_expression(decode_placeholders(attr_exp, placeholders)),
             proceed=False,
         )

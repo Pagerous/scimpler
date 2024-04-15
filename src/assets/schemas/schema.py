@@ -47,7 +47,7 @@ _attributes__type = Attribute(
     name="type",
     type_=type_.String,
     canonical_values=["string", "integer", "boolean", "reference", "dateTime", "binary", "complex"],
-    validate_canonical_values=True,
+    restrict_canonical_values=False,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
@@ -106,7 +106,7 @@ _attributes__mutability = Attribute(
     name="mutability",
     type_=type_.String,
     canonical_values=["readOnly", "readWrite", "immutable", "writeOnly"],
-    validate_canonical_values=True,
+    restrict_canonical_values=True,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
@@ -116,7 +116,7 @@ _attributes__returned = Attribute(
     name="returned",
     type_=type_.String,
     canonical_values=["always", "never", "default", "request"],
-    validate_canonical_values=True,
+    restrict_canonical_values=True,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
@@ -126,7 +126,7 @@ _attributes__uniqueness = Attribute(
     name="uniqueness",
     type_=type_.String,
     canonical_values=["none", "server", "global"],
-    validate_canonical_values=True,
+    restrict_canonical_values=True,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
@@ -154,7 +154,7 @@ def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
                     location=(i, _attributes__sub_attributes.rep.attr),
                 )
         if attr_type == "string" and item.get(_attributes__case_exact.rep) in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing(),
                 location=(i, _attributes__case_exact.rep),
                 proceed=False,
@@ -170,7 +170,7 @@ def dump_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
             if attr_type != "complex":
                 item.pop(_attributes__sub_attributes.rep)
             else:
-                item[_attributes__sub_attributes.rep] = attributes.dump(sub_attributes)
+                item.set(_attributes__sub_attributes.rep, attributes.dump(sub_attributes))
         if attr_type != "string":
             item.pop(_attributes__case_exact.rep)
     return value

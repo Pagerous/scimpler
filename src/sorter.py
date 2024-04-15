@@ -59,7 +59,7 @@ class Sorter:
         try:
             AttrRep.parse(by)
         except ValueError:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_attribute_name(by),
                 proceed=False,
             )

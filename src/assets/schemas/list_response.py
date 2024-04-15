@@ -28,7 +28,7 @@ def validate_resources_type(value) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         if not isinstance(item, SCIMDataContainer):
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_type(get_scim_type(dict), get_scim_type(type(value))),
                 proceed=True,
                 location=(i,),
@@ -69,7 +69,7 @@ class ListResponse(BaseSchema):
             return issues
 
         if not isinstance(resources_, List):
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_type(
                     get_scim_type(list), get_scim_type(type(resources_))
                 ),
@@ -89,7 +89,7 @@ class ListResponse(BaseSchema):
         schemas_ = self.get_schemas_for_resources(resources_)
         for i, (resource, schema) in enumerate(zip(resources_, schemas_)):
             if schema is None:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.unknown_schema(),
                     proceed=False,
                     location=(self.attrs.resources.rep.attr, i),
@@ -147,12 +147,12 @@ def validate_items_per_page_consistency(
 
     n_resources = len(resources_)
     if items_per_page_ != n_resources:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.must_be_equal_to(value="number of resources"),
             location=(items_per_page.rep.attr,),
             proceed=True,
         )
-        issues.add(
+        issues.add_error(
             issue=ValidationError.must_be_equal_to(items_per_page.rep.attr),
             location=(resources.rep.attr,),
             proceed=True,

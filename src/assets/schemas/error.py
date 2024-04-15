@@ -14,13 +14,13 @@ def validate_error_status(value: str) -> ValidationIssues:
     try:
         value = int(value)
     except ValueError:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.bad_error_status(),
             proceed=False,
         )
         return issues
     if not 300 <= value < 600:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.bad_error_status(),
             proceed=True,
         )
@@ -58,7 +58,7 @@ scim_type = Attribute(
         "invalidVers",
         "sensitive",
     ],
-    validate_canonical_values=True,
+    restrict_canonical_values=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,

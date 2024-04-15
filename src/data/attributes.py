@@ -22,7 +22,7 @@ from src.data.type import (
     URIReference,
     get_scim_type,
 )
-from src.error import ValidationError, ValidationIssues
+from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 if TYPE_CHECKING:
     from src.data.path import PatchPath
@@ -70,7 +70,7 @@ class Attribute:
         case_exact: bool = False,
         multi_valued: bool = False,
         canonical_values: Optional[Collection] = None,
-        validate_canonical_values: bool = False,
+        restrict_canonical_values: bool = False,
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
@@ -105,7 +105,7 @@ class Attribute:
             if canonical_values
             else canonical_values
         )
-        self._validate_canonical_values = validate_canonical_values
+        self._validate_canonical_values = restrict_canonical_values
         self._multi_valued = multi_valued
         self._mutability = mutability
         self._returned = returned
@@ -216,7 +216,7 @@ class Attribute:
 
         if self._multi_valued:
             if not isinstance(value, list):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.bad_type(get_scim_type(list), get_scim_type(type(value))),
                     proceed=False,
                 )
@@ -229,13 +229,16 @@ class Attribute:
                     continue
                 if not self._is_canonical(item):
                     if self._validate_canonical_values:
-                        issues.add(
-                            issue=ValidationError.must_be_one_of(self._canonical_values, item),
+                        issues.add_error(
+                            issue=ValidationError.must_be_one_of(self._canonical_values),
                             proceed=False,
                             location=(i,),
                         )
                     else:
-                        pass  # TODO: warn about non-canonical value
+                        issues.add_warning(
+                            issue=ValidationWarning.should_be_one_of(self._canonical_values),
+                            location=(i,),
+                        )
         else:
             issues_ = self._type.validate(value)
             issues.merge(issues=issues_)
@@ -244,12 +247,14 @@ class Attribute:
 
             elif not self._is_canonical(value):
                 if self._validate_canonical_values:
-                    issues.add(
-                        issue=ValidationError.must_be_one_of(self._canonical_values, value),
+                    issues.add_error(
+                        issue=ValidationError.must_be_one_of(self._canonical_values),
                         proceed=False,
                     )
                 else:
-                    pass  # TODO: warn about non-canonical value
+                    issues.add_warning(
+                        issue=ValidationWarning.should_be_one_of(self._canonical_values),
+                    )
 
         for validator in self.validators:
             if not issues.can_proceed():
@@ -422,7 +427,7 @@ def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> Valid
         if item.get("primary") is True:
             primary_entries.add(i)
     if len(primary_entries) > 1:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.multiple_primary_values(primary_entries),
             proceed=True,
         )

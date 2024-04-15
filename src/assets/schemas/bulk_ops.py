@@ -15,7 +15,7 @@ _RESOURCE_OBJECT_REGEX = re.compile(r"/\w+/.*")
 def _validate_operation_method_existence(method: Any) -> ValidationIssues:
     issues = ValidationIssues()
     if method in [None, Missing]:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.missing(),
             proceed=False,
         )
@@ -32,21 +32,21 @@ def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIss
         )
         bulk_id = item.get(_operation__bulk_id.rep)
         if method == "POST" and bulk_id in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__bulk_id.rep.attr),
             )
         path = item.get(_operation__path.rep)
         if path in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__path.rep.attr),
             )
         else:
             if method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.resource_type_endpoint_required(),
                     proceed=False,
                     location=(i, _operation__path.rep.attr),
@@ -57,14 +57,14 @@ def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIss
                 "PUT",
                 "DELETE",
             ] and not _RESOURCE_OBJECT_REGEX.fullmatch(path):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.resource_object_endpoint_required(),
                     proceed=False,
                     location=(i, _operation__path.rep.attr),
                 )
         data = item.get(_operation__data.rep)
         if method in ["POST", "PUT", "PATCH"] and data in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__data.rep.attr),
@@ -86,7 +86,7 @@ _operation__method = Attribute(
     type_=type_.String,
     required=True,
     canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
-    validate_canonical_values=True,
+    restrict_canonical_values=True,
 )
 
 _operation__bulk_id = Attribute(
@@ -150,7 +150,7 @@ def validate_response_operations(value: List[SCIMDataContainer]) -> ValidationIs
         )
         bulk_id = item.get(_operation__bulk_id.rep)
         if method == "POST" and bulk_id in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__bulk_id.rep.attr),
@@ -159,20 +159,20 @@ def validate_response_operations(value: List[SCIMDataContainer]) -> ValidationIs
         if status:
             location = item.get(_operation__location.rep)
             if location in [None, Missing] and method and (method != "POST" or int(status) < 300):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
                     location=(i, _operation__location.rep.attr),
                 )
             response = item.get(_operation__response.rep)
             if response in [None, Missing] and int(status) >= 300:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
                     location=(i, _operation__response.rep.attr),
                 )
         elif status in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operation__status.rep.attr),
@@ -196,7 +196,7 @@ def _validate_status(value: Any) -> ValidationIssues:
     try:
         int(value)
     except ValueError:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.bad_value_syntax(),
             proceed=False,
         )

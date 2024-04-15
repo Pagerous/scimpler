@@ -17,7 +17,7 @@ class AttributeType(abc.ABC):
     def validate(cls, value: t.Any) -> ValidationIssues:
         issues = ValidationIssues()
         if not isinstance(value, cls.TYPE):
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_type(
                     expected=get_scim_type(cls.TYPE), provided=get_scim_type(type(value))
                 ),
@@ -51,7 +51,7 @@ class Decimal(AttributeType):
     def validate(cls, value: t.Any) -> ValidationIssues:
         issues = ValidationIssues()
         if not isinstance(value, (cls.TYPE, int)):
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_type(
                     expected=get_scim_type(cls.TYPE), provided=get_scim_type(type(value))
                 ),
@@ -89,12 +89,12 @@ class Binary(String):
         try:
             value = bytes(value, "ascii")
             if base64.b64encode(base64.b64decode(value)) != value:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
                     proceed=False,
                 )
         except binascii.Error:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
                 proceed=False,
             )
@@ -137,7 +137,7 @@ class DateTime(String):
             return issues
         value = cls._parse_xsd_datetime(value)
         if value is None:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_value_syntax(),
                 proceed=False,
             )
@@ -177,13 +177,13 @@ def validate_absolute_url(value: str) -> ValidationIssues:
         result = urlparse(value)
         is_valid = all([result.scheme, result.netloc])
         if not is_valid:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.bad_url(value),
                 proceed=False,
             )
             return issues
     except ValueError:
-        issues.add(
+        issues.add_error(
             issue=ValidationError.bad_url(value),
             proceed=False,
         )

@@ -20,7 +20,7 @@ class ValidationError:
             "HTTP response status ({response_status}) and error status in body "
             "({body_status}) must match"
         ),
-        14: "value must be one of: {expected_values}, but provided '{provided}'",
+        14: "value must be one of: {expected_values}",
         15: "missing",
         16: "bad status code, expecting '{expected}', but provided '{provided}'",
         17: (
@@ -114,8 +114,8 @@ class ValidationError:
         return cls(code=13, response_status=response_status, body_status=body_status)
 
     @classmethod
-    def must_be_one_of(cls, expected_values: Collection[Any], provided: Any):
-        return cls(code=14, expected_values=expected_values, provided=provided)
+    def must_be_one_of(cls, expected_values: Collection[Any]):
+        return cls(code=14, expected_values=expected_values)
 
     @classmethod
     def missing(cls):
@@ -299,34 +299,78 @@ class ValidationError:
         return o == self._message
 
 
+class ValidationWarning:
+    _message_for_code = {
+        1: "value should be one of: {expected_values}",
+    }
+
+    def __init__(self, code: int, **context):
+        self._code = code
+        self._message = self._message_for_code[code].format(**context)
+        self._context = context
+        self._location: Optional[str] = None
+
+    @classmethod
+    def should_be_one_of(cls, expected_values: Collection[Any]):
+        return cls(code=1, expected_values=expected_values)
+
+    @property
+    def context(self) -> Dict:
+        return self._context
+
+    @property
+    def code(self) -> int:
+        return self._code
+
+    def __repr__(self) -> str:
+        return str(self._message)
+
+    def __eq__(self, o):
+        return o == self._message
+
+
 class ValidationIssues:
     def __init__(self):
-        self._issues: Dict[Tuple, List[ValidationError]] = defaultdict(list)
+        self._errors: Dict[Tuple, List[ValidationError]] = defaultdict(list)
+        self._warnings: Dict[Tuple, List[ValidationWarning]] = defaultdict(list)
         self._stop_proceeding: Dict[Tuple, Set[int]] = defaultdict(set)
 
     def merge(self, issues: "ValidationIssues", location: Optional[Tuple] = None):
         location = location or tuple()
-        for other_location, location_issues in issues._issues.items():
+        for other_location, location_issues in issues._errors.items():
             new_location = location + other_location
-            self._issues[new_location].extend(location_issues)
+            self._errors[new_location].extend(location_issues)
             self._stop_proceeding[new_location].update(issues._stop_proceeding[other_location])
 
-    def add(
+    def add_error(
         self,
         issue: ValidationError,
         proceed: bool,
         location: Optional[Collection[Union[str, int]]] = None,
     ) -> None:
         location = tuple(location or tuple())
-        self._issues[location].append(issue)
+        self._errors[location].append(issue)
         if not proceed:
             self._stop_proceeding[location].add(issue.code)
 
+    def add_warning(
+        self,
+        issue: ValidationWarning,
+        location: Optional[Collection[Union[str, int]]] = None,
+    ) -> None:
+        location = tuple(location or tuple())
+        self._warnings[location].append(issue)
+
     def get(self, location: Collection[Union[str, int]]) -> "ValidationIssues":
         copy = ValidationIssues()
-        copy._issues = {
+        copy._errors = {
             location_[len(location) :]: errors
-            for location_, errors in self._issues.items()
+            for location_, errors in self._errors.items()
+            if location_[: len(location)] == location
+        }
+        copy._warnings = {
+            location_[len(location) :]: warnings
+            for location_, warnings in self._warnings.items()
             if location_[: len(location)] == location
         }
         copy._stop_proceeding = {
@@ -336,22 +380,22 @@ class ValidationIssues:
         }
         return copy
 
-    def pop(self, location: Collection[Union[str, int]], code: int) -> "ValidationIssues":
+    def pop_error(self, location: Collection[Union[str, int]], code: int) -> "ValidationIssues":
         location = tuple(location)
 
-        if location not in self._issues:
+        if location not in self._errors:
             return ValidationIssues()
 
         popped = self.get(location)
 
-        for issue in self._issues[location]:
+        for issue in self._errors[location]:
             if issue.code == code:
-                self._issues[location].remove(issue)
+                self._errors[location].remove(issue)
                 if issue.code in self._stop_proceeding.get(location, set()):
                     self._stop_proceeding[location].remove(issue.code)
 
-        if len(self._issues[location]) == 0:
-            self._issues.pop(location)
+        if len(self._errors[location]) == 0:
+            self._errors.pop(location)
 
         if location in self._stop_proceeding and len(self._stop_proceeding[location]) == 0:
             self._stop_proceeding.pop(location)
@@ -367,12 +411,12 @@ class ValidationIssues:
                     return False
         return True
 
-    def has_issues(self, *locations: Collection[Union[str, int]]) -> bool:
+    def has_errors(self, *locations: Collection[Union[str, int]]) -> bool:
         if not locations:
             locations = [tuple()]
 
         for location in locations:
-            for issue_location in self._issues:
+            for issue_location in self._errors:
                 if issue_location[: len(location)] == location:
                     return True
 
@@ -380,7 +424,13 @@ class ValidationIssues:
 
     def to_dict(self, msg: bool = False, ctx: bool = False):
         output = {}
-        for location, errors in self._issues.items():
+        self._to_dict("_errors", self._errors, output, msg=msg, ctx=ctx)
+        self._to_dict("_warnings", self._warnings, output, msg=msg, ctx=ctx)
+        return output
+
+    @staticmethod
+    def _to_dict(key: str, structure: Dict, output: Dict, msg: bool = False, ctx: bool = False):
+        for location, errors in structure.items():
             if location:
                 current_level = output
                 for i, part in enumerate(location):
@@ -388,25 +438,25 @@ class ValidationIssues:
                     if part not in current_level:
                         current_level[part] = {}  # noqa
                     if i == len(location) - 1:
-                        if "_errors" not in current_level[part]:
-                            current_level[part]["_errors"] = []  # noqa
+                        if key not in current_level[part]:
+                            current_level[part][key] = []  # noqa
                         for error in errors:
                             item = {"code": error.code}
                             if msg:
                                 item["error"] = str(error)
                             if ctx:
                                 item["context"] = error.context
-                            current_level[part]["_errors"].append(item)  # noqa
+                            current_level[part][key].append(item)  # noqa
                     current_level = current_level[part]
             else:
-                if "_errors" not in output:
-                    output["_errors"] = []
+                if key not in output:
+                    output[key] = []
                 for error in errors:
                     item = {"code": error.code}
                     if msg:
                         item["error"] = str(error)
                     if ctx:
                         item["context"] = error.context
-                    output["_errors"].append(item)
+                    output[key].append(item)
 
         return output

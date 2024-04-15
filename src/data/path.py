@@ -60,7 +60,7 @@ class PatchPath:
             or ("]" in path and "[" not in path)
             or ("[" in path and "]" in path and path.index("[") > path.index("]"))
         ):
-            issues.add(issue=ValidationError.bad_operation_path(), proceed=False)
+            issues.add_error(issue=ValidationError.bad_operation_path(), proceed=False)
             return issues
 
         if "[" in path and "]" in path:
@@ -76,7 +76,7 @@ class PatchPath:
     ) -> ValidationIssues:
         filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
         issues = Filter.validate(filter_exp)
-        if issues.has_issues():
+        if issues.has_errors():
             return issues
         filter_ = Filter.parse(filter_exp)
         value_sub_attr_rep_exp = path[path.index("]") + 1 :]
@@ -97,12 +97,14 @@ class PatchPath:
         try:
             sub_attr_rep = AttrRep.parse(sub_attr_rep_exp)
             if sub_attr_rep.sub_attr and not attr_rep.top_level_equals(sub_attr_rep):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.complex_sub_attribute(attr_rep.attr, sub_attr_rep.attr),
                     proceed=False,
                 )
         except ValueError:
-            issues.add(issue=ValidationError.bad_attribute_name(sub_attr_rep_exp), proceed=False)
+            issues.add_error(
+                issue=ValidationError.bad_attribute_name(sub_attr_rep_exp), proceed=False
+            )
         return issues
 
     @classmethod

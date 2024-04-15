@@ -173,3 +173,53 @@ def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
 
     with pytest.raises(ValueError):
         AttrRep.parse(input_)
+
+
+def test_validation_fails_in_not_one_of_canonical_values():
+    attr = Attribute(
+        name="attr",
+        type_=at.String,
+        canonical_values=["A", "B", "C"],
+        restrict_canonical_values=True,
+    )
+    expected_issues = {"_errors": [{"code": 14}]}
+
+    assert attr.validate("D").to_dict() == expected_issues
+
+
+def test_validation_fails_in_not_one_of_canonical_values__multivalued():
+    attr = Attribute(
+        name="attr",
+        type_=at.String,
+        canonical_values=["A", "B", "C"],
+        restrict_canonical_values=True,
+        multi_valued=True
+    )
+    expected_issues = {"1": {"_errors": [{"code": 14}]}}
+
+    assert attr.validate(["A", "D", "C"]).to_dict() == expected_issues
+
+
+def test_validation_returns_warning_in_not_one_of_canonical_values():
+    attr = Attribute(
+        name="attr",
+        type_=at.String,
+        canonical_values=["A", "B", "C"],
+        restrict_canonical_values=False,
+    )
+    expected_issues = {"_warnings": [{"code": 1}]}
+
+    assert attr.validate("D").to_dict() == expected_issues
+
+
+def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued():
+    attr = Attribute(
+        name="attr",
+        type_=at.String,
+        canonical_values=["A", "B", "C"],
+        restrict_canonical_values=False,
+        multi_valued=True,
+    )
+    expected_issues = {"1": {"_warnings": [{"code": 1}]}}
+
+    assert attr.validate(["A", "D", "C"]).to_dict() == expected_issues

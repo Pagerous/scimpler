@@ -3,13 +3,7 @@ from src.data.container import SCIMDataContainer
 
 
 def test_validation_attributes_field_fails_for_bad_sub_attributes():
-    expected_issues = {
-        "0": {
-            "subAttributes": {
-                "0": {"type": {"_errors": [{"code": 14}]}, "caseExact": {"_errors": [{"code": 2}]}}
-            }
-        }
-    }
+    expected_issues = {"0": {"subAttributes": {"0": {"caseExact": {"_errors": [{"code": 2}]}}}}}
 
     issues = attributes.validate(
         value=[

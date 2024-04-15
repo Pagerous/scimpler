@@ -11,7 +11,7 @@ _operations_op = Attribute(
     name="op",
     type_=at.String,
     canonical_values=["add", "remove", "replace"],
-    validate_canonical_values=True,
+    restrict_canonical_values=True,
     required=True,
 )
 
@@ -38,14 +38,14 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
         path = item.get(_operations_path.rep)
         op_value = item.get(_operations_value.rep)
         if type_ == "remove" and path in [None, Missing]:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, _operations_path.rep.attr),
             )
         elif type_ == "add":
             if op_value in [None, Missing]:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
                     location=(i, _operations_value.rep.attr),
@@ -55,7 +55,7 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
                 and (path := PatchPath.parse(path)).complex_filter is not None
                 and path.complex_filter_attr_rep is None
             ):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.complex_filter_without_sub_attr_for_add_op(),
                     proceed=False,
                     location=(i, _operations_path.rep.attr),
@@ -119,14 +119,14 @@ class PatchOp(BaseSchema):
 
     def _validate_remove_operation(self, path: PatchPath) -> ValidationIssues:
         issues = validate_operation_path(self._resource_schema, path)
-        if issues.has_issues():
+        if issues.has_errors():
             return issues
 
         attr = self._resource_schema.attrs.get(path.attr_rep)
         path_location = (self.attrs.operations__path.rep.sub_attr,)
         if path.complex_filter_attr_rep is None:
             if attr.mutability == AttributeMutability.READ_ONLY:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.attribute_can_not_be_modified(),
                     proceed=True,
                     location=path_location,
@@ -135,7 +135,7 @@ class PatchOp(BaseSchema):
                 if isinstance(attr, ComplexAttribute):
                     pass  # TODO: add warning here
                 else:
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.attribute_can_not_be_deleted(),
                         proceed=True,
                         location=path_location,
@@ -143,7 +143,7 @@ class PatchOp(BaseSchema):
         else:
             sub_attr = self._resource_schema.attrs.get(path.complex_filter_attr_rep)
             if sub_attr.required:
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.attribute_can_not_be_deleted(),
                     proceed=True,
                     location=path_location,
@@ -152,7 +152,7 @@ class PatchOp(BaseSchema):
                 attr.mutability == AttributeMutability.READ_ONLY
                 or sub_attr.mutability == AttributeMutability.READ_ONLY
             ):
-                issues.add(
+                issues.add_error(
                     issue=ValidationError.attribute_can_not_be_modified(),
                     proceed=True,
                     location=path_location,
@@ -166,7 +166,7 @@ class PatchOp(BaseSchema):
         issues = ValidationIssues()
         if path not in [None, Missing]:
             issues_ = validate_operation_path(self._resource_schema, path)
-            if issues_.has_issues():
+            if issues_.has_errors():
                 issues.merge(issues_, location=(self.attrs.operations__path.rep.sub_attr,))
                 return issues
 
@@ -179,9 +179,9 @@ class PatchOp(BaseSchema):
     def _validate_operation_value(self, path: Optional[PatchPath], value: Any) -> ValidationIssues:
         if path in [None, Missing]:
             issues = self._resource_schema.validate(value)
-            issues.pop(("schemas",), code=27)
-            issues.pop(("schemas",), code=28)
-            issues.pop(("schemas",), code=29)
+            issues.pop_error(("schemas",), code=27)
+            issues.pop_error(("schemas",), code=28)
+            issues.pop_error(("schemas",), code=29)
             for attr in self._resource_schema.attrs:
                 if (
                     value.get(attr.rep) is not Missing
@@ -192,7 +192,7 @@ class PatchOp(BaseSchema):
                         location = location + (attr.rep.sub_attr,)
                     if attr.rep.extension:
                         location = (attr.rep.schema,) + location
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.attribute_can_not_be_modified(),
                         proceed=False,
                         location=location,
@@ -218,7 +218,7 @@ class PatchOp(BaseSchema):
             return issues
 
         if attr.mutability == AttributeMutability.READ_ONLY:
-            issues.add(
+            issues.add_error(
                 issue=ValidationError.attribute_can_not_be_modified(),
                 proceed=False,
             )
@@ -235,7 +235,7 @@ class PatchOp(BaseSchema):
                     # non-read-only attributes can be updated
                     continue
                 if attr_value[sub_attr.rep] is not Missing:
-                    issues.add(
+                    issues.add_error(
                         issue=ValidationError.attribute_can_not_be_modified(),
                         proceed=False,
                         location=(sub_attr.rep.sub_attr,),
@@ -282,7 +282,7 @@ def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> Validati
         path.complex_filter_attr_rep is not None
         and schema.attrs.get(path.complex_filter_attr_rep) is None
     ):
-        issues.add(
+        issues.add_error(
             issue=ValidationError.unknown_operation_target(),
             proceed=False,
         )
