@@ -193,7 +193,7 @@ def test_validation_fails_in_not_one_of_canonical_values__multivalued():
         type_=at.String,
         canonical_values=["A", "B", "C"],
         restrict_canonical_values=True,
-        multi_valued=True
+        multi_valued=True,
     )
     expected_issues = {"1": {"_errors": [{"code": 14}]}}
 
@@ -223,3 +223,35 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
     expected_issues = {"1": {"_warnings": [{"code": 1}]}}
 
     assert attr.validate(["A", "D", "C"]).to_dict() == expected_issues
+
+
+def test_attribute_construction_fails_if_bad_reference_type_for_external_reference():
+    with pytest.raises(
+        ValueError, match="'external' is the only valid reference type for ExternalReference"
+    ):
+        Attribute(
+            name="attr",
+            type_=at.ExternalReference,
+            reference_types=["uri"],
+        )
+
+
+def test_default_reference_types_for_external_reference_is_selected():
+    attr = Attribute(name="attr", type_=at.ExternalReference)
+
+    assert attr.reference_types == ["external"]
+
+
+def test_attribute_construction_fails_if_bad_reference_type_for_uri_reference():
+    with pytest.raises(ValueError, match="'uri' is the only valid reference type for URIReference"):
+        Attribute(
+            name="attr",
+            type_=at.URIReference,
+            reference_types=["external"],
+        )
+
+
+def test_default_reference_types_for_uri_reference_is_selected():
+    attr = Attribute(name="attr", type_=at.URIReference)
+
+    assert attr.reference_types == ["uri"]
