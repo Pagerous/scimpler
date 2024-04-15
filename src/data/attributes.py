@@ -78,7 +78,7 @@ class Attribute:
         parser: Optional[_AttributeProcessor] = None,
         dumper: Optional[_AttributeProcessor] = None,
     ):
-        self._rep = AttrRep(attr=name) if isinstance(name, str) else name
+        self._rep = AttrRep.parse(name) if isinstance(name, str) else name
         self._type = type_
         self._description = description
         self._reference_types = list(reference_types or [])
