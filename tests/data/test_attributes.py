@@ -118,7 +118,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
     (
         "input_",
         "expected_schema",
-        "expected_full_attr",
+        "expected_attr_with_schema",
         "expected_attr",
         "expected_sub_attr",
     ),
@@ -139,17 +139,19 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
             "name",
             "firstName",
         ),
+        ("weirdo-$", "", "weirdo-$", "weirdo-$", ""),
+        ("attr.weirdo-$", "", "attr", "attr", "weirdo-$"),
     ),
 )
 def test_attribute_identifier_is_parsed(
-    input_, expected_schema, expected_full_attr, expected_attr, expected_sub_attr
+    input_, expected_schema, expected_attr_with_schema, expected_attr, expected_sub_attr
 ):
     issues = AttrRep.validate(input_)
     assert issues.to_dict(msg=True) == {}
 
     attr_rep = AttrRep.parse(input_)
     assert attr_rep.schema == expected_schema
-    assert attr_rep.attr_with_schema == expected_full_attr
+    assert attr_rep.attr_with_schema == expected_attr_with_schema
     assert attr_rep.attr == expected_attr
     assert attr_rep.sub_attr == expected_sub_attr
 

@@ -3,9 +3,11 @@ from typing import Any, Dict, List, Optional, Union
 
 from src.error import ValidationError, ValidationIssues
 
-_ATTR_NAME = re.compile(r"(\w+|\$ref)")
+_ATTR_NAME = re.compile(r"([a-zA-Z][\w$-]*|\$ref)")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
-_ATTR_REP = re.compile(rf"({_URI_PREFIX.pattern})?({_ATTR_NAME.pattern}(\.\w+)?)")
+_ATTR_REP = re.compile(
+    rf"({_URI_PREFIX.pattern})?({_ATTR_NAME.pattern}(\.([a-zA-Z][\w$-]*|\$ref))?)"
+)
 
 
 class AttrRep:
