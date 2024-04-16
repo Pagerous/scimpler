@@ -202,7 +202,9 @@ class SchemaForTests(ResourceSchema):
                 Attribute(name="binary", type_=at.Binary),
                 Attribute(name="external_ref", type_=at.ExternalReference),
                 Attribute(name="uri_ref", type_=at.URIReference),
-                Attribute(name="scim_ref", type_=at.SCIMReference),
+                Attribute(
+                    name="scim_ref", type_=at.SCIMReference, reference_types=["SchemaForTests"]
+                ),
                 ComplexAttribute(
                     name="c",
                     sub_attributes=[Attribute(name="value", type_=at.String)],

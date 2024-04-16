@@ -19,6 +19,7 @@ from src.data.type import (
     AttributeType,
     Complex,
     ExternalReference,
+    SCIMReference,
     URIReference,
     get_scim_type,
 )
@@ -87,6 +88,8 @@ class Attribute:
                 self._reference_types = ["external"]
             elif type_ == URIReference:
                 self._reference_types = ["uri"]
+            elif type_ == SCIMReference:
+                raise ValueError("reference types must be defined for SCIMReference")
         else:
             if type_ == ExternalReference and self._reference_types != ["external"]:
                 raise ValueError(

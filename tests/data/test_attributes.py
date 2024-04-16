@@ -255,3 +255,11 @@ def test_default_reference_types_for_uri_reference_is_selected():
     attr = Attribute(name="attr", type_=at.URIReference)
 
     assert attr.reference_types == ["uri"]
+
+
+def test_attribute_construction_fails_if_no_reference_types_for_scim_reference():
+    with pytest.raises(ValueError, match="reference types must be defined for SCIMReference"):
+        Attribute(
+            name="attr",
+            type_=at.SCIMReference,
+        )
