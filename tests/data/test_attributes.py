@@ -263,3 +263,9 @@ def test_attribute_construction_fails_if_no_reference_types_for_scim_reference()
             name="attr",
             type_=at.SCIMReference,
         )
+
+
+def test_reference_is_always_case_exact_even_if_specified_opposite():
+    attr = Attribute(name="attr", type_=at.URIReference, case_exact=False)
+
+    assert attr.case_exact is True

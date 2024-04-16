@@ -99,7 +99,7 @@ class Attribute:
                 raise ValueError("'uri' is the only valid reference type for URIReference")
         self._issuer = issuer
         self._required = required
-        self._case_exact = case_exact
+        self._case_exact = type_ in (ExternalReference, SCIMReference, URIReference) or case_exact
         self._canonical_values = (
             [
                 item.lower() if isinstance(item, str) and not case_exact else item
