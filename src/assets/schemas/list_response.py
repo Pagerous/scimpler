@@ -1,27 +1,15 @@
 from typing import Any, List, Optional, Sequence
 
-from src.data import type as type_
-from src.data.attributes import Attribute
+from src.data.attributes import Integer, Unknown, get_scim_type
 from src.data.container import Invalid, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.data.type import get_scim_type
 from src.error import ValidationError, ValidationIssues
 
-total_results = Attribute(
-    name="totalResults",
-    type_=type_.Integer,
-    required=True,
-)
+total_results = Integer("totalResults", required=True)
 
-start_index = Attribute(
-    name="startIndex",
-    type_=type_.Integer,
-)
+start_index = Integer("startIndex")
 
-items_per_page = Attribute(
-    name="itemsPerPage",
-    type_=type_.Integer,
-)
+items_per_page = Integer("itemsPerPage")
 
 
 def validate_resources_type(value) -> ValidationIssues:
@@ -37,9 +25,8 @@ def validate_resources_type(value) -> ValidationIssues:
     return issues
 
 
-resources = Attribute(
+resources = Unknown(
     name="Resources",
-    type_=type_.Unknown,
     multi_valued=True,
     validators=[validate_resources_type],
 )
@@ -110,7 +97,7 @@ class ListResponse(BaseSchema):
         dumped_resources = []
         for i, (resource, schema) in enumerate(zip(resources_, schemas_)):
             dumped_resources.append(schema.dump(resource))
-        data[self.attrs.resources.rep] = dumped_resources
+        data.set(self.attrs.resources.rep, dumped_resources)
         return data
 
     def get_schemas_for_resources(self, resources_: List[Any]) -> List[Optional[ResourceSchema]]:

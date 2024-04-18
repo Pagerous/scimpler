@@ -1,9 +1,22 @@
-from typing import Any, Dict, Iterable, Optional
+from typing import Iterable
 
 from marshmallow import Schema, fields, post_dump
 
-from src.data import type as type_
-from src.data.attributes import Attribute, AttributeReturn, ComplexAttribute
+from src.data.attributes import (
+    Attribute,
+    AttributeReturn,
+    Binary,
+    Boolean,
+    Complex,
+    DateTime,
+    Decimal,
+    ExternalReference,
+    Integer,
+    SCIMReference,
+    String,
+    Unknown,
+    URIReference,
+)
 from src.request_validator import Validator
 
 
@@ -18,28 +31,27 @@ def _get_fields(attrs: Iterable[Attribute]) -> dict[str, fields.Field]:
 
 
 def _get_field(attr, **kwargs):
-    if attr.type == type_.Unknown:
+    if isinstance(attr, Unknown):
         field = fields.Raw(**kwargs)
-    elif attr.type == type_.Boolean:
+    elif isinstance(attr, Boolean):
         field = fields.Boolean(**kwargs)
-    elif attr.type == type_.Integer:
+    elif isinstance(attr, Integer):
         field = fields.Integer(**kwargs)
-    elif attr.type == type_.Decimal:
+    elif isinstance(attr, Decimal):
         field = fields.Float(**kwargs)
-    elif attr.type == type_.String:
-        field = fields.String(**kwargs)
-    elif attr.type == type_.DateTime:
+    elif isinstance(attr, DateTime):
         field = fields.DateTime(**kwargs)
-    elif attr.type == type_.Binary:
+    elif isinstance(attr, Binary):
         field = fields.String(**kwargs)
-    elif attr.type == type_.ExternalReference:
-        field = fields.Url(absolute=True, **kwargs)
-    elif attr.type == type_.URIReference:
+    elif isinstance(attr, ExternalReference):
         field = fields.String(**kwargs)
-    elif attr.type == type_.SCIMReference:
+    elif isinstance(attr, URIReference):
         field = fields.String(**kwargs)
-    elif attr.type == type_.Complex:
-        attr: ComplexAttribute
+    elif isinstance(attr, SCIMReference):
+        field = fields.String(**kwargs)
+    elif isinstance(attr, String):
+        field = fields.String(**kwargs)
+    elif isinstance(attr, Complex):
         field = fields.Nested(_get_fields(attr.attrs))
     else:
         raise RuntimeError(f"unknown attr type {attr.type}")

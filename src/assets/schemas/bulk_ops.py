@@ -2,8 +2,7 @@ import re
 from copy import deepcopy
 from typing import Any, List
 
-from src.data import type as type_
-from src.data.attributes import Attribute, ComplexAttribute
+from src.data.attributes import Complex, ExternalReference, Integer, String, Unknown
 from src.data.container import Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
@@ -81,37 +80,26 @@ def parse_request_operations(value: List[SCIMDataContainer]) -> List[SCIMDataCon
     return value
 
 
-_operation__method = Attribute(
+_operation__method = String(
     name="method",
-    type_=type_.String,
     required=True,
     canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
     restrict_canonical_values=True,
 )
 
-_operation__bulk_id = Attribute(
-    name="bulkId",
-    type_=type_.String,
-)
+_operation__bulk_id = String("bulkId")
 
-_operation__version = Attribute(
-    name="version",
-    type_=type_.String,
-)
+_operation__version = String("version")
 
-_operation__path = Attribute(
+_operation__path = String(
     name="path",
-    type_=type_.String,
     required=True,
 )
 
-_operation__data = Attribute(
-    name="data",
-    type_=type_.Unknown,
-)
+_operation__data = Unknown("data")
 
 
-request_operations = ComplexAttribute(
+request_operations = Complex(
     sub_attributes=[
         _operation__method,
         _operation__bulk_id,
@@ -126,10 +114,7 @@ request_operations = ComplexAttribute(
     parser=parse_request_operations,
 )
 
-fail_on_errors = Attribute(
-    name="failOnErrors",
-    type_=type_.Integer,
-)
+fail_on_errors = Integer("failOnErrors")
 
 
 class BulkRequest(BaseSchema):
@@ -156,7 +141,7 @@ def validate_response_operations(value: List[SCIMDataContainer]) -> ValidationIs
                 location=(i, _operation__bulk_id.rep.attr),
             )
         status = item.get(_operation__status.rep)
-        if status:
+        if method and status:
             location = item.get(_operation__location.rep)
             if location in [None, Missing] and method and (method != "POST" or int(status) < 300):
                 issues.add_error(
@@ -180,15 +165,9 @@ def validate_response_operations(value: List[SCIMDataContainer]) -> ValidationIs
     return issues
 
 
-_operation__location = Attribute(
-    name="location",
-    type_=type_.ExternalReference,
-)
+_operation__location = ExternalReference("location")
 
-_operation__response = Attribute(
-    name="response",
-    type_=type_.Unknown,
-)
+_operation__response = Unknown("response")
 
 
 def _validate_status(value: Any) -> ValidationIssues:
@@ -203,15 +182,14 @@ def _validate_status(value: Any) -> ValidationIssues:
     return issues
 
 
-_operation__status = Attribute(
+_operation__status = String(
     name="status",
-    type_=type_.String,
     required=True,
     validators=[_validate_status],
 )
 
 
-response_operations = ComplexAttribute(
+response_operations = Complex(
     sub_attributes=[
         _operation__method,
         _operation__bulk_id,

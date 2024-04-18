@@ -1,34 +1,27 @@
 from typing import Any, List, Optional, Union
 
-from src.data import type as at
-from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
+from src.data.attributes import AttributeMutability, Complex, String, Unknown
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
-_operations_op = Attribute(
-    name="op",
-    type_=at.String,
+_operations_op = String(
+    "op",
     canonical_values=["add", "remove", "replace"],
     restrict_canonical_values=True,
     required=True,
 )
 
 
-_operations_path = Attribute(
-    name="path",
-    type_=at.String,
-    required=False,
+_operations_path = String(
+    "path",
     validators=[PatchPath.validate],
     parser=PatchPath.parse,
 )
 
 
-_operations_value = Attribute(
-    name="value",
-    type_=at.Unknown,
-)
+_operations_value = Unknown("value")
 
 
 def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
@@ -70,7 +63,7 @@ def parse_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     return value
 
 
-operations = ComplexAttribute(
+operations = Complex(
     sub_attributes=[
         _operations_op,
         _operations_path,
@@ -132,7 +125,7 @@ class PatchOp(BaseSchema):
                     location=path_location,
                 )
             if attr.required:
-                if isinstance(attr, ComplexAttribute):
+                if isinstance(attr, Complex):
                     pass  # TODO: add warning here
                 else:
                     issues.add_error(
@@ -201,7 +194,7 @@ class PatchOp(BaseSchema):
 
         # sub-attribute of filtered multivalued complex attribute
         if (
-            isinstance(self._resource_schema.attrs.get(path.attr_rep), ComplexAttribute)
+            isinstance(self._resource_schema.attrs.get(path.attr_rep), Complex)
             and path.complex_filter
             and path.complex_filter_attr_rep
         ):
@@ -229,7 +222,7 @@ class PatchOp(BaseSchema):
         if not issues_.can_proceed():
             return issues
 
-        elif isinstance(attr, ComplexAttribute) and not attr.multi_valued:
+        elif isinstance(attr, Complex) and not attr.multi_valued:
             for sub_attr in attr.attrs:
                 if sub_attr.mutability != AttributeMutability.READ_ONLY:
                     # non-read-only attributes can be updated
@@ -266,7 +259,7 @@ class PatchOp(BaseSchema):
 
         # sub-attribute of filtered multivalued complex attribute
         if (
-            isinstance(self._resource_schema.attrs.get(path.attr_rep), ComplexAttribute)
+            isinstance(self._resource_schema.attrs.get(path.attr_rep), Complex)
             and path.complex_filter
             and path.complex_filter_attr_rep
         ):

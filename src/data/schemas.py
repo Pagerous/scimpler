@@ -1,7 +1,6 @@
 import abc
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
 
-from src.data import type as at
 from src.data.attributes import (
     Attribute,
     AttributeIssuer,
@@ -9,7 +8,10 @@ from src.data.attributes import (
     AttributeReturn,
     Attributes,
     AttributeUniqueness,
-    ComplexAttribute,
+    Complex,
+    DateTime,
+    String,
+    URIReference,
 )
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
@@ -25,11 +27,9 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-schemas = Attribute(
+schemas = URIReference(
     name="schemas",
-    type_=at.URIReference,
     required=True,
-    case_exact=False,
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.ALWAYS,
@@ -37,95 +37,72 @@ schemas = Attribute(
 )
 
 
-id_ = Attribute(
+id_ = String(
     name="id",
-    type_=at.String,
     required=True,
     issuer=AttributeIssuer.SERVER,
     case_exact=True,
-    multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.SERVER,
     validators=[bulk_id_validator],
 )
 
-external_id = Attribute(
+external_id = String(
     name="externalId",
-    type_=at.String,
-    required=False,
     issuer=AttributeIssuer.CLIENT,
     case_exact=True,
-    multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,  # assumed uniqueness is controlled by clients
 )
 
-_meta__resource_type = Attribute(
+_meta__resource_type = String(
     name="resourceType",
-    type_=at.String,
-    required=False,
     case_exact=True,
     issuer=AttributeIssuer.SERVER,
-    multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
 )
 
-_meta__created = Attribute(
+_meta__created = DateTime(
     name="created",
-    type_=at.DateTime,
-    required=False,
-    case_exact=False,
     issuer=AttributeIssuer.SERVER,
-    multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
 )
 
-_meta__last_modified = Attribute(
+_meta__last_modified = DateTime(
     name="lastModified",
-    type_=at.DateTime,
-    required=False,
-    case_exact=False,
     issuer=AttributeIssuer.SERVER,
-    multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: make sure it has the same value as the "Content-Location" HTTP response header
-_meta__location = Attribute(
+_meta__location = URIReference(
     name="location",
-    type_=at.URIReference,
-    required=False,
     issuer=AttributeIssuer.SERVER,
-    case_exact=False,
-    multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: make sure it has the same value as the "ETag" HTTP response header
-_meta__version = Attribute(
+_meta__version = String(
     name="version",
-    type_=at.String,
-    required=False,
     issuer=AttributeIssuer.SERVER,
     case_exact=True,
-    multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
 )
 
 
-meta = ComplexAttribute(
+meta = Complex(
     sub_attributes=[
         _meta__resource_type,
         _meta__created,
@@ -134,9 +111,7 @@ meta = ComplexAttribute(
         _meta__version,
     ],
     name="meta",
-    required=False,
     issuer=AttributeIssuer.SERVER,
-    multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
     uniqueness=AttributeUniqueness.NONE,
@@ -147,49 +122,14 @@ class BaseSchema(abc.ABC):
     def __init__(self, schema: str, attrs: Iterable[Attribute]):
         bounded_attrs = []
         for attr in [schemas, *attrs]:
-            bounded_attrs.append(self._bound_attr_to_schema(attr, AttrRep(schema, attr.rep.attr)))
-            if isinstance(attr, ComplexAttribute):
+            bounded_attrs.append(attr.clone(AttrRep(schema, attr.rep.attr)))
+            if isinstance(attr, Complex):
                 for sub_attr in attr.attrs:
                     bounded_attrs.append(
-                        self._bound_attr_to_schema(
-                            sub_attr, AttrRep(schema, attr.rep.attr, sub_attr.rep.attr)
-                        )
+                        sub_attr.clone(AttrRep(schema, attr.rep.attr, sub_attr.rep.attr))
                     )
         self._attrs = Attributes(bounded_attrs)
         self._schema = schema
-
-    @staticmethod
-    def _bound_attr_to_schema(attr: Attribute, attr_rep: AttrRep) -> Attribute:
-        if isinstance(attr, ComplexAttribute):
-            return ComplexAttribute(
-                sub_attributes=list(attr.attrs),
-                name=attr_rep,
-                required=attr.required,
-                issuer=attr.issuer,
-                multi_valued=attr.multi_valued,
-                mutability=attr.mutability,
-                returned=attr.returned,
-                uniqueness=attr.uniqueness,
-                validators=attr.validators,
-                parser=attr.parser,
-                dumper=attr.dumper,
-            )
-        return Attribute(
-            name=attr_rep,
-            type_=attr.type,
-            reference_types=attr.reference_types,
-            issuer=attr.issuer,
-            required=attr.required,
-            case_exact=attr.case_exact,
-            multi_valued=attr.multi_valued,
-            canonical_values=attr.canonical_values,
-            mutability=attr.mutability,
-            returned=attr.returned,
-            uniqueness=attr.uniqueness,
-            validators=attr.validators,
-            parser=attr.parser,
-            dumper=attr.dumper,
-        )
 
     @property
     def attrs(self) -> Attributes:
@@ -373,19 +313,15 @@ class ResourceSchema(BaseSchema, abc.ABC):
         bounded_attrs = []
         for attr in extension.attrs:
             bounded_attrs.append(
-                self._bound_attr_to_schema(
-                    attr=attr,
-                    attr_rep=AttrRep(extension.schema, attr.rep.attr, extension=True),
-                )
+                attr.clone(AttrRep(extension.schema, attr.rep.attr, extension=True))
             )
-            if isinstance(attr, ComplexAttribute):
+            if isinstance(attr, Complex):
                 for sub_attr in attr.attrs:
                     bounded_attrs.append(
-                        self._bound_attr_to_schema(
-                            attr=sub_attr,
-                            attr_rep=AttrRep(
+                        sub_attr.clone(
+                            AttrRep(
                                 extension.schema, attr.rep.attr, sub_attr.rep.attr, extension=True
-                            ),
+                            )
                         )
                     )
         self._attrs = Attributes(list(self._attrs) + bounded_attrs)

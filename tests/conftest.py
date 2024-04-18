@@ -1,11 +1,20 @@
 from copy import deepcopy
-from datetime import datetime
 
 import pytest
 
 from src.assets.config import create_service_provider_config
-from src.data import type as at
-from src.data.attributes import Attribute, ComplexAttribute
+from src.data.attributes import (
+    Binary,
+    Boolean,
+    Complex,
+    DateTime,
+    Decimal,
+    ExternalReference,
+    Integer,
+    SCIMReference,
+    String,
+    URIReference,
+)
 from src.data.schemas import ResourceSchema
 
 
@@ -191,48 +200,42 @@ class SchemaForTests(ResourceSchema):
         super().__init__(
             schema="schema:for:tests",
             attrs=[
-                Attribute(name="int", type_=at.Integer),
-                Attribute(name="str", type_=at.String),
-                Attribute(name="str_cs", type_=at.String, case_exact=True),
-                Attribute(name="str_mv", type_=at.String, multi_valued=True),
-                Attribute(name="str_cs_mv", type_=at.String, case_exact=True, multi_valued=True),
-                Attribute(name="bool", type_=at.Boolean),
-                Attribute(name="datetime", type_=at.DateTime),
-                Attribute(name="decimal", type_=at.Decimal),
-                Attribute(name="binary", type_=at.Binary),
-                Attribute(name="external_ref", type_=at.ExternalReference),
-                Attribute(name="uri_ref", type_=at.URIReference),
-                Attribute(
-                    name="scim_ref", type_=at.SCIMReference, reference_types=["SchemaForTests"]
+                Integer("int"),
+                String("str"),
+                String("str_cs", case_exact=True),
+                String("str_mv", multi_valued=True),
+                String("str_cs_mv", case_exact=True, multi_valued=True),
+                Boolean("bool"),
+                DateTime("datetime"),
+                Decimal("decimal"),
+                Binary("binary"),
+                ExternalReference("external_ref"),
+                URIReference("uri_ref"),
+                SCIMReference("scim_ref", reference_types=["SchemaForTests"]),
+                Complex(
+                    "c",
+                    sub_attributes=[String("value")],
                 ),
-                ComplexAttribute(
-                    name="c",
-                    sub_attributes=[Attribute(name="value", type_=at.String)],
-                ),
-                ComplexAttribute(
-                    name="c_mv",
-                    sub_attributes=[Attribute(name="value", type_=at.String, multi_valued=True)],
+                Complex(
+                    "c_mv",
+                    sub_attributes=[String("value", multi_valued=True)],
                     multi_valued=True,
                 ),
-                ComplexAttribute(
-                    name="c2",
-                    sub_attributes=[
-                        Attribute(name="str", type_=at.String),
-                        Attribute(name="int", type_=at.Integer),
-                        Attribute(name="bool", type_=at.Boolean),
-                    ],
+                Complex(
+                    "c2",
+                    sub_attributes=[String("str"), Integer("int"), Boolean("bool")],
                 ),
-                ComplexAttribute(
-                    name="c2_mv",
+                Complex(
+                    "c2_mv",
                     sub_attributes=[
-                        Attribute(name="str", type_=at.String),
-                        Attribute(name="int", type_=at.Integer),
-                        Attribute(name="bool", type_=at.Boolean, required=True),
+                        String("str"),
+                        Integer("int"),
+                        Boolean("bool", required=True),
                     ],
                     multi_valued=True,
                 ),
-                Attribute(name="userName", type_=at.String, case_exact=True),
-                Attribute(name="title", type_=at.Integer),
+                String("userName", case_exact=True),
+                Integer("title"),
             ],
             name="SchemaForTests",
             plural_name="SchemasForTests",

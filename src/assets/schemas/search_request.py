@@ -1,8 +1,7 @@
 from typing import Any, List, Tuple, Union
 
 from src.attributes_presence import AttributePresenceChecker
-from src.data import type as type_
-from src.data.attributes import Attribute
+from src.data.attributes import Integer, String
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
@@ -32,67 +31,46 @@ def parse_attr_reps(value: List[str]) -> List[AttrRep]:
     return [AttrRep.parse(item) for item in value]
 
 
-attributes = Attribute(
+attributes = String(
     name="attributes",
-    type_=type_.String,
-    required=False,
-    case_exact=False,
     multi_valued=True,
     validators=[validate_attr_reps],
     parser=parse_attr_reps,
 )
 
 
-exclude_attributes = Attribute(
+exclude_attributes = String(
     name="excludeAttributes",
-    type_=type_.String,
-    required=False,
-    case_exact=False,
     multi_valued=True,
     validators=[validate_attr_reps],
     parser=parse_attr_reps,
 )
 
 
-filter_ = Attribute(
+filter_ = String(
     name="filter",
-    type_=type_.String,
-    required=False,
     validators=[Filter.validate],
     parser=Filter.parse,
 )
 
 
-sort_by = Attribute(
+sort_by = String(
     name="sortBy",
-    type_=type_.String,
-    required=False,
     validators=[AttrRep.validate],
     parser=AttrRep.parse,
 )
 
 
-sort_order = Attribute(
+sort_order = String(
     name="sortOrder",
-    type_=type_.String,
-    required=False,
-    case_exact=False,
     canonical_values=["ascending", "descending"],
 )
 
 
-start_index = Attribute(
-    name="startIndex",
-    type_=type_.Integer,
-    required=False,
-)
+start_index = Integer("startIndex")
 
 
-count = Attribute(
-    name="count",
-    type_=type_.Integer,
-    required=False,
-)
+count = Integer("count")
 
 
 class SearchRequest(BaseSchema):

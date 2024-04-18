@@ -1,9 +1,8 @@
-from src.data import type as type_
 from src.data.attributes import (
-    Attribute,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
+    String,
 )
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
@@ -27,12 +26,9 @@ def validate_error_status(value: str) -> ValidationIssues:
     return issues
 
 
-status = Attribute(
+status = String(
     name="status",
-    type_=type_.String,
     required=True,
-    case_exact=False,
-    multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,
@@ -40,12 +36,8 @@ status = Attribute(
 )
 
 
-scim_type = Attribute(
+scim_type = String(
     name="scimType",
-    type_=type_.String,
-    required=False,
-    case_exact=False,
-    multi_valued=False,
     canonical_values=[
         "invalidFilter",
         "tooMany",
@@ -64,12 +56,8 @@ scim_type = Attribute(
     uniqueness=AttributeUniqueness.NONE,
 )
 
-detail = Attribute(
+detail = String(
     name="detail",
-    type_=type_.String,
-    required=False,
-    case_exact=False,
-    multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
     uniqueness=AttributeUniqueness.NONE,

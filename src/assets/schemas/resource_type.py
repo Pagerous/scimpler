@@ -1,49 +1,45 @@
-from src.data import type as type_
 from src.data.attributes import (
-    Attribute,
     AttributeIssuer,
     AttributeMutability,
-    ComplexAttribute,
+    Boolean,
+    Complex,
+    String,
+    URIReference,
 )
 from src.data.schemas import ResourceSchema
 
-id_ = Attribute(
+id_ = String(
     name="id",
-    type_=type_.String,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
 
-name = Attribute(
+name = String(
     name="name",
-    type_=type_.String,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
     required=True,
 )
 
 
-description = Attribute(
+description = String(
     name="description",
-    type_=type_.String,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
 
-endpoint = Attribute(
+endpoint = URIReference(
     name="endpoint",
-    type_=type_.URIReference,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
     required=True,
 )
 
 
-schema = Attribute(
+schema = String(
     name="schema",
-    type_=type_.String,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
     required=True,
@@ -52,15 +48,14 @@ schema = Attribute(
 
 _schema_extensions__schema = schema
 
-_schema_extensions__required = Attribute(
+_schema_extensions__required = Boolean(
     name="required",
-    type_=type_.Boolean,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
     required=True,
 )
 
-schema_extensions = ComplexAttribute(
+schema_extensions = Complex(
     sub_attributes=[_schema_extensions__schema, _schema_extensions__required],
     name="schemaExtensions",
     multi_valued=True,

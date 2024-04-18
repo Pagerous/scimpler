@@ -1,12 +1,24 @@
+import base64
+
 import pytest
 
-from src.data import type as at
-from src.data.attributes import Attribute, ComplexAttribute
+from src.data.attributes import (
+    Binary,
+    Boolean,
+    Complex,
+    DateTime,
+    Decimal,
+    ExternalReference,
+    Integer,
+    SCIMReference,
+    String,
+    URIReference,
+)
 from src.data.container import AttrRep, SCIMDataContainer
 
 
 def test_validation_is_skipped_if_value_not_provided():
-    attr = Attribute(name="some_attr", type_=at.String, required=True)
+    attr = String(name="some_attr", required=True)
 
     issues = attr.validate(value=None)
 
@@ -14,7 +26,7 @@ def test_validation_is_skipped_if_value_not_provided():
 
 
 def test_multi_valued_attribute_validation_fails_if_not_provided_list():
-    attr = Attribute(name="some_attr", type_=at.String, multi_valued=True)
+    attr = String(name="some_attr", multi_valued=True)
 
     issues = attr.validate("non-list")
 
@@ -22,7 +34,7 @@ def test_multi_valued_attribute_validation_fails_if_not_provided_list():
 
 
 def test_multi_valued_attribute_validation_succeeds_if_provided_list_or_tuple():
-    attr = Attribute(name="some_attr", type_=at.String, multi_valued=True)
+    attr = String(name="some_attr", multi_valued=True)
 
     issues = attr.validate(["a", "b", "c"])
 
@@ -30,7 +42,7 @@ def test_multi_valued_attribute_validation_succeeds_if_provided_list_or_tuple():
 
 
 def test_multi_valued_attribute_values_are_validate_separately():
-    attr = Attribute(name="some_attr", type_=at.String, multi_valued=True)
+    attr = String(name="some_attr", multi_valued=True)
 
     issues = attr.validate(["a", 123])
 
@@ -38,10 +50,10 @@ def test_multi_valued_attribute_values_are_validate_separately():
 
 
 def test_complex_attribute_sub_attributes_are_validated_separately():
-    attr = ComplexAttribute(
+    attr = Complex(
         sub_attributes=[
-            Attribute(name="sub_attr_1", type_=at.Integer, required=True),
-            Attribute(name="sub_attr_2", type_=at.Integer),
+            Integer(name="sub_attr_1", required=True),
+            Integer(name="sub_attr_2"),
         ],
         name="complex_attr",
     )
@@ -68,10 +80,10 @@ def test_complex_attribute_sub_attributes_are_validated_separately():
 
 
 def test_multivalued_complex_attribute_sub_attributes_are_validated_separately():
-    attr = ComplexAttribute(
+    attr = Complex(
         sub_attributes=[
-            Attribute(name="sub_attr_1", type_=at.String, required=True),
-            Attribute(name="sub_attr_2", type_=at.Integer),
+            String("sub_attr_1", required=True),
+            Integer("sub_attr_2"),
         ],
         multi_valued=True,
         name="complex_attr",
@@ -176,9 +188,8 @@ def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
 
 
 def test_validation_fails_in_not_one_of_canonical_values():
-    attr = Attribute(
+    attr = String(
         name="attr",
-        type_=at.String,
         canonical_values=["A", "B", "C"],
         restrict_canonical_values=True,
     )
@@ -188,9 +199,8 @@ def test_validation_fails_in_not_one_of_canonical_values():
 
 
 def test_validation_fails_in_not_one_of_canonical_values__multivalued():
-    attr = Attribute(
+    attr = String(
         name="attr",
-        type_=at.String,
         canonical_values=["A", "B", "C"],
         restrict_canonical_values=True,
         multi_valued=True,
@@ -201,9 +211,8 @@ def test_validation_fails_in_not_one_of_canonical_values__multivalued():
 
 
 def test_validation_returns_warning_in_not_one_of_canonical_values():
-    attr = Attribute(
+    attr = String(
         name="attr",
-        type_=at.String,
         canonical_values=["A", "B", "C"],
         restrict_canonical_values=False,
     )
@@ -213,9 +222,8 @@ def test_validation_returns_warning_in_not_one_of_canonical_values():
 
 
 def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued():
-    attr = Attribute(
+    attr = String(
         name="attr",
-        type_=at.String,
         canonical_values=["A", "B", "C"],
         restrict_canonical_values=False,
         multi_valued=True,
@@ -225,47 +233,258 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
     assert attr.validate(["A", "D", "C"]).to_dict() == expected_issues
 
 
-def test_attribute_construction_fails_if_bad_reference_type_for_external_reference():
-    with pytest.raises(
-        ValueError, match="'external' is the only valid reference type for ExternalReference"
-    ):
-        Attribute(
-            name="attr",
-            type_=at.ExternalReference,
-            reference_types=["uri"],
-        )
+@pytest.mark.parametrize(
+    ("input_value", "attr", "expected_issues"),
+    (
+        (
+            1.0,
+            Integer("int"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "integer",
+                            "provided": "decimal",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            123,
+            String("str"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "string",
+                            "provided": "integer",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            "123",
+            Integer("int"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "integer",
+                            "provided": "string",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            1.2,
+            Integer("int"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "integer",
+                            "provided": "decimal",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            "123",
+            Decimal("decimal"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "decimal",
+                            "provided": "string",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            "Bad",
+            Boolean("bool"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "boolean",
+                            "provided": "string",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            123,
+            URIReference("uri"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "string",
+                            "provided": "integer",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            123,
+            SCIMReference("scim", reference_types=["Users"]),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "string",
+                            "provided": "integer",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            123,
+            ExternalReference("external"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "string",
+                            "provided": "integer",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            "/not/absolute/url",
+            ExternalReference("external"),
+            {"_errors": [{"code": 8, "context": {"value": "/not/absolute/url"}}]},
+        ),
+        (
+            123,
+            Binary("binary"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "string",
+                            "provided": "integer",
+                        },
+                    }
+                ]
+            },
+        ),
+        ("bad", Binary("binary"), {"_errors": [{"code": 3, "context": {"scim_type": "binary"}}]}),
+        (
+            123,
+            DateTime("datetime"),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "string",
+                            "provided": "integer",
+                        },
+                    }
+                ]
+            },
+        ),
+        (
+            "2022/05/05 12:34:56",
+            DateTime("datetime"),
+            {"_errors": [{"code": 1, "context": {}}]},
+        ),
+        (
+            123,
+            Complex("complex", sub_attributes=[]),
+            {
+                "_errors": [
+                    {
+                        "code": 2,
+                        "context": {
+                            "expected": "complex",
+                            "provided": "integer",
+                        },
+                    }
+                ]
+            },
+        ),
+    ),
+)
+def test_validate_bad_type(input_value, attr, expected_issues):
+    issues = attr.validate(input_value)
+
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
-def test_default_reference_types_for_external_reference_is_selected():
-    attr = Attribute(name="attr", type_=at.ExternalReference)
+@pytest.mark.parametrize(
+    ("input_value", "attr"),
+    (
+        (
+            "123",
+            String("str"),
+        ),
+        (
+            123,
+            Integer("int"),
+        ),
+        (
+            1,
+            Decimal("decimal"),
+        ),
+        (
+            1.2,
+            Decimal("decimal"),
+        ),
+        (
+            True,
+            Boolean("bool"),
+        ),
+        (
+            "any:unique:resource:identifier",
+            URIReference("uri"),
+        ),
+        (
+            "Users",
+            SCIMReference("scim", reference_types=["Users"]),
+        ),
+        (
+            "https://www.example.com/absolute/url",
+            ExternalReference("external"),
+        ),
+        (
+            base64.b64encode("blahblah".encode()).decode("utf-8"),
+            Binary("binary"),
+        ),
+        (
+            "2024-01-06T00:00:00",
+            DateTime("datetime"),
+        ),
+        (
+            SCIMDataContainer({"sub_attr_1": 1, "sub_attr_2": "2"}),
+            Complex("complex", sub_attributes=[]),
+        ),
+    ),
+)
+def test_validate_correct_type(input_value, attr):
+    issues = attr.validate(input_value)
 
-    assert attr.reference_types == ["external"]
-
-
-def test_attribute_construction_fails_if_bad_reference_type_for_uri_reference():
-    with pytest.raises(ValueError, match="'uri' is the only valid reference type for URIReference"):
-        Attribute(
-            name="attr",
-            type_=at.URIReference,
-            reference_types=["external"],
-        )
-
-
-def test_default_reference_types_for_uri_reference_is_selected():
-    attr = Attribute(name="attr", type_=at.URIReference)
-
-    assert attr.reference_types == ["uri"]
-
-
-def test_attribute_construction_fails_if_no_reference_types_for_scim_reference():
-    with pytest.raises(ValueError, match="reference types must be defined for SCIMReference"):
-        Attribute(
-            name="attr",
-            type_=at.SCIMReference,
-        )
-
-
-def test_reference_is_always_case_exact_even_if_specified_opposite():
-    attr = Attribute(name="attr", type_=at.URIReference, case_exact=False)
-
-    assert attr.case_exact is True
+    assert issues.to_dict(msg=True) == {}

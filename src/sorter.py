@@ -1,8 +1,7 @@
 import functools
 from typing import Any, List, Optional, Sequence, Union
 
-from src.data import type as at
-from src.data.attributes import Attribute, ComplexAttribute
+from src.data.attributes import Attribute, Complex, String
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
@@ -17,7 +16,7 @@ class AlwaysLastKey:
 
 
 class StringKey:
-    def __init__(self, value: str, attr: Attribute):
+    def __init__(self, value: str, attr: String):
         self._value = value
         self._attr = attr
 
@@ -90,7 +89,7 @@ class Sorter:
         if not isinstance(value, str):
             return value
 
-        if attr.type is not at.String:
+        if not isinstance(attr, String):
             return self._default_value
 
         return StringKey(value, attr)
@@ -108,7 +107,7 @@ class Sorter:
         if attr is not None:
             item_value = item.get(self._attr_rep)
             if item_value is not Missing and attr.multi_valued:
-                if isinstance(attr, ComplexAttribute):
+                if isinstance(attr, Complex):
                     for v in item_value:
                         primary = v.get("primary")
                         if primary is True:

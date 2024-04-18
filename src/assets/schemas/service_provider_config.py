@@ -1,17 +1,18 @@
-from src.data import type as type_
 from src.data.attributes import (
-    Attribute,
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
-    ComplexAttribute,
+    Boolean,
+    Complex,
+    ExternalReference,
+    Integer,
+    String,
 )
 from src.data.schemas import ResourceSchema, bulk_id_validator
 
-id_ = Attribute(
+id_ = String(
     name="id",
-    type_=type_.String,
     required=False,
     issuer=AttributeIssuer.SERVER,
     case_exact=True,
@@ -22,20 +23,18 @@ id_ = Attribute(
     validators=[bulk_id_validator],
 )
 
-documentation_uri = Attribute(
+documentation_uri = ExternalReference(
     name="documentationUri",
-    type_=type_.ExternalReference,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-_supported = Attribute(
+_supported = Boolean(
     name="supported",
-    type_=type_.Boolean,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-patch = ComplexAttribute(
+patch = Complex(
     sub_attributes=[_supported],
     name="patch",
     required=True,
@@ -43,21 +42,19 @@ patch = ComplexAttribute(
 )
 
 
-_bulk_max_operations = Attribute(
+_bulk_max_operations = Integer(
     name="maxOperations",
-    type_=type_.Integer,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-_bulk_max_payload_size = Attribute(
+_bulk_max_payload_size = Integer(
     name="maxPayloadSize",
-    type_=type_.Integer,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-bulk = ComplexAttribute(
+bulk = Complex(
     sub_attributes=[_supported, _bulk_max_operations, _bulk_max_payload_size],
     name="bulk",
     required=True,
@@ -65,14 +62,13 @@ bulk = ComplexAttribute(
 )
 
 
-_filter_max_results = Attribute(
+_filter_max_results = Integer(
     name="maxResults",
-    type_=type_.Integer,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-filter_ = ComplexAttribute(
+filter_ = Complex(
     sub_attributes=[_supported, _filter_max_results],
     name="filter",
     required=True,
@@ -80,7 +76,7 @@ filter_ = ComplexAttribute(
 )
 
 
-change_password = ComplexAttribute(
+change_password = Complex(
     sub_attributes=[_supported],
     name="changePassword",
     required=True,
@@ -88,7 +84,7 @@ change_password = ComplexAttribute(
 )
 
 
-sort = ComplexAttribute(
+sort = Complex(
     sub_attributes=[_supported],
     name="sort",
     required=True,
@@ -96,7 +92,7 @@ sort = ComplexAttribute(
 )
 
 
-etag = ComplexAttribute(
+etag = Complex(
     sub_attributes=[_supported],
     name="etag",
     required=True,
@@ -104,41 +100,36 @@ etag = ComplexAttribute(
 )
 
 
-_authentication_schemes_type = Attribute(
+_authentication_schemes_type = String(
     name="type",
-    type_=type_.String,
     required=True,
     canonical_values=["oauth", "oauth2", "oauthbearertoken", "httpbasic", "httpdigest"],
     mutability=AttributeMutability.READ_ONLY,
 )
 
-_authentication_schemes_name = Attribute(
+_authentication_schemes_name = String(
     name="name",
-    type_=type_.String,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-_authentication_schemes_description = Attribute(
+_authentication_schemes_description = String(
     name="description",
-    type_=type_.String,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-_authentication_schemes_spec_uri = Attribute(
+_authentication_schemes_spec_uri = ExternalReference(
     name="specUri",
-    type_=type_.ExternalReference,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-_authentication_schemes_documentation_uri = Attribute(
+_authentication_schemes_documentation_uri = ExternalReference(
     name="specUri",
-    type_=type_.ExternalReference,
     mutability=AttributeMutability.READ_ONLY,
 )
 
-authentication_schemes = ComplexAttribute(
+authentication_schemes = Complex(
     sub_attributes=[
         _authentication_schemes_type,
         _authentication_schemes_name,

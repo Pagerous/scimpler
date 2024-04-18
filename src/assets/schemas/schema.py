@@ -1,51 +1,47 @@
 from typing import List
 
-from src.data import type as type_
 from src.data.attributes import (
-    Attribute,
     AttributeIssuer,
     AttributeMutability,
-    ComplexAttribute,
+    Boolean,
+    Complex,
+    String,
+    Unknown,
 )
 from src.data.container import Missing, SCIMDataContainer
 from src.data.schemas import ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
-id_ = Attribute(
+id_ = String(
     name="id",
-    type_=type_.String,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
 
-name = Attribute(
+name = String(
     name="name",
-    type_=type_.String,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
 
-description = Attribute(
+description = String(
     name="description",
-    type_=type_.String,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
 
-_attributes__name = Attribute(
+_attributes__name = String(
     name="name",
-    type_=type_.String,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__type = Attribute(
+_attributes__type = String(
     name="type",
-    type_=type_.String,
     canonical_values=["string", "integer", "boolean", "reference", "dateTime", "binary", "complex"],
     restrict_canonical_values=False,
     required=True,
@@ -53,58 +49,47 @@ _attributes__type = Attribute(
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__sub_attributes = Attribute(
+_attributes__sub_attributes = Unknown(
     name="subAttributes",
-    type_=type_.Unknown,
-    required=False,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__multi_valued = Attribute(
+_attributes__multi_valued = Boolean(
     name="multiValued",
-    type_=type_.Boolean,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__description = Attribute(
+_attributes__description = String(
     name="description",
-    type_=type_.String,
-    required=False,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__required = Attribute(
+_attributes__required = Boolean(
     name="required",
-    type_=type_.Boolean,
     required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__canonical_values = Attribute(
+_attributes__canonical_values = Unknown(
     name="canonicalValues",
-    type_=type_.Unknown,
     multi_valued=True,
-    required=False,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__case_exact = Attribute(
+_attributes__case_exact = Boolean(
     name="caseExact",
-    type_=type_.Boolean,
-    required=False,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__mutability = Attribute(
+_attributes__mutability = String(
     name="mutability",
-    type_=type_.String,
     canonical_values=["readOnly", "readWrite", "immutable", "writeOnly"],
     restrict_canonical_values=True,
     required=True,
@@ -112,9 +97,8 @@ _attributes__mutability = Attribute(
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__returned = Attribute(
+_attributes__returned = String(
     name="returned",
-    type_=type_.String,
     canonical_values=["always", "never", "default", "request"],
     restrict_canonical_values=True,
     required=True,
@@ -122,9 +106,8 @@ _attributes__returned = Attribute(
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__uniqueness = Attribute(
+_attributes__uniqueness = String(
     name="uniqueness",
-    type_=type_.String,
     canonical_values=["none", "server", "global"],
     restrict_canonical_values=True,
     required=True,
@@ -132,11 +115,9 @@ _attributes__uniqueness = Attribute(
     issuer=AttributeIssuer.SERVER,
 )
 
-_attributes__reference_types = Attribute(
+_attributes__reference_types = String(
     name="referenceTypes",
-    type_=type_.String,
     multi_valued=True,
-    required=False,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )
@@ -176,7 +157,7 @@ def dump_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     return value
 
 
-attributes = ComplexAttribute(
+attributes = Complex(
     sub_attributes=[
         _attributes__name,
         _attributes__type,

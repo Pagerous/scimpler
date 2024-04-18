@@ -1,32 +1,27 @@
-from src.data import type as type_
-from src.data.attributes import Attribute, AttributeMutability, ComplexAttribute
+from src.data.attributes import AttributeMutability, Complex, String, URIReference
 from src.data.schemas import ResourceSchema
 
-display_name = Attribute(
+display_name = String(
     name="displayName",
-    type_=type_.String,
     required=True,
 )
 
-_members_value = Attribute(
+_members_value = String(
     name="value",
-    type_=type_.String,
     mutability=AttributeMutability.IMMUTABLE,
 )
 
-_members_ref = Attribute(
+_members_ref = URIReference(
     name="$ref",
-    type_=type_.URIReference,
     mutability=AttributeMutability.IMMUTABLE,
 )
 
-_members_display = Attribute(
+_members_display = String(
     name="display",
-    type_=type_.String,
     mutability=AttributeMutability.IMMUTABLE,
 )
 
-members = ComplexAttribute(
+members = Complex(
     sub_attributes=[_members_value, _members_ref, _members_display],
     name="members",
     multi_valued=True,

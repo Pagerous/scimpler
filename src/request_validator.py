@@ -6,7 +6,7 @@ from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
-from src.data.attributes import Attribute, AttributeIssuer, ComplexAttribute
+from src.data.attributes import Attribute, AttributeIssuer, Complex
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
@@ -794,7 +794,7 @@ class ResourceObjectPATCH(Validator):
         value: Any,
         value_location,
     ) -> None:
-        if not (isinstance(attr, ComplexAttribute) and attr.multi_valued) or value is Missing:
+        if not (isinstance(attr, Complex) and attr.multi_valued) or value is Missing:
             return
 
         # checking if new item of complex attribute has all required fields
