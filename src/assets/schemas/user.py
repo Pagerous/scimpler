@@ -29,7 +29,6 @@ _name__formatted = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _name__family_name = String(
@@ -39,7 +38,6 @@ _name__family_name = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _name__given_name = String(
@@ -49,7 +47,6 @@ _name__given_name = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _name__middle_name = String(
@@ -59,7 +56,6 @@ _name__middle_name = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _name__honorific_prefix = String(
@@ -69,7 +65,6 @@ _name__honorific_prefix = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _name__honorific_suffix = String(
@@ -79,7 +74,6 @@ _name__honorific_suffix = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: warn if "formatted" does not contain information from all the other sub-attributes
@@ -96,7 +90,6 @@ name = Complex(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: warn if 'displayName' does not match any of: 'userName', 'name' (any of its sub-attributes)
@@ -107,7 +100,6 @@ display_name = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: warn if 'nickName' is equal to 'username'
@@ -118,7 +110,6 @@ nick_name = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 profile_url = ExternalReference(
@@ -127,7 +118,6 @@ profile_url = ExternalReference(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 title = String(
@@ -137,7 +127,6 @@ title = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 user_type = String(
@@ -147,7 +136,6 @@ user_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
@@ -158,7 +146,6 @@ preferred_language = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
@@ -169,7 +156,6 @@ locale = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc6557 ("Olson")
@@ -180,7 +166,6 @@ timezone = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 active = Boolean(
@@ -189,7 +174,6 @@ active = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: make password preparation according to https://www.rfc-editor.org/rfc/rfc7644#section-7.8
@@ -200,7 +184,6 @@ password = String(
     multi_valued=False,
     mutability=AttributeMutability.WRITE_ONLY,
     returned=AttributeReturn.NEVER,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _email_value = String(
@@ -210,7 +193,6 @@ _email_value = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _email_display = String(
@@ -220,7 +202,6 @@ _email_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _email_type = String(
@@ -231,7 +212,6 @@ _email_type = String(
     canonical_values=["work", "home", "other"],
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _email_primary = Boolean(
@@ -240,7 +220,6 @@ _email_primary = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 emails = Complex(
@@ -255,7 +234,6 @@ emails = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: make proper validation (warn) according to RFC3966 https://datatracker.ietf.org/doc/html/rfc3966
@@ -266,7 +244,6 @@ _phone_number_value = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _phone_number_display = String(
@@ -276,7 +253,6 @@ _phone_number_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _phone_number_type = String(
@@ -287,7 +263,6 @@ _phone_number_type = String(
     canonical_values=["work", "home", "mobile", "fax", "pager", "other"],
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _phone_number_primary = Boolean(
@@ -296,7 +271,6 @@ _phone_number_primary = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 phone_numbers = Complex(
@@ -311,7 +285,6 @@ phone_numbers = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: warn if value contain whitespaces and isn't lowercase
@@ -322,7 +295,6 @@ _ims_value = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _ims_display = String(
@@ -332,7 +304,6 @@ _ims_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # no canonical values included, as those presented in RFC 7643 are obsolete
@@ -344,7 +315,6 @@ _ims_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _ims_primary = Boolean(
@@ -353,7 +323,6 @@ _ims_primary = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 ims = Complex(
@@ -368,7 +337,6 @@ ims = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _photos_value = ExternalReference(
@@ -377,7 +345,6 @@ _photos_value = ExternalReference(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _photos_display = String(
@@ -387,7 +354,6 @@ _photos_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _photos_type = String(
@@ -398,7 +364,6 @@ _photos_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _photos_primary = Boolean(
@@ -407,7 +372,6 @@ _photos_primary = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 photos = Complex(
@@ -422,7 +386,6 @@ photos = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _addresses_formatted = String(
@@ -432,7 +395,6 @@ _addresses_formatted = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _addresses_street_address = String(
@@ -442,7 +404,6 @@ _addresses_street_address = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _addresses_locality = String(
@@ -452,7 +413,6 @@ _addresses_locality = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _addresses_region = String(
@@ -462,7 +422,6 @@ _addresses_region = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _addresses_postal_code = String(
@@ -472,7 +431,6 @@ _addresses_postal_code = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: validate according to ISO 3166-1 "alpha-2"
@@ -483,7 +441,6 @@ _addresses_country = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _addresses_type = String(
@@ -494,7 +451,6 @@ _addresses_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 addresses = Complex(
@@ -512,7 +468,6 @@ addresses = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: make validation of correct group id here
@@ -523,7 +478,6 @@ _groups_value = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _groups_ref = URIReference(
@@ -532,7 +486,6 @@ _groups_ref = URIReference(
     multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _groups_display = String(
@@ -542,7 +495,6 @@ _groups_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _groups_type = String(
@@ -553,7 +505,6 @@ _groups_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 groups = Complex(
@@ -568,7 +519,6 @@ groups = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _entitlements_value = String(
@@ -578,7 +528,6 @@ _entitlements_value = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _entitlements_display = String(
@@ -588,7 +537,6 @@ _entitlements_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _entitlements_type = String(
@@ -598,7 +546,6 @@ _entitlements_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _entitlements_primary = Boolean(
@@ -607,7 +554,6 @@ _entitlements_primary = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 entitlements = Complex(
@@ -622,7 +568,6 @@ entitlements = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _roles_value = String(
@@ -632,7 +577,6 @@ _roles_value = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _roles_display = String(
@@ -642,7 +586,6 @@ _roles_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _roles_type = String(
@@ -652,7 +595,6 @@ _roles_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _roles_primary = Boolean(
@@ -661,7 +603,6 @@ _roles_primary = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 roles = Complex(
@@ -676,7 +617,6 @@ roles = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _x509_certificates_value = Binary(
@@ -685,7 +625,6 @@ _x509_certificates_value = Binary(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _x509_certificates_display = String(
@@ -695,7 +634,6 @@ _x509_certificates_display = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _x509_certificates_type = String(
@@ -705,7 +643,6 @@ _x509_certificates_type = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _x509_certificates_primary = Boolean(
@@ -714,7 +651,6 @@ _x509_certificates_primary = Boolean(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 x509_certificates = Complex(
@@ -729,7 +665,6 @@ x509_certificates = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 
@@ -743,7 +678,6 @@ employee_number = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 cost_center = String(
@@ -753,7 +687,6 @@ cost_center = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 organization = String(
@@ -763,7 +696,6 @@ organization = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 division = String(
@@ -773,7 +705,6 @@ division = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 department = String(
@@ -783,7 +714,6 @@ department = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 
@@ -794,7 +724,6 @@ _manager__value = String(
     case_exact=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _manager__ref = SCIMReference(
@@ -804,7 +733,6 @@ _manager__ref = SCIMReference(
     required=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _manager__display_name = String(
@@ -814,7 +742,6 @@ _manager__display_name = String(
     case_exact=False,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 manager = Complex(

@@ -60,7 +60,7 @@ _AttributeValidator = Callable[[Any], ValidationIssues]
 
 class Attribute(abc.ABC):
     SCIM_NAME: str
-    TYPE: Type
+    BASE_TYPE: Type
 
     def __init__(
         self,
@@ -74,7 +74,6 @@ class Attribute(abc.ABC):
         restrict_canonical_values: bool = False,
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
-        uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
         validators: Optional[List[_AttributeValidator]] = None,
         parser: Optional[_AttributeProcessor] = None,
         dumper: Optional[_AttributeProcessor] = None,
@@ -88,7 +87,6 @@ class Attribute(abc.ABC):
         self._multi_valued = multi_valued
         self._mutability = mutability
         self._returned = returned
-        self._uniqueness = uniqueness
         self._validators = validators or []
         self._parser = parser
         self._dumper = dumper
@@ -126,10 +124,6 @@ class Attribute(abc.ABC):
         return self._returned
 
     @property
-    def uniqueness(self) -> AttributeUniqueness:
-        return self._uniqueness
-
-    @property
     def validators(self) -> List[_AttributeValidator]:
         return self._validators
 
@@ -156,7 +150,6 @@ class Attribute(abc.ABC):
                 self._multi_valued == other._multi_valued,
                 self._mutability == other._mutability,
                 self._returned == other._returned,
-                self._uniqueness == other._uniqueness,
                 self._validators == other._validators,
                 self._parser == other._parser,
                 self._dumper == other._dumper,
@@ -171,10 +164,10 @@ class Attribute(abc.ABC):
 
     def _validate_type(self, value: Any) -> ValidationIssues:
         issues = ValidationIssues()
-        if not isinstance(value, self.TYPE):
+        if not isinstance(value, self.BASE_TYPE):
             issues.add_error(
                 issue=ValidationError.bad_type(
-                    expected=get_scim_type(self.TYPE),
+                    expected=get_scim_type(self.BASE_TYPE),
                     provided=get_scim_type(type(value)),
                 ),
                 proceed=False,
@@ -253,7 +246,6 @@ class Attribute(abc.ABC):
             "required": self.required,
             "mutability": self.mutability.value,
             "returned": self.returned.value,
-            "uniqueness": self.uniqueness.value,
         }
         if self.canonical_values:
             output["canonicalValues"] = self.canonical_values
@@ -265,48 +257,31 @@ class Attribute(abc.ABC):
         return clone
 
 
-class Unknown(Attribute):
-    @classmethod
-    def _validate_type(cls, value: Any) -> ValidationIssues:
-        return ValidationIssues()
+class AttributeWithUniqueness(Attribute, abc.ABC):
+    def __init__(
+        self, name: str, *, uniqueness: AttributeUniqueness = AttributeUniqueness.NONE, **kwargs
+    ):
+        super().__init__(name=name, **kwargs)
+        self._uniqueness = uniqueness
+
+    @property
+    def uniqueness(self) -> AttributeUniqueness:
+        return self._uniqueness
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.uniqueness == other.uniqueness
+
+    def to_dict(self):
+        output = super().to_dict()
+        output["uniqueness"] = self.uniqueness
+        return output
 
 
-class Boolean(Attribute):
-    SCIM_NAME = "boolean"
-    TYPE = bool
-
-
-class Decimal(Attribute):
-    SCIM_NAME = "decimal"
-    TYPE = float
-
-    @classmethod
-    def _validate_type(cls, value: Any) -> ValidationIssues:
-        issues = ValidationIssues()
-        if not isinstance(value, (cls.TYPE, int)):
-            issues.add_error(
-                issue=ValidationError.bad_type(
-                    expected=get_scim_type(cls.TYPE),
-                    provided=get_scim_type(type(value)),
-                ),
-                proceed=False,
-            )
-        return issues
-
-
-class Integer(Attribute):
-    SCIM_NAME = "integer"
-    TYPE = int
-
-
-class String(Attribute):
-    SCIM_NAME = "string"
-    TYPE = str
-
-    def __init__(self, name: Union[str, AttrRep], *, case_exact: bool = False, **kwargs):
+class AttributeWithCaseExact(Attribute, abc.ABC):
+    def __init__(self, name: str, *, case_exact: bool = False, **kwargs):
         super().__init__(name=name, **kwargs)
         self._case_exact = case_exact
-        if not case_exact and self._canonical_values:
+        if not self._case_exact and self._canonical_values:
             self._canonical_values = [item.lower() for item in self._canonical_values]
 
     @property
@@ -318,22 +293,59 @@ class String(Attribute):
             not self._case_exact and value.lower() in self._canonical_values
         )
 
-    def to_dict(self) -> Dict:
+    def __eq__(self, other):
+        return super().__eq__(other) and self.case_exact == other.case_exact
+
+    def to_dict(self):
         output = super().to_dict()
         output["caseExact"] = self.case_exact
         return output
 
-    def __eq__(self, other):
-        return super().__eq__(other) and self.case_exact == other.case_exact
+
+class Unknown(Attribute):
+    def _validate_type(self, value: Any) -> ValidationIssues:
+        return ValidationIssues()
 
 
-class Binary(String):
+class Boolean(Attribute):
+    SCIM_NAME = "boolean"
+    BASE_TYPE = bool
+
+
+class Decimal(AttributeWithUniqueness):
+    SCIM_NAME = "decimal"
+    BASE_TYPE = float
+
+    def _validate_type(self, value: Any) -> ValidationIssues:
+        issues = ValidationIssues()
+        if not isinstance(value, (self.BASE_TYPE, int)):
+            issues.add_error(
+                issue=ValidationError.bad_type(
+                    expected=get_scim_type(self.BASE_TYPE),
+                    provided=get_scim_type(type(value)),
+                ),
+                proceed=False,
+            )
+        return issues
+
+
+class Integer(AttributeWithUniqueness):
+    SCIM_NAME = "integer"
+    BASE_TYPE = int
+
+
+class String(AttributeWithCaseExact, AttributeWithUniqueness):
+    SCIM_NAME = "string"
+    BASE_TYPE = str
+
+
+class Binary(AttributeWithCaseExact):
     SCIM_NAME = "binary"
-    TYPE = str
+    BASE_TYPE = str
 
-    def __init__(self, name: Union[str, AttrRep], **kwargs):
-        kwargs.pop("case_exact", None)
-        super().__init__(name=name, case_exact=True, **kwargs)
+    def __init__(self, name: str, **kwargs):
+        kwargs["case_exact"] = True
+        super().__init__(name=name, **kwargs)
 
     def _validate_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_type(value)
@@ -360,9 +372,9 @@ class Binary(String):
         return issues
 
 
-class _Reference(String):
+class _Reference(AttributeWithCaseExact, abc.ABC):
     SCIM_NAME = "reference"
-    TYPE = str
+    BASE_TYPE = str
 
     def __init__(self, name: Union[str, AttrRep], *, reference_types: Iterable[str], **kwargs):
         kwargs["case_exact"] = True
@@ -382,13 +394,9 @@ class _Reference(String):
         return super().__eq__(other) and set(self.reference_types) == set(other.reference_types)
 
 
-class DateTime(String):
+class DateTime(Attribute):
     SCIM_NAME = "dateTime"
-    TYPE = str
-
-    def __init__(self, name: Union[str, AttrRep], **kwargs):
-        kwargs["case_exact"] = False
-        super().__init__(name=name, **kwargs)
+    BASE_TYPE = str
 
     def _validate_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_type(value)
@@ -467,7 +475,7 @@ _ComplexAttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
 
 class Complex(Attribute):
     SCIM_NAME = "complex"
-    TYPE = SCIMDataContainer
+    BASE_TYPE = SCIMDataContainer
 
     def __init__(
         self,

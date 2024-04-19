@@ -34,7 +34,6 @@ schemas = URIReference(
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.ALWAYS,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 
@@ -55,7 +54,6 @@ external_id = String(
     case_exact=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,  # assumed uniqueness is controlled by clients
 )
 
 _meta__resource_type = String(
@@ -64,7 +62,6 @@ _meta__resource_type = String(
     issuer=AttributeIssuer.SERVER,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _meta__created = DateTime(
@@ -72,7 +69,6 @@ _meta__created = DateTime(
     issuer=AttributeIssuer.SERVER,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 _meta__last_modified = DateTime(
@@ -80,7 +76,6 @@ _meta__last_modified = DateTime(
     issuer=AttributeIssuer.SERVER,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: make sure it has the same value as the "Content-Location" HTTP response header
@@ -89,7 +84,6 @@ _meta__location = URIReference(
     issuer=AttributeIssuer.SERVER,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 # TODO: make sure it has the same value as the "ETag" HTTP response header
@@ -99,7 +93,6 @@ _meta__version = String(
     case_exact=True,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 
@@ -115,7 +108,6 @@ meta = Complex(
     issuer=AttributeIssuer.SERVER,
     mutability=AttributeMutability.READ_ONLY,
     returned=AttributeReturn.DEFAULT,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 

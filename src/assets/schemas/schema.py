@@ -110,7 +110,6 @@ _attributes__uniqueness = String(
     name="uniqueness",
     canonical_values=["none", "server", "global"],
     restrict_canonical_values=True,
-    required=True,
     mutability=AttributeMutability.READ_ONLY,
     issuer=AttributeIssuer.SERVER,
 )

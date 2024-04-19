@@ -18,6 +18,7 @@ from typing import (
 from src.data.attributes import (
     Attribute,
     Attributes,
+    AttributeWithCaseExact,
     Binary,
     Boolean,
     Complex,
@@ -296,7 +297,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             except ValueError:
                 return None
 
-        if isinstance(attr, String):
+        if isinstance(attr, AttributeWithCaseExact):
             if not attr.case_exact:
                 op_value = self.value.lower()
                 if not isinstance(value, List):

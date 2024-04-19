@@ -1,7 +1,7 @@
 import functools
 from typing import Any, List, Optional, Sequence, Union
 
-from src.data.attributes import Attribute, Complex, String
+from src.data.attributes import Attribute, AttributeWithCaseExact, Complex
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
@@ -16,7 +16,7 @@ class AlwaysLastKey:
 
 
 class StringKey:
-    def __init__(self, value: str, attr: String):
+    def __init__(self, value: str, attr: Attribute):
         self._value = value
         self._attr = attr
 
@@ -28,7 +28,12 @@ class StringKey:
                 f"'<' not supported between instances of 'StringKey' and '{type(other).__name__}'"
             )
 
-        if self._attr.case_exact or other._attr.case_exact:
+        if (
+            isinstance(self._attr, AttributeWithCaseExact)
+            and self._attr.case_exact
+            or isinstance(other._attr, AttributeWithCaseExact)
+            and self._attr.case_exact
+        ):
             return self._value < other._value
 
         return self._value.lower() < other._value.lower()
@@ -89,7 +94,7 @@ class Sorter:
         if not isinstance(value, str):
             return value
 
-        if not isinstance(attr, String):
+        if attr.BASE_TYPE != str:
             return self._default_value
 
         return StringKey(value, attr)

@@ -31,7 +31,6 @@ status = String(
     required=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
-    uniqueness=AttributeUniqueness.NONE,
     validators=[validate_error_status],
 )
 
@@ -53,14 +52,12 @@ scim_type = String(
     restrict_canonical_values=True,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 detail = String(
     name="detail",
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.ALWAYS,
-    uniqueness=AttributeUniqueness.NONE,
 )
 
 
