@@ -64,7 +64,8 @@ schema_extensions = Complex(
 
 ResourceType = ResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:ResourceType",
-    attrs=[name, description, endpoint, schema, schema_extensions],
     name="ResourceType",
+    endpoint="/ResourceTypes",
+    attrs=[name, description, endpoint, schema, schema_extensions],
     attr_overrides={"id": id_},
 )

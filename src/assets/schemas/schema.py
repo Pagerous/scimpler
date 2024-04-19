@@ -182,7 +182,8 @@ attributes = Complex(
 
 Schema = ResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
-    attrs=[name, description, attributes],
     name="Schema",
+    endpoint="/Schemas",
+    attrs=[name, description, attributes],
     attr_overrides={"id": id_},
 )

@@ -833,6 +833,9 @@ manager = Complex(
 
 User = ResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:User",
+    name="User",
+    plural_name="Users",
+    endpoint="/Users",
     attrs=[
         user_name,
         name,
@@ -856,8 +859,6 @@ User = ResourceSchema(
         roles,
         x509_certificates,
     ],
-    name="User",
-    plural_name="Users",
 )
 User.add_extension(
     SchemaExtension(

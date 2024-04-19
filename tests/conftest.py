@@ -197,6 +197,9 @@ def error_data():
 
 SchemaForTests = ResourceSchema(
     schema="schema:for:tests",
+    name="SchemaForTests",
+    plural_name="SchemasForTests",
+    endpoint="/SchemasForTests",
     attrs=[
         Integer("int"),
         String("str"),
@@ -235,8 +238,6 @@ SchemaForTests = ResourceSchema(
         String("userName", case_exact=True),
         Integer("title"),
     ],
-    name="SchemaForTests",
-    plural_name="SchemasForTests",
 )
 
 

@@ -802,9 +802,7 @@ def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict():
         Equal(AttrRep.parse("str"), "abc"),
     )
 
-    match = operator.match(
-        SCIMDataContainer({"int": 1, "str": "cba"}), SchemaForTests.attrs, True
-    )
+    match = operator.match(SCIMDataContainer({"int": 1, "str": "cba"}), SchemaForTests.attrs, True)
 
     assert not match
 

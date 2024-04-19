@@ -31,7 +31,8 @@ members = Complex(
 
 Group = ResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:Group",
-    attrs=[display_name, members],
     name="Group",
     plural_name="Groups",
+    endpoint="/Groups",
+    attrs=[display_name, members],
 )

@@ -146,6 +146,8 @@ authentication_schemes = Complex(
 
 ServiceProviderConfig = ResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
+    name="ServiceProviderConfig",
+    endpoint="/ServiceProviderConfig",
     attrs=[
         documentation_uri,
         patch,
@@ -156,6 +158,5 @@ ServiceProviderConfig = ResourceSchema(
         etag,
         authentication_schemes,
     ],
-    name="ServiceProviderConfig",
     attr_overrides={"id": id_},
 )

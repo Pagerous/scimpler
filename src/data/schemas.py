@@ -14,6 +14,7 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.registry import register_resource_schema
 from src.error import ValidationError, ValidationIssues
 
 
@@ -263,8 +264,9 @@ class ResourceSchema(BaseSchema):
     def __init__(
         self,
         schema: str,
+        name: str,
         attrs: Iterable[Attribute],
-        name: str = "",
+        endpoint: Optional[str] = None,
         description: str = "",
         plural_name: Optional[str] = None,
         attr_overrides: Optional[Dict[str, Attribute]] = None,
@@ -282,7 +284,17 @@ class ResourceSchema(BaseSchema):
         self._schema_extensions: Dict[str, bool] = {}
         self._name = name
         self._plural_name = plural_name or name
+        self._endpoint = endpoint or f"/{self._plural_name}"
         self._description = description
+        register_resource_schema(self)
+
+    @property
+    def endpoint(self) -> str:
+        return self._endpoint
+
+    @endpoint.setter
+    def endpoint(self, value: str):
+        self._endpoint = value
 
     @property
     def name(self) -> str:
