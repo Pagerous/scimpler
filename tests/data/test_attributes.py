@@ -15,7 +15,6 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.container import AttrRep, SCIMDataContainer
-from src.assets.schemas.user import User  # noqa; triggering resource registration
 
 
 def test_validation_is_skipped_if_value_not_provided():
