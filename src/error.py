@@ -49,6 +49,7 @@ class ValidationError:
         37: "too many operations (max {max})",
         38: "too many errors (max {max})",
         39: "value or operation not supported",
+        40: "bad SCIM reference, allowed resources: {allowed_resources}",
         100: "one of brackets is not opened / closed",
         102: "one of complex attribute brackets is not opened / closed",
         104: "missing operand for operator '{operator}' in expression '{expression}'",
@@ -214,6 +215,10 @@ class ValidationError:
     @classmethod
     def not_supported(cls):
         return cls(code=39)
+
+    @classmethod
+    def bad_scim_reference(cls, allowed_resources: Collection[str]):
+        return cls(code=40, allowed_resources=list(allowed_resources))
 
     @classmethod
     def bracket_not_opened_or_closed(cls):

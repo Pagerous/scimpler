@@ -15,6 +15,7 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.container import AttrRep, SCIMDataContainer
+from src.assets.schemas.user import User  # noqa; triggering resource registration
 
 
 def test_validation_is_skipped_if_value_not_provided():
@@ -357,6 +358,20 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
             },
         ),
         (
+            "/Groups/123",
+            SCIMReference("scim", reference_types=["User"]),
+            {
+                "_errors": [
+                    {
+                        "code": 40,
+                        "context": {
+                            "allowed_resources": ["User"],
+                        },
+                    }
+                ]
+            },
+        ),
+        (
             123,
             ExternalReference("external"),
             {
@@ -463,8 +478,8 @@ def test_validate_bad_type(input_value, attr, expected_issues):
             URIReference("uri"),
         ),
         (
-            "Users",
-            SCIMReference("scim", reference_types=["Users"]),
+            "/Users/123",
+            SCIMReference("scim", reference_types=["User"]),
         ),
         (
             "https://www.example.com/absolute/url",

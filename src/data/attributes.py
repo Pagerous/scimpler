@@ -21,6 +21,7 @@ from typing import (
 from urllib.parse import urlparse
 
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.registry import resource_schemas
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 if TYPE_CHECKING:
@@ -168,13 +169,12 @@ class Attribute(abc.ABC):
             return True
         return value in self._canonical_values
 
-    @classmethod
-    def _validate_type(cls, value: Any) -> ValidationIssues:
+    def _validate_type(self, value: Any) -> ValidationIssues:
         issues = ValidationIssues()
-        if not isinstance(value, cls.TYPE):
+        if not isinstance(value, self.TYPE):
             issues.add_error(
                 issue=ValidationError.bad_type(
-                    expected=get_scim_type(cls.TYPE),
+                    expected=get_scim_type(self.TYPE),
                     provided=get_scim_type(type(value)),
                 ),
                 proceed=False,
@@ -335,28 +335,26 @@ class Binary(String):
         kwargs.pop("case_exact", None)
         super().__init__(name=name, case_exact=True, **kwargs)
 
-    @classmethod
-    def _validate_type(cls, value: Any) -> ValidationIssues:
+    def _validate_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_type(value)
         if not issues.can_proceed():
             return issues
-        cls._validate_encoding(value, issues)
+        self._validate_encoding(value, issues)
         if not issues.can_proceed():
             return issues
         return issues
 
-    @classmethod
-    def _validate_encoding(cls, value: Any, issues: ValidationIssues) -> ValidationIssues:
+    def _validate_encoding(self, value: Any, issues: ValidationIssues) -> ValidationIssues:
         try:
             value = bytes(value, "ascii")
             if base64.b64encode(base64.b64decode(value)) != value:
                 issues.add_error(
-                    issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
+                    issue=ValidationError.base_64_encoding_required(self.SCIM_NAME),
                     proceed=False,
                 )
         except binascii.Error:
             issues.add_error(
-                issue=ValidationError.base_64_encoding_required(cls.SCIM_NAME),
+                issue=ValidationError.base_64_encoding_required(self.SCIM_NAME),
                 proceed=False,
             )
         return issues
@@ -447,6 +445,21 @@ class URIReference(_Reference):
 class SCIMReference(_Reference):
     def __init__(self, name: Union[str, AttrRep], *, reference_types: Iterable[str], **kwargs):
         super().__init__(name=name, reference_types=reference_types, **kwargs)
+
+    def _validate_type(self, value: Any) -> ValidationIssues:
+        issues = super()._validate_type(value)
+        if not issues.can_proceed():
+            return issues
+
+        for resource_schema in resource_schemas.values():
+            if resource_schema.name in self._reference_types and resource_schema.endpoint in value:
+                return issues
+
+        issues.add_error(
+            issue=ValidationError.bad_scim_reference(self._reference_types),
+            proceed=False,
+        )
+        return issues
 
 
 _ComplexAttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
