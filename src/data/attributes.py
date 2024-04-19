@@ -191,6 +191,7 @@ class Attribute(abc.ABC):
                 issues_ = self._validate_type(item)
                 issues.merge(location=(i,), issues=issues_)
                 if not issues_.can_proceed():
+                    value[i] = Invalid
                     continue
                 if not self._is_canonical(item):
                     if self._validate_canonical_values:
@@ -609,11 +610,11 @@ class Complex(Attribute):
 
 def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
-    primary_entries = set()
-    for i, item in enumerate(value):
-        if item.get("primary") is True:
-            primary_entries.add(i)
-    if len(primary_entries) > 1:
+    primary_entries = 0
+    for item in value:
+        if item is not Invalid and item.get("primary") is True:
+            primary_entries += 1
+    if primary_entries > 1:
         issues.add_error(
             issue=ValidationError.multiple_primary_values(),
             proceed=True,

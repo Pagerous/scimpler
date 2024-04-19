@@ -502,3 +502,17 @@ def test_validate_correct_type(input_value, attr):
     issues = attr.validate(input_value)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_complex_mv_attr_fails_if_multiple_primary_items():
+    attr = Complex("complex", multi_valued=True)
+    expected_issues = {"_errors": [{"code": 9}]}
+
+    issues = attr.validate(
+        [
+            SCIMDataContainer({"value": 1, "primary": True}),
+            SCIMDataContainer({"value": "abc", "primary": True}),
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues
