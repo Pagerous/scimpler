@@ -307,6 +307,7 @@ class ValidationError:
 class ValidationWarning:
     _message_for_code = {
         1: "value should be one of: {expected_values}",
+        2: "multi-valued complex attribute should contain no more than once type-value pair",
     }
 
     def __init__(self, code: int, **context):
@@ -318,6 +319,10 @@ class ValidationWarning:
     @classmethod
     def should_be_one_of(cls, expected_values: Collection[Any]):
         return cls(code=1, expected_values=expected_values)
+
+    @classmethod
+    def multiple_type_value_pairs(cls):
+        return cls(code=2)
 
     @property
     def context(self) -> Dict:
@@ -346,6 +351,9 @@ class ValidationIssues:
             new_location = location + other_location
             self._errors[new_location].extend(location_issues)
             self._stop_proceeding[new_location].update(issues._stop_proceeding[other_location])
+        for other_location, location_issues in issues._warnings.items():
+            new_location = location + other_location
+            self._warnings[new_location].extend(location_issues)
 
     def add_error(
         self,

@@ -516,3 +516,31 @@ def test_complex_mv_attr_fails_if_multiple_primary_items():
     )
 
     assert issues.to_dict() == expected_issues
+
+
+def test_warning_is_returned_if_multiple_type_value_pairs():
+    attr = Complex("complex", multi_valued=True)
+    expected_issues = {"_warnings": [{"code": 2}]}
+
+    issues = attr.validate(
+        [
+            SCIMDataContainer({"value": 1, "type": "work"}),
+            SCIMDataContainer({"value": 1, "type": "work"}),
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_invalid_items_dont_count_in_type_value_pairs():
+    attr = Complex("complex", multi_valued=True)
+    expected_issues = {"0": {"_errors": [{"code": 2}]}}
+
+    issues = attr.validate(
+        [
+            {"value": 1, "type": "work"},
+            SCIMDataContainer({"value": 1, "type": "work"}),
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues

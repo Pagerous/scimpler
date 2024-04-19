@@ -501,6 +501,8 @@ class Complex(Attribute):
         if self._multi_valued:
             if validate_single_primary_value not in validators:
                 validators.append(validate_single_primary_value)
+            if validate_type_value_pairs not in validators:
+                validators.append(validate_type_value_pairs)
 
         default_sub_attrs = (
             [
@@ -619,7 +621,22 @@ def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> Valid
             issue=ValidationError.multiple_primary_values(),
             proceed=True,
         )
-    # TODO: warn if a given type-value pair appears more than once
+    return issues
+
+
+def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> ValidationIssues:
+    issues = ValidationIssues()
+    pairs = defaultdict(int)
+    for item in value:
+        if item is Invalid:
+            continue
+        type_ = item.get("type")
+        value = item.get("value")
+        if type_ and value:
+            pairs[item.get("type"), item.get("value")] += 1
+    for count in pairs.values():
+        if count > 1:
+            issues.add_warning(issue=ValidationWarning.multiple_type_value_pairs())
     return issues
 
 
