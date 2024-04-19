@@ -470,7 +470,16 @@ class SCIMReference(_Reference):
         return issues
 
 
-_ComplexAttributeProcessor = Callable[[Any], Tuple[Any, ValidationIssues]]
+_default_sub_attrs = [
+    Unknown("value"),
+    String(
+        "display",
+        mutability=AttributeMutability.IMMUTABLE,
+    ),
+    String("type"),
+    Boolean("primary"),
+    URIReference("$ref"),
+]
 
 
 class Complex(Attribute):
@@ -481,16 +490,32 @@ class Complex(Attribute):
         self,
         name: Union[str, AttrRep],
         *,
-        sub_attributes: Collection[Attribute],
+        sub_attributes: Optional[Collection[Attribute]] = None,
         **kwargs,
     ):
         validators = kwargs.pop("validators", None)
         super().__init__(name=name, **kwargs)
-        self._sub_attributes = Attributes(sub_attributes)
+
         validators = list(validators or [])
         if self._multi_valued:
             if validate_single_primary_value not in validators:
                 validators.append(validate_single_primary_value)
+
+        default_sub_attrs = (
+            [
+                Unknown("value"),
+                String(
+                    "display",
+                    mutability=AttributeMutability.IMMUTABLE,
+                ),
+                String("type"),
+                Boolean("primary"),
+                URIReference("$ref"),
+            ]
+            if self._multi_valued
+            else []
+        )
+        self._sub_attributes = Attributes(sub_attributes or default_sub_attrs)
         self._complex_validators = validators
 
     @property
@@ -590,7 +615,7 @@ def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> Valid
             primary_entries.add(i)
     if len(primary_entries) > 1:
         issues.add_error(
-            issue=ValidationError.multiple_primary_values(primary_entries),
+            issue=ValidationError.multiple_primary_values(),
             proceed=True,
         )
     # TODO: warn if a given type-value pair appears more than once

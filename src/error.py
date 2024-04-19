@@ -10,8 +10,8 @@ class ValidationError:
         7: "'{keyword}' is SCIM reserved keyword that MUST NOT occur in a attribute value",
         8: "'{value}' is not a valid URL",
         9: (
-            "'primary' attribute, in multi-valued attribute item, set to 'True', "
-            "MUST appear no more than once, but these items have it: {primary_entries}"
+            "'primary' attribute set to 'True', in multi-valued complex attribute, "
+            "MUST appear no more than once"
         ),
         10: "header '{header}' is required",
         11: "must be equal to {value!r}",
@@ -95,8 +95,8 @@ class ValidationError:
         return cls(code=8, value=value)
 
     @classmethod
-    def multiple_primary_values(cls, primary_entry_numbers: Collection[int]):
-        return cls(code=9, primary_entries=", ".join([str(x) for x in primary_entry_numbers]))
+    def multiple_primary_values(cls):
+        return cls(code=9)
 
     @classmethod
     def missing_required_header(cls, header: str):
