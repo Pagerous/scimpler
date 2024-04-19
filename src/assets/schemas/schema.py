@@ -180,11 +180,9 @@ attributes = Complex(
 )
 
 
-class Schema(ResourceSchema):
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
-            attrs=[name, description, attributes],
-            name="Schema",
-            attr_overrides={"id": id_},
-        )
+Schema = ResourceSchema(
+    schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
+    attrs=[name, description, attributes],
+    name="Schema",
+    attr_overrides={"id": id_},
+)

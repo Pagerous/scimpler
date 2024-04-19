@@ -44,7 +44,7 @@ def test_items_are_sorted_according_to_attr_value():
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -57,7 +57,7 @@ def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
     values = [c_1, c_2, c_3]
     expected = [c_2, c_1, c_3]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -70,7 +70,7 @@ def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
     values = [c_1, c_2, c_3]
     expected = [c_3, c_1, c_2]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -83,7 +83,7 @@ def test_original_order_is_preserved_if_no_values_for_all_items():
     values = [c_1, c_2, c_3]
     expected = [c_1, c_2, c_3]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -96,7 +96,7 @@ def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=SchemaForTests())
+    actual = sorter(values, schema=SchemaForTests)
 
     assert actual == expected
 
@@ -112,7 +112,7 @@ def test_items_are_sorted_according_to_sub_attr_value():
 
     expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -125,7 +125,7 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
     values = [c_1, c_2, c_3]
     expected = [c_3, c_1, c_2]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -138,7 +138,7 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
     values = [c_1, c_2, c_3]
     expected = [c_2, c_1, c_3]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -172,7 +172,7 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
     values = [c_1, c_2, c_3]
     expected = [c_3, c_1, c_2]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -186,7 +186,7 @@ def test_case_insensitive_attributes_are_respected_if_schema_provided():
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -199,7 +199,7 @@ def test_case_sensitive_attributes_are_respected_if_schema_provided():
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
 
-    actual = sorter(values, schema=User())
+    actual = sorter(values, schema=User)
 
     assert actual == expected
 
@@ -211,7 +211,7 @@ def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_cas
     c_3 = SCIMDataContainer({"userName": "B"})
     values = [c_1, c_2, c_3]
     expected = [c_3, c_2, c_1]
-    schemas = [SchemaForTests(), User(), User()]
+    schemas = [SchemaForTests, User, User]
 
     actual = sorter(values, schemas)
 
@@ -223,7 +223,7 @@ def test_fails_if_different_value_types():
     c_1 = SCIMDataContainer({"title": 1})
     c_2 = SCIMDataContainer({"title": "a"})
     values = [c_1, c_2]
-    schemas = [SchemaForTests(), User()]
+    schemas = [SchemaForTests, User]
 
     with pytest.raises(TypeError):
         sorter(values, schemas)

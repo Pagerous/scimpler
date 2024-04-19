@@ -195,51 +195,49 @@ def error_data():
     }
 
 
-class SchemaForTests(ResourceSchema):
-    def __init__(self):
-        super().__init__(
-            schema="schema:for:tests",
-            attrs=[
-                Integer("int"),
+SchemaForTests = ResourceSchema(
+    schema="schema:for:tests",
+    attrs=[
+        Integer("int"),
+        String("str"),
+        String("str_cs", case_exact=True),
+        String("str_mv", multi_valued=True),
+        String("str_cs_mv", case_exact=True, multi_valued=True),
+        Boolean("bool"),
+        DateTime("datetime"),
+        Decimal("decimal"),
+        Binary("binary"),
+        ExternalReference("external_ref"),
+        URIReference("uri_ref"),
+        SCIMReference("scim_ref", reference_types=["SchemaForTests"]),
+        Complex(
+            "c",
+            sub_attributes=[String("value")],
+        ),
+        Complex(
+            "c_mv",
+            sub_attributes=[String("value", multi_valued=True)],
+            multi_valued=True,
+        ),
+        Complex(
+            "c2",
+            sub_attributes=[String("str"), Integer("int"), Boolean("bool")],
+        ),
+        Complex(
+            "c2_mv",
+            sub_attributes=[
                 String("str"),
-                String("str_cs", case_exact=True),
-                String("str_mv", multi_valued=True),
-                String("str_cs_mv", case_exact=True, multi_valued=True),
-                Boolean("bool"),
-                DateTime("datetime"),
-                Decimal("decimal"),
-                Binary("binary"),
-                ExternalReference("external_ref"),
-                URIReference("uri_ref"),
-                SCIMReference("scim_ref", reference_types=["SchemaForTests"]),
-                Complex(
-                    "c",
-                    sub_attributes=[String("value")],
-                ),
-                Complex(
-                    "c_mv",
-                    sub_attributes=[String("value", multi_valued=True)],
-                    multi_valued=True,
-                ),
-                Complex(
-                    "c2",
-                    sub_attributes=[String("str"), Integer("int"), Boolean("bool")],
-                ),
-                Complex(
-                    "c2_mv",
-                    sub_attributes=[
-                        String("str"),
-                        Integer("int"),
-                        Boolean("bool", required=True),
-                    ],
-                    multi_valued=True,
-                ),
-                String("userName", case_exact=True),
-                Integer("title"),
+                Integer("int"),
+                Boolean("bool", required=True),
             ],
-            name="SchemaForTests",
-            plural_name="SchemasForTests",
-        )
+            multi_valued=True,
+        ),
+        String("userName", case_exact=True),
+        Integer("title"),
+    ],
+    name="SchemaForTests",
+    plural_name="SchemasForTests",
+)
 
 
 CONFIG = create_service_provider_config(

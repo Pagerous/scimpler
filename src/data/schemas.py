@@ -259,7 +259,7 @@ def validate_resource_type_consistency(
     return issues
 
 
-class ResourceSchema(BaseSchema, abc.ABC):
+class ResourceSchema(BaseSchema):
     def __init__(
         self,
         schema: str,
@@ -304,7 +304,7 @@ class ResourceSchema(BaseSchema, abc.ABC):
     def schema_extensions(self) -> List[str]:
         return list(self._schema_extensions)
 
-    def with_extension(self, extension: "SchemaExtension", required: bool = False) -> None:
+    def add_extension(self, extension: "SchemaExtension", required: bool = False) -> None:
         if extension.schema in map(lambda x: x.lower(), self.schemas):
             raise ValueError(f"extension {extension!r} already in {self!r} schema")
 

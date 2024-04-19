@@ -29,11 +29,9 @@ members = Complex(
 )
 
 
-class Group(ResourceSchema):
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:Group",
-            attrs=[display_name, members],
-            name="Group",
-            plural_name="Groups",
-        )
+Group = ResourceSchema(
+    schema="urn:ietf:params:scim:schemas:core:2.0:Group",
+    attrs=[display_name, members],
+    name="Group",
+    plural_name="Groups",
+)

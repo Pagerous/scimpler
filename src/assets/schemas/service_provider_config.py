@@ -144,20 +144,18 @@ authentication_schemes = Complex(
 )
 
 
-class ServiceProviderConfig(ResourceSchema):
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
-            attrs=[
-                documentation_uri,
-                patch,
-                bulk,
-                filter_,
-                change_password,
-                sort,
-                etag,
-                authentication_schemes,
-            ],
-            name="ServiceProviderConfig",
-            attr_overrides={"id": id_},
-        )
+ServiceProviderConfig = ResourceSchema(
+    schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
+    attrs=[
+        documentation_uri,
+        patch,
+        bulk,
+        filter_,
+        change_password,
+        sort,
+        etag,
+        authentication_schemes,
+    ],
+    name="ServiceProviderConfig",
+    attr_overrides={"id": id_},
+)

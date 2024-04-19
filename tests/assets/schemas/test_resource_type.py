@@ -2,7 +2,7 @@ from src.assets.schemas import resource_type
 
 
 def test_resource_type_schema_is_validated():
-    schema = resource_type.ResourceType()
+    schema = resource_type.ResourceType
     input_ = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
         "id": "User",

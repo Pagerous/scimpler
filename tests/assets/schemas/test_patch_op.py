@@ -150,14 +150,14 @@ def test_validate_patch_operations(value, expected_issues):
     ),
 )
 def test_validate_operation_path(path, expected_issues):
-    issues = patch_op.validate_operation_path(schema=user.User(), path=path)
+    issues = patch_op.validate_operation_path(schema=user.User, path=path)
 
     assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
 def test_patch_op__add_and_replace_operation_without_path_can_be_parsed(op):
-    schema = patch_op.PatchOp(resource_schema=user.User())
+    schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -214,7 +214,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_parsed(op):
 
 @pytest.mark.parametrize("op", ("add", "replace"))
 def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_data(op):
-    schema = patch_op.PatchOp(resource_schema=user.User())
+    schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -258,7 +258,7 @@ def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_da
 
 @pytest.mark.parametrize("op", ("add", "replace"))
 def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_readonly(op):
-    schema = patch_op.PatchOp(resource_schema=user.User())
+    schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -343,7 +343,7 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
 def test_validate_add_and_replace_operation__fails_for_incorrect_data(
     op, path, input_value, expected_value, expected_value_issues
 ):
-    schema = patch_op.PatchOp(resource_schema=user.User())
+    schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -428,7 +428,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
 def test_parse_add_and_replace_operation__succeeds_on_correct_data(
     op, path, expected_path, value, expected_value
 ):
-    schema = patch_op.PatchOp(resource_schema=user.User())
+    schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -473,7 +473,7 @@ def test_parse_add_and_replace_operation__succeeds_on_correct_data(
     ),
 )
 def test_add_operation__fails_if_attribute_is_readonly(op, path, value):
-    schema = patch_op.PatchOp(resource_schema=user.User())
+    schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -502,7 +502,7 @@ def test_add_operation__fails_if_attribute_is_readonly(op, path, value):
     ),
 )
 def test_remove_operation__succeeds_if_correct_path(path):
-    schema = patch_op.PatchOp(resource_schema=user.User())
+    schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
@@ -524,7 +524,7 @@ def test_remove_operation__succeeds_if_correct_path(path):
 
 
 def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribute():
-    schema = patch_op.PatchOp(resource_schema=SchemaForTests())
+    schema = patch_op.PatchOp(resource_schema=SchemaForTests)
     path = "str_mv[value sw 'a']"
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -549,17 +549,17 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
 @pytest.mark.parametrize(
     ("path", "expected_path_issue_codes", "resource_schema"),
     (
-        ("id", [{"code": 304}, {"code": 306}], user.User()),
-        ("userName", [{"code": 306}], user.User()),
+        ("id", [{"code": 304}, {"code": 306}], user.User),
+        ("userName", [{"code": 306}], user.User),
         (
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
             [{"code": 304}],
-            user.User(),
+            user.User,
         ),
-        ("meta", [{"code": 304}], user.User()),
-        ("groups", [{"code": 304}], user.User()),
-        ('groups[type eq "direct"].value', [{"code": 304}], user.User()),
-        ("c2_mv[int eq 1].bool", [{"code": 306}], SchemaForTests()),
+        ("meta", [{"code": 304}], user.User),
+        ("groups", [{"code": 304}], user.User),
+        ('groups[type eq "direct"].value', [{"code": 304}], user.User),
+        ("c2_mv[int eq 1].bool", [{"code": 306}], SchemaForTests),
     ),
 )
 def test_remove_operation__fails_if_attribute_is_readonly_or_required(

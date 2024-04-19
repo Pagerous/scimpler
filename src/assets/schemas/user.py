@@ -831,47 +831,45 @@ manager = Complex(
 )
 
 
-class User(ResourceSchema):
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            attrs=[
-                user_name,
-                name,
-                display_name,
-                nick_name,
-                profile_url,
-                title,
-                user_type,
-                preferred_language,
-                locale,
-                timezone,
-                active,
-                password,
-                emails,
-                phone_numbers,
-                ims,
-                photos,
-                addresses,
-                groups,
-                entitlements,
-                roles,
-                x509_certificates,
-            ],
-            name="User",
-            plural_name="Users",
-        )
-        self.with_extension(
-            SchemaExtension(
-                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                attrs=[
-                    employee_number,
-                    cost_center,
-                    division,
-                    department,
-                    organization,
-                    manager,
-                ],
-                name="Enterprise User",
-            )
-        )
+User = ResourceSchema(
+    schema="urn:ietf:params:scim:schemas:core:2.0:User",
+    attrs=[
+        user_name,
+        name,
+        display_name,
+        nick_name,
+        profile_url,
+        title,
+        user_type,
+        preferred_language,
+        locale,
+        timezone,
+        active,
+        password,
+        emails,
+        phone_numbers,
+        ims,
+        photos,
+        addresses,
+        groups,
+        entitlements,
+        roles,
+        x509_certificates,
+    ],
+    name="User",
+    plural_name="Users",
+)
+User.add_extension(
+    SchemaExtension(
+        schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+        attrs=[
+            employee_number,
+            cost_center,
+            division,
+            department,
+            organization,
+            manager,
+        ],
+        name="Enterprise User",
+    )
+)

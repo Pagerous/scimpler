@@ -62,11 +62,9 @@ schema_extensions = Complex(
 )
 
 
-class ResourceType(ResourceSchema):
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:ResourceType",
-            attrs=[name, description, endpoint, schema, schema_extensions],
-            name="ResourceType",
-            attr_overrides={"id": id_},
-        )
+ResourceType = ResourceSchema(
+    schema="urn:ietf:params:scim:schemas:core:2.0:ResourceType",
+    attrs=[name, description, endpoint, schema, schema_extensions],
+    name="ResourceType",
+    attr_overrides={"id": id_},
+)

@@ -1126,12 +1126,12 @@ class _ServiceProviderConfig(ResourcesGET):
 
 class SchemasGET(_ServiceProviderConfig):
     def __init__(self, config: ServiceProviderConfig):
-        super().__init__(config, resource_schema=Schema())
+        super().__init__(config, resource_schema=Schema)
 
 
 class ResourceTypesGET(_ServiceProviderConfig):
     def __init__(self, config: ServiceProviderConfig):
-        super().__init__(config, resource_schema=ResourceType())
+        super().__init__(config, resource_schema=ResourceType)
 
 
 def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:
