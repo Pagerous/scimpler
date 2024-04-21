@@ -6,14 +6,14 @@ from src.data.attributes import (
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
-    Attributes,
     AttributeUniqueness,
+    BoundedAttributes,
     Complex,
     DateTime,
     String,
     URIReference,
 )
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.container import Invalid, Missing, SCIMDataContainer
 from src.data.registry import register_resource_schema
 from src.error import ValidationError, ValidationIssues
 
@@ -112,20 +112,22 @@ meta = Complex(
 
 
 class BaseSchema(abc.ABC):
-    def __init__(self, schema: str, attrs: Iterable[Attribute]):
-        bounded_attrs = []
-        for attr in [schemas, *attrs]:
-            bounded_attrs.append(attr.clone(AttrRep(schema, attr.rep.attr)))
-            if isinstance(attr, Complex):
-                for sub_attr in attr.attrs:
-                    bounded_attrs.append(
-                        sub_attr.clone(AttrRep(schema, attr.rep.attr, sub_attr.rep.attr))
-                    )
-        self._attrs = Attributes(bounded_attrs)
+    def __init__(
+        self,
+        schema: str,
+        attrs: Iterable[Attribute],
+        common_attrs: Optional[Iterable[str]] = None,
+    ):
+        self._attrs = BoundedAttributes(
+            schema=schema,
+            extension=False,
+            attrs=[schemas, *attrs],
+            common_attrs=(common_attrs or []) + ["schemas"],
+        )
         self._schema = schema
 
     @property
-    def attrs(self) -> Attributes:
+    def attrs(self) -> BoundedAttributes:
         return self._attrs
 
     @property
@@ -139,7 +141,7 @@ class BaseSchema(abc.ABC):
     def deserialize(self, data: Any) -> SCIMDataContainer:
         data = SCIMDataContainer(data)
         deserialized = SCIMDataContainer()
-        for attr in self.attrs.top_level:
+        for attr in self.attrs:
             value = data.get(attr.rep)
             if value is not Missing:
                 deserialized.set(attr.rep, attr.deserialize(value))
@@ -148,7 +150,7 @@ class BaseSchema(abc.ABC):
     def serialize(self, data: Any) -> SCIMDataContainer:
         data = SCIMDataContainer(data)
         serialized = SCIMDataContainer()
-        for attr in self.attrs.top_level:
+        for attr in self.attrs:
             value = data.get(attr.rep)
             if value is not Missing:
                 serialized.set(attr.rep, attr.serialize(value))
@@ -181,7 +183,7 @@ class BaseSchema(abc.ABC):
 
     def _validate_data(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
-        for attr in self.attrs.top_level:
+        for attr in self.attrs:
             value = data.get(attr.rep)
             if value is Missing:
                 continue
@@ -271,6 +273,7 @@ class ResourceSchema(BaseSchema):
         super().__init__(
             schema=schema,
             attrs=[id_, external_id, meta, *(attrs or [])],
+            common_attrs=["id", "externalId", "meta"],
         )
         self._schema_extensions: Dict[str, Dict] = {}
         self._name = name
@@ -314,30 +317,13 @@ class ResourceSchema(BaseSchema):
     def add_extension(self, extension: "SchemaExtension", required: bool = False) -> None:
         if extension.schema in map(lambda x: x.lower(), self.schemas):
             raise ValueError(f"schema {extension.schema!r} already in {self.name!r} resource")
-
         if extension.name.lower() in self._schema_extensions:
             raise ValueError(f"extension {extension.name!r} already in resource")
-
         self._schema_extensions[extension.name.lower()] = {
             "extension": extension,
             "required": required,
         }
-
-        bounded_attrs = []
-        for attr in extension.attrs:
-            bounded_attrs.append(
-                attr.clone(AttrRep(extension.schema, attr.rep.attr, extension=True))
-            )
-            if isinstance(attr, Complex):
-                for sub_attr in attr.attrs:
-                    bounded_attrs.append(
-                        sub_attr.clone(
-                            AttrRep(
-                                extension.schema, attr.rep.attr, sub_attr.rep.attr, extension=True
-                            )
-                        )
-                    )
-        self._attrs = Attributes(list(self._attrs) + bounded_attrs)
+        self._attrs.extend(extension.attrs)
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
@@ -382,7 +368,11 @@ class SchemaExtension:
         description: str = "",
     ):
         self._schema = schema
-        self._attrs = Attributes(attrs or [])
+        self._attrs = BoundedAttributes(
+            schema=schema,
+            extension=True,
+            attrs=attrs,
+        )
         self._name = name
         self._description = description
 
@@ -399,7 +389,7 @@ class SchemaExtension:
         return self._schema
 
     @property
-    def attrs(self) -> Attributes:
+    def attrs(self) -> BoundedAttributes:
         return self._attrs
 
     def to_dict(self) -> Dict[str, Any]:

@@ -1,6 +1,6 @@
 from typing import Any, Dict, Iterable, List, Optional, Union
 
-from src.data.attributes import Attribute, AttributeReturn, Attributes
+from src.data.attributes import Attribute, AttributeReturn, Attributes, Complex
 from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 
@@ -54,59 +54,60 @@ class AttributePresenceChecker:
     ) -> ValidationIssues:
         issues = ValidationIssues()
         data = SCIMDataContainer(data)
-
         for attr in attrs:
-            top_attr_rep = AttrRep(schema=attr.rep.schema, attr=attr.rep.attr)
-            top_attr = attrs.get(top_attr_rep)
+            attr_value = data.get(attr.rep)
+            issues.merge(
+                issues=self._check_presence(
+                    value=attr_value,
+                    direction=direction,
+                    attr=attr,
+                    attr_rep=attr.rep,
+                ),
+                location=(attr.rep.attr,),
+            )
 
-            if attr.rep.sub_attr and top_attr.multi_valued:
-                value = data.get(top_attr_rep)
-                if value in [Invalid, Missing]:
-                    continue
+            if not isinstance(attr, Complex) or attr_value in [Invalid, Missing]:
+                continue
 
-                if value in [None, Missing]:
+            for sub_attr in attr.attrs:
+                sub_attr_rep = AttrRep(attr.rep.schema, attr.rep.attr, sub_attr.rep.attr)
+                if not attr.multi_valued:
                     issues.merge(
                         issues=self._check_presence(
-                            value=value,
+                            value=attr_value.get(sub_attr.rep),
                             direction=direction,
                             attr=attr,
-                            attr_rep=attr.rep,
+                            attr_rep=sub_attr_rep,
                         ),
-                        location=(attr.rep.attr, attr.rep.sub_attr),
+                        location=(attr.rep.attr, sub_attr.rep.attr),
                     )
-                else:
-                    for i, item in enumerate(value):
-                        item_value = item.get(AttrRep(attr=attr.rep.sub_attr))
-                        if item_value is Invalid:
-                            continue
-
-                        issues.merge(
-                            issues=self._check_presence(
-                                value=item.get(AttrRep(attr=attr.rep.sub_attr)),
-                                direction=direction,
-                                attr=attr,
-                                attr_rep=attr.rep,
-                            ),
-                            location=(attr.rep.attr, i, attr.rep.sub_attr),
-                        )
-            else:
-                value = data.get(attr.rep)
-                if value is Invalid:
                     continue
 
-                attr_location = (
-                    (attr.rep.attr, attr.rep.sub_attr) if attr.rep.sub_attr else (attr.rep.attr,)
-                )
-                issues.merge(
-                    issues=self._check_presence(
-                        value=data.get(attr.rep),
-                        direction=direction,
-                        attr=attr,
-                        attr_rep=attr.rep,
-                    ),
-                    location=attr_location,
-                )
+                if attr_value is None:
+                    issues.merge(
+                        issues=self._check_presence(
+                            value=None,
+                            direction=direction,
+                            attr=sub_attr,
+                            attr_rep=sub_attr_rep,
+                        ),
+                        location=(attr.rep.attr, sub_attr.rep.attr),
+                    )
+                    continue
 
+                for i, item in enumerate(attr_value):
+                    item_value = item.get(sub_attr.rep)
+                    if item_value is Invalid:
+                        continue
+                    issues.merge(
+                        issues=self._check_presence(
+                            value=item_value,
+                            direction=direction,
+                            attr=sub_attr,
+                            attr_rep=sub_attr_rep,
+                        ),
+                        location=(attr.rep.attr, i, sub_attr.rep.attr),
+                    )
         return issues
 
     def _check_presence(
@@ -118,7 +119,7 @@ class AttributePresenceChecker:
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if value not in [None, "", [], Missing]:
-            if direction != "RESPONSE":
+            if direction == "REQUEST":
                 return issues
 
             if attr.returned == AttributeReturn.NEVER:

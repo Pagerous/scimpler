@@ -176,13 +176,12 @@ class PatchOp(BaseSchema):
             issues.pop_error(("schemas",), code=28)
             issues.pop_error(("schemas",), code=29)
             for attr in self._resource_schema.attrs:
-                if (
-                    value.get(attr.rep) is not Missing
-                    and attr.mutability == AttributeMutability.READ_ONLY
-                ):
-                    location = (attr.rep.attr,)
-                    if attr.rep.sub_attr:
-                        location = location + (attr.rep.sub_attr,)
+                location = (attr.rep.attr,)
+                attr_value = value.get(attr.rep)
+                if attr_value is Missing:
+                    continue
+
+                if attr.mutability == AttributeMutability.READ_ONLY:
                     if attr.rep.extension:
                         location = (attr.rep.schema,) + location
                     issues.add_error(
@@ -190,6 +189,23 @@ class PatchOp(BaseSchema):
                         proceed=False,
                         location=location,
                     )
+
+                elif not isinstance(attr, Complex):
+                    continue
+
+                for sub_attr in attr.attrs:
+                    if (
+                        sub_attr.mutability == AttributeMutability.READ_ONLY
+                        and attr_value.get(sub_attr.rep) is not Missing
+                    ):
+                        location = location + (sub_attr.rep.attr,)
+                        if attr.rep.extension:
+                            location = (attr.rep.schema,) + location
+                        issues.add_error(
+                            issue=ValidationError.attribute_can_not_be_modified(),
+                            proceed=False,
+                            location=location,
+                        )
             return issues
 
         # sub-attribute of filtered multivalued complex attribute

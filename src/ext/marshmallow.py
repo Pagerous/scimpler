@@ -79,12 +79,12 @@ def _apply_validator_on_schema(schema, validator: Validator):
     return class_
 
 
-def response_serializeer(validator: Validator):
+def response_serializer(validator: Validator):
     pyscim_schema = validator.response_schema
-    base_fields = _get_fields(pyscim_schema.attrs.base_top_level)
+    base_fields = _get_fields(pyscim_schema.attrs.core_attrs)
     extension_fields = {
         extension_name: fields.Nested(_get_fields(attrs))
-        for extension_name, attrs in pyscim_schema.attrs.extensions.items()
+        for extension_name, attrs in pyscim_schema.attrs._extensions.items()
     }
     schema = Schema.from_dict(
         fields={**base_fields, **extension_fields},

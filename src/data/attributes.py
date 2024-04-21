@@ -647,58 +647,101 @@ def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> Validatio
 
 class Attributes:
     def __init__(self, attrs: Iterable[Attribute]):
-        self._top_level: List[Attribute] = []
-        self._base_top_level: List[Attribute] = []
-        self._extensions: Dict[str, List[Attribute]] = defaultdict(list)
         self._attrs = {}
         for attr in attrs:
-            self._attrs[attr.rep.schema, attr.rep.attr, attr.rep.sub_attr] = attr
-            if not attr.rep.sub_attr:
-                self._top_level.append(attr)
-                if not attr.rep.extension:
-                    self._base_top_level.append(attr)
-            if attr.rep.extension:
-                self._extensions[attr.rep.schema.lower()].append(attr)
-
-    @property
-    def top_level(self) -> List[Attribute]:
-        return self._top_level
-
-    @property
-    def base_top_level(self) -> List[Attribute]:
-        return self._base_top_level
-
-    @property
-    def extensions(self) -> Dict[str, List[Attribute]]:
-        return self._extensions
+            self._register_attr(attr)
 
     def __getattr__(self, name: str) -> Attribute:
-        parts = name.split("__", 1)
-        if len(parts) == 1:
-            for attr in self._top_level:
-                if attr.rep.attr.lower() == name.lower():
-                    return attr
-            raise AttributeError(f"no {name!r} attribute")
-
-        has_attr = False
-        for (_, attr, sub_attr), attr_obj in self._attrs.items():
-            if attr.lower() == parts[0].lower():
-                has_attr = True
-                if sub_attr.lower() == parts[1].lower():
-                    return attr_obj
-
-        if has_attr:
-            raise AttributeError(f"{parts[0]!r} has no {parts[1]!r} attribute")
-        raise AttributeError(f"no {parts[0]!r} attribute")
+        for attr in self._attrs.values():
+            if attr.rep.attr.lower() == name.lower():
+                return attr
+        raise AttributeError(f"no {name!r} attribute")
 
     def __iter__(self):
         return iter(self._attrs.values())
+
+    def _register_attr(self, attr: Attribute):
+        self._attrs[attr.rep.schema, attr.rep.attr, attr.rep.sub_attr] = attr
 
     def get(self, attr_rep: AttrRep) -> Optional[Attribute]:
         for (schema, attr, sub_attr), attr_obj in self._attrs.items():
             if AttrRep(schema, attr, sub_attr) == attr_rep:
                 return attr_obj
         return None
+
+
+class BoundedAttributes(Attributes):
+    def __init__(
+        self,
+        schema: str,
+        extension: bool,
+        attrs: Optional[Iterable[Attribute]] = None,
+        common_attrs: Optional[Iterable[str]] = None,
+    ):
+        self._schema = schema
+        self._core_attrs = []
+        self._extensions = {}
+
+        bounded_attrs = []
+        common_attrs = set(common_attrs or set())
+        self._bounded_complex_sub_attrs = {}
+        for attr in attrs or []:
+            bounded_attr = attr.clone(AttrRep(schema, attr.rep.attr, extension=extension))
+            if attr.rep.attr not in common_attrs and not extension:
+                self._core_attrs.append(bounded_attr)
+
+            bounded_attrs.append(bounded_attr)
+            if isinstance(bounded_attr, Complex):
+                self._bounded_complex_sub_attrs[id(bounded_attr)] = {
+                    id(sub_attr): sub_attr.clone(
+                        AttrRep(
+                            schema,
+                            bounded_attr.rep.attr,
+                            sub_attr.rep.attr,
+                            extension=extension,
+                        )
+                    )
+                    for sub_attr in bounded_attr.attrs
+                }
+        super().__init__(bounded_attrs)
+
+    def __getattr__(self, name: str) -> Attribute:
+        parts = name.split("__", 1)
+        attr = super().__getattr__(parts[0])
+        if len(parts) == 1:
+            return attr
+        if not isinstance(attr, Complex):
+            raise TypeError(f"{attr.rep.attr!r} is not complex")
+        sub_attr = getattr(attr.attrs, parts[1], None)
+        if sub_attr is None:
+            raise AttributeError(f"{parts[0]!r} has no {parts[1]!r} attribute")
+        return self._bounded_complex_sub_attrs[id(attr)][id(sub_attr)]
+
+    @property
+    def core_attrs(self) -> List[Attribute]:
+        return self._core_attrs
+
+    def extend(self, attrs: "BoundedAttributes") -> None:
+        for attr in attrs:
+            self._register_attr(attr)
+        self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
+        self._extensions[attrs._schema.lower()] = attrs
+
+    def get(self, attr_rep: AttrRep) -> Optional[Attribute]:
+        if attr_rep.schema.lower() in self._extensions:
+            return self._extensions[attr_rep.schema.lower()].get(attr_rep)
+
+        attr = super().get(AttrRep(schema=attr_rep.schema, attr=attr_rep.attr))
+        if not attr_rep.sub_attr or attr is None:
+            return attr
+
+        if not isinstance(attr, Complex):
+            raise TypeError(f"{attr.rep.attr!r} is not complex")
+
+        sub_attr = getattr(attr.attrs, attr_rep.sub_attr, None)
+        if sub_attr is None:
+            return None
+        return self._bounded_complex_sub_attrs[id(attr)][id(sub_attr)]
 
     def get_by_path(self, path: "PatchPath") -> Optional[Attribute]:
         if (

@@ -174,7 +174,7 @@ class _Schema(ServiceResourceSchema):
             "schemas": self.schemas,
             "name": schema.name,
             "description": schema.description,
-            "attributes": [attr.to_dict() for attr in schema.attrs.top_level],
+            "attributes": [attr.to_dict() for attr in schema.attrs],
             "meta": {
                 "resourceType": "Schema",
                 "location": f"{self.endpoint}/{schema.schema}",
