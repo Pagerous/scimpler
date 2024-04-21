@@ -154,7 +154,7 @@ def test_validate_resource_type_consistency__succeeds_if_consistency():
 
 def test_adding_same_schema_extension_to_resource_fails():
     schema = ResourceSchema(schema="my:schema", name="MyResource")
-    extension = SchemaExtension(schema="my:schema:extension")
+    extension = SchemaExtension(schema="my:schema:extension", name="MyExtension")
     schema.add_extension(extension)
 
     with pytest.raises(

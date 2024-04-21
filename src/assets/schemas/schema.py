@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, Dict, List, Union
 
 from src.data.attributes import (
     AttributeIssuer,
@@ -9,134 +9,25 @@ from src.data.attributes import (
     Unknown,
 )
 from src.data.container import Missing, SCIMDataContainer
-from src.data.schemas import ResourceSchema
+from src.data.schemas import ResourceSchema, SchemaExtension, ServiceResourceSchema
 from src.error import ValidationError, ValidationIssues
-
-id_ = String(
-    name="id",
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-
-name = String(
-    name="name",
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-
-description = String(
-    name="description",
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-
-_attributes__name = String(
-    name="name",
-    required=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__type = String(
-    name="type",
-    canonical_values=["string", "integer", "boolean", "reference", "dateTime", "binary", "complex"],
-    restrict_canonical_values=False,
-    required=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__sub_attributes = Unknown(
-    name="subAttributes",
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__multi_valued = Boolean(
-    name="multiValued",
-    required=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__description = String(
-    name="description",
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__required = Boolean(
-    name="required",
-    required=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__canonical_values = Unknown(
-    name="canonicalValues",
-    multi_valued=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__case_exact = Boolean(
-    name="caseExact",
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__mutability = String(
-    name="mutability",
-    canonical_values=["readOnly", "readWrite", "immutable", "writeOnly"],
-    restrict_canonical_values=True,
-    required=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__returned = String(
-    name="returned",
-    canonical_values=["always", "never", "default", "request"],
-    restrict_canonical_values=True,
-    required=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__uniqueness = String(
-    name="uniqueness",
-    canonical_values=["none", "server", "global"],
-    restrict_canonical_values=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
-
-_attributes__reference_types = String(
-    name="referenceTypes",
-    multi_valued=True,
-    mutability=AttributeMutability.READ_ONLY,
-    issuer=AttributeIssuer.SERVER,
-)
 
 
 def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        attr_type = item.get(_attributes__type.rep)
-        sub_attributes = item.get(_attributes__sub_attributes.rep)
+        attr_type = item.get("type")
+        sub_attributes = item.get("subAttributes")
         if sub_attributes not in [Missing, None]:
             if attr_type == "complex":
                 issues.merge(
                     attributes.validate(sub_attributes),
-                    location=(i, _attributes__sub_attributes.rep.attr),
+                    location=(i, "subAttributes"),
                 )
-        if attr_type == "string" and item.get(_attributes__case_exact.rep) in [None, Missing]:
+        if attr_type == "string" and item.get("caseExact") in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
-                location=(i, _attributes__case_exact.rep),
+                location=(i, "caseExact"),
                 proceed=False,
             )
     return issues
@@ -144,34 +35,106 @@ def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
 
 def serialize_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     for i, item in enumerate(value):
-        attr_type = item.get(_attributes__type.rep)
-        sub_attributes = item.get(_attributes__sub_attributes.rep)
+        attr_type = item.get("type")
+        sub_attributes = item.get("subAttributes")
         if sub_attributes not in [Missing, None]:
             if attr_type != "complex":
-                item.pop(_attributes__sub_attributes.rep)
+                item.pop("subAttributes")
             else:
-                item.set(_attributes__sub_attributes.rep, attributes.serialize(sub_attributes))
+                item.set("subAttributes", attributes.serialize(sub_attributes))
         if attr_type != "string":
-            item.pop(_attributes__case_exact.rep)
+            item.pop("caseExact")
     return value
 
 
 attributes = Complex(
-    sub_attributes=[
-        _attributes__name,
-        _attributes__type,
-        _attributes__sub_attributes,
-        _attributes__multi_valued,
-        _attributes__description,
-        _attributes__required,
-        _attributes__canonical_values,
-        _attributes__case_exact,
-        _attributes__mutability,
-        _attributes__returned,
-        _attributes__uniqueness,
-        _attributes__reference_types,
-    ],
     name="attributes",
+    sub_attributes=[
+        String(
+            name="name",
+            required=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="type",
+            canonical_values=[
+                "string",
+                "integer",
+                "boolean",
+                "reference",
+                "dateTime",
+                "binary",
+                "complex",
+            ],
+            restrict_canonical_values=False,
+            required=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        Unknown(
+            name="subAttributes",
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        Boolean(
+            name="multiValued",
+            required=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="description",
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        Boolean(
+            name="required",
+            required=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        Unknown(
+            name="canonicalValues",
+            multi_valued=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        Boolean(
+            name="caseExact",
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="mutability",
+            canonical_values=["readOnly", "readWrite", "immutable", "writeOnly"],
+            restrict_canonical_values=True,
+            required=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="returned",
+            canonical_values=["always", "never", "default", "request"],
+            restrict_canonical_values=True,
+            required=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="uniqueness",
+            canonical_values=["none", "server", "global"],
+            restrict_canonical_values=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="referenceTypes",
+            multi_valued=True,
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+    ],
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
     validators=[validate_attributes],
@@ -179,10 +142,44 @@ attributes = Complex(
 )
 
 
-Schema = ResourceSchema(
-    schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
-    name="Schema",
-    endpoint="/Schemas",
-    attrs=[name, description, attributes],
-    attr_overrides={"id": id_},
-)
+class _Schema(ServiceResourceSchema):
+    def __init__(self):
+        super().__init__(
+            schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
+            name="Schema",
+            endpoint="/Schemas",
+            attrs=[
+                String(
+                    name="id",
+                    mutability=AttributeMutability.READ_ONLY,
+                    issuer=AttributeIssuer.SERVER,
+                ),
+                String(
+                    name="name",
+                    mutability=AttributeMutability.READ_ONLY,
+                    issuer=AttributeIssuer.SERVER,
+                ),
+                String(
+                    name="description",
+                    mutability=AttributeMutability.READ_ONLY,
+                    issuer=AttributeIssuer.SERVER,
+                ),
+                attributes,
+            ],
+        )
+
+    def get_repr(self, schema: Union[ResourceSchema, SchemaExtension]) -> Dict[str, Any]:
+        return {
+            "id": schema.schema,
+            "schemas": self.schemas,
+            "name": schema.name,
+            "description": schema.description,
+            "attributes": [attr.to_dict() for attr in schema.attrs.top_level],
+            "meta": {
+                "resourceType": "Schema",
+                "location": f"{self.endpoint}/{schema.schema}",
+            },
+        }
+
+
+Schema = _Schema()

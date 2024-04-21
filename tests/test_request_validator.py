@@ -10,7 +10,6 @@ from src.attributes_presence import AttributePresenceChecker
 from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present
 from src.data.path import PatchPath
-from src.data.schemas import get_schema_rep
 from src.filter import Filter
 from src.request_validator import (
     BulkOperations,
@@ -1209,7 +1208,7 @@ def test_schemas_output_can_be_validated():
         "totalResults": 2,
         "itemsPerPage": 2,
         "startIndex": 1,
-        "Resources": [get_schema_rep(user.User), get_schema_rep(group.Group)],
+        "Resources": [Schema.get_repr(user.User), Schema.get_repr(group.Group)],
     }
 
     issues = validator.validate_response(status_code=200, body=body)
@@ -1229,7 +1228,7 @@ def test_service_config_request_parsing_fails_if_requested_filtering(validator):
 def test_schema_response_can_be_validated():
     validator = ResourceObjectGET(CONFIG, resource_schema=Schema)
 
-    issues = validator.validate_response(status_code=200, body=get_schema_rep(user.User))
+    issues = validator.validate_response(status_code=200, body=Schema.get_repr(user.User))
 
     assert issues.to_dict(msg=True) == {}
 

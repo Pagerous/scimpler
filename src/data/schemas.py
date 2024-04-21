@@ -263,23 +263,16 @@ class ResourceSchema(BaseSchema):
         self,
         schema: str,
         name: str,
-        attrs: Optional[Iterable[Attribute]] = None,
-        endpoint: Optional[str] = None,
-        description: str = "",
         plural_name: Optional[str] = None,
-        attr_overrides: Optional[Dict[str, Attribute]] = None,
+        description: str = "",
+        endpoint: Optional[str] = None,
+        attrs: Optional[Iterable[Attribute]] = None,
     ):
-        attr_overrides = attr_overrides or {}
         super().__init__(
             schema=schema,
-            attrs=[
-                attr_overrides.get("id") or id_,
-                attr_overrides.get("externalId") or external_id,
-                attr_overrides.get("meta") or meta,
-                *(attrs or []),
-            ],
+            attrs=[id_, external_id, meta, *(attrs or [])],
         )
-        self._schema_extensions: Dict[str, bool] = {}
+        self._schema_extensions: Dict[str, Dict] = {}
         self._name = name
         self._plural_name = plural_name or name
         self._endpoint = endpoint or f"/{self._plural_name}"
@@ -308,17 +301,27 @@ class ResourceSchema(BaseSchema):
 
     @property
     def schemas(self) -> List[str]:
-        return [self.schema] + list(self._schema_extensions)
+        return [self.schema] + [
+            extension["extension"].schema for extension in self._schema_extensions.values()
+        ]
 
-    @property
-    def schema_extensions(self) -> List[str]:
-        return list(self._schema_extensions)
+    def get_extension(self, name: str) -> "SchemaExtension":
+        name = name.lower()
+        if name not in self._schema_extensions:
+            raise ValueError(f"{self.name!r} has no {name!r} extension")
+        return self._schema_extensions[name]["extension"]
 
     def add_extension(self, extension: "SchemaExtension", required: bool = False) -> None:
         if extension.schema in map(lambda x: x.lower(), self.schemas):
             raise ValueError(f"schema {extension.schema!r} already in {self.name!r} resource")
 
-        self._schema_extensions[extension.schema] = required
+        if extension.name.lower() in self._schema_extensions:
+            raise ValueError(f"extension {extension.name!r} already in resource")
+
+        self._schema_extensions[extension.name.lower()] = {
+            "extension": extension,
+            "required": required,
+        }
 
         bounded_attrs = []
         for attr in extension.attrs:
@@ -349,25 +352,33 @@ class ResourceSchema(BaseSchema):
         return issues
 
 
-def get_schema_rep(schema: ResourceSchema) -> Dict[str, Any]:
-    return {
-        "id": schema.schema,
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Schema"],
-        "name": schema.name,
-        "description": schema.description,
-        "attributes": [attr.to_dict() for attr in schema.attrs.top_level],
-        "meta": {
-            "resourceType": "Schema",
-        },
-    }
+class ServiceResourceSchema(BaseSchema):
+    def __init__(self, name: str, endpoint: str = "", **kwargs):
+        attrs = kwargs.pop("attrs", [])
+        attrs = [meta, *attrs]
+        super().__init__(attrs=attrs, **kwargs)
+        self._name = name
+        self._endpoint = endpoint or f"/{self._name}"
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def endpoint(self) -> str:
+        return self._endpoint
+
+    @endpoint.setter
+    def endpoint(self, value) -> None:
+        self._endpoint = value
 
 
 class SchemaExtension:
     def __init__(
         self,
         schema: str,
+        name: str,
         attrs: Optional[Iterable[Attribute]] = None,
-        name: str = "",
         description: str = "",
     ):
         self._schema = schema
