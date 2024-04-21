@@ -75,7 +75,7 @@ class Attribute(abc.ABC):
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         validators: Optional[List[_AttributeValidator]] = None,
         deserializer: Optional[_AttributeProcessor] = None,
-        serializeer: Optional[_AttributeProcessor] = None,
+        serializer: Optional[_AttributeProcessor] = None,
     ):
         self._rep = AttrRep.deserialize(name) if isinstance(name, str) else name
         self._description = description
@@ -88,7 +88,7 @@ class Attribute(abc.ABC):
         self._returned = returned
         self._validators = validators or []
         self._deserializer = deserializer
-        self._serializeer = serializeer
+        self._serializer = serializer
 
     @property
     def rep(self) -> AttrRep:
@@ -131,8 +131,8 @@ class Attribute(abc.ABC):
         return self._deserializer
 
     @property
-    def serializeer(self) -> Optional[_AttributeProcessor]:
-        return self._serializeer
+    def serializer(self) -> Optional[_AttributeProcessor]:
+        return self._serializer
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._rep})"
@@ -151,7 +151,7 @@ class Attribute(abc.ABC):
                 self._returned == other._returned,
                 self._validators == other._validators,
                 self._deserializer == other._deserializer,
-                self._serializeer == other._serializeer,
+                self._serializer == other._serializer,
                 self._validate_canonical_values == other._validate_canonical_values,
             ]
         )
@@ -228,8 +228,8 @@ class Attribute(abc.ABC):
         return issues
 
     def serialize(self, value: Any) -> Any:
-        if self._serializeer is not None:
-            return self._serializeer(value)
+        if self._serializer is not None:
+            return self._serializer(value)
         return value
 
     def deserialize(self, value: Any) -> Any:
@@ -273,7 +273,7 @@ class AttributeWithUniqueness(Attribute, abc.ABC):
 
     def to_dict(self):
         output = super().to_dict()
-        output["uniqueness"] = self.uniqueness
+        output["uniqueness"] = self.uniqueness.value
         return output
 
 

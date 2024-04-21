@@ -138,7 +138,7 @@ attributes = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
     validators=[validate_attributes],
-    serializeer=serialize_attributes,
+    serializer=serialize_attributes,
 )
 
 
@@ -169,12 +169,13 @@ class _Schema(ServiceResourceSchema):
         )
 
     def get_repr(self, schema: Union[ResourceSchema, SchemaExtension]) -> Dict[str, Any]:
+        attrs = schema.attrs if isinstance(schema, SchemaExtension) else schema.attrs.core_attrs
         return {
             "id": schema.schema,
             "schemas": self.schemas,
             "name": schema.name,
             "description": schema.description,
-            "attributes": [attr.to_dict() for attr in schema.attrs],
+            "attributes": [attr.to_dict() for attr in attrs],
             "meta": {
                 "resourceType": "Schema",
                 "location": f"{self.endpoint}/{schema.schema}",

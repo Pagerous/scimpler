@@ -1,4 +1,5 @@
-from src.assets.schemas.schema import attributes
+from src.assets.schemas import User
+from src.assets.schemas.schema import attributes, Schema
 from src.data.container import SCIMDataContainer
 
 
@@ -69,7 +70,7 @@ def test_validation_attributes_field_fails_for_bad_sub_attributes():
     assert issues.to_dict() == expected_issues
 
 
-def test_case_exact_is_removed_from_non_string_attrs_while_serializeing_attributes():
+def test_case_exact_is_removed_from_non_string_attrs_while_serializing_attributes():
     serialized = attributes.serialize(
         value=[
             SCIMDataContainer(
@@ -87,7 +88,7 @@ def test_case_exact_is_removed_from_non_string_attrs_while_serializeing_attribut
     assert "caseExact" not in serialized[0].to_dict()
 
 
-def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializeing_attributes():
+def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializing_attributes():
     serialized = attributes.serialize(
         value=[
             SCIMDataContainer(
@@ -103,3 +104,16 @@ def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializeing_at
     )
 
     assert "subAttributes" not in serialized[0].to_dict()
+
+
+def test_resource_schema_representation_can_be_generated():
+    output = Schema.get_repr(User)
+
+    for attr in output["attributes"]:
+        assert attr["name"] not in ["id", "meta", "externalId"]
+
+
+def test_schema_extension_representation_can_be_generated():
+    output = Schema.get_repr(User.get_extension("EnterpriseUser"))
+
+    assert output

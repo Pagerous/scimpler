@@ -798,6 +798,6 @@ User.add_extension(
             organization,
             manager,
         ],
-        name="Enterprise User",
+        name="EnterpriseUser",
     )
 )
