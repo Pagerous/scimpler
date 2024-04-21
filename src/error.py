@@ -50,6 +50,7 @@ class ValidationError:
         38: "too many errors (max {max})",
         39: "value or operation not supported",
         40: "bad SCIM reference, allowed resources: {allowed_resources}",
+        41: "value contains duplicates",
         100: "one of brackets is not opened / closed",
         102: "one of complex attribute brackets is not opened / closed",
         104: "missing operand for operator '{operator}' in expression '{expression}'",
@@ -219,6 +220,10 @@ class ValidationError:
     @classmethod
     def bad_scim_reference(cls, allowed_resources: Collection[str]):
         return cls(code=40, allowed_resources=list(allowed_resources))
+
+    @classmethod
+    def duplicated_values(cls):
+        return cls(code=41)
 
     @classmethod
     def bracket_not_opened_or_closed(cls):

@@ -168,7 +168,8 @@ class BaseSchema(abc.ABC):
                     schemas_=schemas_,
                     main_schema=self.schema,
                     known_schemas=schemas_,
-                )
+                ),
+                location=(schemas.rep.attr,),
             )
 
         if issues.can_proceed():
@@ -204,6 +205,12 @@ def validate_schemas_field(
     issues = ValidationIssues()
     main_schema = main_schema.lower()
     schemas_ = [item.lower() for item in schemas_]
+    if len(schemas_) > len(set(schemas_)):
+        issues.add_error(
+            issue=ValidationError.duplicated_values(),
+            proceed=True,
+        )
+
     known_schemas = [item.lower() for item in known_schemas]
     main_schema_included = False
     mismatch = False
@@ -215,13 +222,13 @@ def validate_schemas_field(
             issues.add_error(
                 issue=ValidationError.unknown_schema(),
                 proceed=True,
-                location=(schemas.rep.attr,),
             )
             mismatch = True
 
     if not main_schema_included:
         issues.add_error(
-            issue=ValidationError.missing_main_schema(), proceed=True, location=(schemas.rep.attr,)
+            issue=ValidationError.missing_main_schema(),
+            proceed=True,
         )
 
     for k, v in data.to_dict().items():
@@ -230,7 +237,6 @@ def validate_schemas_field(
             issues.add_error(
                 issue=ValidationError.missing_schema_extension(k),
                 proceed=True,
-                location=(schemas.rep.attr,),
             )
     return issues
 
@@ -257,7 +263,7 @@ class ResourceSchema(BaseSchema):
         self,
         schema: str,
         name: str,
-        attrs: Iterable[Attribute],
+        attrs: Optional[Iterable[Attribute]] = None,
         endpoint: Optional[str] = None,
         description: str = "",
         plural_name: Optional[str] = None,
@@ -270,7 +276,7 @@ class ResourceSchema(BaseSchema):
                 attr_overrides.get("id") or id_,
                 attr_overrides.get("externalId") or external_id,
                 attr_overrides.get("meta") or meta,
-                *attrs,
+                *(attrs or []),
             ],
         )
         self._schema_extensions: Dict[str, bool] = {}
@@ -310,7 +316,7 @@ class ResourceSchema(BaseSchema):
 
     def add_extension(self, extension: "SchemaExtension", required: bool = False) -> None:
         if extension.schema in map(lambda x: x.lower(), self.schemas):
-            raise ValueError(f"extension {extension!r} already in {self!r} schema")
+            raise ValueError(f"schema {extension.schema!r} already in {self.name!r} resource")
 
         self._schema_extensions[extension.schema] = required
 
@@ -360,12 +366,12 @@ class SchemaExtension:
     def __init__(
         self,
         schema: str,
-        attrs: Iterable[Attribute],
+        attrs: Optional[Iterable[Attribute]] = None,
         name: str = "",
         description: str = "",
     ):
         self._schema = schema
-        self._attrs = Attributes(attrs)
+        self._attrs = Attributes(attrs or [])
         self._name = name
         self._description = description
 
