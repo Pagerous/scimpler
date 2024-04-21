@@ -497,13 +497,6 @@ class Complex(Attribute):
         validators = kwargs.pop("validators", None)
         super().__init__(name=name, **kwargs)
 
-        validators = list(validators or [])
-        if self._multi_valued:
-            if validate_single_primary_value not in validators:
-                validators.append(validate_single_primary_value)
-            if validate_type_value_pairs not in validators:
-                validators.append(validate_type_value_pairs)
-
         default_sub_attrs = (
             [
                 Unknown("value"),
@@ -519,6 +512,19 @@ class Complex(Attribute):
             else []
         )
         self._sub_attributes = Attributes(sub_attributes or default_sub_attrs)
+
+        validators = list(validators or [])
+        if self._multi_valued:
+            if (
+                getattr(self.attrs, "primary", None)
+                and validate_single_primary_value not in validators
+            ):
+                validators.append(validate_single_primary_value)
+            if (
+                all([getattr(self.attrs, "type", None), getattr(self.attrs, "value", None)])
+                and validate_type_value_pairs not in validators
+            ):
+                validators.append(validate_type_value_pairs)
         self._complex_validators = validators
 
     @property
