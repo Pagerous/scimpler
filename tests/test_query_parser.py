@@ -1,7 +1,7 @@
 import pytest
 
 from src.data.container import AttrRep
-from src.query_parser import (
+from src.query_deserializer import (
     ResourceObjectGET,
     ResourceObjectPATCH,
     ResourceObjectPUT,
@@ -12,7 +12,7 @@ from tests.conftest import CONFIG
 
 
 @pytest.mark.parametrize(
-    "parser",
+    "deserializer",
     (
         ResourceObjectGET(CONFIG),
         ResourcesPOST(CONFIG),
@@ -20,15 +20,17 @@ from tests.conftest import CONFIG
         ResourceObjectPATCH(CONFIG),
     ),
 )
-def test_presence_checker_is_parsed_from_query_string(parser):
-    parsed = parser.parse(query_string={"attributes": ["name.familyName"]})
+def test_presence_checker_is_deserialized_from_query_string(deserializer):
+    deserialized = deserializer.deserialize(query_string={"attributes": ["name.familyName"]})
 
-    assert parsed["presence_checker"].attr_reps == [AttrRep(attr="name", sub_attr="familyName")]
-    assert parsed["presence_checker"].include is True
+    assert deserialized["presence_checker"].attr_reps == [
+        AttrRep(attr="name", sub_attr="familyName")
+    ]
+    assert deserialized["presence_checker"].include is True
 
 
-def test_server_root_resources_get_query_string_is_parsed():
-    data = ServerRootResourcesGET(CONFIG).parse(
+def test_server_root_resources_get_query_string_is_deserialized():
+    data = ServerRootResourcesGET(CONFIG).deserialize(
         {
             "attributes": ["userName", "name"],
             "filter": 'userName eq "bjensen"',

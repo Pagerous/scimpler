@@ -17,7 +17,7 @@ _operations_op = String(
 _operations_path = String(
     "path",
     validators=[PatchPath.validate],
-    parser=PatchPath.parse,
+    deserializer=PatchPath.deserialize,
 )
 
 
@@ -45,7 +45,7 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
                 )
             if (
                 path
-                and (path := PatchPath.parse(path)).complex_filter is not None
+                and (path := PatchPath.deserialize(path)).complex_filter is not None
                 and path.complex_filter_attr_rep is None
             ):
                 issues.add_error(
@@ -56,7 +56,7 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     return issues
 
 
-def parse_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+def deserialize_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     for i, item in enumerate(value):
         if item == "remove":
             item.pop(_operations_value.rep)
@@ -73,7 +73,7 @@ operations = Complex(
     required=True,
     multi_valued=True,
     validators=[validate_operations],
-    parser=parse_operations,
+    deserializer=deserialize_operations,
 )
 
 
@@ -96,7 +96,7 @@ class PatchOp(BaseSchema):
                 continue
 
             if path is not Missing:
-                path = PatchPath.parse(path)
+                path = PatchPath.deserialize(path)
             if op in ["add", "replace"]:
                 issues.merge(
                     issues=self._validate_add_or_replace_operation(path, value),
@@ -235,27 +235,31 @@ class PatchOp(BaseSchema):
                     )
         return issues
 
-    def parse(self, data: Any) -> SCIMDataContainer:
-        data = super().parse(data)
+    def deserialize(self, data: Any) -> SCIMDataContainer:
+        data = super().deserialize(data)
         ops = data.get(self.attrs.operations__op.rep)
         paths = data.get(self.attrs.operations__path.rep)
         values = data.get(self.attrs.operations__value.rep)
-        parsed = []
+        deserialized = []
         for i, (op, path, value) in enumerate(zip(ops, paths, values)):
             if op in ["add", "replace"]:
-                parsed.append(
+                deserialized.append(
                     SCIMDataContainer(
-                        {"op": op, "path": path, "value": self._parse_operation_value(path, value)}
+                        {
+                            "op": op,
+                            "path": path,
+                            "value": self._deserialize_operation_value(path, value),
+                        }
                     )
                 )
             else:
-                parsed.append(SCIMDataContainer({"op": "remove", "path": path}))
-        data.set(operations.rep, parsed)
+                deserialized.append(SCIMDataContainer({"op": "remove", "path": path}))
+        data.set(operations.rep, deserialized)
         return data
 
-    def _parse_operation_value(self, path: Optional[PatchPath], value: Any) -> Any:
+    def _deserialize_operation_value(self, path: Optional[PatchPath], value: Any) -> Any:
         if path in [None, Missing]:
-            return self._resource_schema.parse(value)
+            return self._resource_schema.deserialize(value)
 
         # sub-attribute of filtered multivalued complex attribute
         if (
@@ -266,7 +270,7 @@ class PatchOp(BaseSchema):
             attr_rep = path.complex_filter_attr_rep
         else:
             attr_rep = path.attr_rep
-        return self._resource_schema.attrs.get(attr_rep).parse(value)
+        return self._resource_schema.attrs.get(attr_rep).deserialize(value)
 
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:

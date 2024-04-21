@@ -136,23 +136,23 @@ class BaseSchema(abc.ABC):
     def schema(self) -> str:
         return self._schema
 
-    def parse(self, data: Any) -> SCIMDataContainer:
+    def deserialize(self, data: Any) -> SCIMDataContainer:
         data = SCIMDataContainer(data)
-        parsed = SCIMDataContainer()
+        deserialized = SCIMDataContainer()
         for attr in self.attrs.top_level:
             value = data.get(attr.rep)
             if value is not Missing:
-                parsed.set(attr.rep, attr.parse(value))
-        return parsed
+                deserialized.set(attr.rep, attr.deserialize(value))
+        return deserialized
 
-    def dump(self, data: Any) -> SCIMDataContainer:
+    def serialize(self, data: Any) -> SCIMDataContainer:
         data = SCIMDataContainer(data)
-        dumped = SCIMDataContainer()
+        serialized = SCIMDataContainer()
         for attr in self.attrs.top_level:
             value = data.get(attr.rep)
             if value is not Missing:
-                dumped.set(attr.rep, attr.dump(value))
-        return dumped
+                serialized.set(attr.rep, attr.serialize(value))
+        return serialized
 
     def validate(self, data: Union[SCIMDataContainer, Dict[str, Any]]) -> ValidationIssues:
         issues = ValidationIssues()

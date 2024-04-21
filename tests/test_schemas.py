@@ -12,11 +12,11 @@ from src.data.schemas import (
 )
 
 
-def test_correct_user_data_can_be_parsed(user_data_client):
+def test_correct_user_data_can_be_deserialized(user_data_client):
     expected_data = deepcopy(user_data_client)
     user_data_client["unexpected"] = 123
 
-    data = user.User.parse(user_data_client)
+    data = user.User.deserialize(user_data_client)
 
     assert data.to_dict() == expected_data
     assert "unexpected" not in data.to_dict()

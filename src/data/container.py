@@ -65,14 +65,14 @@ class AttrRep:
         return issues
 
     @classmethod
-    def parse(cls, attr_rep: str) -> "AttrRep":
+    def deserialize(cls, attr_rep: str) -> "AttrRep":
         try:
-            return cls._parse(attr_rep)
+            return cls._deserialize(attr_rep)
         except Exception:
             raise ValueError(f"{attr_rep!r} is not valid attribute representation")
 
     @classmethod
-    def _parse(cls, attr_rep: str) -> "AttrRep":
+    def _deserialize(cls, attr_rep: str) -> "AttrRep":
         match = _ATTR_REP.fullmatch(attr_rep)
         schema, attr = match.group(1), match.group(2)
         schema = schema[:-1] if schema else ""
@@ -257,7 +257,7 @@ class SCIMDataContainer:
 
     @staticmethod
     def _to_attr_rep(attr_rep):
-        attr_rep = AttrRep.parse(attr_rep)
+        attr_rep = AttrRep.deserialize(attr_rep)
         if attr_rep is Invalid:
             raise ValueError(f"bad attribute name {attr_rep!r}")
         return attr_rep

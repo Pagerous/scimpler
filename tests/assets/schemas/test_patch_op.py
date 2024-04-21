@@ -156,7 +156,7 @@ def test_validate_operation_path(path, expected_issues):
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_patch_op__add_and_replace_operation_without_path_can_be_parsed(op):
+def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op):
     schema = patch_op.PatchOp(resource_schema=user.User)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -208,7 +208,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_parsed(op):
     issues = schema.validate(input_data)
     assert issues.to_dict(msg=True) == {}
 
-    actual_data = schema.parse(input_data)
+    actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
 
 
@@ -425,7 +425,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
         ),
     ),
 )
-def test_parse_add_and_replace_operation__succeeds_on_correct_data(
+def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
     op, path, expected_path, value, expected_value
 ):
     schema = patch_op.PatchOp(resource_schema=user.User)
@@ -443,7 +443,7 @@ def test_parse_add_and_replace_operation__succeeds_on_correct_data(
     issues = schema.validate(input_data)
     assert issues.to_dict(msg=True) == {}
 
-    actual_data = schema.parse(input_data)
+    actual_data = schema.deserialize(input_data)
     assert actual_data.get("Operations")[0].get("value") == expected_value
     assert actual_data.get("Operations")[0].get("path").attr_rep == expected_path.attr_rep
     if expected_path.complex_filter:
@@ -514,12 +514,12 @@ def test_remove_operation__succeeds_if_correct_path(path):
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.parse(path)}],
+        "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
     assert schema.validate(input_data).to_dict(msg=True) == {}
 
-    actual_data = schema.parse(input_data)
+    actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
 
 
@@ -537,12 +537,12 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.parse(path)}],
+        "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
     assert schema.validate(input_data).to_dict(msg=True) == {}
 
-    actual_data = schema.parse(input_data)
+    actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
 
 
@@ -577,9 +577,9 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
     }
     expected_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.parse(path)}],
+        "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
     expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
 
     assert schema.validate(input_data).to_dict() == expected_issues
-    assert schema.parse(input_data).to_dict() == expected_data
+    assert schema.deserialize(input_data).to_dict() == expected_data

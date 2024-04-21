@@ -155,13 +155,13 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
         ("attr.weirdo-$", "", "attr", "attr", "weirdo-$"),
     ),
 )
-def test_attribute_identifier_is_parsed(
+def test_attribute_identifier_is_deserialized(
     input_, expected_schema, expected_attr_with_schema, expected_attr, expected_sub_attr
 ):
     issues = AttrRep.validate(input_)
     assert issues.to_dict(msg=True) == {}
 
-    attr_rep = AttrRep.parse(input_)
+    attr_rep = AttrRep.deserialize(input_)
     assert attr_rep.schema == expected_schema
     assert attr_rep.attr_with_schema == expected_attr_with_schema
     assert attr_rep.attr == expected_attr
@@ -179,12 +179,12 @@ def test_attribute_identifier_is_parsed(
         "urn:ietf:params:scim:schemas:core:2.0:User:name.firstName.blahblah",
     ),
 )
-def test_attribute_identifier_is_not_parsed_when_bad_input(input_):
+def test_attribute_identifier_is_not_deserialized_when_bad_input(input_):
     issues = AttrRep.validate(input_)
     assert issues.to_dict() == {"_errors": [{"code": 111}]}
 
     with pytest.raises(ValueError):
-        AttrRep.parse(input_)
+        AttrRep.deserialize(input_)
 
 
 def test_validation_fails_in_not_one_of_canonical_values():

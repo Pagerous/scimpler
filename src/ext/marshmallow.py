@@ -63,7 +63,7 @@ def _get_kwargs(attr: Attribute):
 
 
 def _apply_validator_on_schema(schema, validator: Validator):
-    def _post_dump(self, data, **kwargs):
+    def _post_serialize(self, data, **kwargs):
         context_ = {k: v() if callable(v) else v for k, v in self.context.items()}
         issues = validator.validate_response(
             status_code=context_.get("status_code"),
@@ -74,12 +74,12 @@ def _apply_validator_on_schema(schema, validator: Validator):
         return data
 
     class_ = type(
-        schema.__name__, (schema,), {"_post_dump": post_dump(_post_dump, pass_many=False)}
+        schema.__name__, (schema,), {"_post_serialize": post_dump(_post_serialize, pass_many=False)}
     )
     return class_
 
 
-def response_dumper(validator: Validator):
+def response_serializeer(validator: Validator):
     pyscim_schema = validator.response_schema
     base_fields = _get_fields(pyscim_schema.attrs.base_top_level)
     extension_fields = {

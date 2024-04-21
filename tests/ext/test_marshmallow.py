@@ -1,6 +1,6 @@
 from src.assets.config import create_service_provider_config
 from src.assets.schemas import user
-from src.ext.marshmallow import response_dumper
+from src.ext.marshmallow import response_serializeer
 from src.request_validator import ResourceObjectGET
 
 CONFIG = create_service_provider_config(
@@ -13,9 +13,9 @@ CONFIG = create_service_provider_config(
 )
 
 
-def test_response_dumper_can_be_created():
+def test_response_serializer_can_be_created():
     validator = ResourceObjectGET(config=CONFIG, resource_schema=user.User)
-    schema_cls = response_dumper(validator)
+    schema_cls = response_serializeer(validator)
 
     schema_cls().dump({"id": 123})
 

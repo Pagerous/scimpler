@@ -12,7 +12,7 @@ def get_placeholder() -> Tuple[str, str]:
     return id_, f"|&PLACE_HOLDER_{id_}&|"
 
 
-def parse_placeholder(exp: str) -> Optional[str]:
+def deserialize_placeholder(exp: str) -> Optional[str]:
     match = PLACEHOLDER_REGEX.fullmatch(exp)
     if match:
         return match.group(1)
@@ -39,7 +39,7 @@ def decode_placeholders(exp: str, placeholders: Dict[str, Any]) -> str:
     return encoded
 
 
-def parse_comparison_value(value: str) -> Any:
+def deserialize_comparison_value(value: str) -> Any:
     if (
         value.startswith('"')
         and value.endswith('"')
@@ -54,10 +54,10 @@ def parse_comparison_value(value: str) -> Any:
     elif value == "null":
         value = None
     else:
-        parsed = float(value)
-        parsed_int = int(parsed)
-        if parsed == parsed_int:
-            value = parsed_int
+        deserialized = float(value)
+        deserialized_int = int(deserialized)
+        if deserialized == deserialized_int:
+            value = deserialized_int
         else:
-            value = parsed
+            value = deserialized
     return value

@@ -6,21 +6,21 @@ from src.assets.schemas import search_request
 from src.data.container import Missing, SCIMDataContainer
 
 
-class QueryStringParser(abc.ABC):
+class QueryStringDeserializer(abc.ABC):
     def __init__(self, config: ServiceProviderConfig):
         self._config = config
 
     @abc.abstractmethod
-    def parse(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         ...
 
 
-class _AttributesParser(QueryStringParser, abc.ABC):
-    def parse(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+class _AttributesDeserializer(QueryStringDeserializer, abc.ABC):
+    def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         query_string = query_string or {}
         return (
             search_request.SearchRequest()
-            .parse(
+            .deserialize(
                 SCIMDataContainer(
                     {
                         "attributes": query_string.get("attributes", Missing),
@@ -32,25 +32,29 @@ class _AttributesParser(QueryStringParser, abc.ABC):
         )
 
 
-class ResourcesPOST(_AttributesParser):
+class ResourcesPOST(_AttributesDeserializer):
     pass
 
 
-class ResourceObjectGET(_AttributesParser):
+class ResourceObjectGET(_AttributesDeserializer):
     pass
 
 
-class ResourceObjectPUT(_AttributesParser):
+class ResourceObjectPUT(_AttributesDeserializer):
     pass
 
 
-class ResourceObjectPATCH(_AttributesParser):
+class ResourceObjectPATCH(_AttributesDeserializer):
     pass
 
 
-class ServerRootResourcesGET(QueryStringParser):
-    def parse(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        return search_request.SearchRequest().parse(SCIMDataContainer(query_string or {})).to_dict()
+class ServerRootResourcesGET(QueryStringDeserializer):
+    def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        return (
+            search_request.SearchRequest()
+            .deserialize(SCIMDataContainer(query_string or {}))
+            .to_dict()
+        )
 
 
 class ResourcesGET(ServerRootResourcesGET):

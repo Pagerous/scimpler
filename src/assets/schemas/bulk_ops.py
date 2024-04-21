@@ -71,7 +71,7 @@ def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIss
     return issues
 
 
-def parse_request_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+def deserialize_request_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     value = deepcopy(value)
     for i, item in enumerate(value):
         method = item.get(_operation__method.rep)
@@ -111,7 +111,7 @@ request_operations = Complex(
     required=True,
     multi_valued=True,
     validators=[validate_request_operations],
-    parser=parse_request_operations,
+    deserializer=deserialize_request_operations,
 )
 
 fail_on_errors = Integer("failOnErrors")

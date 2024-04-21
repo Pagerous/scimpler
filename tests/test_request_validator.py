@@ -270,7 +270,7 @@ def test_validate_start_index_consistency__succeeds_if_correct_data():
     ),
 )
 def test_validate_resources_filtered(filter_exp, list_user_data):
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     expected = {
         "0": {
             "_errors": [
@@ -292,7 +292,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
 
 
 def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
-    filter_ = Filter.parse('meta.resourcetype eq "user"')  # "user", not "User"
+    filter_ = Filter.deserialize('meta.resourcetype eq "user"')  # "user", not "User"
     expected = {
         "0": {
             "_errors": [
@@ -323,7 +323,7 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
 def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_by_filter(
     list_user_data,
 ):
-    filter_ = Filter.parse(
+    filter_ = Filter.deserialize(
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName "
         'eq "John Smith"'
     )

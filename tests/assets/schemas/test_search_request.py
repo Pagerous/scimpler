@@ -2,10 +2,10 @@ from src.assets.schemas.search_request import SearchRequest
 from src.data.container import AttrRep
 
 
-def test_search_request_is_parsed():
+def test_search_request_is_deserialized():
     schema = SearchRequest()
 
-    data = schema.parse(
+    data = schema.deserialize(
         {
             "attributes": ["userName", "name"],
             "filter": 'userName eq "bjensen"',

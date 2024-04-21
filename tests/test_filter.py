@@ -11,14 +11,14 @@ from src.filter import Filter
     ),
 )
 @pytest.mark.parametrize("operator", ("eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"))
-def test_parse_basic_binary_attribute_filter(attr_rep, operator):
+def test_deserialize_basic_binary_attribute_filter(attr_rep, operator):
     expected = {"op": operator, "attr_rep": attr_rep, "value": "bjensen"}
     filter_exp = f'{attr_rep} {operator} "bjensen"'
 
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -30,7 +30,7 @@ def test_parse_basic_binary_attribute_filter(attr_rep, operator):
     ),
 )
 @pytest.mark.parametrize("operator", ("eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"))
-def test_parse_basic_binary_complex_attribute_filter(full_attr_rep, operator):
+def test_deserialize_basic_binary_complex_attribute_filter(full_attr_rep, operator):
     sub_attr_rep, attr_rep = full_attr_rep[::-1].split(".", 1)
     attr_rep = attr_rep[::-1]
     sub_attr_rep = sub_attr_rep[::-1]
@@ -48,7 +48,7 @@ def test_parse_basic_binary_complex_attribute_filter(full_attr_rep, operator):
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -60,7 +60,7 @@ def test_parse_basic_binary_complex_attribute_filter(full_attr_rep, operator):
     ),
 )
 @pytest.mark.parametrize("operator", ("pr",))
-def test_parse_basic_unary_attribute_filter(attr_rep, operator):
+def test_deserialize_basic_unary_attribute_filter(attr_rep, operator):
     expected = {
         "op": operator,
         "attr_rep": attr_rep,
@@ -70,7 +70,7 @@ def test_parse_basic_unary_attribute_filter(attr_rep, operator):
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -82,7 +82,7 @@ def test_parse_basic_unary_attribute_filter(attr_rep, operator):
     ),
 )
 @pytest.mark.parametrize("operator", ("pr",))
-def test_parse_basic_unary_attribute_filter_with_complex_attribute(full_attr_rep, operator):
+def test_deserialize_basic_unary_attribute_filter_with_complex_attribute(full_attr_rep, operator):
     sub_attr_rep, attr_rep = full_attr_rep[::-1].split(".", 1)
     attr_rep = attr_rep[::-1]
     sub_attr_rep = sub_attr_rep[::-1]
@@ -99,7 +99,7 @@ def test_parse_basic_unary_attribute_filter_with_complex_attribute(full_attr_rep
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -118,7 +118,7 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -152,7 +152,7 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_w
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -182,7 +182,7 @@ def test_basic_filters_can_be_combined_with_and_operator():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -212,7 +212,7 @@ def test_basic_filters_can_be_combined_with_or_operator():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -230,7 +230,7 @@ def test_basic_filter_can_be_combined_with_not_operator():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -272,7 +272,7 @@ def test_precedence_of_logical_operators_is_preserved():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -314,11 +314,11 @@ def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_f
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
-def test_filter_groups_are_parsed():
+def test_filter_groups_are_deserialized():
     expected = {
         "op": "and",
         "sub_ops": [
@@ -366,7 +366,7 @@ def test_filter_groups_are_parsed():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -421,11 +421,11 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
-def test_basic_complex_attribute_filter_is_parsed():
+def test_basic_complex_attribute_filter_is_deserialized():
     expected = {
         "op": "complex",
         "attr_rep": "emails",
@@ -440,11 +440,11 @@ def test_basic_complex_attribute_filter_is_parsed():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
-def test_complex_attribute_filter_with_logical_operators_is_parsed():
+def test_complex_attribute_filter_with_logical_operators_is_deserialized():
     expected = {
         "op": "complex",
         "attr_rep": "emails",
@@ -469,11 +469,11 @@ def test_complex_attribute_filter_with_logical_operators_is_parsed():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
-def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
+def test_complex_attribute_filter_with_logical_operators_and_groups_is_deserialized():
     expected = {
         "op": "complex",
         "attr_rep": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
@@ -529,7 +529,7 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_parsed():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -595,7 +595,7 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -746,7 +746,7 @@ def test_gargantuan_filter():
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1061,7 +1061,7 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1129,7 +1129,7 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
     assert issues.to_dict() == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1171,7 +1171,7 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1199,7 +1199,7 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_is
     assert issues.to_dict() == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1243,7 +1243,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -1691,7 +1691,7 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1788,7 +1788,7 @@ def test_unknown_operator_causes_parsing_issues(filter_exp, expected_issues):
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 def test_putting_complex_attribute_operator_inside_other_complex_attribute_operator_fails():
@@ -1798,7 +1798,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
     assert issues.to_dict() == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1938,7 +1938,7 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -1996,7 +1996,7 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2046,7 +2046,7 @@ def test_lack_of_top_level_complex_attribute_name_is_discovered(filter_exp, expe
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2064,7 +2064,7 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
     assert issues.to_dict() == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2103,7 +2103,7 @@ def test_no_expression_is_discovered(filter_exp, expected_issues):
     assert issues.to_dict() == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2121,7 +2121,7 @@ def test_operators_are_case_insensitive(filter_exp):
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    assert Filter.parse(filter_exp)
+    assert Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2189,7 +2189,7 @@ def test_operators_are_case_insensitive(filter_exp, expected):
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
 
 
@@ -2267,7 +2267,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2380,7 +2380,7 @@ def test_binary_operator_non_compatible_comparison_values_are_discovered(
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 def test_complex_sub_attribute_is_discovered():
@@ -2390,7 +2390,7 @@ def test_complex_sub_attribute_is_discovered():
     assert issues.to_dict() == expected_issues
 
     with pytest.raises(ValueError, match="invalid filter expression"):
-        Filter.parse(filter_exp)
+        Filter.deserialize(filter_exp)
 
 
 @pytest.mark.parametrize(
@@ -2444,5 +2444,5 @@ def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, exp
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 
-    filter_ = Filter.parse(filter_exp)
+    filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected

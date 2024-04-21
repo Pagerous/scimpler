@@ -78,7 +78,7 @@ class PatchPath:
         issues = Filter.validate(filter_exp)
         if issues.has_errors():
             return issues
-        filter_ = Filter.parse(filter_exp)
+        filter_ = Filter.deserialize(filter_exp)
         value_sub_attr_rep_exp = path[path.index("]") + 1 :]
         if value_sub_attr_rep_exp:
             if value_sub_attr_rep_exp.startswith("."):
@@ -95,7 +95,7 @@ class PatchPath:
     def _validate_sub_attr_rep(attr_rep: AttrRep, sub_attr_rep_exp: str) -> ValidationIssues:
         issues = ValidationIssues()
         try:
-            sub_attr_rep = AttrRep.parse(sub_attr_rep_exp)
+            sub_attr_rep = AttrRep.deserialize(sub_attr_rep_exp)
             if sub_attr_rep.sub_attr and not attr_rep.top_level_equals(sub_attr_rep):
                 issues.add_error(
                     issue=ValidationError.complex_sub_attribute(attr_rep.attr, sub_attr_rep.attr),
@@ -108,38 +108,38 @@ class PatchPath:
         return issues
 
     @classmethod
-    def parse(cls, path: str) -> "PatchPath":
+    def deserialize(cls, path: str) -> "PatchPath":
         try:
-            return cls._parse(path)
+            return cls._deserialize(path)
         except Exception:
             raise ValueError("invalid path expression")
 
     @classmethod
-    def _parse(cls, path: str) -> "PatchPath":
+    def _deserialize(cls, path: str) -> "PatchPath":
         path, placeholders = encode_strings(path)
         if "[" in path and "]" in path:
-            return cls._parse_complex_multivalued_path(path, placeholders)
+            return cls._deserialize_complex_multivalued_path(path, placeholders)
 
         assert "[" not in path and "]" not in path
         return PatchPath(
-            attr_rep=AttrRep.parse(decode_placeholders(path, placeholders)),
+            attr_rep=AttrRep.deserialize(decode_placeholders(path, placeholders)),
             complex_filter=None,
             complex_filter_attr_rep=None,
         )
 
     @classmethod
-    def _parse_complex_multivalued_path(
+    def _deserialize_complex_multivalued_path(
         cls, path: str, placeholders: Dict[str, Any]
     ) -> "PatchPath":
         filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
-        filter_ = Filter.parse(filter_exp)
+        filter_ = Filter.deserialize(filter_exp)
         val_attr_rep = None
         val_attr_exp = path[path.index("]") + 1 :]
         if val_attr_exp:
             if val_attr_exp.startswith("."):
                 val_attr_exp = val_attr_exp[1:]
             val_attr_exp = decode_placeholders(val_attr_exp, placeholders)
-            val_attr_rep = AttrRep.parse(val_attr_exp)
+            val_attr_rep = AttrRep.deserialize(val_attr_exp)
             assert not val_attr_rep.sub_attr
             val_attr_rep = AttrRep(
                 schema=filter_.operator.attr_rep.schema,

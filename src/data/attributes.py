@@ -14,7 +14,6 @@ from typing import (
     Iterable,
     List,
     Optional,
-    Tuple,
     Type,
     Union,
 )
@@ -75,10 +74,10 @@ class Attribute(abc.ABC):
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
         validators: Optional[List[_AttributeValidator]] = None,
-        parser: Optional[_AttributeProcessor] = None,
-        dumper: Optional[_AttributeProcessor] = None,
+        deserializer: Optional[_AttributeProcessor] = None,
+        serializeer: Optional[_AttributeProcessor] = None,
     ):
-        self._rep = AttrRep.parse(name) if isinstance(name, str) else name
+        self._rep = AttrRep.deserialize(name) if isinstance(name, str) else name
         self._description = description
         self._issuer = issuer
         self._required = required
@@ -88,8 +87,8 @@ class Attribute(abc.ABC):
         self._mutability = mutability
         self._returned = returned
         self._validators = validators or []
-        self._parser = parser
-        self._dumper = dumper
+        self._deserializer = deserializer
+        self._serializeer = serializeer
 
     @property
     def rep(self) -> AttrRep:
@@ -128,12 +127,12 @@ class Attribute(abc.ABC):
         return self._validators
 
     @property
-    def parser(self) -> Optional[_AttributeProcessor]:
-        return self._parser
+    def deserializer(self) -> Optional[_AttributeProcessor]:
+        return self._deserializer
 
     @property
-    def dumper(self) -> Optional[_AttributeProcessor]:
-        return self._dumper
+    def serializeer(self) -> Optional[_AttributeProcessor]:
+        return self._serializeer
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._rep})"
@@ -151,8 +150,8 @@ class Attribute(abc.ABC):
                 self._mutability == other._mutability,
                 self._returned == other._returned,
                 self._validators == other._validators,
-                self._parser == other._parser,
-                self._dumper == other._dumper,
+                self._deserializer == other._deserializer,
+                self._serializeer == other._serializeer,
                 self._validate_canonical_values == other._validate_canonical_values,
             ]
         )
@@ -228,14 +227,14 @@ class Attribute(abc.ABC):
             issues.merge(validator(value))
         return issues
 
-    def dump(self, value: Any) -> Any:
-        if self._dumper is not None:
-            return self._dumper(value)
+    def serialize(self, value: Any) -> Any:
+        if self._serializeer is not None:
+            return self._serializeer(value)
         return value
 
-    def parse(self, value: Any) -> Any:
-        if self._parser is not None:
-            return self._parser(value)
+    def deserialize(self, value: Any) -> Any:
+        if self._deserializer is not None:
+            return self._deserializer(value)
         return value
 
     def to_dict(self) -> Dict:
@@ -403,7 +402,7 @@ class DateTime(Attribute):
         issues = super()._validate_type(value)
         if not issues.can_proceed():
             return issues
-        value = self._parse_xsd_datetime(value)
+        value = self._deserialize_xsd_datetime(value)
         if value is None:
             issues.add_error(
                 issue=ValidationError.bad_value_syntax(),
@@ -413,7 +412,7 @@ class DateTime(Attribute):
         return issues
 
     @staticmethod
-    def _parse_xsd_datetime(value: str) -> Optional[datetime]:
+    def _deserialize_xsd_datetime(value: str) -> Optional[datetime]:
         try:
             return datetime.fromisoformat(value)
         except ValueError:
@@ -566,49 +565,49 @@ class Complex(Attribute):
             issues.merge(validator(value))
         return issues
 
-    def parse(self, value: Any) -> Any:
+    def deserialize(self, value: Any) -> Any:
         if self.multi_valued:
-            parsed = []
+            deserialized = []
             for i, item in enumerate(value):
                 item = SCIMDataContainer(item)
-                parsed_item = SCIMDataContainer()
+                deserialized_item = SCIMDataContainer()
                 for sub_attr in self._sub_attributes:
                     sub_attr_value = item.get(sub_attr.rep)
                     if sub_attr_value is Missing:
                         continue
-                    parsed_item.set(sub_attr.rep, sub_attr.parse(sub_attr_value))
-                parsed.append(parsed_item)
+                    deserialized_item.set(sub_attr.rep, sub_attr.deserialize(sub_attr_value))
+                deserialized.append(deserialized_item)
         else:
             value = SCIMDataContainer(value)
-            parsed = SCIMDataContainer()
+            deserialized = SCIMDataContainer()
             for sub_attr in self._sub_attributes:
                 sub_attr_value = value.get(sub_attr.rep)
                 if sub_attr_value is Missing:
                     continue
-                parsed.set(sub_attr.rep, sub_attr.parse(sub_attr_value))
-        return super().parse(parsed)
+                deserialized.set(sub_attr.rep, sub_attr.deserialize(sub_attr_value))
+        return super().deserialize(deserialized)
 
-    def dump(self, value: Any) -> Any:
+    def serialize(self, value: Any) -> Any:
         if self.multi_valued:
-            dumped = []
+            serialized = []
             for i, item in enumerate(value):
                 item = SCIMDataContainer(item)
-                parsed_item = SCIMDataContainer()
+                deserialized_item = SCIMDataContainer()
                 for sub_attr in self._sub_attributes:
                     sub_attr_value = item.get(sub_attr.rep)
                     if sub_attr_value is Missing:
                         continue
-                    parsed_item.set(sub_attr.rep, sub_attr.dump(sub_attr_value))
-                dumped.append(parsed_item)
+                    deserialized_item.set(sub_attr.rep, sub_attr.serialize(sub_attr_value))
+                serialized.append(deserialized_item)
         else:
             value = SCIMDataContainer(value)
-            dumped = SCIMDataContainer()
+            serialized = SCIMDataContainer()
             for sub_attr in self._sub_attributes:
                 sub_attr_value = value.get(sub_attr.rep)
                 if sub_attr_value is Missing:
                     continue
-                dumped.set(sub_attr.rep, sub_attr.dump(sub_attr_value))
-        return super().dump(dumped)
+                serialized.set(sub_attr.rep, sub_attr.serialize(sub_attr_value))
+        return super().serialize(serialized)
 
     def to_dict(self) -> Dict[str, Any]:
         output = super().to_dict()

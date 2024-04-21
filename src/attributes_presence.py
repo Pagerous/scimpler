@@ -29,7 +29,7 @@ class AttributePresenceChecker:
         issues = ValidationIssues()
         for attr_rep in attr_reps:
             try:
-                AttrRep.parse(attr_rep)
+                AttrRep.deserialize(attr_rep)
             except ValueError:
                 issues.add_error(
                     issue=ValidationError.bad_attribute_name(attr_rep),
@@ -39,11 +39,11 @@ class AttributePresenceChecker:
         return issues
 
     @classmethod
-    def parse(
+    def deserialize(
         cls, attr_reps: Iterable[str], include: Optional[bool] = None
     ) -> "AttributePresenceChecker":
         return AttributePresenceChecker(
-            [AttrRep.parse(attr_rep) for attr_rep in attr_reps], include
+            [AttrRep.deserialize(attr_rep) for attr_rep in attr_reps], include
         )
 
     def __call__(

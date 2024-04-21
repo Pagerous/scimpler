@@ -88,16 +88,16 @@ class ListResponse(BaseSchema):
                 )
         return issues
 
-    def dump(self, data: Any) -> SCIMDataContainer:
-        data = super().dump(data)
+    def serialize(self, data: Any) -> SCIMDataContainer:
+        data = super().serialize(data)
         resources_ = data.get(self.attrs.resources.rep)
         if resources_ is Missing:
             return data
         schemas_ = self.get_schemas_for_resources(resources_)
-        dumped_resources = []
+        serialized_resources = []
         for i, (resource, schema) in enumerate(zip(resources_, schemas_)):
-            dumped_resources.append(schema.dump(resource))
-        data.set(self.attrs.resources.rep, dumped_resources)
+            serialized_resources.append(schema.serialize(resource))
+        data.set(self.attrs.resources.rep, serialized_resources)
         return data
 
     def get_schemas_for_resources(self, resources_: List[Any]) -> List[Optional[ResourceSchema]]:

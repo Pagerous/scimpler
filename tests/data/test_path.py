@@ -68,7 +68,7 @@ def test_patch_path_parsing_failure(path, expected_issues):
     assert issues.to_dict(ctx=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid path expression"):
-        PatchPath.parse(path)
+        PatchPath.deserialize(path)
 
 
 @pytest.mark.parametrize(
@@ -117,21 +117,21 @@ def test_patch_path_parsing_success(
     issues = PatchPath.validate(path)
     assert issues.to_dict(msg=True) == {}
 
-    parsed = PatchPath.parse(path)
-    assert parsed.attr_rep == expected_attr_rep
+    deserialized = PatchPath.deserialize(path)
+    assert deserialized.attr_rep == expected_attr_rep
     if expected_multivalued_filter is not None:
-        assert isinstance(parsed.complex_filter, type(expected_multivalued_filter))
+        assert isinstance(deserialized.complex_filter, type(expected_multivalued_filter))
         assert (
-            parsed.complex_filter.operator.sub_operator.value
+            deserialized.complex_filter.operator.sub_operator.value
             == expected_multivalued_filter.operator.sub_operator.value
         )
         assert (
-            parsed.complex_filter.operator.sub_operator.attr_rep
+            deserialized.complex_filter.operator.sub_operator.attr_rep
             == expected_multivalued_filter.operator.sub_operator.attr_rep
         )
     else:
-        assert parsed.complex_filter is None
-    assert parsed.complex_filter_attr_rep == expected_complex_filter_attr_rep
+        assert deserialized.complex_filter is None
+    assert deserialized.complex_filter_attr_rep == expected_complex_filter_attr_rep
 
 
 @pytest.mark.parametrize(
@@ -218,5 +218,5 @@ def test_complex_filter_string_values_can_contain_anything(path, expected_filter
     issues = PatchPath.validate(path)
     assert issues.to_dict(msg=True) == {}
 
-    parsed = PatchPath.parse(path)
-    assert parsed.complex_filter.operator.sub_operator.value == expected_filter_value
+    deserialized = PatchPath.deserialize(path)
+    assert deserialized.complex_filter.operator.sub_operator.value == expected_filter_value

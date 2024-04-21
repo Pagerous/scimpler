@@ -54,14 +54,14 @@ class Sorter:
         return self._asc
 
     @classmethod
-    def parse(cls, by: str, asc: bool = True) -> "Sorter":
-        return Sorter(attr_rep=AttrRep.parse(by), asc=asc)
+    def deserialize(cls, by: str, asc: bool = True) -> "Sorter":
+        return Sorter(attr_rep=AttrRep.deserialize(by), asc=asc)
 
     @classmethod
     def validate(cls, by: str) -> ValidationIssues:
         issues = ValidationIssues()
         try:
-            AttrRep.parse(by)
+            AttrRep.deserialize(by)
         except ValueError:
             issues.add_error(
                 issue=ValidationError.bad_attribute_name(by),

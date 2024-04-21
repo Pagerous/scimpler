@@ -1,23 +1,12 @@
-from typing import Any, List, Tuple, Union
+from typing import Any, List
 
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import Integer, String
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.container import AttrRep, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
 from src.sorter import Sorter
-
-
-def parse_attr_rep(value: str) -> Tuple[Union[Invalid, AttrRep], ValidationIssues]:
-    issues = ValidationIssues()
-    parsed = AttrRep.parse(value)
-    if parsed is Invalid:
-        issues.add_error(
-            issue=ValidationError.bad_attribute_name(str(value)),
-            proceed=False,
-        )
-    return parsed, issues
 
 
 def validate_attr_reps(value: List[str]) -> ValidationIssues:
@@ -27,15 +16,15 @@ def validate_attr_reps(value: List[str]) -> ValidationIssues:
     return issues
 
 
-def parse_attr_reps(value: List[str]) -> List[AttrRep]:
-    return [AttrRep.parse(item) for item in value]
+def deserialize_attr_reps(value: List[str]) -> List[AttrRep]:
+    return [AttrRep.deserialize(item) for item in value]
 
 
 attributes = String(
     name="attributes",
     multi_valued=True,
     validators=[validate_attr_reps],
-    parser=parse_attr_reps,
+    deserializer=deserialize_attr_reps,
 )
 
 
@@ -43,21 +32,21 @@ exclude_attributes = String(
     name="excludeAttributes",
     multi_valued=True,
     validators=[validate_attr_reps],
-    parser=parse_attr_reps,
+    deserializer=deserialize_attr_reps,
 )
 
 
 filter_ = String(
     name="filter",
     validators=[Filter.validate],
-    parser=Filter.parse,
+    deserializer=Filter.deserialize,
 )
 
 
 sort_by = String(
     name="sortBy",
     validators=[AttrRep.validate],
-    parser=AttrRep.parse,
+    deserializer=AttrRep.deserialize,
 )
 
 
@@ -88,8 +77,8 @@ class SearchRequest(BaseSchema):
             ],
         )
 
-    def parse(self, data: Any) -> SCIMDataContainer:
-        data = super().parse(data)
+    def deserialize(self, data: Any) -> SCIMDataContainer:
+        data = super().deserialize(data)
         to_include = data.pop(self.attrs.attributes.rep)
         to_exclude = data.pop(self.attrs.excludeattributes.rep)
         if to_include or to_exclude:

@@ -142,7 +142,7 @@ def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
     return issues
 
 
-def dump_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+def serialize_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     for i, item in enumerate(value):
         attr_type = item.get(_attributes__type.rep)
         sub_attributes = item.get(_attributes__sub_attributes.rep)
@@ -150,7 +150,7 @@ def dump_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
             if attr_type != "complex":
                 item.pop(_attributes__sub_attributes.rep)
             else:
-                item.set(_attributes__sub_attributes.rep, attributes.dump(sub_attributes))
+                item.set(_attributes__sub_attributes.rep, attributes.serialize(sub_attributes))
         if attr_type != "string":
             item.pop(_attributes__case_exact.rep)
     return value
@@ -175,7 +175,7 @@ attributes = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
     validators=[validate_attributes],
-    dumper=dump_attributes,
+    serializeer=serialize_attributes,
 )
 
 

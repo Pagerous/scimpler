@@ -101,11 +101,11 @@ def test_validation_bulk_request_operation_fails_if_bad_path(method):
 
 @pytest.mark.parametrize("method", ["GET", "DELETE"])
 def test_data_is_removed_when_parsing_bulk_request_get_or_delete_operation(method):
-    parsed = request_operations.parse(
+    deserialized = request_operations.deserialize(
         [SCIMDataContainer({"method": method, "data": {"a": 1}, "path": "/NiceResource/123"})]
     )
 
-    assert "data" not in parsed[0].to_dict()
+    assert "data" not in deserialized[0].to_dict()
 
 
 def test_validation_bulk_request_post_operation_succeeds():

@@ -69,8 +69,8 @@ def test_validation_attributes_field_fails_for_bad_sub_attributes():
     assert issues.to_dict() == expected_issues
 
 
-def test_case_exact_is_removed_from_non_string_attrs_while_dumping_attributes():
-    dumped = attributes.dump(
+def test_case_exact_is_removed_from_non_string_attrs_while_serializeing_attributes():
+    serialized = attributes.serialize(
         value=[
             SCIMDataContainer(
                 {
@@ -84,11 +84,11 @@ def test_case_exact_is_removed_from_non_string_attrs_while_dumping_attributes():
         ]
     )
 
-    assert "caseExact" not in dumped[0].to_dict()
+    assert "caseExact" not in serialized[0].to_dict()
 
 
-def test_sub_attributes_are_removed_from_non_complex_attrs_while_dumping_attributes():
-    dumped = attributes.dump(
+def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializeing_attributes():
+    serialized = attributes.serialize(
         value=[
             SCIMDataContainer(
                 {
@@ -102,4 +102,4 @@ def test_sub_attributes_are_removed_from_non_complex_attrs_while_dumping_attribu
         ]
     )
 
-    assert "subAttributes" not in dumped[0].to_dict()
+    assert "subAttributes" not in serialized[0].to_dict()

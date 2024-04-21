@@ -778,7 +778,7 @@ class ResourceObjectPATCH(Validator):
                     )
 
             else:
-                attr = self._resource_schema.attrs.get_by_path(PatchPath.parse(path))
+                attr = self._resource_schema.attrs.get_by_path(PatchPath.deserialize(path))
                 self._check_complex_sub_attrs_presence(
                     issues=issues,
                     attr=attr,
