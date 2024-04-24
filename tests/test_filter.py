@@ -503,13 +503,9 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_deseriali
                             "value": "@example.com",
                         },
                         {
-                            "op": "complex",
-                            "attr_rep": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
-                            "sub_op": {
-                                "op": "co",
-                                "attr_rep": "display",
-                                "value": "@example.com",
-                            },
+                            "op": "co",
+                            "attr_rep": "display",
+                            "value": "@example.com",
                         },
                     ],
                 },
@@ -549,12 +545,8 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
                             "value": "work",
                         },
                         {
-                            "op": "complex",
-                            "attr_rep": "emails",
-                            "sub_op": {
-                                "op": "pr",
-                                "attr_rep": "primary",
-                            },
+                            "op": "pr",
+                            "attr_rep": "primary",
                         },
                     ],
                 },
@@ -567,13 +559,9 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
                             "value": "@ex am\nple.com",
                         },
                         {
-                            "op": "complex",
-                            "attr_rep": "urn:ietf:params:scim:schemas:core:2.0:User:emails",
-                            "sub_op": {
-                                "op": "co",
-                                "attr_rep": "display",
-                                "value": "@example\t.com",
-                            },
+                            "op": "co",
+                            "attr_rep": "display",
+                            "value": "@example\t.com",
                         },
                     ],
                 },
@@ -665,15 +653,9 @@ def test_gargantuan_filter():
                                             "value": "@example.com",
                                         },
                                         {
-                                            "op": "complex",
-                                            "attr_rep": (
-                                                "urn:ietf:params:scim:schemas:core:2.0:User:emails"
-                                            ),
-                                            "sub_op": {
-                                                "op": "co",
-                                                "attr_rep": "display",
-                                                "value": "@example.com",
-                                            },
+                                            "op": "co",
+                                            "attr_rep": "display",
+                                            "value": "@example.com",
                                         },
                                     ],
                                 },

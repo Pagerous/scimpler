@@ -1,5 +1,5 @@
 from src.assets.schemas import User
-from src.assets.schemas.schema import attributes, Schema
+from src.assets.schemas.schema import Schema, attributes
 from src.data.container import SCIMDataContainer
 
 

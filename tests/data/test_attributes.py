@@ -2,6 +2,7 @@ import base64
 
 import pytest
 
+from src.assets.schemas import User  # noqa; schema must be registered
 from src.data.attributes import (
     Binary,
     Boolean,
@@ -14,7 +15,7 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.data.container import AttrRep, SCIMDataContainer
+from src.data.container import BoundedAttrRep, SCIMDataContainer
 
 
 def test_validation_is_skipped_if_value_not_provided():
@@ -158,10 +159,10 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
 def test_attribute_identifier_is_deserialized(
     input_, expected_schema, expected_attr_with_schema, expected_attr, expected_sub_attr
 ):
-    issues = AttrRep.validate(input_)
+    issues = BoundedAttrRep.validate(input_)
     assert issues.to_dict(msg=True) == {}
 
-    attr_rep = AttrRep.deserialize(input_)
+    attr_rep = BoundedAttrRep.deserialize(input_)
     assert attr_rep.schema == expected_schema
     assert attr_rep.attr_with_schema == expected_attr_with_schema
     assert attr_rep.attr == expected_attr
@@ -180,11 +181,11 @@ def test_attribute_identifier_is_deserialized(
     ),
 )
 def test_attribute_identifier_is_not_deserialized_when_bad_input(input_):
-    issues = AttrRep.validate(input_)
+    issues = BoundedAttrRep.validate(input_)
     assert issues.to_dict() == {"_errors": [{"code": 111}]}
 
     with pytest.raises(ValueError):
-        AttrRep.deserialize(input_)
+        BoundedAttrRep.deserialize(input_)
 
 
 def test_validation_fails_in_not_one_of_canonical_values():

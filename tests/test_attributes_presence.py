@@ -1,21 +1,6 @@
-import pytest
-
 from src.assets.schemas.user import User
 from src.attributes_presence import AttributePresenceChecker
-from src.data.container import AttrRep, SCIMDataContainer
-
-
-@pytest.mark.parametrize(
-    ("attr_reps", "expected"),
-    (
-        (["username", "name.familyname"], {}),
-        (["bad^attr"], {"bad^attr": {"_errors": [{"code": 111}]}}),
-    ),
-)
-def test_attribute_presence_checker_parsing(attr_reps, expected):
-    issues = AttributePresenceChecker.validate(attr_reps)
-
-    assert issues.to_dict() == expected
+from src.data.container import BoundedAttrRep, SCIMDataContainer
 
 
 def test_presence_checker_fails_if_returned_attribute_that_never_should_be_returned(
@@ -39,7 +24,7 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
 
 
 def test_restricted_attributes_can_be_sent_with_request(user_data_client):
-    checker = AttributePresenceChecker(ignore_required=[AttrRep(attr="id")])
+    checker = AttributePresenceChecker(ignore_required=[BoundedAttrRep(attr="id")])
     user_data_client["password"] = "1234"
 
     issues = checker(SCIMDataContainer(user_data_client), User.attrs, "REQUEST")
@@ -48,7 +33,7 @@ def test_restricted_attributes_can_be_sent_with_request(user_data_client):
 
 
 def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
-    checker = AttributePresenceChecker([AttrRep(attr="name")], include=False)
+    checker = AttributePresenceChecker([BoundedAttrRep(attr="name")], include=False)
     data = SCIMDataContainer(
         {
             "id": "1",
@@ -66,7 +51,7 @@ def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
 
 
 def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
-    checker = AttributePresenceChecker([AttrRep(attr="name")], include=True)
+    checker = AttributePresenceChecker([BoundedAttrRep(attr="name")], include=True)
     data = SCIMDataContainer(
         {
             "id": "1",
@@ -98,7 +83,9 @@ def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
 
 
 def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
-    checker = AttributePresenceChecker([AttrRep(attr="name", sub_attr="familyName")], include=False)
+    checker = AttributePresenceChecker(
+        [BoundedAttrRep(attr="name", sub_attr="familyName")], include=False
+    )
     data = SCIMDataContainer(
         {
             "id": "1",
@@ -126,7 +113,9 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
 
 
 def test_presence_checker_fails_on_sub_attr_not_requested_by_inclusion():
-    checker = AttributePresenceChecker([AttrRep(attr="name", sub_attr="familyName")], include=True)
+    checker = AttributePresenceChecker(
+        [BoundedAttrRep(attr="name", sub_attr="familyName")], include=True
+    )
     data = SCIMDataContainer(
         {
             "id": "1",
@@ -185,7 +174,7 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
 
 
 def test_presence_checker_fails_if_not_provided_requested_required_attribute():
-    checker = AttributePresenceChecker([AttrRep(attr="username")], include=True)
+    checker = AttributePresenceChecker([BoundedAttrRep(attr="username")], include=True)
     data = SCIMDataContainer(
         {
             "id": "1",
@@ -208,7 +197,9 @@ def test_presence_checker_fails_if_not_provided_requested_required_attribute():
 
 
 def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
-    checker = AttributePresenceChecker([AttrRep(attr="name", sub_attr="familyname")], include=True)
+    checker = AttributePresenceChecker(
+        [BoundedAttrRep(attr="name", sub_attr="familyname")], include=True
+    )
     data = SCIMDataContainer(
         {
             "id": "1",
@@ -222,7 +213,9 @@ def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
 
 
 def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exclusion():
-    checker = AttributePresenceChecker([AttrRep(attr="emails", sub_attr="display")], include=False)
+    checker = AttributePresenceChecker(
+        [BoundedAttrRep(attr="emails", sub_attr="display")], include=False
+    )
     data = SCIMDataContainer(
         {
             "id": "1",
@@ -249,7 +242,9 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exc
 
 
 def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inclusion():
-    checker = AttributePresenceChecker([AttrRep(attr="emails", sub_attr="display")], include=True)
+    checker = AttributePresenceChecker(
+        [BoundedAttrRep(attr="emails", sub_attr="display")], include=True
+    )
     data = SCIMDataContainer(
         {
             "id": "1",

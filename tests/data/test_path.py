@@ -2,7 +2,7 @@ from typing import Optional
 
 import pytest
 
-from src.data.container import AttrRep
+from src.data.container import AttrRep, BoundedAttrRep
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
 from src.filter import Filter
@@ -31,7 +31,7 @@ from src.filter import Filter
         ),
         (
             "attr[value eq 1].sub_attr.sub_sub_attr",
-            {"_errors": [{"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
+            {"_errors": [{"code": 111, "context": {"attribute": "sub_attr.sub_sub_attr"}}]},
         ),
         (
             "attr[value eq]",
@@ -79,14 +79,14 @@ def test_patch_path_parsing_failure(path, expected_issues):
         "expected_complex_filter_attr_rep",
     ),
     (
-        ("members", AttrRep(attr="members"), None, None),
-        ("name.familyName", AttrRep(attr="name", sub_attr="familyName"), None, None),
+        ("members", BoundedAttrRep(attr="members"), None, None),
+        ("name.familyName", BoundedAttrRep(attr="name", sub_attr="familyName"), None, None),
         (
             'addresses[type eq "work"]',
-            AttrRep(attr="addresses"),
+            BoundedAttrRep(attr="addresses"),
             Filter(
                 ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="addressed"),
+                    attr_rep=BoundedAttrRep(attr="addressed"),
                     sub_operator=Equal(AttrRep(attr="type"), "work"),
                 )
             ),
@@ -94,17 +94,17 @@ def test_patch_path_parsing_failure(path, expected_issues):
         ),
         (
             'members[value eq "2819c223-7f76-453a-919d-413861904646"].displayName',
-            AttrRep(attr="members"),
+            BoundedAttrRep(attr="members"),
             Filter(
                 ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="members"),
+                    attr_rep=BoundedAttrRep(attr="members"),
                     sub_operator=Equal(
                         AttrRep(attr="value"),
                         "2819c223-7f76-453a-919d-413861904646",
                     ),
                 )
             ),
-            AttrRep(attr="members", sub_attr="displayName"),
+            AttrRep(attr="displayName"),
         ),
     ),
 )
@@ -138,64 +138,34 @@ def test_patch_path_parsing_success(
     "kwargs",
     (
         {
-            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
             "complex_filter": Filter(
                 ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="attr"),
+                    attr_rep=BoundedAttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
             "complex_filter_attr_rep": None,
         },
         {
-            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
             "complex_filter": Filter(
                 ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="attr"),
+                    attr_rep=BoundedAttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
-            "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
+            "complex_filter_attr_rep": AttrRep(attr="other_attr"),
         },
         {
-            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "attr_rep": BoundedAttrRep(attr="attr"),
             "complex_filter": Filter(
                 ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="attr"),
-                    sub_operator=Equal(AttrRep(attr="attr"), "whatever"),
-                )
-            ),
-            "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
-        },
-        {
-            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Filter(
-                ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="attr"),
+                    attr_rep=BoundedAttrRep(attr="different_attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
-            "complex_filter_attr_rep": AttrRep(attr="attr"),
-        },
-        {
-            "attr_rep": AttrRep(attr="attr"),
-            "complex_filter": Filter(
-                ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="different_attr"),
-                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
-                )
-            ),
-            "complex_filter_attr_rep": AttrRep(attr="attr", sub_attr="other_attr"),
-        },
-        {
-            "attr_rep": AttrRep(attr="attr"),
-            "complex_filter": Filter(
-                ComplexAttributeOperator(
-                    attr_rep=AttrRep(attr="attr"),
-                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
-                )
-            ),
-            "complex_filter_attr_rep": AttrRep(attr="different_attr", sub_attr="other_attr"),
+            "complex_filter_attr_rep": AttrRep(attr="other_attr"),
         },
     ),
 )

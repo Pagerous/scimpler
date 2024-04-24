@@ -2,7 +2,7 @@ from typing import Any, List
 
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import Integer, String
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
@@ -12,12 +12,12 @@ from src.sorter import Sorter
 def validate_attr_reps(value: List[str]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        issues.merge(issues=AttrRep.validate(item), location=(i,))
+        issues.merge(issues=BoundedAttrRep.validate(item), location=(i,))
     return issues
 
 
-def deserialize_attr_reps(value: List[str]) -> List[AttrRep]:
-    return [AttrRep.deserialize(item) for item in value]
+def deserialize_attr_reps(value: List[str]) -> List[BoundedAttrRep]:
+    return [BoundedAttrRep.deserialize(item) for item in value]
 
 
 attributes = String(
@@ -45,8 +45,8 @@ filter_ = String(
 
 sort_by = String(
     name="sortBy",
-    validators=[AttrRep.validate],
-    deserializer=AttrRep.deserialize,
+    validators=[BoundedAttrRep.validate],
+    deserializer=BoundedAttrRep.deserialize,
 )
 
 

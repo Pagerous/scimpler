@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, TypeAlias, Union
 
 from src.data import operator as op
-from src.data.container import AttrRep, SCIMDataContainer
+from src.data.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.utils import (
     OP_REGEX,
@@ -118,7 +118,7 @@ class Filter:
                             proceed=False,
                         )
                     try:
-                        attr_rep = AttrRep.deserialize(complex_attr_rep)
+                        attr_rep = BoundedAttrRep.deserialize(complex_attr_rep)
                         if attr_rep.sub_attr:
                             issues_.add_error(
                                 issue=ValidationError.complex_sub_attribute(
@@ -345,7 +345,7 @@ class Filter:
                         proceed=False,
                     )
             attr_rep = decode_placeholders(components[0], placeholders)
-            issues.merge(AttrRep.validate(attr_rep))
+            issues.merge(BoundedAttrRep.validate(attr_rep))
             return issues
 
         elif len(components) == 3:
@@ -360,7 +360,7 @@ class Filter:
                     proceed=False,
                 )
             attr_rep = decode_placeholders(components[0], placeholders)
-            issues.merge(AttrRep.validate(attr_rep))
+            issues.merge(BoundedAttrRep.validate(attr_rep))
             value = decode_placeholders(components[2], placeholders)
             try:
                 value = deserialize_comparison_value(value)
@@ -397,7 +397,7 @@ class Filter:
     def deserialize(cls, filter_exp: str) -> "Filter":
         try:
             return cls._deserialize(filter_exp)
-        except Exception:
+        except Exception as e:
             raise ValueError("invalid filter expression")
 
     @classmethod
@@ -405,10 +405,13 @@ class Filter:
         filter_exp, placeholders = encode_strings(filter_exp)
         for match in COMPLEX_OPERATOR_REGEX.finditer(filter_exp):
             complex_attr_rep = match.group(1)
-            attr_rep = AttrRep.deserialize(complex_attr_rep)
-            assert not attr_rep.sub_attr
+            attr_rep = BoundedAttrRep.deserialize(complex_attr_rep)
+            if attr_rep.sub_attr:
+                raise
             sub_op_exp = match.group(2)
-            deserialized_sub_op = Filter._deserialize_operator(sub_op_exp, placeholders)
+            deserialized_sub_op = Filter._deserialize_operator(
+                sub_op_exp, placeholders, complex_group=True
+            )
             id_, placeholder = get_placeholder()
             placeholders[id_] = op.ComplexAttributeOperator(
                 attr_rep=attr_rep,
@@ -416,24 +419,31 @@ class Filter:
             )
             filter_exp = filter_exp.replace(match.group(0), placeholder, 1)
 
-        deserialized_op = Filter._deserialize_operator(filter_exp, placeholders)
+        deserialized_op = Filter._deserialize_operator(
+            filter_exp, placeholders, complex_group=False
+        )
         return cls(deserialized_op)
 
     @staticmethod
-    def _deserialize_operator(exp: str, placeholders: Dict[str, Any]) -> _DeserializedOperator:
+    def _deserialize_operator(
+        exp: str, placeholders: Dict[str, Any], complex_group: bool
+    ) -> _DeserializedOperator:
         for match in GROUP_OPERATOR_REGEX.finditer(exp):
             sub_op_exp = match.group(0)
             deserialized_op = Filter._deserialize_operator(
                 exp=sub_op_exp[1:-1],  # without enclosing brackets
                 placeholders=placeholders,
+                complex_group=complex_group,
             )
             id_, placeholder = get_placeholder()
             placeholders[id_] = deserialized_op
             exp = exp.replace(sub_op_exp, placeholder, 1)
-        return Filter._deserialize_op_or_exp(exp, placeholders)
+        return Filter._deserialize_op_or_exp(exp, placeholders, complex_group)
 
     @staticmethod
-    def _deserialize_op_or_exp(exp: str, placeholders: Dict[str, Any]) -> _DeserializedOperator:
+    def _deserialize_op_or_exp(
+        exp: str, placeholders: Dict[str, Any], complex_group: bool
+    ) -> _DeserializedOperator:
         or_operands = Filter._split_exp_to_logical_operands(
             exp=exp,
             regexp=OR_LOGICAL_OPERATOR_SPLIT_REGEX,
@@ -441,14 +451,18 @@ class Filter:
         deserialized_or_operands = []
         for or_operand in or_operands:
             deserialized_or_operands.append(
-                Filter._deserialize_op_and_exp(or_operand, placeholders)
+                Filter._deserialize_op_and_exp(or_operand, placeholders, complex_group)
             )
         if len(deserialized_or_operands) == 1:
             return deserialized_or_operands[0]
         return op.Or(*deserialized_or_operands)
 
     @staticmethod
-    def _deserialize_op_and_exp(exp: str, placeholders: Dict[str, Any]) -> _DeserializedOperator:
+    def _deserialize_op_and_exp(
+        exp: str,
+        placeholders: Dict[str, Any],
+        complex_group: bool,
+    ) -> _DeserializedOperator:
         and_operands = Filter._split_exp_to_logical_operands(
             exp=exp,
             regexp=AND_LOGICAL_OPERATOR_SPLIT_REGEX,
@@ -458,11 +472,11 @@ class Filter:
             match = NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
             if match:
                 deserialized_and_operand = op.Not(
-                    Filter._deserialize_op_attr_exp(match.group(1), placeholders)
+                    Filter._deserialize_op_attr_exp(match.group(1), placeholders, complex_group)
                 )
             else:
                 deserialized_and_operand = Filter._deserialize_op_attr_exp(
-                    and_operand, placeholders
+                    and_operand, placeholders, complex_group
                 )
             deserialized_and_operands.append(deserialized_and_operand)
         if len(deserialized_and_operands) == 1:
@@ -492,7 +506,11 @@ class Filter:
         return operands
 
     @staticmethod
-    def _deserialize_op_attr_exp(exp: str, placeholders: Dict[str, Any]) -> _DeserializedOperator:
+    def _deserialize_op_attr_exp(
+        exp: str,
+        placeholders: Dict[str, Any],
+        complex_group: bool,
+    ) -> _DeserializedOperator:
         exp = exp.strip()
         sub_or_complex = placeholders.get(deserialize_placeholder(exp))
         if sub_or_complex is not None:
@@ -503,19 +521,24 @@ class Filter:
         if len(components) == 2:
             op_exp = components[1].lower()
             op_ = _UNARY_ATTR_OPERATORS[op_exp]
-            attr_rep = AttrRep.deserialize(components[0])
-            if attr_rep.sub_attr:
+            attr_rep = BoundedAttrRep.deserialize(components[0])
+            if complex_group:
+                attr_rep = AttrRep(attr_rep.sub_attr or attr_rep.attr)
+            elif attr_rep.sub_attr:
                 return op.ComplexAttributeOperator(
-                    attr_rep=AttrRep(schema=attr_rep.schema, attr=attr_rep.attr),
+                    attr_rep=BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr),
                     sub_operator=op_(AttrRep(attr=attr_rep.sub_attr)),
                 )
             return op_(attr_rep)
         op_ = _BINARY_ATTR_OPERATORS.get(components[1].lower())
-        attr_rep = AttrRep.deserialize(components[0])
         value = deserialize_comparison_value(decode_placeholders(components[2], placeholders))
-        if attr_rep.sub_attr:
+
+        attr_rep = BoundedAttrRep.deserialize(components[0])
+        if complex_group:
+            attr_rep = AttrRep(attr_rep.sub_attr or attr_rep.attr)
+        elif attr_rep.sub_attr:
             return op.ComplexAttributeOperator(
-                attr_rep=AttrRep(schema=attr_rep.schema, attr=attr_rep.attr),
+                attr_rep=BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr),
                 sub_operator=op_(AttrRep(attr=attr_rep.sub_attr), value),
             )
         return op_(attr_rep, value)
@@ -540,7 +563,11 @@ class Filter:
         if isinstance(operator, op.AttributeOperator):
             filter_dict = {
                 "op": operator.SCIM_OP,
-                "attr_rep": operator.attr_rep.sub_attr or operator.attr_rep.attr_with_schema,
+                "attr_rep": (
+                    (operator.attr_rep.sub_attr or operator.attr_rep.attr_with_schema)
+                    if isinstance(operator.attr_rep, BoundedAttrRep)
+                    else operator.attr_rep.attr
+                ),
             }
             if isinstance(operator, op.BinaryAttributeOperator):
                 filter_dict["value"] = operator.value
@@ -549,7 +576,7 @@ class Filter:
         if isinstance(operator, op.ComplexAttributeOperator):
             return {
                 "op": "complex",
-                "attr_rep": operator.attr_rep.sub_attr or operator.attr_rep.attr_with_schema,
+                "attr_rep": operator.attr_rep.attr_with_schema,
                 "sub_op": Filter._to_dict(operator.sub_operator),
             }
 

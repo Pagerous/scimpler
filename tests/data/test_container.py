@@ -1,6 +1,6 @@
 import pytest
 
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 
 
 @pytest.mark.parametrize(
@@ -8,7 +8,7 @@ from src.data.container import AttrRep, Missing, SCIMDataContainer
     (
         (AttrRep(attr="id"), "2819c223-7f76-453a-919d-413861904646"),
         (
-            AttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
+            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
             "bjensen@example.com",
         ),
         (
@@ -16,15 +16,15 @@ from src.data.container import AttrRep, Missing, SCIMDataContainer
             "bjensen@example.com",
         ),
         (
-            AttrRep(attr="meta", sub_attr="resourceType"),
+            BoundedAttrRep(attr="meta", sub_attr="resourceType"),
             "User",
         ),
         (
-            AttrRep(attr="name", sub_attr="givenName"),
+            BoundedAttrRep(attr="name", sub_attr="givenName"),
             "Barbara",
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
                 attr="name",
                 sub_attr="familyName",
@@ -32,7 +32,7 @@ from src.data.container import AttrRep, Missing, SCIMDataContainer
             "Jensen",
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
                 attr="name",
                 sub_attr="familyName",
@@ -40,21 +40,21 @@ from src.data.container import AttrRep, Missing, SCIMDataContainer
             "Jensen",
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 attr="emails",
                 sub_attr="type",
             ),
             ["work", "home"],
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="employeeNumber",
             ),
             "1",
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="manager",
                 sub_attr="displayName",
@@ -78,7 +78,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             {"id": "2819c223-7f76-453a-919d-413861904646"},
         ),
         (
-            AttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
+            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
             "bjensen@example.com",
             {"userName": "bjensen@example.com"},
         ),
@@ -88,12 +88,12 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             {"userName": "bjensen@example.com"},
         ),
         (
-            AttrRep(attr="meta", sub_attr="resourceType"),
+            BoundedAttrRep(attr="meta", sub_attr="resourceType"),
             "User",
             {"meta": {"resourceType": "User"}},
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
                 attr="meta",
                 sub_attr="resourceType",
@@ -102,7 +102,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             {"meta": {"resourceType": "User"}},
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
                 attr="emails",
                 sub_attr="type",
@@ -111,7 +111,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             {"emails": [{"type": "work"}, {"type": "home"}]},
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
                 attr="emails",
                 sub_attr="type",
@@ -120,7 +120,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             {"emails": [{}, {"type": "home"}]},
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="employeeNumber",
                 extension=True,
@@ -133,7 +133,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             },
         ),
         (
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="manager",
                 sub_attr="displayName",

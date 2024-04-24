@@ -1,6 +1,6 @@
 import pytest
 
-from src.data.container import AttrRep
+from src.data.container import BoundedAttrRep
 from src.query_deserializer import (
     ResourceObjectGET,
     ResourceObjectPATCH,
@@ -24,7 +24,7 @@ def test_presence_checker_is_deserialized_from_query_string(deserializer):
     deserialized = deserializer.deserialize(query_string={"attributes": ["name.familyName"]})
 
     assert deserialized["presence_checker"].attr_reps == [
-        AttrRep(attr="name", sub_attr="familyName")
+        BoundedAttrRep(attr="name", sub_attr="familyName")
     ]
     assert deserialized["presence_checker"].include is True
 
@@ -42,8 +42,8 @@ def test_server_root_resources_get_query_string_is_deserialized():
     )
 
     assert data["presence_checker"].attr_reps == [
-        AttrRep(attr="userName"),
-        AttrRep(attr="name"),
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name"),
     ]
     assert data["presence_checker"].include is True
     assert data["filter"].to_dict() == {
@@ -51,7 +51,7 @@ def test_server_root_resources_get_query_string_is_deserialized():
         "attr_rep": "userName",
         "value": "bjensen",
     }
-    assert data["sorter"].attr_rep == AttrRep(attr="name", sub_attr="familyName")
+    assert data["sorter"].attr_rep == BoundedAttrRep(attr="name", sub_attr="familyName")
     assert data["sorter"].asc is False
     assert data["startIndex"] == 2
     assert data["count"] == 10

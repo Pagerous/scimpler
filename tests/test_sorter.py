@@ -1,42 +1,13 @@
 import pytest
 
 from src.assets.schemas.user import User
-from src.data.container import AttrRep, SCIMDataContainer
+from src.data.container import BoundedAttrRep, SCIMDataContainer
 from src.sorter import Sorter
 from tests.conftest import SchemaForTests
 
 
-@pytest.mark.parametrize(
-    "sort_by",
-    (
-        "userName",
-        "name.givenName",
-        "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-        "urn:ietf:params:scim:schemas:core:2.0:User:name.givenName",
-        "emails",
-        "urn:ietf:params:scim:schemas:core:2.0:User:emails",
-    ),
-)
-def test_sorter_is_deserialized(sort_by):
-    issues = Sorter.validate(by=sort_by)
-    assert issues.to_dict(msg=True) == {}
-
-    sorter = Sorter.deserialize(by=sort_by)
-    assert sorter is not None
-
-
-def test_sorter_parsing_fails_with_schema():
-    expected = {"_errors": [{"code": 111}]}
-    attr_rep = "bad.attr.name"
-    issues = Sorter.validate(by=attr_rep)
-    assert issues.to_dict() == expected
-
-    with pytest.raises(ValueError):
-        Sorter.deserialize(by=attr_rep)
-
-
 def test_items_are_sorted_according_to_attr_value():
-    sorter = Sorter(AttrRep.deserialize("userName"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="userName"), asc=True)
     c_1 = SCIMDataContainer({"userName": "C", "id": "2"})
     c_2 = SCIMDataContainer({"userName": "A", "id": "3"})
     c_3 = SCIMDataContainer({"userName": "B", "id": "1"})
@@ -50,7 +21,7 @@ def test_items_are_sorted_according_to_attr_value():
 
 
 def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttrRep.deserialize("userName"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="userName"), asc=True)
     c_1 = SCIMDataContainer({"urn:ietf:params:scim:schemas:core:2.0:User:userName": "C", "id": "2"})
     c_2 = SCIMDataContainer({"userName": "A", "id": "3"})
     c_3 = SCIMDataContainer({"id": "1"})
@@ -63,7 +34,7 @@ def test_items_with_missing_value_for_attr_are_sorted_last_for_asc():
 
 
 def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttrRep.deserialize("userName"), asc=False)
+    sorter = Sorter(BoundedAttrRep(attr="userName"), asc=False)
     c_1 = SCIMDataContainer({"userName": "C", "id": "2"})
     c_2 = SCIMDataContainer({"userName": "A", "id": "3"})
     c_3 = SCIMDataContainer({"id": "1"})
@@ -76,7 +47,7 @@ def test_items_with_missing_value_for_attr_are_sorted_first_for_desc():
 
 
 def test_original_order_is_preserved_if_no_values_for_all_items():
-    sorter = Sorter(AttrRep.deserialize("userName"))
+    sorter = Sorter(BoundedAttrRep(attr="userName"))
     c_1 = SCIMDataContainer({"id": "2"})
     c_2 = SCIMDataContainer({"id": "3"})
     c_3 = SCIMDataContainer({"id": "1"})
@@ -89,7 +60,7 @@ def test_original_order_is_preserved_if_no_values_for_all_items():
 
 
 def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_attrs():
-    sorter = Sorter(AttrRep.deserialize("str_mv"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="str_mv"), asc=True)
     c_1 = SCIMDataContainer({"str_mv": [7, 1, 9]})
     c_2 = SCIMDataContainer({"str_mv": [1, 8, 2]})
     c_3 = SCIMDataContainer({"str_mv": [4, 3, 6]})
@@ -102,7 +73,7 @@ def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_
 
 
 def test_items_are_sorted_according_to_sub_attr_value():
-    sorter = Sorter(AttrRep.deserialize("name.givenName"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="name", sub_attr="givenName"), asc=True)
     c_1 = SCIMDataContainer(
         {"urn:ietf:params:scim:schemas:core:2.0:User:name": {"givenName": "C"}, "id": "2"}
     )
@@ -118,7 +89,7 @@ def test_items_are_sorted_according_to_sub_attr_value():
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
-    sorter = Sorter(AttrRep.deserialize("name.givenName"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="name", sub_attr="givenName"), asc=True)
     c_1 = SCIMDataContainer({"name": {"givenName": "C"}, "id": "2"})
     c_2 = SCIMDataContainer({"id": "3"})
     c_3 = SCIMDataContainer({"name": {"givenName": "B"}, "id": "1"})
@@ -131,7 +102,7 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc():
 
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
-    sorter = Sorter(AttrRep.deserialize("name.givenName"), asc=False)
+    sorter = Sorter(BoundedAttrRep(attr="name", sub_attr="givenName"), asc=False)
     c_1 = SCIMDataContainer({"name": {"givenName": "C"}, "id": "2"})
     c_2 = SCIMDataContainer({"id": "3"})
     c_3 = SCIMDataContainer({"name": {"givenName": "B"}, "id": "1"})
@@ -144,7 +115,7 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc():
 
 
 def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs():
-    sorter = Sorter(AttrRep(attr="emails"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="emails"), asc=True)
     c_1 = SCIMDataContainer(
         {
             "id": "1",
@@ -178,7 +149,7 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
 
 
 def test_case_insensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttrRep.deserialize("userName"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="userName"), asc=True)
     c_1 = SCIMDataContainer({"userName": "C", "id": "2"})
     # 'a' would be after 'C' if case-sensitive
     c_2 = SCIMDataContainer({"userName": "a", "id": "3"})
@@ -192,7 +163,7 @@ def test_case_insensitive_attributes_are_respected_if_schema_provided():
 
 
 def test_case_sensitive_attributes_are_respected_if_schema_provided():
-    sorter = Sorter(AttrRep.deserialize("id"), asc=True)
+    sorter = Sorter(BoundedAttrRep(attr="id"), asc=True)
     c_1 = SCIMDataContainer({"id": "a"})
     c_2 = SCIMDataContainer({"id": "A"})
     c_3 = SCIMDataContainer({"id": "B"})
@@ -205,7 +176,7 @@ def test_case_sensitive_attributes_are_respected_if_schema_provided():
 
 
 def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_case_sensitive():
-    sorter = Sorter(AttrRep.deserialize("userName"), asc=False)
+    sorter = Sorter(BoundedAttrRep(attr="userName"), asc=False)
     c_1 = SCIMDataContainer({"userName": "A"})
     c_2 = SCIMDataContainer({"userName": "a"})
     c_3 = SCIMDataContainer({"userName": "B"})
@@ -219,7 +190,7 @@ def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_cas
 
 
 def test_fails_if_different_value_types():
-    sorter = Sorter(AttrRep.deserialize("title"), asc=False)
+    sorter = Sorter(BoundedAttrRep(attr="title"), asc=False)
     c_1 = SCIMDataContainer({"title": 1})
     c_2 = SCIMDataContainer({"title": "a"})
     values = [c_1, c_2]

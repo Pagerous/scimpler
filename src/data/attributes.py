@@ -19,7 +19,13 @@ from typing import (
 )
 from urllib.parse import urlparse
 
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.container import (
+    AttrRep,
+    BoundedAttrRep,
+    Invalid,
+    Missing,
+    SCIMDataContainer,
+)
 from src.data.registry import resource_schemas
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 
@@ -63,7 +69,7 @@ class Attribute(abc.ABC):
 
     def __init__(
         self,
-        name: Union[str, AttrRep],
+        name: Union[str, AttrRep, BoundedAttrRep],
         *,
         description: str = "",
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
@@ -77,7 +83,7 @@ class Attribute(abc.ABC):
         deserializer: Optional[_AttributeProcessor] = None,
         serializer: Optional[_AttributeProcessor] = None,
     ):
-        self._rep = AttrRep.deserialize(name) if isinstance(name, str) else name
+        self._rep = AttrRep(name) if isinstance(name, str) else name
         self._description = description
         self._issuer = issuer
         self._required = required
@@ -91,7 +97,7 @@ class Attribute(abc.ABC):
         self._serializer = serializer
 
     @property
-    def rep(self) -> AttrRep:
+    def rep(self) -> Union[AttrRep, BoundedAttrRep]:
         return self._rep
 
     @property
@@ -251,7 +257,7 @@ class Attribute(abc.ABC):
             output["canonicalValues"] = self.canonical_values
         return output
 
-    def clone(self, attr_rep: AttrRep) -> "Attribute":
+    def clone(self, attr_rep: Union[AttrRep, BoundedAttrRep]) -> "Attribute":
         clone = copy(self)
         clone._rep = attr_rep
         return clone
@@ -647,9 +653,7 @@ def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> Validatio
 
 class Attributes:
     def __init__(self, attrs: Iterable[Attribute]):
-        self._attrs = {}
-        for attr in attrs:
-            self._register_attr(attr)
+        self._attrs = {attr.rep.attr: attr for attr in attrs}
 
     def __getattr__(self, name: str) -> Attribute:
         for attr in self._attrs.values():
@@ -660,17 +664,14 @@ class Attributes:
     def __iter__(self):
         return iter(self._attrs.values())
 
-    def _register_attr(self, attr: Attribute):
-        self._attrs[attr.rep.schema, attr.rep.attr, attr.rep.sub_attr] = attr
-
     def get(self, attr_rep: AttrRep) -> Optional[Attribute]:
-        for (schema, attr, sub_attr), attr_obj in self._attrs.items():
-            if AttrRep(schema, attr, sub_attr) == attr_rep:
+        for attr, attr_obj in self._attrs.items():
+            if attr.lower() == attr_rep.attr.lower():
                 return attr_obj
         return None
 
 
-class BoundedAttributes(Attributes):
+class BoundedAttributes:
     def __init__(
         self,
         schema: str,
@@ -682,19 +683,19 @@ class BoundedAttributes(Attributes):
         self._core_attrs = []
         self._extensions = {}
 
-        bounded_attrs = []
         common_attrs = set(common_attrs or set())
+        self._attrs = {}
         self._bounded_complex_sub_attrs = {}
         for attr in attrs or []:
-            bounded_attr = attr.clone(AttrRep(schema, attr.rep.attr, extension=extension))
+            bounded_attr = attr.clone(BoundedAttrRep(schema, attr.rep.attr, extension=extension))
             if attr.rep.attr not in common_attrs and not extension:
                 self._core_attrs.append(bounded_attr)
 
-            bounded_attrs.append(bounded_attr)
+            self._attrs[bounded_attr.rep.schema, bounded_attr.rep.attr] = bounded_attr
             if isinstance(bounded_attr, Complex):
                 self._bounded_complex_sub_attrs[id(bounded_attr)] = {
                     id(sub_attr): sub_attr.clone(
-                        AttrRep(
+                        BoundedAttrRep(
                             schema,
                             bounded_attr.rep.attr,
                             sub_attr.rep.attr,
@@ -703,19 +704,32 @@ class BoundedAttributes(Attributes):
                     )
                     for sub_attr in bounded_attr.attrs
                 }
-        super().__init__(bounded_attrs)
 
     def __getattr__(self, name: str) -> Attribute:
         parts = name.split("__", 1)
-        attr = super().__getattr__(parts[0])
+        attr_name = parts[0].lower()
+        attr = None
+        for attr_ in self._attrs.values():
+            if attr_.rep.attr.lower() == attr_name:
+                attr = attr_
+
+        if attr is None:
+            raise AttributeError(f"no {name!r} attribute")
+
         if len(parts) == 1:
             return attr
+
         if not isinstance(attr, Complex):
             raise TypeError(f"{attr.rep.attr!r} is not complex")
+
         sub_attr = getattr(attr.attrs, parts[1], None)
         if sub_attr is None:
             raise AttributeError(f"{parts[0]!r} has no {parts[1]!r} attribute")
+
         return self._bounded_complex_sub_attrs[id(attr)][id(sub_attr)]
+
+    def __iter__(self):
+        return iter(self._attrs.values())
 
     @property
     def core_attrs(self) -> List[Attribute]:
@@ -723,25 +737,31 @@ class BoundedAttributes(Attributes):
 
     def extend(self, attrs: "BoundedAttributes") -> None:
         for attr in attrs:
-            self._register_attr(attr)
+            self._attrs[attr.rep.schema, attr.rep.attr] = attr
         self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
         self._extensions[attrs._schema.lower()] = attrs
 
-    def get(self, attr_rep: AttrRep) -> Optional[Attribute]:
+    def get(self, attr_rep: BoundedAttrRep) -> Optional[Attribute]:
         if attr_rep.schema.lower() in self._extensions:
             return self._extensions[attr_rep.schema.lower()].get(attr_rep)
 
-        attr = super().get(AttrRep(schema=attr_rep.schema, attr=attr_rep.attr))
-        if not attr_rep.sub_attr or attr is None:
-            return attr
+        top_level_rep = BoundedAttrRep(attr_rep.schema, attr_rep.attr)
+        attr_obj = None
+        for (schema, attr), attr_obj_ in self._attrs.items():
+            if BoundedAttrRep(schema, attr) == top_level_rep:
+                attr_obj = attr_obj_
 
-        if not isinstance(attr, Complex):
-            raise TypeError(f"{attr.rep.attr!r} is not complex")
+        if attr_obj is None or not attr_rep.sub_attr:
+            return attr_obj
 
-        sub_attr = getattr(attr.attrs, attr_rep.sub_attr, None)
-        if sub_attr is None:
+        if not isinstance(attr_obj, Complex):
+            raise TypeError(f"{attr_obj.rep.attr!r} is not complex")
+
+        sub_attr_obj = getattr(attr_obj.attrs, attr_rep.sub_attr, None)
+        if sub_attr_obj is None:
             return None
-        return self._bounded_complex_sub_attrs[id(attr)][id(sub_attr)]
+
+        return self._bounded_complex_sub_attrs[id(attr_obj)][id(sub_attr_obj)]
 
     def get_by_path(self, path: "PatchPath") -> Optional[Attribute]:
         if (
@@ -752,7 +772,13 @@ class BoundedAttributes(Attributes):
         attr = self.get(path.attr_rep)
         if attr is None or path.complex_filter_attr_rep is None:
             return attr
-        return self.get(path.complex_filter_attr_rep)
+        return self.get(
+            BoundedAttrRep(
+                schema=path.attr_rep.schema,
+                attr=path.attr_rep.attr,
+                sub_attr=path.complex_filter_attr_rep.attr,
+            )
+        )
 
 
 _TYPE_TO_SCIM_TYPE: Dict[Type, str] = {

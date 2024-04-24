@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from src.data.container import AttrRep
+from src.data.container import AttrRep, BoundedAttrRep
 from src.data.operator import ComplexAttributeOperator
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
@@ -10,20 +10,13 @@ from src.utils import decode_placeholders, encode_strings
 class PatchPath:
     def __init__(
         self,
-        attr_rep: AttrRep,
+        attr_rep: BoundedAttrRep,
         complex_filter: Optional[Filter],
         complex_filter_attr_rep: Optional[AttrRep],
     ):
         if attr_rep.sub_attr and (complex_filter or complex_filter_attr_rep):
             raise ValueError("sub-attribute can not be complex")
-        if complex_filter_attr_rep:
-            if not complex_filter_attr_rep.sub_attr:
-                raise ValueError("sub-attribute name is required for 'complex_filter_attr_rep'")
-            if not complex_filter_attr_rep.top_level_equals(attr_rep):
-                raise ValueError(
-                    "non-matching top-level attributes for 'attr_rep' "
-                    "and 'complex_filter_attr_rep'"
-                )
+
         if complex_filter is not None:
             if not isinstance(complex_filter.operator, ComplexAttributeOperator):
                 raise ValueError("only ComplexAttributeOperator is supported as path filter")
@@ -38,7 +31,7 @@ class PatchPath:
         self._complex_filter_attr_rep = complex_filter_attr_rep
 
     @property
-    def attr_rep(self) -> AttrRep:
+    def attr_rep(self) -> BoundedAttrRep:
         return self._attr_rep
 
     @property
@@ -67,7 +60,7 @@ class PatchPath:
             return cls._validate_complex_multivalued_path(path, placeholders)
 
         path = decode_placeholders(path, placeholders)
-        issues.merge(AttrRep.validate(path))
+        issues.merge(BoundedAttrRep.validate(path))
         return issues
 
     @classmethod
@@ -78,33 +71,11 @@ class PatchPath:
         issues = Filter.validate(filter_exp)
         if issues.has_errors():
             return issues
-        filter_ = Filter.deserialize(filter_exp)
         value_sub_attr_rep_exp = path[path.index("]") + 1 :]
         if value_sub_attr_rep_exp:
             if value_sub_attr_rep_exp.startswith("."):
                 value_sub_attr_rep_exp = value_sub_attr_rep_exp[1:]
-            issues.merge(
-                cls._validate_sub_attr_rep(
-                    attr_rep=filter_.operator.attr_rep,
-                    sub_attr_rep_exp=decode_placeholders(value_sub_attr_rep_exp, placeholders),
-                )
-            )
-        return issues
-
-    @staticmethod
-    def _validate_sub_attr_rep(attr_rep: AttrRep, sub_attr_rep_exp: str) -> ValidationIssues:
-        issues = ValidationIssues()
-        try:
-            sub_attr_rep = AttrRep.deserialize(sub_attr_rep_exp)
-            if sub_attr_rep.sub_attr and not attr_rep.top_level_equals(sub_attr_rep):
-                issues.add_error(
-                    issue=ValidationError.complex_sub_attribute(attr_rep.attr, sub_attr_rep.attr),
-                    proceed=False,
-                )
-        except ValueError:
-            issues.add_error(
-                issue=ValidationError.bad_attribute_name(sub_attr_rep_exp), proceed=False
-            )
+            issues.merge(AttrRep.validate(value_sub_attr_rep_exp))
         return issues
 
     @classmethod
@@ -122,7 +93,7 @@ class PatchPath:
 
         assert "[" not in path and "]" not in path
         return PatchPath(
-            attr_rep=AttrRep.deserialize(decode_placeholders(path, placeholders)),
+            attr_rep=BoundedAttrRep.deserialize(decode_placeholders(path, placeholders)),
             complex_filter=None,
             complex_filter_attr_rep=None,
         )
@@ -139,13 +110,8 @@ class PatchPath:
             if val_attr_exp.startswith("."):
                 val_attr_exp = val_attr_exp[1:]
             val_attr_exp = decode_placeholders(val_attr_exp, placeholders)
-            val_attr_rep = AttrRep.deserialize(val_attr_exp)
-            assert not val_attr_rep.sub_attr
-            val_attr_rep = AttrRep(
-                schema=filter_.operator.attr_rep.schema,
-                attr=filter_.operator.attr_rep.attr,
-                sub_attr=val_attr_rep.attr,
-            )
+            val_attr_rep = AttrRep(val_attr_exp)
+
         return cls(
             attr_rep=filter_.operator.attr_rep,
             complex_filter=filter_,

@@ -7,7 +7,7 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import Attribute, AttributeIssuer, Complex
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
@@ -1134,7 +1134,7 @@ class ResourceTypesGET(_ServiceProviderConfig):
         super().__init__(config, resource_schema=ResourceType)
 
 
-def _location(attr_rep: AttrRep) -> Union[Tuple[str], Tuple[str, str]]:
+def _location(attr_rep: BoundedAttrRep) -> Union[Tuple[str], Tuple[str, str]]:
     if attr_rep.sub_attr:
         return attr_rep.attr, attr_rep.sub_attr
     return (attr_rep.attr,)

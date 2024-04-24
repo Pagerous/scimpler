@@ -1,7 +1,7 @@
 from typing import Any, List, Optional, Union
 
 from src.data.attributes import AttributeMutability, Complex, String, Unknown
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
@@ -134,7 +134,13 @@ class PatchOp(BaseSchema):
                         location=path_location,
                     )
         else:
-            sub_attr = self._resource_schema.attrs.get(path.complex_filter_attr_rep)
+            sub_attr = self._resource_schema.attrs.get(
+                BoundedAttrRep(
+                    schema=path.attr_rep.schema,
+                    attr=path.attr_rep.attr,
+                    sub_attr=path.complex_filter_attr_rep.attr,
+                )
+            )
             if sub_attr.required:
                 issues.add_error(
                     issue=ValidationError.attribute_can_not_be_deleted(),
@@ -214,12 +220,18 @@ class PatchOp(BaseSchema):
             and path.complex_filter
             and path.complex_filter_attr_rep
         ):
-            attr_rep = path.complex_filter_attr_rep
+            attr_rep = BoundedAttrRep(
+                schema=path.attr_rep.schema,
+                attr=path.attr_rep.attr,
+                sub_attr=path.complex_filter_attr_rep.attr,
+            )
         else:
             attr_rep = path.attr_rep
         return self._validate_update_attr_value(attr_rep, value)
 
-    def _validate_update_attr_value(self, attr_rep: AttrRep, attr_value: Any) -> ValidationIssues:
+    def _validate_update_attr_value(
+        self, attr_rep: BoundedAttrRep, attr_value: Any
+    ) -> ValidationIssues:
         issues = ValidationIssues()
 
         attr = self._resource_schema.attrs.get(attr_rep)
@@ -247,7 +259,7 @@ class PatchOp(BaseSchema):
                     issues.add_error(
                         issue=ValidationError.attribute_can_not_be_modified(),
                         proceed=False,
-                        location=(sub_attr.rep.sub_attr,),
+                        location=(sub_attr.rep.attr,),
                     )
         return issues
 
@@ -278,22 +290,24 @@ class PatchOp(BaseSchema):
             return self._resource_schema.deserialize(value)
 
         # sub-attribute of filtered multivalued complex attribute
-        if (
-            isinstance(self._resource_schema.attrs.get(path.attr_rep), Complex)
-            and path.complex_filter
-            and path.complex_filter_attr_rep
-        ):
-            attr_rep = path.complex_filter_attr_rep
-        else:
-            attr_rep = path.attr_rep
-        return self._resource_schema.attrs.get(attr_rep).deserialize(value)
+        attr = self._resource_schema.attrs.get(path.attr_rep)
+        if isinstance(attr, Complex) and path.complex_filter and path.complex_filter_attr_rep:
+            return attr.attrs.get(path.complex_filter_attr_rep).deserialize(value)
+        return attr.deserialize(value)
 
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:
     issues = ValidationIssues()
     if schema.attrs.get(path.attr_rep) is None or (
         path.complex_filter_attr_rep is not None
-        and schema.attrs.get(path.complex_filter_attr_rep) is None
+        and schema.attrs.get(
+            BoundedAttrRep(
+                schema=path.attr_rep.schema,
+                attr=path.attr_rep.attr,
+                sub_attr=path.complex_filter_attr_rep.attr,
+            )
+        )
+        is None
     ):
         issues.add_error(
             issue=ValidationError.unknown_operation_target(),

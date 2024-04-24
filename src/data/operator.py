@@ -21,6 +21,7 @@ from src.data.attributes import (
     AttributeWithCaseExact,
     Binary,
     Boolean,
+    BoundedAttributes,
     Complex,
     DateTime,
     Decimal,
@@ -30,7 +31,13 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.container import (
+    AttrRep,
+    BoundedAttrRep,
+    Invalid,
+    Missing,
+    SCIMDataContainer,
+)
 
 
 class MatchStatus(Enum):
@@ -92,7 +99,7 @@ class LogicalOperator(abc.ABC):
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
         ...
@@ -112,7 +119,10 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         return self._sub_operators
 
     def _collect_matches(
-        self, value: SCIMDataContainer, attrs: Attributes, strict: bool = True
+        self,
+        value: SCIMDataContainer,
+        attrs: Union[Attributes, BoundedAttributes],
+        strict: bool = True,
     ) -> Generator[MatchResult, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
@@ -127,7 +137,7 @@ class And(MultiOperandLogicalOperator):
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -148,7 +158,7 @@ class Or(MultiOperandLogicalOperator):
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -181,7 +191,7 @@ class Not(LogicalOperator):
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
         value = value or {}
@@ -204,21 +214,24 @@ class Not(LogicalOperator):
         return MatchResult.failed()
 
 
+TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
+
+
 class AttributeOperator(abc.ABC):
     SCIM_OP = None
 
-    def __init__(self, attr_rep: AttrRep):
+    def __init__(self, attr_rep: TAttrRep):
         self._attr_rep = attr_rep
 
     @property
-    def attr_rep(self) -> AttrRep:
+    def attr_rep(self) -> TAttrRep:
         return self._attr_rep
 
     @abc.abstractmethod
     def match(
         self,
         value: Any,
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
         ...
@@ -230,9 +243,10 @@ class Present(AttributeOperator):
     def match(
         self,
         value: Any,
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
+        _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
         if attr is None:
             return MatchResult.failed_no_attr()
@@ -259,7 +273,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     SUPPORTED_TYPES: Set[Type]
     OPERATOR: Callable[[Any, Any], bool]
 
-    def __init__(self, attr_rep: AttrRep, value: T2):
+    def __init__(self, attr_rep: TAttrRep, value: T2):
         super().__init__(attr_rep=attr_rep)
         if type(value) not in self.SUPPORTED_TYPES:
             raise TypeError(
@@ -312,9 +326,10 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     def match(
         self,
         value: Any,
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
+        _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
         if attr is None:
             return MatchResult.failed_no_attr()
@@ -480,14 +495,14 @@ TComplexAttributeSubOperator = TypeVar(
 class ComplexAttributeOperator:
     def __init__(
         self,
-        attr_rep: AttrRep,
+        attr_rep: TAttrRep,
         sub_operator: TComplexAttributeSubOperator,
     ):
         self._attr_rep = attr_rep
         self._sub_operator = sub_operator
 
     @property
-    def attr_rep(self) -> AttrRep:
+    def attr_rep(self) -> TAttrRep:
         return self._attr_rep
 
     @property
@@ -497,9 +512,10 @@ class ComplexAttributeOperator:
     def match(
         self,
         value: Optional[Union[List[SCIMDataContainer], SCIMDataContainer]],
-        attrs: Attributes,
+        attrs: Union[Attributes, BoundedAttributes],
         strict: bool = True,
     ) -> MatchResult:
+        _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
         if attr is None or not isinstance(attr, Complex):
             return MatchResult.failed_no_attr()
@@ -540,3 +556,14 @@ class ComplexAttributeOperator:
         if missing_data and not strict:
             return MatchResult.passed()
         return MatchResult.failed()
+
+
+def _ensure_correct_attrs(
+    attrs: Union[Attributes, BoundedAttributes], attr_rep: Union[AttrRep, BoundedAttrRep]
+):
+    if isinstance(attrs, BoundedAttributes) and not isinstance(attr_rep, BoundedAttrRep):
+        raise TypeError(
+            f"bounded attribute representation can be handled by BoundedAttributes only"
+        )
+    elif isinstance(attrs, Attributes) and not isinstance(attr_rep, AttrRep):
+        raise TypeError(f"attribute representation can be handled by Attributes only")

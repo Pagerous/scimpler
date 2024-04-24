@@ -11,6 +11,39 @@ _ATTR_REP = re.compile(
 
 
 class AttrRep:
+    def __init__(self, attr: str):
+        if not _ATTR_NAME.fullmatch(attr):
+            raise ValueError(f"{attr!r} is not valid attr name")
+
+        self._attr = attr
+        self._repr = attr
+
+    def __repr__(self) -> str:
+        return self._repr
+
+    def __eq__(self, other):
+        if not isinstance(other, AttrRep):
+            return False
+
+        return self.attr.lower() == other.attr.lower()
+
+    @classmethod
+    def validate(cls, attr_rep: str) -> ValidationIssues:
+        issues = ValidationIssues()
+        match = _ATTR_NAME.fullmatch(attr_rep)
+        if not match:
+            issues.add_error(
+                issue=ValidationError.bad_attribute_name(attr_rep),
+                proceed=False,
+            )
+        return issues
+
+    @property
+    def attr(self) -> str:
+        return self._attr
+
+
+class BoundedAttrRep:
     def __init__(
         self, schema: str = "", attr: str = "", sub_attr: str = "", extension: bool = False
     ):
@@ -23,7 +56,7 @@ class AttrRep:
         if sub_attr:
             attr_ += "." + sub_attr
 
-        if not _ATTR_REP.fullmatch(attr):
+        if not _ATTR_REP.fullmatch(attr_):
             raise ValueError(f"{attr_!r} is not valid attr / sub-attr name")
 
         if extension and not schema:
@@ -39,13 +72,13 @@ class AttrRep:
         return self._repr
 
     def __eq__(self, other):
-        if not isinstance(other, AttrRep):
-            return False
-
-        if all([self.schema, other.schema]) and self.schema.lower() != other.schema.lower():
+        if not isinstance(other, BoundedAttrRep):
             return False
 
         if self.attr.lower() != other.attr.lower():
+            return False
+
+        if all([self.schema, other.schema]) and self.schema.lower() != other.schema.lower():
             return False
 
         if self.sub_attr.lower() != other.sub_attr.lower():
@@ -65,14 +98,14 @@ class AttrRep:
         return issues
 
     @classmethod
-    def deserialize(cls, attr_rep: str) -> "AttrRep":
+    def deserialize(cls, attr_rep: str) -> "BoundedAttrRep":
         try:
             return cls._deserialize(attr_rep)
         except Exception:
             raise ValueError(f"{attr_rep!r} is not valid attribute representation")
 
     @classmethod
-    def _deserialize(cls, attr_rep: str) -> "AttrRep":
+    def _deserialize(cls, attr_rep: str) -> "BoundedAttrRep":
         match = _ATTR_REP.fullmatch(attr_rep)
         schema, attr = match.group(1), match.group(2)
         schema = schema[:-1] if schema else ""
@@ -80,7 +113,7 @@ class AttrRep:
             attr, sub_attr = attr.split(".")
         else:
             attr, sub_attr = attr, ""
-        return AttrRep(schema=schema, attr=attr, sub_attr=sub_attr)
+        return BoundedAttrRep(schema=schema, attr=attr, sub_attr=sub_attr)
 
     @property
     def extension(self) -> bool:
@@ -91,20 +124,20 @@ class AttrRep:
         return self._schema
 
     @property
+    def attr(self) -> str:
+        return self._attr
+
+    @property
     def attr_with_schema(self) -> str:
         if self.schema:
             return f"{self.schema}:{self.attr}"
         return self.attr
 
     @property
-    def attr(self) -> str:
-        return self._attr
-
-    @property
     def sub_attr(self) -> str:
         return self._sub_attr
 
-    def top_level_equals(self, other: "AttrRep") -> bool:
+    def top_level_equals(self, other: "BoundedAttrRep") -> bool:
         if all([self.schema, other.schema]):
             return self.attr_with_schema.lower() == other.attr_with_schema.lower()
         return self.attr.lower() == other.attr.lower()
@@ -156,17 +189,15 @@ class SCIMDataContainer:
             self._data = d._data
             self._lower_case_to_original = d._lower_case_to_original
 
-    def set(self, attr_rep: Union["AttrRep", str], value):
-        if isinstance(attr_rep, str):
-            attr_rep = self._to_attr_rep(attr_rep)
-
+    def set(self, attr_rep: Union[AttrRep, BoundedAttrRep, str], value):
+        attr_rep = self._normalize(attr_rep)
         if attr_rep.extension:
             extension_key = self._lower_case_to_original.get(attr_rep.schema.lower())
             if extension_key is None:
                 self._lower_case_to_original[attr_rep.schema.lower()] = attr_rep.schema
                 self._data[attr_rep.schema] = SCIMDataContainer()
             self._data[attr_rep.schema].set(
-                AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr), value
+                BoundedAttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr), value
             )
         elif attr_rep.sub_attr:
             initial_key = self._lower_case_to_original.get(attr_rep.attr.lower())
@@ -181,28 +212,25 @@ class SCIMDataContainer:
                 raise KeyError(
                     f"can not assign ({attr_rep.sub_attr}, {value}) to '{attr_rep.attr}'"
                 )
-
             if isinstance(value, List):
                 to_create = len(value) - len(self._data[initial_key])
                 if to_create > 0:
                     self._data[initial_key].extend([SCIMDataContainer() for _ in range(to_create)])
                 for item, container in zip(value, self._data[initial_key]):
                     if item is not Missing:
-                        container.set(AttrRep(attr=attr_rep.sub_attr), item)
+                        container.set(BoundedAttrRep(attr=attr_rep.sub_attr), item)
             else:
-                self._data[initial_key].set(AttrRep(attr=attr_rep.sub_attr), value)
+                self._data[initial_key].set(BoundedAttrRep(attr=attr_rep.sub_attr), value)
         else:
             self._lower_case_to_original[attr_rep.attr.lower()] = attr_rep.attr
             self._data[attr_rep.attr] = value
 
-    def get(self, attr_rep: Union["AttrRep", str]):
-        if isinstance(attr_rep, str):
-            attr_rep = self._to_attr_rep(attr_rep)
-
+    def get(self, attr_rep: Union[AttrRep, BoundedAttrRep, str]):
+        attr_rep = self._normalize(attr_rep)
         extension = self._lower_case_to_original.get(attr_rep.schema.lower())
         if extension is not None:
             return self._data[extension].get(
-                AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
+                BoundedAttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
             )
 
         attr = self._lower_case_to_original.get(attr_rep.attr.lower())
@@ -212,20 +240,18 @@ class SCIMDataContainer:
         if attr_rep.sub_attr:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMDataContainer):
-                return attr_value.get(AttrRep(attr=attr_rep.sub_attr))
+                return attr_value.get(BoundedAttrRep(attr=attr_rep.sub_attr))
             if isinstance(attr_value, List):
-                return [item.get(AttrRep(attr=attr_rep.sub_attr)) for item in attr_value]
+                return [item.get(BoundedAttrRep(attr=attr_rep.sub_attr)) for item in attr_value]
             return Missing
         return self._data[attr]
 
-    def pop(self, attr_rep: Union["AttrRep", str]):
-        if isinstance(attr_rep, str):
-            attr_rep = self._to_attr_rep(attr_rep)
-
+    def pop(self, attr_rep: Union[AttrRep, BoundedAttrRep, str]):
+        attr_rep = self._normalize(attr_rep)
         extension = self._lower_case_to_original.get(attr_rep.schema.lower())
         if extension is not None:
             return self._data[extension].pop(
-                AttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
+                BoundedAttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr)
             )
 
         attr = self._lower_case_to_original.get(attr_rep.attr.lower())
@@ -244,6 +270,14 @@ class SCIMDataContainer:
         return self._data.pop(attr)
 
     @staticmethod
+    def _normalize(attr_rep) -> BoundedAttrRep:
+        if isinstance(attr_rep, str):
+            return BoundedAttrRep.deserialize(attr_rep)
+        if isinstance(attr_rep, AttrRep):
+            return BoundedAttrRep(attr=attr_rep.attr)
+        return attr_rep
+
+    @staticmethod
     def _can_assign_to_complex(current_value, new_value) -> bool:
         if isinstance(current_value, SCIMDataContainer):
             return True
@@ -254,13 +288,6 @@ class SCIMDataContainer:
                 return True
 
         return False
-
-    @staticmethod
-    def _to_attr_rep(attr_rep):
-        attr_rep = AttrRep.deserialize(attr_rep)
-        if attr_rep is Invalid:
-            raise ValueError(f"bad attribute name {attr_rep!r}")
-        return attr_rep
 
     def to_dict(self) -> Dict[str, Any]:
         output = {}

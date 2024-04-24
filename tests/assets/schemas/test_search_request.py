@@ -1,5 +1,5 @@
 from src.assets.schemas.search_request import SearchRequest
-from src.data.container import AttrRep
+from src.data.container import BoundedAttrRep
 
 
 def test_search_request_is_deserialized():
@@ -17,8 +17,8 @@ def test_search_request_is_deserialized():
     )
 
     assert data.get("presence_checker").attr_reps == [
-        AttrRep(attr="userName"),
-        AttrRep(attr="name"),
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name"),
     ]
     assert data.get("presence_checker").include is True
     assert data.get("filter").to_dict() == {
@@ -26,7 +26,7 @@ def test_search_request_is_deserialized():
         "attr_rep": "userName",
         "value": "bjensen",
     }
-    assert data.get("sorter").attr_rep == AttrRep(attr="name", sub_attr="familyName")
+    assert data.get("sorter").attr_rep == BoundedAttrRep(attr="name", sub_attr="familyName")
     assert data.get("sorter").asc is False
     assert data.get("startIndex") == 2
     assert data.get("count") == 10

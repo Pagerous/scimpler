@@ -1,57 +1,62 @@
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
 
-from src.data.attributes import Attribute, AttributeReturn, Attributes, Complex
-from src.data.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.attributes import (
+    Attribute,
+    AttributeReturn,
+    Attributes,
+    BoundedAttributes,
+    Complex,
+)
+from src.data.container import (
+    AttrRep,
+    BoundedAttrRep,
+    Invalid,
+    Missing,
+    SCIMDataContainer,
+)
 from src.error import ValidationError, ValidationIssues
 
+TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
+TAttrs = TypeVar("TAttrs", bound=Union[Attributes, BoundedAttributes])
 
-class AttributePresenceChecker:
+
+class AttributePresenceChecker(Generic[TAttrRep]):
     def __init__(
         self,
-        attr_reps: Optional[Iterable[AttrRep]] = None,
+        attr_reps: Optional[Iterable[TAttrRep]] = None,
         include: Optional[bool] = None,
-        ignore_required: Optional[Iterable[AttrRep]] = None,
+        ignore_required: Optional[Iterable[TAttrRep]] = None,
     ):
         self._attr_reps = list(attr_reps or [])
         self._include = include
         self._ignore_required = list(ignore_required or [])
 
     @property
-    def attr_reps(self) -> List[AttrRep]:
+    def attr_reps(self) -> List[TAttrRep]:
         return self._attr_reps
 
     @property
     def include(self) -> Optional[bool]:
         return self._include
 
-    @classmethod
-    def validate(cls, attr_reps: Iterable[str]) -> ValidationIssues:
-        issues = ValidationIssues()
-        for attr_rep in attr_reps:
-            try:
-                AttrRep.deserialize(attr_rep)
-            except ValueError:
-                issues.add_error(
-                    issue=ValidationError.bad_attribute_name(attr_rep),
-                    location=(attr_rep,),
-                    proceed=False,
-                )
-        return issues
-
-    @classmethod
-    def deserialize(
-        cls, attr_reps: Iterable[str], include: Optional[bool] = None
-    ) -> "AttributePresenceChecker":
-        return AttributePresenceChecker(
-            [AttrRep.deserialize(attr_rep) for attr_rep in attr_reps], include
-        )
-
     def __call__(
         self,
         data: Union[Dict[str, Any], SCIMDataContainer],
-        attrs: Attributes,
+        attrs: TAttrs,
         direction: str,
     ) -> ValidationIssues:
+        attr_rep_ = next(iter(self._attr_reps), None)
+        attr_rep_ignore = next(iter(self._ignore_required), None)
+
+        if isinstance(attrs, Attributes) and (
+            isinstance(attr_rep_, BoundedAttrRep) or isinstance(attr_rep_ignore, BoundedAttrRep)
+        ):
+            raise TypeError("incompatible attributes, use BoundedAttributes class")
+        elif isinstance(attrs, BoundedAttributes) and (
+            isinstance(attr_rep_, AttrRep) or isinstance(attr_rep_ignore, AttrRep)
+        ):
+            raise TypeError("incompatible attributes, use Attributes class")
+
         issues = ValidationIssues()
         data = SCIMDataContainer(data)
         for attr in attrs:
@@ -70,7 +75,7 @@ class AttributePresenceChecker:
                 continue
 
             for sub_attr in attr.attrs:
-                sub_attr_rep = AttrRep(attr.rep.schema, attr.rep.attr, sub_attr.rep.attr)
+                sub_attr_rep = BoundedAttrRep(attr.rep.schema, attr.rep.attr, sub_attr.rep.attr)
                 if not attr.multi_valued:
                     issues.merge(
                         issues=self._check_presence(
@@ -115,7 +120,7 @@ class AttributePresenceChecker:
         value: Any,
         direction: str,
         attr: Attribute,
-        attr_rep: AttrRep,
+        attr_rep: TAttrRep,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if value not in [None, "", [], Missing]:
@@ -156,7 +161,10 @@ class AttributePresenceChecker:
                 )
         return issues
 
-    def _sub_attr_or_top_attr_in_attr_reps(self, attr_rep: AttrRep) -> bool:
+    def _sub_attr_or_top_attr_in_attr_reps(self, attr_rep: TAttrRep) -> bool:
+        if isinstance(attr_rep, AttrRep):
+            return False
+
         for attr_rep_ in self._attr_reps:
             if (
                 # sub-attr in attr names check

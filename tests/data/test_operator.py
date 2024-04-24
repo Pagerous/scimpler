@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from src.data.container import AttrRep, SCIMDataContainer
+from src.data.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.data.operator import (
     And,
     ComplexAttributeOperator,
@@ -26,72 +26,72 @@ from tests.conftest import SchemaForTests
 @pytest.mark.parametrize(
     ("value", "operator_value", "attr_rep", "expected"),
     (
-        (1, 1, AttrRep.deserialize("int"), True),
-        (1, 2, AttrRep.deserialize("int"), False),
-        ("a", "a", AttrRep.deserialize("str_cs"), True),
-        ("A", "a", AttrRep.deserialize("str_cs"), False),
-        (True, True, AttrRep.deserialize("bool"), True),
-        (True, False, AttrRep.deserialize("bool"), False),
+        (1, 1, BoundedAttrRep(attr="int"), True),
+        (1, 2, BoundedAttrRep(attr="int"), False),
+        ("a", "a", BoundedAttrRep(attr="str_cs"), True),
+        ("A", "a", BoundedAttrRep(attr="str_cs"), False),
+        (True, True, BoundedAttrRep(attr="bool"), True),
+        (True, False, BoundedAttrRep(attr="bool"), False),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             False,
         ),
-        (3.14, 3.14, AttrRep.deserialize("decimal"), True),
-        (3.14, 3.141, AttrRep.deserialize("decimal"), False),
+        (3.14, 3.14, BoundedAttrRep(attr="decimal"), True),
+        (3.14, 3.141, BoundedAttrRep(attr="decimal"), False),
         (
             "YQ==",
             "YQ==",
-            AttrRep.deserialize("binary"),
+            BoundedAttrRep(attr="binary"),
             True,
         ),
         (
             "YQ==",
             "Yg==",
-            AttrRep.deserialize("binary"),
+            BoundedAttrRep(attr="binary"),
             False,
         ),
         (
             "https://www.example.com",
             "https://www.example.com",
-            AttrRep.deserialize("external_ref"),
+            BoundedAttrRep(attr="external_ref"),
             True,
         ),
         (
             "https://www.example.com",
             "https://www.bad_example.com",
-            AttrRep.deserialize("external_ref"),
+            BoundedAttrRep(attr="external_ref"),
             False,
         ),
         (
             "whatever/some/location/",
             "whatever/some/location/",
-            AttrRep.deserialize("uri_ref"),
+            BoundedAttrRep(attr="uri_ref"),
             True,
         ),
         (
             "whatever/some/location/",
             "whatever/some/other/location/",
-            AttrRep.deserialize("uri_ref"),
+            BoundedAttrRep(attr="uri_ref"),
             False,
         ),
         (
             "Users",
             "Users",
-            AttrRep.deserialize("scim_ref"),
+            BoundedAttrRep(attr="scim_ref"),
             True,
         ),
         (
             "Users",
             "Groups",
-            AttrRep.deserialize("scim_ref"),
+            BoundedAttrRep(attr="scim_ref"),
             False,
         ),
     ),
@@ -107,72 +107,72 @@ def test_equal_operator(value, operator_value, attr_rep, expected):
 @pytest.mark.parametrize(
     ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 1, AttrRep.deserialize("int"), False),
-        (1, 2, AttrRep.deserialize("int"), True),
-        ("a", "a", AttrRep.deserialize("str_cs"), False),
-        ("A", "a", AttrRep.deserialize("str_cs"), True),
-        (True, True, AttrRep.deserialize("bool"), False),
-        (True, False, AttrRep.deserialize("bool"), True),
+        (1, 1, BoundedAttrRep(attr="int"), False),
+        (1, 2, BoundedAttrRep(attr="int"), True),
+        ("a", "a", BoundedAttrRep(attr="str_cs"), False),
+        ("A", "a", BoundedAttrRep(attr="str_cs"), True),
+        (True, True, BoundedAttrRep(attr="bool"), False),
+        (True, False, BoundedAttrRep(attr="bool"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
-        (3.14, 3.14, AttrRep.deserialize("decimal"), False),
-        (3.14, 3.141, AttrRep.deserialize("decimal"), True),
+        (3.14, 3.14, BoundedAttrRep(attr="decimal"), False),
+        (3.14, 3.141, BoundedAttrRep(attr="decimal"), True),
         (
             "YQ==",
             "YQ==",
-            AttrRep.deserialize("binary"),
+            BoundedAttrRep(attr="binary"),
             False,
         ),
         (
             "YQ==",
             "Yg==",
-            AttrRep.deserialize("binary"),
+            BoundedAttrRep(attr="binary"),
             True,
         ),
         (
             "https://www.example.com",
             "https://www.example.com",
-            AttrRep.deserialize("external_ref"),
+            BoundedAttrRep(attr="external_ref"),
             False,
         ),
         (
             "https://www.example.com",
             "https://www.bad_example.com",
-            AttrRep.deserialize("external_ref"),
+            BoundedAttrRep(attr="external_ref"),
             True,
         ),
         (
             "whatever/some/location/",
             "whatever/some/location/",
-            AttrRep.deserialize("uri_ref"),
+            BoundedAttrRep(attr="uri_ref"),
             False,
         ),
         (
             "whatever/some/location/",
             "whatever/some/other/location/",
-            AttrRep.deserialize("uri_ref"),
+            BoundedAttrRep(attr="uri_ref"),
             True,
         ),
         (
             "Users",
             "Users",
-            AttrRep.deserialize("scim_ref"),
+            BoundedAttrRep(attr="scim_ref"),
             False,
         ),
         (
             "Users",
             "Groups",
-            AttrRep.deserialize("scim_ref"),
+            BoundedAttrRep(attr="scim_ref"),
             True,
         ),
     ),
@@ -188,24 +188,24 @@ def test_not_equal_operator(value, operator_value, attribute_name, expected):
 @pytest.mark.parametrize(
     ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 1, AttrRep.deserialize("int"), False),
-        (2, 1, AttrRep.deserialize("int"), True),
-        ("a", "a", AttrRep.deserialize("str_cs"), False),
-        ("a", "A", AttrRep.deserialize("str_cs"), True),
+        (1, 1, BoundedAttrRep(attr="int"), False),
+        (2, 1, BoundedAttrRep(attr="int"), True),
+        ("a", "a", BoundedAttrRep(attr="str_cs"), False),
+        ("a", "A", BoundedAttrRep(attr="str_cs"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
-        (3.14, 3.14, AttrRep.deserialize("decimal"), False),
-        (3.141, 3.14, AttrRep.deserialize("decimal"), True),
+        (3.14, 3.14, BoundedAttrRep(attr="decimal"), False),
+        (3.141, 3.14, BoundedAttrRep(attr="decimal"), True),
     ),
 )
 def test_greater_than_operator(value, operator_value, attribute_name, expected):
@@ -219,33 +219,33 @@ def test_greater_than_operator(value, operator_value, attribute_name, expected):
 @pytest.mark.parametrize(
     ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 2, AttrRep.deserialize("int"), False),
-        (1, 1, AttrRep.deserialize("int"), True),
-        (2, 1, AttrRep.deserialize("int"), True),
-        ("A", "a", AttrRep.deserialize("str_cs"), False),
-        ("a", "a", AttrRep.deserialize("str_cs"), True),
-        ("a", "A", AttrRep.deserialize("str_cs"), True),
+        (1, 2, BoundedAttrRep(attr="int"), False),
+        (1, 1, BoundedAttrRep(attr="int"), True),
+        (2, 1, BoundedAttrRep(attr="int"), True),
+        ("A", "a", BoundedAttrRep(attr="str_cs"), False),
+        ("a", "a", BoundedAttrRep(attr="str_cs"), True),
+        ("a", "A", BoundedAttrRep(attr="str_cs"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
-        (3.14, 3.141, AttrRep.deserialize("decimal"), False),
-        (3.14, 3.14, AttrRep.deserialize("decimal"), True),
-        (3.141, 3.14, AttrRep.deserialize("decimal"), True),
+        (3.14, 3.141, BoundedAttrRep(attr="decimal"), False),
+        (3.14, 3.14, BoundedAttrRep(attr="decimal"), True),
+        (3.141, 3.14, BoundedAttrRep(attr="decimal"), True),
     ),
 )
 def test_greater_than_or_equal_operator(value, operator_value, attribute_name, expected):
@@ -259,24 +259,24 @@ def test_greater_than_or_equal_operator(value, operator_value, attribute_name, e
 @pytest.mark.parametrize(
     ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 1, AttrRep.deserialize("int"), False),
-        (1, 2, AttrRep.deserialize("int"), True),
-        ("a", "a", AttrRep.deserialize("str_cs"), False),
-        ("A", "a", AttrRep.deserialize("str_cs"), True),
+        (1, 1, BoundedAttrRep(attr="int"), False),
+        (1, 2, BoundedAttrRep(attr="int"), True),
+        ("a", "a", BoundedAttrRep(attr="str_cs"), False),
+        ("A", "a", BoundedAttrRep(attr="str_cs"), True),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             False,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
-        (3.14, 3.14, AttrRep.deserialize("decimal"), False),
-        (3.14, 3.141, AttrRep.deserialize("decimal"), True),
+        (3.14, 3.14, BoundedAttrRep(attr="decimal"), False),
+        (3.14, 3.141, BoundedAttrRep(attr="decimal"), True),
     ),
 )
 def test_lesser_than_operator(value, operator_value, attribute_name, expected):
@@ -290,33 +290,33 @@ def test_lesser_than_operator(value, operator_value, attribute_name, expected):
 @pytest.mark.parametrize(
     ("value", "operator_value", "attribute_name", "expected"),
     (
-        (1, 2, AttrRep.deserialize("int"), True),
-        (1, 1, AttrRep.deserialize("int"), True),
-        (2, 1, AttrRep.deserialize("int"), False),
-        ("A", "a", AttrRep.deserialize("str_cs"), True),
-        ("a", "a", AttrRep.deserialize("str_cs"), True),
-        ("a", "A", AttrRep.deserialize("str_cs"), False),
+        (1, 2, BoundedAttrRep(attr="int"), True),
+        (1, 1, BoundedAttrRep(attr="int"), True),
+        (2, 1, BoundedAttrRep(attr="int"), False),
+        ("A", "a", BoundedAttrRep(attr="str_cs"), True),
+        ("a", "a", BoundedAttrRep(attr="str_cs"), True),
+        ("a", "A", BoundedAttrRep(attr="str_cs"), False),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             True,
         ),
         (
             datetime(2023, 10, 10, 21, 27, 2).isoformat(),
             datetime(2023, 10, 10, 21, 27, 1).isoformat(),
-            AttrRep.deserialize("datetime"),
+            BoundedAttrRep(attr="datetime"),
             False,
         ),
-        (3.14, 3.141, AttrRep.deserialize("decimal"), True),
-        (3.14, 3.14, AttrRep.deserialize("decimal"), True),
-        (3.141, 3.14, AttrRep.deserialize("decimal"), False),
+        (3.14, 3.141, BoundedAttrRep(attr="decimal"), True),
+        (3.14, 3.14, BoundedAttrRep(attr="decimal"), True),
+        (3.141, 3.14, BoundedAttrRep(attr="decimal"), False),
     ),
 )
 def test_lesser_than_or_equal_operator(value, operator_value, attribute_name, expected):
@@ -328,7 +328,7 @@ def test_lesser_than_or_equal_operator(value, operator_value, attribute_name, ex
 
 
 def test_binary_operator_does_not_match_if_non_matching_attribute_type():
-    operator = Equal(AttrRep.deserialize("int"), "1")
+    operator = Equal(BoundedAttrRep(attr="int"), "1")
 
     match = operator.match(1, SchemaForTests.attrs)
 
@@ -336,7 +336,7 @@ def test_binary_operator_does_not_match_if_non_matching_attribute_type():
 
 
 def test_binary_operator_does_not_match_if_attr_missing_in_schema():
-    operator = Equal(AttrRep.deserialize("other_int"), 1)
+    operator = Equal(BoundedAttrRep(attr="other_int"), 1)
 
     match = operator.match(1, SchemaForTests.attrs)
 
@@ -344,7 +344,7 @@ def test_binary_operator_does_not_match_if_attr_missing_in_schema():
 
 
 def test_binary_operator_does_not_match_if_not_supported_scim_type():
-    operator = GreaterThan(AttrRep.deserialize("scim_ref"), chr(0))
+    operator = GreaterThan(BoundedAttrRep(attr="scim_ref"), chr(0))
 
     match = operator.match("Users", SchemaForTests.attrs)
 
@@ -366,7 +366,7 @@ def test_binary_operator_does_not_match_if_not_supported_scim_type():
     ),
 )
 def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expected):
-    operator = operator_cls(AttrRep.deserialize("str"), "A")
+    operator = operator_cls(BoundedAttrRep(attr="str"), "A")
 
     actual = operator.match("a", SchemaForTests.attrs)
 
@@ -383,7 +383,7 @@ def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expect
     ),
 )
 def test_contains_operator(value, operator_value, expected):
-    operator = Contains(AttrRep.deserialize("str_cs"), operator_value)
+    operator = Contains(BoundedAttrRep(attr="str_cs"), operator_value)
 
     actual = operator.match(value, SchemaForTests.attrs)
 
@@ -401,7 +401,7 @@ def test_contains_operator(value, operator_value, expected):
     ),
 )
 def test_starts_with_operator(value, operator_value, expected):
-    operator = StartsWith(AttrRep.deserialize("str_cs"), operator_value)
+    operator = StartsWith(BoundedAttrRep(attr="str_cs"), operator_value)
 
     actual = operator.match(value, SchemaForTests.attrs)
 
@@ -419,7 +419,7 @@ def test_starts_with_operator(value, operator_value, expected):
     ),
 )
 def test_ends_with_operator(value, operator_value, expected):
-    operator = EndsWith(AttrRep.deserialize("str_cs"), operator_value)
+    operator = EndsWith(BoundedAttrRep(attr="str_cs"), operator_value)
 
     actual = operator.match(value, SchemaForTests.attrs)
 
@@ -427,7 +427,7 @@ def test_ends_with_operator(value, operator_value, expected):
 
 
 def test_multi_value_attribute_is_matched_if_one_of_values_match():
-    operator = Equal(AttrRep.deserialize("str_cs_mv"), "abc")
+    operator = Equal(BoundedAttrRep(attr="str_cs_mv"), "abc")
 
     match = operator.match(["b", "c", "ab", "abc", "ca"], SchemaForTests.attrs)
 
@@ -435,7 +435,7 @@ def test_multi_value_attribute_is_matched_if_one_of_values_match():
 
 
 def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_match():
-    operator = Equal(AttrRep.deserialize("str_mv"), "abc")
+    operator = Equal(BoundedAttrRep(attr="str_mv"), "abc")
 
     match = operator.match(["b", "c", "ab", "ABc", "ca"], SchemaForTests.attrs)
 
@@ -445,28 +445,28 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
 @pytest.mark.parametrize(
     ("value", "attribute_name", "expected"),
     (
-        ("", AttrRep.deserialize("str"), False),
-        ("abc", AttrRep.deserialize("str"), True),
-        (None, AttrRep.deserialize("bool"), False),
-        (False, AttrRep.deserialize("bool"), True),
-        ([], AttrRep.deserialize("str_mv"), False),
+        ("", BoundedAttrRep(attr="str"), False),
+        ("abc", BoundedAttrRep(attr="str"), True),
+        (None, BoundedAttrRep(attr="bool"), False),
+        (False, BoundedAttrRep(attr="bool"), True),
+        ([], BoundedAttrRep(attr="str_mv"), False),
         (
             ["a", "b", "c"],
-            AttrRep.deserialize("str_mv"),
+            BoundedAttrRep(attr="str_mv"),
             True,
         ),
         (
             {
                 "value": "",
             },
-            AttrRep.deserialize("c"),
+            BoundedAttrRep(attr="c"),
             False,
         ),
         (
             {
                 "value": "abc",
             },
-            AttrRep.deserialize("c"),
+            BoundedAttrRep(attr="c"),
             False,  # only multivalued complex attributes can be matched
         ),
         (
@@ -478,7 +478,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
                     "value": "",
                 },
             ],
-            AttrRep.deserialize("c_mv"),
+            BoundedAttrRep(attr="c_mv"),
             False,
         ),
         (
@@ -490,7 +490,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
                     "value": "abc",
                 },
             ],
-            AttrRep.deserialize("c_mv"),
+            BoundedAttrRep(attr="c_mv"),
             True,
         ),
     ),
@@ -504,7 +504,7 @@ def test_present_operator(value, attribute_name, expected):
 
 
 def test_complex_attribute_matches_binary_operator_if_one_of_values_matches():
-    operator = StartsWith(AttrRep.deserialize("c_mv"), "abc")
+    operator = StartsWith(BoundedAttrRep(attr="c_mv"), "abc")
 
     match = operator.match(
         [{"value": "a"}, {"value": "bac"}, {"value": "abcd"}], SchemaForTests.attrs
@@ -514,7 +514,7 @@ def test_complex_attribute_matches_binary_operator_if_one_of_values_matches():
 
 
 def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches():
-    operator = StartsWith(AttrRep.deserialize("c_mv"), "abc")
+    operator = StartsWith(BoundedAttrRep(attr="c_mv"), "abc")
 
     match = operator.match(
         [{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}], SchemaForTests.attrs
@@ -532,14 +532,14 @@ def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_m
 )
 def test_and_operator_matches(str_cs_value, expected):
     operator = And(
-        Equal(AttrRep.deserialize("int"), 1),
+        Equal(BoundedAttrRep(attr="int"), 1),
         And(
-            GreaterThan(AttrRep.deserialize("decimal"), 1.0),
-            NotEqual(AttrRep.deserialize("str"), "1"),
+            GreaterThan(BoundedAttrRep(attr="decimal"), 1.0),
+            NotEqual(BoundedAttrRep(attr="str"), "1"),
         ),
         Or(
-            Equal(AttrRep.deserialize("bool"), True),
-            StartsWith(AttrRep.deserialize("str_cs"), "a"),
+            Equal(BoundedAttrRep(attr="bool"), True),
+            StartsWith(BoundedAttrRep(attr="str_cs"), "a"),
         ),
     )
 
@@ -568,14 +568,14 @@ def test_and_operator_matches(str_cs_value, expected):
 )
 def test_or_operator_matches(str_cs_value, expected):
     operator = Or(
-        Equal(AttrRep.deserialize("int"), 1),
+        Equal(BoundedAttrRep(attr="int"), 1),
         And(
-            GreaterThan(AttrRep.deserialize("decimal"), 1.0),
-            NotEqual(AttrRep.deserialize("str"), "1"),
+            GreaterThan(BoundedAttrRep(attr="decimal"), 1.0),
+            NotEqual(BoundedAttrRep(attr="str"), "1"),
         ),
         Or(
-            Equal(AttrRep.deserialize("bool"), True),
-            StartsWith(AttrRep.deserialize("str_cs"), "a"),
+            Equal(BoundedAttrRep(attr="bool"), True),
+            StartsWith(BoundedAttrRep(attr="str_cs"), "a"),
         ),
     )
 
@@ -597,7 +597,7 @@ def test_or_operator_matches(str_cs_value, expected):
 
 def test_complex_attribute_operator_matches_all_complex_sub_attrs():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep(attr="c2"),
+        attr_rep=BoundedAttrRep(attr="c2"),
         sub_operator=And(
             Equal(AttrRep(attr="str"), "admin"),
             GreaterThan(AttrRep(attr="int"), 18),
@@ -614,7 +614,7 @@ def test_complex_attribute_operator_matches_all_complex_sub_attrs():
 
 def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep(attr="c2"),
+        attr_rep=BoundedAttrRep(attr="c2"),
         sub_operator=Or(
             Equal(AttrRep(attr="str"), "admin"),
             GreaterThan(AttrRep(attr="int"), 18),
@@ -631,7 +631,7 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
 
 def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep(attr="c2_mv"),
+        attr_rep=BoundedAttrRep(attr="c2_mv"),
         sub_operator=And(
             Equal(AttrRep(attr="str"), "admin"),
             GreaterThan(AttrRep(attr="int"), 18),
@@ -653,7 +653,7 @@ def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
 
 def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep(attr="c2_mv"),
+        attr_rep=BoundedAttrRep(attr="c2_mv"),
         sub_operator=Or(
             Equal(AttrRep(attr="str"), "admin"),
             GreaterThan(AttrRep(attr="int"), 18),
@@ -709,12 +709,12 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
 def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalued, expected):
     if is_multivalued:
         operator = ComplexAttributeOperator(
-            attr_rep=AttrRep(attr="c2_mv"),
+            attr_rep=BoundedAttrRep(attr="c2_mv"),
             sub_operator=Equal(AttrRep(attr="str"), "admin"),
         )
     else:
         operator = ComplexAttributeOperator(
-            attr_rep=AttrRep(attr="c2"),
+            attr_rep=BoundedAttrRep(attr="c2"),
             sub_operator=Equal(AttrRep(attr="str"), "admin"),
         )
 
@@ -724,7 +724,7 @@ def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalue
 
 
 def test_binary_op_returns_missing_data_if_no_value_provided_with_strict():
-    operator = Equal(AttrRep.deserialize("str"), "abc")
+    operator = Equal(BoundedAttrRep(attr="str"), "abc")
 
     match = operator.match(None, SchemaForTests.attrs, True)
 
@@ -732,7 +732,7 @@ def test_binary_op_returns_missing_data_if_no_value_provided_with_strict():
 
 
 def test_binary_op_returns_matches_if_no_value_provided_without_strict():
-    operator = Equal(AttrRep.deserialize("str"), "abc")
+    operator = Equal(BoundedAttrRep(attr="str"), "abc")
 
     match = operator.match(None, SchemaForTests.attrs, False)
 
@@ -741,7 +741,7 @@ def test_binary_op_returns_matches_if_no_value_provided_without_strict():
 
 def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep(attr="c"),
+        attr_rep=BoundedAttrRep(attr="c"),
         sub_operator=Equal(AttrRep(attr="str"), "abc"),
     )
 
@@ -752,7 +752,7 @@ def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict():
 
 def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep(attr="c"),
+        attr_rep=BoundedAttrRep(attr="c"),
         sub_operator=Equal(AttrRep(attr="str"), "abc"),
     )
 
@@ -763,8 +763,8 @@ def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict()
 
 def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict():
     operator = Or(
-        Equal(AttrRep.deserialize("int"), 1),
-        Equal(AttrRep.deserialize("str"), "abc"),
+        Equal(BoundedAttrRep(attr="int"), 1),
+        Equal(BoundedAttrRep(attr="str"), "abc"),
     )
 
     match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs, True)
@@ -775,8 +775,8 @@ def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict():
 @pytest.mark.parametrize("strict", (True, False))
 def test_or_op_matches_if_any_sub_attr_matched(strict):
     operator = Or(
-        Equal(AttrRep.deserialize("int"), 1),
-        Equal(AttrRep.deserialize("str"), "abc"),
+        Equal(BoundedAttrRep(attr="int"), 1),
+        Equal(BoundedAttrRep(attr="str"), "abc"),
     )
 
     match = operator.match(SCIMDataContainer({"int": 1}), SchemaForTests.attrs, strict)
@@ -786,8 +786,8 @@ def test_or_op_matches_if_any_sub_attr_matched(strict):
 
 def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict():
     operator = And(
-        Equal(AttrRep.deserialize("int"), 1),
-        Equal(AttrRep.deserialize("str"), "abc"),
+        Equal(BoundedAttrRep(attr="int"), 1),
+        Equal(BoundedAttrRep(attr="str"), "abc"),
     )
     value = {"int": 1}  # value for this attr is correct, but missing 'str'
 
@@ -798,8 +798,8 @@ def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict
 
 def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict():
     operator = And(
-        Equal(AttrRep.deserialize("int"), 1),
-        Equal(AttrRep.deserialize("str"), "abc"),
+        Equal(BoundedAttrRep(attr="int"), 1),
+        Equal(BoundedAttrRep(attr="str"), "abc"),
     )
 
     match = operator.match(SCIMDataContainer({"int": 1, "str": "cba"}), SchemaForTests.attrs, True)
@@ -809,9 +809,9 @@ def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict():
 
 def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict():
     operator = And(
-        Equal(AttrRep.deserialize("int"), 1),
+        Equal(BoundedAttrRep(attr="int"), 1),
         Equal(
-            AttrRep.deserialize("str"),
+            BoundedAttrRep(attr="str"),
             "abc",
         ),
     )
@@ -825,8 +825,8 @@ def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict():
 def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict():
     operator = Not(
         Or(
-            Equal(AttrRep.deserialize("int"), 1),
-            Equal(AttrRep.deserialize("str"), "abc"),
+            Equal(BoundedAttrRep(attr="int"), 1),
+            Equal(BoundedAttrRep(attr="str"), "abc"),
         ),
     )
 
@@ -838,8 +838,8 @@ def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict():
 def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict():
     operator = Not(
         Or(
-            Equal(AttrRep.deserialize("int"), 1),
-            Equal(AttrRep.deserialize("str"), "abc"),
+            Equal(BoundedAttrRep(attr="int"), 1),
+            Equal(BoundedAttrRep(attr="str"), "abc"),
         ),
     )
 
@@ -849,7 +849,7 @@ def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict()
 
 
 def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict():
-    operator = Not(Equal(AttrRep.deserialize("int"), 1))
+    operator = Not(Equal(BoundedAttrRep(attr="int"), 1))
 
     match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, False)
 
@@ -857,7 +857,7 @@ def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict():
 
 
 def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict():
-    operator = Not(Equal(AttrRep.deserialize("int"), 1))
+    operator = Not(Equal(BoundedAttrRep(attr="int"), 1))
 
     match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, True)
 
@@ -865,7 +865,7 @@ def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict():
 
 
 def test_not_op_does_not_match_if_op_attr_not_in_attrs():
-    operator = Not(Equal(AttrRep.deserialize("other_attr"), 1))
+    operator = Not(Equal(BoundedAttrRep(attr="other_attr"), 1))
 
     match = operator.match(SCIMDataContainer({"other_attr": 2}), SchemaForTests.attrs)
 
@@ -874,7 +874,7 @@ def test_not_op_does_not_match_if_op_attr_not_in_attrs():
 
 @pytest.mark.parametrize("strict", (True, False))
 def test_not_op_matches_if_no_data_for_pr_sub_op_with_strict(strict):
-    operator = Not(Present(AttrRep.deserialize("int")))
+    operator = Not(Present(BoundedAttrRep(attr="int")))
 
     match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, strict)
 
@@ -884,7 +884,7 @@ def test_not_op_matches_if_no_data_for_pr_sub_op_with_strict(strict):
 @pytest.mark.parametrize("strict", (True, False))
 @pytest.mark.parametrize(("value", "expected"), ((1.0, True), (2.0, False)))
 def test_binary_attributes_allows_to_compare_int_with_decimal(strict, value, expected):
-    operator = Equal(AttrRep.deserialize("decimal"), 1)
+    operator = Equal(BoundedAttrRep(attr="decimal"), 1)
 
     match = operator.match(value, SchemaForTests.attrs, strict)
 
@@ -894,7 +894,7 @@ def test_binary_attributes_allows_to_compare_int_with_decimal(strict, value, exp
 @pytest.mark.parametrize("strict", (True, False))
 @pytest.mark.parametrize(("value", "expected"), ((1, True), (2, False)))
 def test_binary_attributes_allows_to_compare_decimal_with_int(strict, value, expected):
-    operator = Equal(AttrRep.deserialize("int"), 1.0)
+    operator = Equal(BoundedAttrRep(attr="int"), 1.0)
 
     match = operator.match(value, SchemaForTests.attrs, strict)
 
@@ -903,10 +903,8 @@ def test_binary_attributes_allows_to_compare_decimal_with_int(strict, value, exp
 
 def test_complex_op_can_be_used_with_logical_op():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep(attr="c2"),
-        sub_operator=And(
-            Equal(AttrRep.deserialize("int"), 1), Equal(AttrRep.deserialize("str"), "abc")
-        ),
+        attr_rep=BoundedAttrRep(attr="c2"),
+        sub_operator=And(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
     match = operator.match(SCIMDataContainer({"int": 1, "str": "abc"}), SchemaForTests.attrs)
@@ -916,10 +914,8 @@ def test_complex_op_can_be_used_with_logical_op():
 
 def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep.deserialize("c2"),
-        sub_operator=Or(
-            Equal(AttrRep.deserialize("int"), 1), Equal(AttrRep.deserialize("str"), "abc")
-        ),
+        attr_rep=BoundedAttrRep(attr="c2"),
+        sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
     match = operator.match(SCIMDataContainer({"int": 1}), SchemaForTests.attrs)
@@ -929,10 +925,8 @@ def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches():
 
 def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep.deserialize("c2"),
-        sub_operator=Or(
-            Equal(AttrRep.deserialize("int"), 1), Equal(AttrRep.deserialize("str"), "abc")
-        ),
+        attr_rep=BoundedAttrRep(attr="c2"),
+        sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
     match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs)
@@ -942,10 +936,8 @@ def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided():
 
 def test_complex_op_used_with_or_op_matches_if_no_values_provided_without_strict():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep.deserialize("c2"),
-        sub_operator=Or(
-            Equal(AttrRep.deserialize("int"), 1), Equal(AttrRep.deserialize("str"), "abc")
-        ),
+        attr_rep=BoundedAttrRep(attr="c2"),
+        sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
     match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, False)
@@ -955,10 +947,8 @@ def test_complex_op_used_with_or_op_matches_if_no_values_provided_without_strict
 
 def test_multivalued_complex_op_can_be_used_with_logical_op():
     operator = ComplexAttributeOperator(
-        attr_rep=AttrRep.deserialize("c2_mv"),
-        sub_operator=And(
-            Equal(AttrRep.deserialize("int"), 1), Equal(AttrRep.deserialize("str"), "abc")
-        ),
+        attr_rep=BoundedAttrRep(attr="c2_mv"),
+        sub_operator=And(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
     match = operator.match(

@@ -7,7 +7,7 @@ from src.assets.schemas import group, list_response, service_provider_config, us
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.operator import Present
 from src.data.path import PatchPath
 from src.filter import Filter
@@ -349,9 +349,9 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
 @pytest.mark.parametrize(
     "sorter",
     (
-        Sorter(AttrRep(attr="name", sub_attr="familyName"), asc=False),
+        Sorter(BoundedAttrRep(attr="name", sub_attr="familyName"), asc=False),
         Sorter(
-            AttrRep(
+            BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="manager",
                 sub_attr="displayName",
@@ -375,7 +375,7 @@ def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
 def test_validate_resources_attribute_presence__fails_if_requested_attribute_not_excluded(
     list_user_data,
 ):
-    checker = AttributePresenceChecker(attr_reps=[AttrRep(attr="name")], include=False)
+    checker = AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False)
     expected = {
         "0": {
             "name": {
@@ -430,7 +430,9 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
         status_code=200,
         body=user_data_server,
         headers={"Location": user_data_server["meta"]["location"]},
-        presence_checker=AttributePresenceChecker(attr_reps=[AttrRep(attr="name")], include=False),
+        presence_checker=AttributePresenceChecker(
+            attr_reps=[BoundedAttrRep(attr="name")], include=False
+        ),
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -525,8 +527,10 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
         start_index=1,
         count=2,
         filter_=Filter(Present(AttrRep(attr="username"))),
-        sorter=Sorter(AttrRep(attr="userName"), True),
-        presence_checker=AttributePresenceChecker(attr_reps=[AttrRep(attr="name")], include=False),
+        sorter=Sorter(BoundedAttrRep(attr="userName"), True),
+        presence_checker=AttributePresenceChecker(
+            attr_reps=[BoundedAttrRep(attr="name")], include=False
+        ),
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -786,7 +790,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
             "userName": "bjensen",
         },
         presence_checker=AttributePresenceChecker(
-            attr_reps=[AttrRep(attr="userName")], include=True
+            attr_reps=[BoundedAttrRep(attr="userName")], include=True
         ),
     )
 
@@ -856,10 +860,10 @@ def test_bulk_operations_request_is_valid_if_correct_data():
     expected_body: dict = deepcopy(data)
     expected_body["Operations"][1]["data"] = {"userName": "Bob"}
     expected_body["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath(
-        attr_rep=AttrRep(attr="nickName"), complex_filter=None, complex_filter_attr_rep=None
+        attr_rep=BoundedAttrRep(attr="nickName"), complex_filter=None, complex_filter_attr_rep=None
     )
     expected_body["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath(
-        attr_rep=AttrRep(attr="userName"), complex_filter=None, complex_filter_attr_rep=None
+        attr_rep=BoundedAttrRep(attr="userName"), complex_filter=None, complex_filter_attr_rep=None
     )
 
     issues = validator.validate_request(body=data)

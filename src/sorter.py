@@ -2,9 +2,8 @@ import functools
 from typing import Any, List, Optional, Sequence, Union
 
 from src.data.attributes import Attribute, AttributeWithCaseExact, Complex
-from src.data.container import AttrRep, Missing, SCIMDataContainer
+from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.error import ValidationError, ValidationIssues
 
 
 class AlwaysLastKey:
@@ -40,34 +39,18 @@ class StringKey:
 
 
 class Sorter:
-    def __init__(self, attr_rep: AttrRep, asc: bool = True):
+    def __init__(self, attr_rep: BoundedAttrRep, asc: bool = True):
         self._attr_rep = attr_rep
         self._asc = asc
         self._default_value = AlwaysLastKey()
 
     @property
-    def attr_rep(self) -> AttrRep:
+    def attr_rep(self) -> BoundedAttrRep:
         return self._attr_rep
 
     @property
     def asc(self) -> bool:
         return self._asc
-
-    @classmethod
-    def deserialize(cls, by: str, asc: bool = True) -> "Sorter":
-        return Sorter(attr_rep=AttrRep.deserialize(by), asc=asc)
-
-    @classmethod
-    def validate(cls, by: str) -> ValidationIssues:
-        issues = ValidationIssues()
-        try:
-            AttrRep.deserialize(by)
-        except ValueError:
-            issues.add_error(
-                issue=ValidationError.bad_attribute_name(by),
-                proceed=False,
-            )
-        return issues
 
     def __call__(
         self,

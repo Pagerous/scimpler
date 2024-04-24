@@ -42,7 +42,7 @@ class ValidationError:
         28: "main schema not included",
         29: "extension {extension!r} is missing",
         30: "can not be used together with {other!r}",
-        33: "complex sub-attribute {sub_attr!r} of {attr!r} can not be complex",
+        33: "sub-attribute {sub_attr!r} of {attr!r} can not be complex",
         34: "resource type endpoint is required",
         35: "resource object endpoint is required",
         36: "unknown resource",
