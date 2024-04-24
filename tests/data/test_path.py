@@ -76,7 +76,7 @@ def test_patch_path_parsing_failure(path, expected_issues):
         "path",
         "expected_attr_rep",
         "expected_multivalued_filter",
-        "expected_complex_filter_attr_rep",
+        "expected_filter_sub_attr_rep",
     ),
     (
         ("members", BoundedAttrRep(attr="members"), None, None),
@@ -112,7 +112,7 @@ def test_patch_path_parsing_success(
     path,
     expected_attr_rep: AttrRep,
     expected_multivalued_filter: Optional[Filter],
-    expected_complex_filter_attr_rep: Optional[AttrRep],
+    expected_filter_sub_attr_rep: Optional[AttrRep],
 ):
     issues = PatchPath.validate(path)
     assert issues.to_dict(msg=True) == {}
@@ -120,18 +120,18 @@ def test_patch_path_parsing_success(
     deserialized = PatchPath.deserialize(path)
     assert deserialized.attr_rep == expected_attr_rep
     if expected_multivalued_filter is not None:
-        assert isinstance(deserialized.complex_filter, type(expected_multivalued_filter))
+        assert isinstance(deserialized.filter, type(expected_multivalued_filter))
         assert (
-            deserialized.complex_filter.operator.sub_operator.value
+            deserialized.filter.operator.sub_operator.value
             == expected_multivalued_filter.operator.sub_operator.value
         )
         assert (
-            deserialized.complex_filter.operator.sub_operator.attr_rep
+            deserialized.filter.operator.sub_operator.attr_rep
             == expected_multivalued_filter.operator.sub_operator.attr_rep
         )
     else:
-        assert deserialized.complex_filter is None
-    assert deserialized.complex_filter_attr_rep == expected_complex_filter_attr_rep
+        assert deserialized.filter is None
+    assert deserialized.filter_sub_attr_rep == expected_filter_sub_attr_rep
 
 
 @pytest.mark.parametrize(
@@ -139,33 +139,33 @@ def test_patch_path_parsing_success(
     (
         {
             "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Filter(
+            "filter": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
-            "complex_filter_attr_rep": None,
+            "filter_sub_attr_rep": None,
         },
         {
             "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
-            "complex_filter": Filter(
+            "filter": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
-            "complex_filter_attr_rep": AttrRep(attr="other_attr"),
+            "filter_sub_attr_rep": AttrRep(attr="other_attr"),
         },
         {
             "attr_rep": BoundedAttrRep(attr="attr"),
-            "complex_filter": Filter(
+            "filter": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="different_attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
-            "complex_filter_attr_rep": AttrRep(attr="other_attr"),
+            "filter_sub_attr_rep": AttrRep(attr="other_attr"),
         },
     ),
 )
@@ -189,4 +189,4 @@ def test_complex_filter_string_values_can_contain_anything(path, expected_filter
     assert issues.to_dict(msg=True) == {}
 
     deserialized = PatchPath.deserialize(path)
-    assert deserialized.complex_filter.operator.sub_operator.value == expected_filter_value
+    assert deserialized.filter.operator.sub_operator.value == expected_filter_value

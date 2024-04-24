@@ -45,8 +45,8 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
                 )
             if (
                 path
-                and (path := PatchPath.deserialize(path)).complex_filter is not None
-                and path.complex_filter_attr_rep is None
+                and (path := PatchPath.deserialize(path)).filter is not None
+                and path.filter_sub_attr_rep is None
             ):
                 issues.add_error(
                     issue=ValidationError.complex_filter_without_sub_attr_for_add_op(),
@@ -117,7 +117,7 @@ class PatchOp(BaseSchema):
 
         attr = self._resource_schema.attrs.get(path.attr_rep)
         path_location = (self.attrs.operations__path.rep.sub_attr,)
-        if path.complex_filter_attr_rep is None:
+        if path.filter_sub_attr_rep is None:
             if attr.mutability == AttributeMutability.READ_ONLY:
                 issues.add_error(
                     issue=ValidationError.attribute_can_not_be_modified(),
@@ -138,7 +138,7 @@ class PatchOp(BaseSchema):
                 BoundedAttrRep(
                     schema=path.attr_rep.schema,
                     attr=path.attr_rep.attr,
-                    sub_attr=path.complex_filter_attr_rep.attr,
+                    sub_attr=path.filter_sub_attr_rep.attr,
                 )
             )
             if sub_attr.required:
@@ -217,13 +217,13 @@ class PatchOp(BaseSchema):
         # sub-attribute of filtered multivalued complex attribute
         if (
             isinstance(self._resource_schema.attrs.get(path.attr_rep), Complex)
-            and path.complex_filter
-            and path.complex_filter_attr_rep
+            and path.filter
+            and path.filter_sub_attr_rep
         ):
             attr_rep = BoundedAttrRep(
                 schema=path.attr_rep.schema,
                 attr=path.attr_rep.attr,
-                sub_attr=path.complex_filter_attr_rep.attr,
+                sub_attr=path.filter_sub_attr_rep.attr,
             )
         else:
             attr_rep = path.attr_rep
@@ -291,20 +291,20 @@ class PatchOp(BaseSchema):
 
         # sub-attribute of filtered multivalued complex attribute
         attr = self._resource_schema.attrs.get(path.attr_rep)
-        if isinstance(attr, Complex) and path.complex_filter and path.complex_filter_attr_rep:
-            return attr.attrs.get(path.complex_filter_attr_rep).deserialize(value)
+        if isinstance(attr, Complex) and path.filter and path.filter_sub_attr_rep:
+            return attr.attrs.get(path.filter_sub_attr_rep).deserialize(value)
         return attr.deserialize(value)
 
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:
     issues = ValidationIssues()
     if schema.attrs.get(path.attr_rep) is None or (
-        path.complex_filter_attr_rep is not None
+        path.filter_sub_attr_rep is not None
         and schema.attrs.get(
             BoundedAttrRep(
                 schema=path.attr_rep.schema,
                 attr=path.attr_rep.attr,
-                sub_attr=path.complex_filter_attr_rep.attr,
+                sub_attr=path.filter_sub_attr_rep.attr,
             )
         )
         is None

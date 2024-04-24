@@ -11,36 +11,34 @@ class PatchPath:
     def __init__(
         self,
         attr_rep: BoundedAttrRep,
-        complex_filter: Optional[Filter],
-        complex_filter_attr_rep: Optional[AttrRep],
+        filter: Optional[Filter],  # noqa
+        filter_sub_attr_rep: Optional[AttrRep],
     ):
-        if attr_rep.sub_attr and (complex_filter or complex_filter_attr_rep):
+        if attr_rep.sub_attr and (filter or filter_sub_attr_rep):
             raise ValueError("sub-attribute can not be complex")
 
-        if complex_filter is not None:
-            if not isinstance(complex_filter.operator, ComplexAttributeOperator):
+        if filter is not None:
+            if not isinstance(filter.operator, ComplexAttributeOperator):
                 raise ValueError("only ComplexAttributeOperator is supported as path filter")
 
-            if complex_filter.operator.attr_rep != attr_rep:
-                raise ValueError(
-                    "non-matching top-level attributes for 'attr_rep' and 'complex_filter'"
-                )
+            if filter.operator.attr_rep != attr_rep:
+                raise ValueError("non-matching top-level attributes for 'attr_rep' and 'filter'")
 
         self._attr_rep = attr_rep
-        self._complex_filter = complex_filter
-        self._complex_filter_attr_rep = complex_filter_attr_rep
+        self._filter = filter
+        self._filter_sub_attr_rep = filter_sub_attr_rep
 
     @property
     def attr_rep(self) -> BoundedAttrRep:
         return self._attr_rep
 
     @property
-    def complex_filter(self) -> Optional[Filter]:
-        return self._complex_filter
+    def filter(self) -> Optional[Filter]:
+        return self._filter
 
     @property
-    def complex_filter_attr_rep(self) -> Optional[AttrRep]:
-        return self._complex_filter_attr_rep
+    def filter_sub_attr_rep(self) -> Optional[AttrRep]:
+        return self._filter_sub_attr_rep
 
     @classmethod
     def validate(cls, path: str) -> ValidationIssues:
@@ -94,8 +92,8 @@ class PatchPath:
         assert "[" not in path and "]" not in path
         return PatchPath(
             attr_rep=BoundedAttrRep.deserialize(decode_placeholders(path, placeholders)),
-            complex_filter=None,
-            complex_filter_attr_rep=None,
+            filter=None,
+            filter_sub_attr_rep=None,
         )
 
     @classmethod
@@ -114,8 +112,8 @@ class PatchPath:
 
         return cls(
             attr_rep=filter_.operator.attr_rep,
-            complex_filter=filter_,
-            complex_filter_attr_rep=val_attr_rep,
+            filter=filter_,
+            filter_sub_attr_rep=val_attr_rep,
         )
 
     def __eq__(self, other) -> bool:
@@ -124,6 +122,6 @@ class PatchPath:
 
         return bool(
             self.attr_rep == other.attr_rep
-            and self.complex_filter == other.complex_filter
-            and self.complex_filter_attr_rep == other.complex_filter_attr_rep
+            and self.filter == other.filter
+            and self.filter_sub_attr_rep == other.filter_sub_attr_rep
         )
