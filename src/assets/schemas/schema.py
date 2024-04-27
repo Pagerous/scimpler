@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Optional, Union
 
 from src.data.attributes import (
     AttributeIssuer,
@@ -168,9 +168,13 @@ class _Schema(ServiceResourceSchema):
             ],
         )
 
-    def get_repr(self, schema: Union[ResourceSchema, SchemaExtension]) -> Dict[str, Any]:
+    def get_repr(
+        self,
+        schema: Union[ResourceSchema, SchemaExtension],
+        version: Optional[str] = None,
+    ) -> Dict[str, Any]:
         attrs = schema.attrs if isinstance(schema, SchemaExtension) else schema.attrs.core_attrs
-        return {
+        output = {
             "id": schema.schema,
             "schemas": self.schemas,
             "name": schema.name,
@@ -181,6 +185,9 @@ class _Schema(ServiceResourceSchema):
                 "location": f"{self.endpoint}/{schema.schema}",
             },
         }
+        if version:
+            output["meta"]["version"] = version
+        return output
 
 
 Schema = _Schema()

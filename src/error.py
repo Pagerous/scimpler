@@ -13,7 +13,6 @@ class ValidationError:
             "'primary' attribute set to 'True', in multi-valued complex attribute, "
             "MUST appear no more than once"
         ),
-        10: "header '{header}' is required",
         11: "must be equal to {value!r}",
         12: "error status must be greater or equal to 300 and lesser than 600",
         13: (
@@ -99,10 +98,6 @@ class ValidationError:
     @classmethod
     def multiple_primary_values(cls):
         return cls(code=9)
-
-    @classmethod
-    def missing_required_header(cls, header: str):
-        return cls(code=10, header=header)
 
     @classmethod
     def must_be_equal_to(cls, value: Any):

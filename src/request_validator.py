@@ -144,7 +144,7 @@ def validate_resource_location_in_header(
     if not isinstance(headers, Dict) or "Location" not in (headers or {}):
         if header_required:
             issues.add_error(
-                issue=ValidationError.missing_required_header("Location"),
+                issue=ValidationError.missing(),
                 proceed=False,
                 location=("Location",),
             )
@@ -191,6 +191,7 @@ def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> Val
 
 def _validate_resource_output_body(
     schema: ResourceSchema,
+    config: ServiceProviderConfig,
     location_header_required: bool,
     expected_status_code: int,
     status_code: int,
@@ -230,6 +231,35 @@ def _validate_resource_output_body(
                 headers_location=location_header,
             ),
         )
+
+    etag = headers.get("ETag")
+    version_rep = schema.attrs.meta__version.rep
+    version = body.get(version_rep)
+    if all([etag, version]) and etag != version:
+        issues.add_error(
+            issue=ValidationError.must_be_equal_to("'ETag' header"),
+            proceed=True,
+            location=body_location + _location(version_rep),
+        )
+        issues.add_error(
+            issue=ValidationError.must_be_equal_to("'meta.version'"),
+            proceed=True,
+            location=("headers", "ETag"),
+        )
+    elif config.etag.supported:
+        if etag is None:
+            issues.add_error(
+                issue=ValidationError.missing(),
+                location=("headers", "ETag"),
+                proceed=False,
+            )
+
+        if version in [None, Missing]:
+            issues.add_error(
+                issue=ValidationError.missing(),
+                proceed=False,
+                location=body_location + _location(version_rep),
+            )
     return issues
 
 
@@ -272,6 +302,7 @@ class ResourceObjectGET(Validator):
     ) -> ValidationIssues:
         return _validate_resource_output_body(
             schema=self._schema,
+            config=self.config,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
@@ -279,6 +310,17 @@ class ResourceObjectGET(Validator):
             headers=headers or {},
             presence_checker=kwargs.get("presence_checker"),
         )
+
+
+class ServiceResourceObjectGET(ResourceObjectGET):
+    def validate_request(
+        self,
+        *,
+        body: Optional[Dict[str, Any]] = None,
+        query_string: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, Any]] = None,
+    ) -> ValidationIssues:
+        return ValidationIssues()
 
 
 class ResourceObjectPUT(Validator):
@@ -332,6 +374,7 @@ class ResourceObjectPUT(Validator):
     ) -> ValidationIssues:
         return _validate_resource_output_body(
             schema=self._schema,
+            config=self.config,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
@@ -393,6 +436,7 @@ class ResourcesPOST(Validator):
         body = SCIMDataContainer(body)
         issues = _validate_resource_output_body(
             schema=self._schema,
+            config=self.config,
             location_header_required=True,
             expected_status_code=201,
             status_code=status_code,
@@ -834,15 +878,23 @@ class ResourceObjectPATCH(Validator):
                     location=("status",),
                 )
             return issues
-        return _validate_resource_output_body(
+        body = SCIMDataContainer(body or {})
+        issues = _validate_resource_output_body(
             schema=self._resource_schema,
+            config=self.config,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=SCIMDataContainer(body or {}),
+            body=body,
             headers=headers or {},
             presence_checker=presence_checker,
         )
+        meta_location = self.response_schema.attrs.meta__version.rep
+        if body.get(meta_location) is Missing:
+            issues.pop_error(("body", *_location(meta_location)), 11)
+            issues.pop_error(("body", *_location(meta_location)), 15)
+            issues.pop_error(("headers", "ETag"), 11)
+        return issues
 
 
 class ResourceObjectDELETE(Validator):

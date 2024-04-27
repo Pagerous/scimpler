@@ -78,8 +78,8 @@ def test_validate_error_status_code_consistency(status_code, expected):
     (
         ({}, False, {}),
         (None, False, {}),
-        ({}, True, {"Location": {"_errors": [{"code": 10}]}}),
-        ([1, 2, 3], True, {"Location": {"_errors": [{"code": 10}]}}),
+        ({}, True, {"Location": {"_errors": [{"code": 15}]}}),
+        ([1, 2, 3], True, {"Location": {"_errors": [{"code": 15}]}}),
         (
             {"Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646"},
             True,
@@ -429,13 +429,124 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
     issues = validator.validate_response(
         status_code=200,
         body=user_data_server,
-        headers={"Location": user_data_server["meta"]["location"]},
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": user_data_server["meta"]["version"],
+        },
         presence_checker=AttributePresenceChecker(
             attr_reps=[BoundedAttrRep(attr="name")], include=False
         ),
     )
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_validation_failure_on_missing_etag_header_when_etag_supported(user_data_server):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
+    expected_issues = {"headers": {"ETag": {"_errors": [{"code": 15}]}}}
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=user_data_server,
+        headers={
+            "Location": user_data_server["meta"]["location"],
+        },
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_validation_failure_on_missing_meta_version_when_etag_supported(user_data_server):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
+    user_data_server["meta"].pop("version")
+    expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 15}]}}}}
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=user_data_server,
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": 'W/"3694e05e9dff591"',
+        },
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_validation_failure_on_etag_and_meta_version_mismatch_when_etag_supported(user_data_server):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
+    expected_issues = {
+        "body": {"meta": {"version": {"_errors": [{"code": 11}]}}},
+        "headers": {"ETag": {"_errors": [{"code": 11}]}},
+    }
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=user_data_server,
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": 'W/"3694e05e9dff592"',
+        },
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_validation_failure_on_etag_and_meta_version_mismatch_when_etag_not_supported(
+    user_data_server,
+):
+    config = deepcopy(CONFIG)
+    config.etag.supported = False
+    validator = ResourceObjectGET(config, resource_schema=user.User)
+    expected_issues = {
+        "body": {"meta": {"version": {"_errors": [{"code": 11}]}}},
+        "headers": {"ETag": {"_errors": [{"code": 11}]}},
+    }
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=user_data_server,
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": 'W/"3694e05e9dff592"',
+        },
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_response_is_validated_without_tag_and_version_if_etag_not_supported(user_data_server):
+    config = deepcopy(CONFIG)
+    config.etag.supported = False
+    validator = ResourceObjectGET(config, resource_schema=user.User)
+    user_data_server["meta"].pop("version")
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=user_data_server,
+        headers={
+            "Location": user_data_server["meta"]["location"],
+        },
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
+    user_data_server["meta"]["version"] = 123
+    expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 2}]}}}}
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=user_data_server,
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": 'W/"3694e05e9dff591"',
+        },
+    )
+
+    assert issues.to_dict() == expected_issues
 
 
 def test_correct_resource_type_post_request_passes_validation(user_data_client):
@@ -473,7 +584,10 @@ def test_resources_post_response_validation_fails_if_different_created_and_last_
     issues = validator.validate_response(
         body=user_data_server,
         status_code=201,
-        headers={"Location": user_data_server["meta"]["location"]},
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": user_data_server["meta"]["version"],
+        },
     )
 
     assert issues.to_dict() == expected_issues
@@ -507,7 +621,10 @@ def test_correct_resource_object_put_response_passes_validation(user_data_server
     issues = validator.validate_response(
         status_code=200,
         body=user_data_server,
-        headers={"Location": user_data_server["meta"]["location"]},
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": user_data_server["meta"]["version"],
+        },
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -519,7 +636,10 @@ def test_correct_resource_type_post_response_passes_validation(user_data_server)
     issues = validator.validate_response(
         status_code=201,
         body=user_data_server,
-        headers={"Location": user_data_server["meta"]["location"]},
+        headers={
+            "Location": user_data_server["meta"]["location"],
+            "ETag": user_data_server["meta"]["version"],
+        },
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -788,6 +908,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data
         status_code=200,
         body=user_data_server,
         presence_checker=None,
+        headers={"ETag": user_data_server["meta"]["version"]},
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -808,6 +929,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
         presence_checker=AttributePresenceChecker(
             attr_reps=[BoundedAttrRep(attr="userName")], include=True
         ),
+        headers={"ETag": 'W/"3694e05e9dff591"'},
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -1179,7 +1301,10 @@ def test_service_provider_configuration_is_validated():
     issues = validator.validate_response(
         status_code=200,
         body=input_,
-        headers={"Location": "https://example.com/v2/ServiceProviderConfig"},
+        headers={
+            "Location": input_["meta"]["location"],
+            "ETag": input_["meta"]["version"],
+        },
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -1215,7 +1340,10 @@ def test_group_output_is_validated_correctly():
     issues = validator.validate_response(
         status_code=200,
         body=input_,
-        headers={"Location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a"},
+        headers={
+            "Location": input_["meta"]["location"],
+            "ETag": input_["meta"]["version"],
+        },
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -1248,7 +1376,13 @@ def test_service_config_request_parsing_fails_if_requested_filtering(validator):
 def test_schema_response_can_be_validated():
     validator = ResourceObjectGET(CONFIG, resource_schema=Schema)
 
-    issues = validator.validate_response(status_code=200, body=Schema.get_repr(user.User))
+    issues = validator.validate_response(
+        status_code=200,
+        body=Schema.get_repr(user.User, version='W/"3694e05e9dff591"'),
+        headers={
+            "ETag": 'W/"3694e05e9dff591"',
+        },
+    )
 
     assert issues.to_dict(msg=True) == {}
 
@@ -1271,10 +1405,17 @@ def test_resource_type_response_can_be_validated():
         "meta": {
             "location": "https://example.com/v2/ResourceTypes/User",
             "resourceType": "ResourceType",
+            "version": 'W/"3694e05e9dff591"',
         },
     }
 
-    issues = validator.validate_response(status_code=200, body=body)
+    issues = validator.validate_response(
+        status_code=200,
+        body=body,
+        headers={
+            "ETag": 'W/"3694e05e9dff591"',
+        },
+    )
 
     assert issues.to_dict(msg=True) == {}
 
