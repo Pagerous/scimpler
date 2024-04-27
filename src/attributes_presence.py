@@ -1,7 +1,8 @@
-from typing import Any, Dict, Generic, Iterable, List, Optional, TypeVar, Union
+from typing import Any, Collection, Dict, Generic, List, Optional, TypeVar, Union
 
 from src.data.attributes import (
     Attribute,
+    AttributeIssuer,
     AttributeReturn,
     Attributes,
     BoundedAttributes,
@@ -23,13 +24,14 @@ TAttrs = TypeVar("TAttrs", bound=Union[Attributes, BoundedAttributes])
 class AttributePresenceChecker(Generic[TAttrRep]):
     def __init__(
         self,
-        attr_reps: Optional[Iterable[TAttrRep]] = None,
+        attr_reps: Optional[Collection[TAttrRep]] = None,
         include: Optional[bool] = None,
-        ignore_required: Optional[Iterable[TAttrRep]] = None,
+        ignore_issuer: Optional[Collection[TAttrRep]] = None,
     ):
         self._attr_reps = list(attr_reps or [])
         self._include = include
-        self._ignore_required = list(ignore_required or [])
+
+        self._ignore_issuer = list(ignore_issuer or [])
 
     @property
     def attr_reps(self) -> List[TAttrRep]:
@@ -39,25 +41,27 @@ class AttributePresenceChecker(Generic[TAttrRep]):
     def include(self) -> Optional[bool]:
         return self._include
 
+    def _ensure_valid_attrs(self, attrs: TAttrs):
+        attr_rep_ = next(iter(self._attr_reps), None)
+        ignore = next(iter(self._ignore_issuer), None)
+
+        if isinstance(attrs, Attributes) and (
+            isinstance(attr_rep_, BoundedAttrRep) or isinstance(ignore, BoundedAttrRep)
+        ):
+            raise TypeError("incompatible attributes, use BoundedAttributes class")
+        elif isinstance(attrs, BoundedAttributes) and (
+            isinstance(attr_rep_, AttrRep) or isinstance(ignore, AttrRep)
+        ):
+            raise TypeError("incompatible attributes, use Attributes class")
+
     def __call__(
         self,
         data: Union[Dict[str, Any], SCIMDataContainer],
         attrs: TAttrs,
         direction: str,
     ) -> ValidationIssues:
-        attr_rep_ = next(iter(self._attr_reps), None)
-        attr_rep_ignore = next(iter(self._ignore_required), None)
-
-        if isinstance(attrs, Attributes) and (
-            isinstance(attr_rep_, BoundedAttrRep) or isinstance(attr_rep_ignore, BoundedAttrRep)
-        ):
-            raise TypeError("incompatible attributes, use BoundedAttributes class")
-        elif isinstance(attrs, BoundedAttributes) and (
-            isinstance(attr_rep_, AttrRep) or isinstance(attr_rep_ignore, AttrRep)
-        ):
-            raise TypeError("incompatible attributes, use Attributes class")
-
         issues = ValidationIssues()
+        self._ensure_valid_attrs(attrs)
         data = SCIMDataContainer(data)
         for attr in attrs:
             attr_value = data.get(attr.rep)
@@ -125,6 +129,11 @@ class AttributePresenceChecker(Generic[TAttrRep]):
         issues = ValidationIssues()
         if value not in [None, "", [], Missing]:
             if direction == "REQUEST":
+                if attr.issuer == AttributeIssuer.SERVER and attr not in self._ignore_issuer:
+                    issues.add_error(
+                        issue=ValidationError.must_not_be_specified(),
+                        proceed=True,
+                    )
                 return issues
 
             if attr.returned == AttributeReturn.NEVER:
@@ -148,9 +157,13 @@ class AttributePresenceChecker(Generic[TAttrRep]):
         else:
             if (
                 attr.required
-                and attr_rep not in self._ignore_required
+                and not (
+                    direction == "REQUEST"
+                    and attr.issuer == AttributeIssuer.SERVER
+                    and attr not in self._ignore_issuer
+                )
                 and (
-                    self._include is not True
+                    not self._attr_reps
                     or (attr_rep in self._attr_reps and self._include is True)
                     or (direction == "RESPONSE" and attr.returned == AttributeReturn.ALWAYS)
                 )

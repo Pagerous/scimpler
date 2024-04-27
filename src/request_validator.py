@@ -7,7 +7,7 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import Attribute, AttributeIssuer, Complex
-from src.data.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
@@ -180,17 +180,11 @@ def validate_status_code(expected: int, actual: int) -> ValidationIssues:
     return issues
 
 
-def _validate_body(
-    schema: BaseSchema,
-    body: SCIMDataContainer,
-    required_attrs_to_ignore: Optional[Sequence[AttrRep]] = None,
-) -> ValidationIssues:
+def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> ValidationIssues:
     issues = schema.validate(body)
     if issues.can_proceed():
         issues.merge(
-            issues=AttributePresenceChecker(ignore_required=required_attrs_to_ignore)(
-                body, schema.attrs, "REQUEST"
-            ),
+            issues=AttributePresenceChecker(**kwargs)(body, schema.attrs, "REQUEST"),
         )
     return issues
 
@@ -319,7 +313,11 @@ class ResourceObjectPUT(Validator):
             location=("query_string",),
         )
         issues.merge(
-            issues=_validate_body(schema=self._schema, body=SCIMDataContainer(body or {})),
+            issues=_validate_body(
+                schema=self._schema,
+                body=SCIMDataContainer(body or {}),
+                ignore_issuer=[self._schema.attrs.id],
+            ),
             location=("body",),
         )
         return issues
@@ -374,12 +372,9 @@ class ResourcesPOST(Validator):
             ),
             location=("query_string",),
         )
-        required_to_ignore = []
-        for attr in self._schema.attrs:
-            if attr.required and attr.issuer == AttributeIssuer.SERVER:
-                required_to_ignore.append(attr.rep)
         issues.merge(
-            issues=_validate_body(self._schema, body, required_to_ignore), location=("body",)
+            issues=_validate_body(self._schema, body),
+            location=("body",),
         )
         return issues
 
@@ -797,12 +792,7 @@ class ResourceObjectPATCH(Validator):
         if not (isinstance(attr, Complex) and attr.multi_valued) or value is Missing:
             return
 
-        # checking if new item of complex attribute has all required fields
-        ignore_required = []
-        for sub_attr in attr.attrs:
-            if sub_attr.required and sub_attr.issuer == AttributeIssuer.SERVER:
-                ignore_required.append(sub_attr.rep)
-        presence_checker = AttributePresenceChecker(ignore_required=ignore_required)
+        presence_checker = AttributePresenceChecker()
         for j, item in enumerate(value):
             item_location = value_location + (j,)
             if not issues.has_errors(item_location):

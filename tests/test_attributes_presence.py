@@ -24,7 +24,7 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
 
 
 def test_restricted_attributes_can_be_sent_with_request(user_data_client):
-    checker = AttributePresenceChecker(ignore_required=[BoundedAttrRep(attr="id")])
+    checker = AttributePresenceChecker()
     user_data_client["password"] = "1234"
 
     issues = checker(SCIMDataContainer(user_data_client), User.attrs, "REQUEST")
@@ -267,3 +267,15 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inc
     issues = checker(data, User.attrs, "RESPONSE")
 
     assert issues.to_dict() == expected
+
+
+def test_specifying_attribute_issued_by_service_provider_causes_validation_failure(
+    user_data_client,
+):
+    checker = AttributePresenceChecker()
+    user_data_client["id"] = "should-not-be-provided"
+    expected_issues = {"id": {"_errors": [{"code": 18}]}}
+
+    issues = checker(SCIMDataContainer(user_data_client), User.attrs, "REQUEST")
+
+    assert issues.to_dict() == expected_issues

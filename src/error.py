@@ -27,6 +27,7 @@ class ValidationError:
             "meta.resourceType must match configured type `{resource_type}`, "
             "but provided '{provided}'"
         ),
+        18: "must not be specified",
         19: "should not be returned",
         21: "too many results, must {must}",
         22: "total results ({total_results}) do not match number of resources ({n_resources})",
@@ -130,6 +131,10 @@ class ValidationError:
     @classmethod
     def resource_type_mismatch(cls, resource_type: str, provided: str):
         return cls(code=17, resource_type=resource_type, provided=provided)
+
+    @classmethod
+    def must_not_be_specified(cls):
+        return cls(code=18)
 
     @classmethod
     def restricted_or_not_requested(cls):
