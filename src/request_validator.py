@@ -6,7 +6,7 @@ from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
-from src.data.attributes import Attribute, AttributeIssuer, Complex
+from src.data.attributes import Attribute, Complex
 from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
@@ -389,15 +389,26 @@ class ResourcesPOST(Validator):
         issues = ValidationIssues()
         if not body:
             return issues  # TODO: warn missing body
-        return _validate_resource_output_body(
+
+        body = SCIMDataContainer(body)
+        issues = _validate_resource_output_body(
             schema=self._schema,
             location_header_required=True,
             expected_status_code=201,
             status_code=status_code,
-            body=SCIMDataContainer(body),
+            body=body,
             headers=headers or {},
             presence_checker=kwargs.get("presence_checker"),
         )
+        if body.get(self.response_schema.attrs.meta__created.rep) != body.get(
+            self.response_schema.attrs.meta__lastModified.rep
+        ):
+            issues.add_error(
+                issue=ValidationError.must_be_equal_to("'meta.created'"),
+                proceed=True,
+                location=("body", *_location(self._schema.attrs.meta__lastModified.rep)),
+            )
+        return issues
 
 
 def validate_resources_sorted(

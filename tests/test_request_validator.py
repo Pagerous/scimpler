@@ -463,6 +463,22 @@ def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_vali
     assert issues.to_dict() == expected_issues
 
 
+def test_resources_post_response_validation_fails_if_different_created_and_last_modified(
+    user_data_server,
+):
+    validator = ResourcesPOST(CONFIG, resource_schema=user.User)
+    user_data_server["meta"]["lastModified"] = "2011-05-13T04:42:34Z"
+    expected_issues = {"body": {"meta": {"lastModified": {"_errors": [{"code": 11}]}}}}
+
+    issues = validator.validate_response(
+        body=user_data_server,
+        status_code=201,
+        headers={"Location": user_data_server["meta"]["location"]},
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_correct_resource_object_put_request_passes_validation(user_data_client):
     validator = ResourceObjectPUT(CONFIG, resource_schema=user.User)
     user_data_client["id"] = "anything"

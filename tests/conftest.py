@@ -144,7 +144,7 @@ def user_data_server(user_data_client):
     data["meta"] = {
         "resourceType": "User",
         "created": "2010-01-23T04:56:22Z",
-        "lastModified": "2011-05-13T04:42:34Z",
+        "lastModified": "2010-01-23T04:56:22Z",
         "version": r'W\/"3694e05e9dff591"',
         "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
     }

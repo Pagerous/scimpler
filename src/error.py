@@ -360,7 +360,9 @@ class ValidationIssues:
         for other_location, location_issues in issues._errors.items():
             new_location = location + other_location
             self._errors[new_location].extend(location_issues)
-            self._stop_proceeding[new_location].update(issues._stop_proceeding[other_location])
+            self._stop_proceeding[new_location].update(
+                issues._stop_proceeding.get(other_location, {})
+            )
         for other_location, location_issues in issues._warnings.items():
             new_location = location + other_location
             self._warnings[new_location].extend(location_issues)
