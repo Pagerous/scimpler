@@ -549,6 +549,18 @@ def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server
     assert issues.to_dict() == expected_issues
 
 
+def test_validation_warning_for_missing_response_body_for_resources_post():
+    validator = ResourcesPOST(CONFIG, resource_schema=user.User)
+    expected_issues = {"body": {"_warnings": [{"code": 4}]}}
+
+    issues = validator.validate_response(
+        status_code=201,
+        body=None,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_correct_resource_type_post_request_passes_validation(user_data_client):
     validator = ResourcesPOST(CONFIG, resource_schema=user.User)
 

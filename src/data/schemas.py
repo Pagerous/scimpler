@@ -78,7 +78,6 @@ _meta__last_modified = DateTime(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: make sure it has the same value as the "Content-Location" HTTP response header
 _meta__location = URIReference(
     name="location",
     issuer=AttributeIssuer.SERVER,
@@ -86,7 +85,6 @@ _meta__location = URIReference(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: make sure it has the same value as the "ETag" HTTP response header
 _meta__version = String(
     name="version",
     issuer=AttributeIssuer.SERVER,

@@ -125,14 +125,11 @@ class PatchOp(BaseSchema):
                     location=path_location,
                 )
             if attr.required:
-                if isinstance(attr, Complex):
-                    pass  # TODO: add warning here
-                else:
-                    issues.add_error(
-                        issue=ValidationError.attribute_can_not_be_deleted(),
-                        proceed=True,
-                        location=path_location,
-                    )
+                issues.add_error(
+                    issue=ValidationError.attribute_can_not_be_deleted(),
+                    proceed=True,
+                    location=path_location,
+                )
         else:
             sub_attr = self._resource_schema.attrs.get(
                 BoundedAttrRep(

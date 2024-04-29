@@ -522,7 +522,6 @@ addresses = Complex(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: make validation of correct group id here
 _groups_value = String(
     name="value",
     required=False,

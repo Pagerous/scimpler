@@ -10,7 +10,7 @@ from src.data.attributes import Attribute, Complex
 from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.error import ValidationError, ValidationIssues
+from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.filter import Filter
 from src.sorter import Sorter
 
@@ -431,7 +431,8 @@ class ResourcesPOST(Validator):
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if not body:
-            return issues  # TODO: warn missing body
+            issues.add_warning(issue=ValidationWarning.missing(), location=("body",))
+            return issues
 
         body = SCIMDataContainer(body)
         issues = _validate_resource_output_body(
