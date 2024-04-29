@@ -1,6 +1,7 @@
 import re
 import zoneinfo
 
+import phonenumbers
 import precis_i18n
 
 from src.data.attributes import (
@@ -16,7 +17,7 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.schemas import ResourceSchema, SchemaExtension
-from src.error import ValidationError, ValidationIssues
+from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 user_name = String(
     name="userName",
@@ -234,7 +235,7 @@ _EMAIL_REGEX = re.compile(
     r"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\""
     r"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\""
     r")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|"
-    r"\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])"
+    r"\[(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:(2(5[0-5]|[0-4][0-9])"
     r"|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:"
     r"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])"
 )
@@ -293,49 +294,51 @@ emails = Complex(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: make proper validation (warn) according to RFC3966 https://datatracker.ietf.org/doc/html/rfc3966
-_phone_number_value = String(
-    name="value",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
 
-_phone_number_display = String(
-    name="display",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
+def _validate_phone_number(value: str) -> ValidationIssues:
+    issues = ValidationIssues()
+    try:
+        phonenumbers.parse(value, _check_region=False)
+    except phonenumbers.NumberParseException:
+        issues.add_warning(issue=ValidationWarning.unexpected_content("not a valid phone number"))
+    return issues
 
-_phone_number_type = String(
-    name="type",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    canonical_values=["work", "home", "mobile", "fax", "pager", "other"],
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_phone_number_primary = Boolean(
-    name="primary",
-    required=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
 
 phone_numbers = Complex(
     sub_attributes=[
-        _phone_number_value,
-        _phone_number_type,
-        _phone_number_display,
-        _phone_number_primary,
+        String(
+            name="value",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+            validators=[_validate_phone_number],
+        ),
+        String(
+            name="type",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            canonical_values=["work", "home", "mobile", "fax", "pager", "other"],
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="display",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        Boolean(
+            name="primary",
+            required=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
     ],
     name="phoneNumbers",
     required=False,

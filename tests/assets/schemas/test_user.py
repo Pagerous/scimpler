@@ -67,3 +67,20 @@ def test_correct_email_is_validated(user_data_client):
     issues = User.validate(user_data_client)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_bad_phone_number_is_validated(user_data_client):
+    user_data_client["phoneNumbers"][0]["value"] = "bad-email"
+    expected_issues = {"phoneNumbers": {"0": {"value": {"_warnings": [{"code": 3}]}}}}
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_correct_phone_number_is_validated(user_data_client):
+    user_data_client["phoneNumbers"][0]["value"] = "+48666999666"
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict(msg=True) == {}

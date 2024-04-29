@@ -318,6 +318,7 @@ class ValidationWarning:
     _message_for_code = {
         1: "value should be one of: {expected_values}",
         2: "multi-valued complex attribute should contain no more than once type-value pair",
+        3: "unexpected content, {reason}",
     }
 
     def __init__(self, code: int, **context):
@@ -333,6 +334,10 @@ class ValidationWarning:
     @classmethod
     def multiple_type_value_pairs(cls):
         return cls(code=2)
+
+    @classmethod
+    def unexpected_content(cls, reason: str):
+        return cls(code=3, reason=reason)
 
     @property
     def context(self) -> Dict:
