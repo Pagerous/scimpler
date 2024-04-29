@@ -1,7 +1,7 @@
 import functools
 from typing import Any, List, Optional, Sequence, Union
 
-from src.data.attributes import Attribute, AttributeWithCaseExact, Complex
+from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
 
@@ -27,15 +27,22 @@ class StringKey:
                 f"'<' not supported between instances of 'StringKey' and '{type(other).__name__}'"
             )
 
+        value = self._value
+        other_value = other._value
+        if isinstance(self._attr, String):
+            value = self._attr.precis.enforce(value)
+        if isinstance(other._attr, String):
+            other_value = other._attr.precis.enforce(other_value)
+
         if (
             isinstance(self._attr, AttributeWithCaseExact)
             and self._attr.case_exact
             or isinstance(other._attr, AttributeWithCaseExact)
-            and self._attr.case_exact
+            and other._attr.case_exact
         ):
-            return self._value < other._value
+            return value < other_value
 
-        return self._value.lower() < other._value.lower()
+        return value.lower() < other_value.lower()
 
 
 class Sorter:
