@@ -1,6 +1,8 @@
 import re
 import zoneinfo
 
+import precis_i18n
+
 from src.data.attributes import (
     AttributeMutability,
     AttributeReturn,
@@ -18,6 +20,7 @@ from src.error import ValidationError, ValidationIssues
 
 user_name = String(
     name="userName",
+    precis=precis_i18n.get_profile("UsernameCaseMapped"),
     required=True,
     case_exact=False,
     multi_valued=False,
