@@ -7,6 +7,7 @@ class ValidationError:
         1: "bad value syntax",
         2: "expected type '{expected}', got '{provided}' instead",
         3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
+        4: "bad value content",
         7: "'{keyword}' is SCIM reserved keyword that MUST NOT occur in a attribute value",
         8: "'{value}' is not a valid URL",
         9: (
@@ -86,6 +87,10 @@ class ValidationError:
     @classmethod
     def base_64_encoding_required(cls, scim_type: str):
         return cls(code=3, scim_type=scim_type)
+
+    @classmethod
+    def bad_value_content(cls):
+        return cls(code=4)
 
     @classmethod
     def reserved_keyword(cls, keyword: str):

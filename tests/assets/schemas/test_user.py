@@ -33,3 +33,20 @@ def test_correct_locale_is_validated(user_data_client):
     issues = User.validate(user_data_client)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_bad_timezone_is_validated(user_data_client):
+    user_data_client["timezone"] = "non/Existing"
+    expected_issues = {"timezone": {"_errors": [{"code": 4}]}}
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_correct_timezone_is_validated(user_data_client):
+    user_data_client["timezone"] = "Europe/Warsaw"
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict(msg=True) == {}

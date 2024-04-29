@@ -1,4 +1,5 @@
 import re
+import zoneinfo
 
 from src.data.attributes import (
     AttributeMutability,
@@ -185,7 +186,19 @@ locale = String(
     validators=[_validate_locale],
 )
 
-# TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc6557 ("Olson")
+
+def _validate_timezone(value: str) -> ValidationIssues:
+    issues = ValidationIssues()
+    try:
+        zoneinfo.ZoneInfo(value)
+    except zoneinfo.ZoneInfoNotFoundError:
+        issues.add_error(
+            issue=ValidationError.bad_value_content(),
+            proceed=True,
+        )
+    return issues
+
+
 timezone = String(
     name="timezone",
     required=False,
@@ -193,6 +206,7 @@ timezone = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
+    validators=[_validate_timezone],
 )
 
 active = Boolean(
