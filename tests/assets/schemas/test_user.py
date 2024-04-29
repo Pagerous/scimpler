@@ -101,3 +101,11 @@ def test_correct_country_is_validated(user_data_client):
     issues = User.validate(user_data_client)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_country_is_not_validated_if_not_specified_validated(user_data_client):
+    user_data_client["addresses"][0].pop("country")
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict(msg=True) == {}
