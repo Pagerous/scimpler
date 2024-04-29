@@ -220,7 +220,6 @@ active = Boolean(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: make password preparation according to https://www.rfc-editor.org/rfc/rfc7644#section-7.8
 password = String(
     name="password",
     required=False,
@@ -230,48 +229,62 @@ password = String(
     returned=AttributeReturn.NEVER,
 )
 
-_email_value = String(
-    name="value",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
+
+_EMAIL_REGEX = re.compile(
+    r"(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\""
+    r"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*\""
+    r")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|"
+    r"\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\.){3}(?:(2(5[0-5]|[0-4][0-9])"
+    r"|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:"
+    r"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)])"
 )
 
-_email_display = String(
-    name="display",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
 
-_email_type = String(
-    name="type",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    canonical_values=["work", "home", "other"],
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
+def _validate_email(value: str) -> ValidationIssues:
+    issues = ValidationIssues()
+    if _EMAIL_REGEX.fullmatch(value) is None:
+        issues.add_error(
+            issue=ValidationError.bad_value_syntax(),
+            proceed=True,
+        )
+    return issues
 
-_email_primary = Boolean(
-    name="primary",
-    required=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
 
 emails = Complex(
     sub_attributes=[
-        _email_value,
-        _email_type,
-        _email_display,
-        _email_primary,
+        String(
+            name="value",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+            validators=[_validate_email],
+        ),
+        String(
+            name="display",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="type",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            canonical_values=["work", "home", "other"],
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        Boolean(
+            name="primary",
+            required=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
     ],
     name="emails",
     required=False,

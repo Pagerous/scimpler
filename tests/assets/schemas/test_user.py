@@ -50,3 +50,20 @@ def test_correct_timezone_is_validated(user_data_client):
     issues = User.validate(user_data_client)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_bad_email_is_validated(user_data_client):
+    user_data_client["emails"][0]["value"] = "bad-email"
+    expected_issues = {"emails": {"0": {"value": {"_errors": [{"code": 1}]}}}}
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_correct_email_is_validated(user_data_client):
+    user_data_client["emails"][0]["value"] = "correct@email.com"
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict(msg=True) == {}
