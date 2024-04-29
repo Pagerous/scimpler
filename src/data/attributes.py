@@ -19,6 +19,9 @@ from typing import (
 )
 from urllib.parse import urlparse
 
+import precis_i18n.profile
+from precis_i18n import get_profile
+
 from src.data.container import (
     AttrRep,
     BoundedAttrRep,
@@ -343,6 +346,20 @@ class Integer(AttributeWithUniqueness):
 class String(AttributeWithCaseExact, AttributeWithUniqueness):
     SCIM_NAME = "string"
     BASE_TYPE = str
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        precis: precis_i18n.profile.Profile = get_profile("OpaqueString"),
+        **kwargs,
+    ):
+        super().__init__(name=name, **kwargs)
+        self._precis = precis
+
+    @property
+    def precis(self) -> precis_i18n.profile.Profile:
+        return self._precis
 
 
 class Binary(AttributeWithCaseExact):
