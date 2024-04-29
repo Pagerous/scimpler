@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.11"
 marshmallow = {version = "^3.21.1", optional = true}
+precis-i18n = "^1.1.0"
 
 [tool.poetry.extras]
 marshmallow = ["marshmallow"]
