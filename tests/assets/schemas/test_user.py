@@ -84,3 +84,20 @@ def test_correct_phone_number_is_validated(user_data_client):
     issues = User.validate(user_data_client)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_bad_country_is_validated(user_data_client):
+    user_data_client["addresses"][0]["country"] = "bad-country"
+    expected_issues = {"addresses": {"0": {"country": {"_errors": [{"code": 4}]}}}}
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_correct_country_is_validated(user_data_client):
+    user_data_client["addresses"][0]["country"] = "PL"
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict(msg=True) == {}

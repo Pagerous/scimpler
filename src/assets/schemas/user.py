@@ -1,6 +1,7 @@
 import re
 import zoneinfo
 
+import iso3166
 import phonenumbers
 import precis_i18n
 
@@ -347,7 +348,6 @@ phone_numbers = Complex(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: warn if value contain whitespaces and isn't lowercase
 _ims_value = String(
     name="value",
     required=False,
@@ -366,8 +366,6 @@ _ims_display = String(
     returned=AttributeReturn.DEFAULT,
 )
 
-# no canonical values included, as those presented in RFC 7643 are obsolete
-# and does not contain modern tools
 _ims_type = String(
     name="type",
     required=False,
@@ -448,80 +446,74 @@ photos = Complex(
     returned=AttributeReturn.DEFAULT,
 )
 
-_addresses_formatted = String(
-    name="formatted",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
 
-_addresses_street_address = String(
-    name="streetAddress",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
+def _validate_country(value: str) -> ValidationIssues:
+    issues = ValidationIssues()
+    if iso3166.countries_by_alpha2.get(value) is None:
+        issues.add_error(issue=ValidationError.bad_value_content(), proceed=True)
+    return issues
 
-_addresses_locality = String(
-    name="locality",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_addresses_region = String(
-    name="region",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_addresses_postal_code = String(
-    name="postalCode",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-# TODO: validate according to ISO 3166-1 "alpha-2"
-_addresses_country = String(
-    name="country",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_addresses_type = String(
-    name="type",
-    required=False,
-    case_exact=False,
-    canonical_values=["work", "home", "other"],
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
 
 addresses = Complex(
     sub_attributes=[
-        _addresses_formatted,
-        _addresses_locality,
-        _addresses_street_address,
-        _addresses_region,
-        _addresses_postal_code,
-        _addresses_country,
-        _addresses_type,
+        String(
+            name="formatted",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="locality",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="streetAddress",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="region",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="postalCode",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="country",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+            validators=[_validate_country],
+        ),
+        String(
+            name="type",
+            required=False,
+            case_exact=False,
+            canonical_values=["work", "home", "other"],
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
     ],
     name="addresses",
     required=False,
