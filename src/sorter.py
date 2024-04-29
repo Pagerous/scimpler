@@ -29,6 +29,10 @@ class StringKey:
 
         value = self._value
         other_value = other._value
+
+        if not isinstance(value, str) or not isinstance(other_value, str):
+            return value < other_value
+
         if isinstance(self._attr, String):
             value = self._attr.precis.enforce(value)
         if isinstance(other._attr, String):

@@ -20,6 +20,7 @@ from src.data.operator import (
     Present,
     StartsWith,
 )
+from src.registry import register_converter
 from tests.conftest import SchemaForTests
 
 
@@ -961,3 +962,31 @@ def test_multivalued_complex_op_can_be_used_with_logical_op():
     )
 
     assert match
+
+
+def test_operator_values_are_converted_if_converter_registered():
+    register_converter("dateTime", datetime.fromisoformat)
+
+    operator = GreaterThan(
+        attr_rep=BoundedAttrRep(attr="datetime"), value="2024-04-29T18:14:15.189594"
+    )
+
+    match = operator.match(datetime.now(), SchemaForTests.attrs)
+
+    assert match
+
+
+def test_value_is_not_matched_if_bad_input_value_type():
+    operator = GreaterThan(attr_rep=BoundedAttrRep(attr="str"), value="abc")
+
+    match = operator.match(1, SchemaForTests.attrs)
+
+    assert not match
+
+
+def test_value_is_not_matched_if_bad_operator_value_type():
+    operator = GreaterThan(attr_rep=BoundedAttrRep(attr="str"), value=1)
+
+    match = operator.match("abc", SchemaForTests.attrs)
+
+    assert not match

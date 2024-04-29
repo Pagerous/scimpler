@@ -37,6 +37,7 @@ from src.data.container import (
     Missing,
     SCIMDataContainer,
 )
+from src.registry import converters
 
 
 class MatchStatus(Enum):
@@ -290,6 +291,9 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
             return None
 
+        op_value = self.value
+        convert = converters.get(attr.SCIM_NAME, lambda _: _)
+
         if isinstance(attr, Complex):
             value_sub_attr = None
             for sub_attr in attr.attrs:
@@ -308,18 +312,25 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             value = [value]
 
         if isinstance(attr, AttributeWithCaseExact):
-            op_value = self.value
             if isinstance(attr, String):
                 try:
-                    value = [attr.precis.enforce(item) for item in value]
-                    op_value = attr.precis.enforce(op_value)
+                    value = [
+                        attr.precis.enforce(item) if isinstance(item, str) else item
+                        for item in value
+                    ]
+                    if isinstance(op_value, str):
+                        op_value = attr.precis.enforce(op_value)
                 except UnicodeEncodeError:
                     return None
             if attr.case_exact:
                 return [(item, op_value) for item in value]
-            return [(item.lower(), op_value.lower()) for item in value]
 
-        return [(item, self.value) for item in value]
+            if isinstance(op_value, str):
+                op_value = op_value.lower()
+            return [(item.lower(), op_value) if isinstance(item, str) else item for item in value]
+
+        op_value = convert(op_value)
+        return [(item, op_value) for item in value]
 
     def match(
         self,
@@ -344,9 +355,12 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if values is None:
             return MatchResult.failed()
 
-        for attr_value, op_value in values:
-            if self.OPERATOR(attr_value, op_value):
-                return MatchResult.passed()
+        try:
+            for attr_value, op_value in values:
+                if self.OPERATOR(attr_value, op_value):
+                    return MatchResult.passed()
+        except TypeError:
+            return MatchResult.failed()
         return MatchResult.failed()
 
 
@@ -560,8 +574,6 @@ def _ensure_correct_attrs(
     attrs: Union[Attributes, BoundedAttributes], attr_rep: Union[AttrRep, BoundedAttrRep]
 ):
     if isinstance(attrs, BoundedAttributes) and not isinstance(attr_rep, BoundedAttrRep):
-        raise TypeError(
-            f"bounded attribute representation can be handled by BoundedAttributes only"
-        )
+        raise TypeError(f"bounded attr can be handled by BoundedAttributes only")
     elif isinstance(attrs, Attributes) and not isinstance(attr_rep, AttrRep):
-        raise TypeError(f"attribute representation can be handled by Attributes only")
+        raise TypeError(f"attr can be handled by Attributes only")

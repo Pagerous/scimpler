@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Sequence
 
-from src.data.attributes import Integer, Unknown, get_scim_type
+from src.data.attributes import Integer, Unknown
 from src.data.container import Invalid, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
@@ -17,7 +17,7 @@ def validate_resources_type(value) -> ValidationIssues:
     for i, item in enumerate(value):
         if not isinstance(item, SCIMDataContainer):
             issues.add_error(
-                issue=ValidationError.bad_type(get_scim_type(dict), get_scim_type(type(value))),
+                issue=ValidationError.bad_type("complex"),
                 proceed=True,
                 location=(i,),
             )
@@ -57,9 +57,7 @@ class ListResponse(BaseSchema):
 
         if not isinstance(resources_, List):
             issues.add_error(
-                issue=ValidationError.bad_type(
-                    get_scim_type(list), get_scim_type(type(resources_))
-                ),
+                issue=ValidationError.bad_type("list"),
                 location=(self.attrs.resources.rep.attr,),
                 proceed=False,
             )

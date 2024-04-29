@@ -244,10 +244,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "integer",
-                            "provided": "decimal",
-                        },
+                        "context": {"expected": "integer"},
                     }
                 ]
             },
@@ -259,10 +256,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "string",
-                            "provided": "integer",
-                        },
+                        "context": {"expected": "string"},
                     }
                 ]
             },
@@ -274,10 +268,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "integer",
-                            "provided": "string",
-                        },
+                        "context": {"expected": "integer"},
                     }
                 ]
             },
@@ -289,10 +280,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "integer",
-                            "provided": "decimal",
-                        },
+                        "context": {"expected": "integer"},
                     }
                 ]
             },
@@ -304,10 +292,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "decimal",
-                            "provided": "string",
-                        },
+                        "context": {"expected": "decimal"},
                     }
                 ]
             },
@@ -319,10 +304,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "boolean",
-                            "provided": "string",
-                        },
+                        "context": {"expected": "boolean"},
                     }
                 ]
             },
@@ -334,10 +316,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "string",
-                            "provided": "integer",
-                        },
+                        "context": {"expected": "reference"},
                     }
                 ]
             },
@@ -349,10 +328,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "string",
-                            "provided": "integer",
-                        },
+                        "context": {"expected": "reference"},
                     }
                 ]
             },
@@ -378,10 +354,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "string",
-                            "provided": "integer",
-                        },
+                        "context": {"expected": "reference"},
                     }
                 ]
             },
@@ -398,10 +371,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "string",
-                            "provided": "integer",
-                        },
+                        "context": {"expected": "binary"},
                     }
                 ]
             },
@@ -414,10 +384,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "string",
-                            "provided": "integer",
-                        },
+                        "context": {"expected": "dateTime"},
                     }
                 ]
             },
@@ -434,10 +401,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 "_errors": [
                     {
                         "code": 2,
-                        "context": {
-                            "expected": "complex",
-                            "provided": "integer",
-                        },
+                        "context": {"expected": "complex"},
                     }
                 ]
             },

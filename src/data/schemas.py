@@ -14,8 +14,8 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.container import Invalid, Missing, SCIMDataContainer
-from src.data.registry import register_resource_schema
 from src.error import ValidationError, ValidationIssues
+from src.registry import register_resource_schema
 
 
 def bulk_id_validator(value) -> ValidationIssues:

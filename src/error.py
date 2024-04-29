@@ -5,7 +5,7 @@ from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 class ValidationError:
     _message_for_code = {
         1: "bad value syntax",
-        2: "expected type '{expected}', got '{provided}' instead",
+        2: "'{expected}' is expected",
         3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
         4: "bad value content",
         7: "'{keyword}' is SCIM reserved keyword that MUST NOT occur in a attribute value",
@@ -81,8 +81,8 @@ class ValidationError:
         return cls(code=1)
 
     @classmethod
-    def bad_type(cls, expected: str, provided: str):
-        return cls(code=2, expected=expected, provided=provided)
+    def bad_type(cls, expected: str):
+        return cls(code=2, expected=expected)
 
     @classmethod
     def base_64_encoding_required(cls, scim_type: str):

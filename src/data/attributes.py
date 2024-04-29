@@ -29,8 +29,8 @@ from src.data.container import (
     Missing,
     SCIMDataContainer,
 )
-from src.data.registry import resource_schemas
 from src.error import ValidationError, ValidationIssues, ValidationWarning
+from src.registry import resource_schemas
 
 if TYPE_CHECKING:
     from src.data.path import PatchPath
@@ -174,10 +174,7 @@ class Attribute(abc.ABC):
         issues = ValidationIssues()
         if not isinstance(value, self.BASE_TYPE):
             issues.add_error(
-                issue=ValidationError.bad_type(
-                    expected=get_scim_type(self.BASE_TYPE),
-                    provided=get_scim_type(type(value)),
-                ),
+                issue=ValidationError.bad_type(self.SCIM_NAME),
                 proceed=False,
             )
         return issues
@@ -190,7 +187,7 @@ class Attribute(abc.ABC):
         if self._multi_valued:
             if not isinstance(value, list):
                 issues.add_error(
-                    issue=ValidationError.bad_type(get_scim_type(list), get_scim_type(type(value))),
+                    issue=ValidationError.bad_type("list"),
                     proceed=False,
                 )
                 return issues
@@ -329,10 +326,7 @@ class Decimal(AttributeWithUniqueness):
         issues = ValidationIssues()
         if not isinstance(value, (self.BASE_TYPE, int)):
             issues.add_error(
-                issue=ValidationError.bad_type(
-                    expected=get_scim_type(self.BASE_TYPE),
-                    provided=get_scim_type(type(value)),
-                ),
+                issue=ValidationError.bad_type(self.SCIM_NAME),
                 proceed=False,
             )
         return issues
@@ -793,17 +787,3 @@ class BoundedAttributes:
                 sub_attr=path.filter_sub_attr_rep.attr,
             )
         )
-
-
-_TYPE_TO_SCIM_TYPE: Dict[Type, str] = {
-    bool: Boolean.SCIM_NAME,
-    int: Integer.SCIM_NAME,
-    float: Decimal.SCIM_NAME,
-    str: String.SCIM_NAME,
-    SCIMDataContainer: Complex.SCIM_NAME,
-    list: "list",
-}
-
-
-def get_scim_type(type_: Type) -> str:
-    return _TYPE_TO_SCIM_TYPE.get(type_, "unknown")
