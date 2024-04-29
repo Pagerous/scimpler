@@ -1,3 +1,5 @@
+import re
+
 from src.data.attributes import (
     AttributeMutability,
     AttributeReturn,
@@ -11,6 +13,7 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.schemas import ResourceSchema, SchemaExtension
+from src.error import ValidationError, ValidationIssues
 
 user_name = String(
     name="userName",
@@ -22,69 +25,57 @@ user_name = String(
     uniqueness=AttributeUniqueness.SERVER,
 )
 
-_name__formatted = String(
-    name="formatted",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
 
-_name__family_name = String(
-    name="familyName",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_name__given_name = String(
-    name="givenName",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_name__middle_name = String(
-    name="middleName",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_name__honorific_prefix = String(
-    name="honorificPrefix",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_name__honorific_suffix = String(
-    name="honorificSuffix",
-    required=False,
-    case_exact=False,
-    multi_valued=False,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-# TODO: warn if "formatted" does not contain information from all the other sub-attributes
 name = Complex(
     sub_attributes=[
-        _name__formatted,
-        _name__family_name,
-        _name__given_name,
-        _name__middle_name,
-        _name__honorific_prefix,
-        _name__honorific_suffix,
+        String(
+            name="formatted",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="familyName",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="givenName",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="middleName",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="honorificPrefix",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
+        String(
+            name="honorificSuffix",
+            required=False,
+            case_exact=False,
+            multi_valued=False,
+            mutability=AttributeMutability.READ_WRITE,
+            returned=AttributeReturn.DEFAULT,
+        ),
     ],
     name="name",
     multi_valued=False,
@@ -92,7 +83,6 @@ name = Complex(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: warn if 'displayName' does not match any of: 'userName', 'name' (any of its sub-attributes)
 display_name = String(
     name="displayName",
     required=False,
@@ -102,7 +92,6 @@ display_name = String(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: warn if 'nickName' is equal to 'username'
 nick_name = String(
     name="nickName",
     required=False,
@@ -138,7 +127,22 @@ user_type = String(
     returned=AttributeReturn.DEFAULT,
 )
 
-# TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
+
+_ACCEPT_LANGUAGE_REGEX = re.compile(
+    r"\s*([a-z]{2})(?:-[A-Z]{2})?(?:\s*;q=([0-9]\.[0-9]))?(?:\s*,|$)"
+)
+
+
+def _validate_preferred_language(value: str) -> ValidationIssues:
+    issues = ValidationIssues()
+    if _ACCEPT_LANGUAGE_REGEX.fullmatch(value) is None:
+        issues.add_error(
+            issue=ValidationError.bad_value_syntax(),
+            proceed=True,
+        )
+    return issues
+
+
 preferred_language = String(
     name="preferredLanguage",
     required=False,
@@ -146,6 +150,7 @@ preferred_language = String(
     multi_valued=False,
     mutability=AttributeMutability.READ_WRITE,
     returned=AttributeReturn.DEFAULT,
+    validators=[_validate_preferred_language],
 )
 
 # TODO: write proper validator for this field according to: https://www.rfc-editor.org/rfc/rfc7231#section-5.3.5
