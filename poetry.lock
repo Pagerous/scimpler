@@ -145,6 +145,17 @@ files = [
 ]
 
 [[package]]
+name = "iso3166"
+version = "2.1.1"
+description = "Self-contained ISO 3166-1 country definitions."
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "iso3166-2.1.1-py3-none-any.whl", hash = "sha256:263660b36f8471c42acd1ff673d28a3715edbce7d24b1550d0cf010f6816c47f"},
+    {file = "iso3166-2.1.1.tar.gz", hash = "sha256:fcd551b8dda66b44e9f9e6d6bbbee3a1145a22447c0a556e5d0fb1ad1e491719"},
+]
+
+[[package]]
 name = "isort"
 version = "5.13.2"
 description = "A Python utility / library to sort Python imports."
@@ -306,4 +317,4 @@ marshmallow = ["marshmallow"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "0ca397e7c463813def23318cf253fdf15b834b3d892181abfd3b914945adf7a0"
+content-hash = "6524964c3919920853f7fc4eb011d66bc73ee805d012d85115b3040040c7cadd"
