@@ -1,6 +1,5 @@
 import abc
 import operator
-from datetime import datetime
 from enum import Enum
 from typing import (
     Any,
@@ -303,23 +302,22 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             if not attr.multi_valued:
                 return None
 
+            attr = value_sub_attr
             value = [item.get("value") for item in value]
-
-        if attr.SCIM_NAME == "dateTime":
-            try:
-                return [(datetime.fromisoformat(value), datetime.fromisoformat(self.value))]
-            except ValueError:
-                return None
+        elif not isinstance(value, List):
+            value = [value]
 
         if isinstance(attr, AttributeWithCaseExact):
-            if not attr.case_exact:
-                op_value = self.value.lower()
-                if not isinstance(value, List):
-                    value = [value]
-                return [(item.lower(), op_value) for item in value if isinstance(item, str)]
-
-        if not isinstance(value, List):
-            value = [value]
+            op_value = self.value
+            if isinstance(attr, String):
+                try:
+                    value = [attr.precis.enforce(item) for item in value]
+                    op_value = attr.precis.enforce(op_value)
+                except UnicodeEncodeError:
+                    return None
+            if attr.case_exact:
+                return [(item, op_value) for item in value]
+            return [(item.lower(), op_value.lower()) for item in value]
 
         return [(item, self.value) for item in value]
 

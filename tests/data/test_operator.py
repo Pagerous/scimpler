@@ -397,7 +397,7 @@ def test_contains_operator(value, operator_value, expected):
         ("abc", "bc", False),
         ("abc", "cd", False),
         ("ab", "abc", False),
-        ("ab", "", True),
+        ("ab", "", False),
     ),
 )
 def test_starts_with_operator(value, operator_value, expected):
@@ -415,7 +415,7 @@ def test_starts_with_operator(value, operator_value, expected):
         ("abc", "bc", True),
         ("abc", "cd", False),
         ("ab", "abc", False),
-        ("ab", "", True),
+        ("ab", "", False),
     ),
 )
 def test_ends_with_operator(value, operator_value, expected):
