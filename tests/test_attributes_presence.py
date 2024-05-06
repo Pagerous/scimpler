@@ -1,6 +1,8 @@
 from src.assets.schemas.user import User
 from src.attributes_presence import AttributePresenceChecker
+from src.data.attributes import Integer
 from src.data.container import BoundedAttrRep, SCIMDataContainer
+from src.data.schemas import ResourceSchema, SchemaExtension
 
 
 def test_presence_checker_fails_if_returned_attribute_that_never_should_be_returned(
@@ -279,3 +281,34 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
     issues = checker(SCIMDataContainer(user_data_client), User.attrs, "REQUEST")
 
     assert issues.to_dict() == expected_issues
+
+
+def test_presence_validation_fails_if_missing_required_field_from_required_extension():
+    schema = ResourceSchema(schema="my:schema", name="MyResource")
+    extension = SchemaExtension(
+        schema="my:schema:extension", name="MyExtension", attrs=[Integer("age", required=True)]
+    )
+    schema.extend(extension, required=True)
+    checker = AttributePresenceChecker()
+    expected_issues = {"age": {"_errors": [{"code": 15}]}}
+
+    issues = checker(
+        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema.attrs, "RESPONSE"
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_presence_validation_succeeds_if_missing_required_field_from_non_required_extension():
+    schema = ResourceSchema(schema="my:schema", name="MyResource")
+    extension = SchemaExtension(
+        schema="my:schema:extension", name="MyExtension", attrs=[Integer("age", required=True)]
+    )
+    schema.extend(extension, required=False)
+    checker = AttributePresenceChecker()
+
+    issues = checker(
+        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema.attrs, "RESPONSE"
+    )
+
+    assert issues.to_dict(msg=True) == {}

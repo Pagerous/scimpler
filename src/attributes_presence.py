@@ -158,6 +158,11 @@ class AttributePresenceChecker(Generic[TAttrRep]):
             if (
                 attr.required
                 and not (
+                    isinstance(attr_rep, BoundedAttrRep)
+                    and attr_rep.extension
+                    and not attr_rep.extension_required
+                )
+                and not (
                     direction == "REQUEST"
                     and attr.issuer == AttributeIssuer.SERVER
                     and attr not in self._ignore_issuer

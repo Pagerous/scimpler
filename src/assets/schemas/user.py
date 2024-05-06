@@ -839,18 +839,16 @@ User = ResourceSchema(
         x509_certificates,
     ],
 )
-User.add_extension(
-    SchemaExtension(
-        schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-        attrs=[
-            employee_number,
-            cost_center,
-            division,
-            department,
-            organization,
-            manager,
-        ],
-        name="EnterpriseUser",
-    ),
-    required=True,
+
+EnterpriseUserExtension = SchemaExtension(
+    schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+    attrs=[
+        employee_number,
+        cost_center,
+        division,
+        department,
+        organization,
+        manager,
+    ],
+    name="EnterpriseUser",
 )

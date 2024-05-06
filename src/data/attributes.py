@@ -663,8 +663,8 @@ def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> Validatio
 
 
 class Attributes:
-    def __init__(self, attrs: Iterable[Attribute]):
-        self._attrs = {attr.rep.attr: attr for attr in attrs}
+    def __init__(self, attrs: Optional[Iterable[Attribute]] = None):
+        self._attrs = {attr.rep.attr: attr for attr in attrs or []}
 
     def __getattr__(self, name: str) -> Attribute:
         for attr in self._attrs.values():
@@ -686,8 +686,9 @@ class BoundedAttributes:
     def __init__(
         self,
         schema: str,
-        extension: bool,
         attrs: Optional[Iterable[Attribute]] = None,
+        extension: bool = False,
+        extension_required: Optional[bool] = None,
         common_attrs: Optional[Iterable[str]] = None,
     ):
         self._schema = schema
@@ -698,8 +699,15 @@ class BoundedAttributes:
         self._attrs = {}
         self._bounded_complex_sub_attrs = {}
         for attr in attrs or []:
-            bounded_attr = attr.clone(BoundedAttrRep(schema, attr.rep.attr, extension=extension))
-            if attr.rep.attr not in common_attrs and not extension:
+            bounded_attr = attr.clone(
+                BoundedAttrRep(
+                    schema,
+                    attr.rep.attr,
+                    extension=extension,
+                    extension_required=extension_required,
+                )
+            )
+            if attr.rep.attr not in common_attrs:
                 self._core_attrs.append(bounded_attr)
 
             self._attrs[bounded_attr.rep.schema, bounded_attr.rep.attr] = bounded_attr
@@ -711,6 +719,7 @@ class BoundedAttributes:
                             bounded_attr.rep.attr,
                             sub_attr.rep.attr,
                             extension=extension,
+                            extension_required=extension_required,
                         )
                     )
                     for sub_attr in bounded_attr.attrs
@@ -746,11 +755,12 @@ class BoundedAttributes:
     def core_attrs(self) -> List[Attribute]:
         return self._core_attrs
 
-    def extend(self, attrs: "BoundedAttributes") -> None:
+    def extend(self, attrs: Attributes, schema: str, required: bool = False) -> None:
+        attrs = BoundedAttributes(schema, attrs, extension=True, extension_required=required)
         for attr in attrs:
             self._attrs[attr.rep.schema, attr.rep.attr] = attr
         self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
-        self._extensions[attrs._schema.lower()] = attrs
+        self._extensions[schema.lower()] = attrs
 
     def get(self, attr_rep: BoundedAttrRep) -> Optional[Attribute]:
         if attr_rep.schema.lower() in self._extensions:

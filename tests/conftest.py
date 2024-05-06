@@ -3,6 +3,8 @@ from copy import deepcopy
 import pytest
 
 from src.assets.config import create_service_provider_config
+from src.assets.schemas import Group, User
+from src.assets.schemas.user import EnterpriseUserExtension
 from src.data.attributes import (
     Binary,
     Boolean,
@@ -16,6 +18,15 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.schemas import ResourceSchema
+from src.registry import register_resource_schema
+
+
+@pytest.fixture(scope="session", autouse=True)
+def register_schemas():
+    User.extend(EnterpriseUserExtension, required=True)
+    register_resource_schema(User)
+    register_resource_schema(Group)
+    register_resource_schema(SchemaForTests)
 
 
 @pytest.fixture

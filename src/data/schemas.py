@@ -1,11 +1,12 @@
 import abc
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 from src.data.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
+    Attributes,
     AttributeUniqueness,
     BoundedAttributes,
     Complex,
@@ -15,7 +16,6 @@ from src.data.attributes import (
 )
 from src.data.container import Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
-from src.registry import register_resource_schema
 
 
 def bulk_id_validator(value) -> ValidationIssues:
@@ -159,21 +159,48 @@ class BaseSchema(abc.ABC):
         if isinstance(data, Dict):
             data = SCIMDataContainer(data)
         issues.merge(self._validate_data(data))
-
-        schemas_ = data.get(self._attrs.schemas.rep)
-        if issues.can_proceed(("schemas",)) and schemas_:
+        if issues.can_proceed(("schemas",)):
             issues.merge(
-                validate_schemas_field(
-                    data=data,
-                    schemas_=schemas_,
-                    main_schema=self.schema,
-                    known_schemas=schemas_,
-                ),
+                self._validate_schemas_field(data),
                 location=(schemas.rep.attr,),
             )
-
         if issues.can_proceed():
             issues.merge(self._validate(data))
+        return issues
+
+    def _validate_schemas_field(self, data):
+        issues = ValidationIssues()
+        provided_schemas = data.get(self._attrs.schemas.rep)
+        if not provided_schemas:
+            return issues
+
+        main_schema = self.schema.lower()
+        provided_schemas = [item.lower() for item in provided_schemas]
+        if len(provided_schemas) > len(set(provided_schemas)):
+            issues.add_error(
+                issue=ValidationError.duplicated_values(),
+                proceed=True,
+            )
+
+        known_schemas = [item.lower() for item in self.schemas]
+        main_schema_included = False
+        mismatch = False
+        for schema in provided_schemas:
+            if schema == main_schema:
+                main_schema_included = True
+
+            elif schema not in known_schemas and not mismatch:
+                issues.add_error(
+                    issue=ValidationError.unknown_schema(),
+                    proceed=True,
+                )
+                mismatch = True
+
+        if not main_schema_included:
+            issues.add_error(
+                issue=ValidationError.missing_main_schema(),
+                proceed=True,
+            )
         return issues
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
@@ -194,51 +221,6 @@ class BaseSchema(abc.ABC):
                 location=location,
             )
         return issues
-
-
-def validate_schemas_field(
-    data: SCIMDataContainer,
-    schemas_: List[str],
-    main_schema: str,
-    known_schemas: Sequence[str],
-) -> ValidationIssues:
-    issues = ValidationIssues()
-    main_schema = main_schema.lower()
-    schemas_ = [item.lower() for item in schemas_]
-    if len(schemas_) > len(set(schemas_)):
-        issues.add_error(
-            issue=ValidationError.duplicated_values(),
-            proceed=True,
-        )
-
-    known_schemas = [item.lower() for item in known_schemas]
-    main_schema_included = False
-    mismatch = False
-    for schema in schemas_:
-        if schema == main_schema:
-            main_schema_included = True
-
-        elif schema not in known_schemas and not mismatch:
-            issues.add_error(
-                issue=ValidationError.unknown_schema(),
-                proceed=True,
-            )
-            mismatch = True
-
-    if not main_schema_included:
-        issues.add_error(
-            issue=ValidationError.missing_main_schema(),
-            proceed=True,
-        )
-
-    for k, v in data.to_dict().items():
-        k_lower = k.lower()
-        if k_lower in known_schemas and k_lower not in schemas_:
-            issues.add_error(
-                issue=ValidationError.missing_schema_extension(k),
-                proceed=True,
-            )
-    return issues
 
 
 def validate_resource_type_consistency(
@@ -278,7 +260,6 @@ class ResourceSchema(BaseSchema):
         self._plural_name = plural_name or name
         self._endpoint = endpoint or f"/{self._plural_name}"
         self._description = description
-        register_resource_schema(self)
 
     @property
     def endpoint(self) -> str:
@@ -316,7 +297,7 @@ class ResourceSchema(BaseSchema):
             raise ValueError(f"{self.name!r} has no {name!r} extension")
         return self._schema_extensions[name]["extension"]
 
-    def add_extension(self, extension: "SchemaExtension", required: bool = False) -> None:
+    def extend(self, extension: "SchemaExtension", required: bool = False) -> None:
         if extension.schema in map(lambda x: x.lower(), self.schemas):
             raise ValueError(f"schema {extension.schema!r} already in {self.name!r} resource")
         if extension.name.lower() in self._schema_extensions:
@@ -325,7 +306,7 @@ class ResourceSchema(BaseSchema):
             "extension": extension,
             "required": required,
         }
-        self._attrs.extend(extension.attrs)
+        self._attrs.extend(extension.attrs, extension.schema, required)
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
@@ -337,6 +318,41 @@ class ResourceSchema(BaseSchema):
                     expected=self.name,
                 )
             )
+        return issues
+
+    def _validate_schemas_field(self, data: SCIMDataContainer) -> ValidationIssues:
+        provided_schemas = data.get(self.attrs.schemas.rep)
+        if not provided_schemas:
+            return ValidationIssues()
+
+        issues = super()._validate_schemas_field(data)
+        if not issues.can_proceed():
+            return issues
+
+        known_schemas = [item.lower() for item in self.schemas]
+        provided_schemas = [item.lower() for item in provided_schemas]
+        reported_missing = set()
+        for k, v in data.to_dict().items():
+            k_lower = k.lower()
+            if k_lower in known_schemas and k_lower not in provided_schemas:
+                issues.add_error(
+                    issue=ValidationError.missing_schema_extension(k),
+                    proceed=True,
+                )
+                reported_missing.add(k_lower)
+                break
+
+        for extension in self._schema_extensions.values():
+            extension_schema = extension["extension"].schema.lower()
+            if (
+                extension["required"]
+                and extension_schema not in provided_schemas
+                and extension_schema not in reported_missing
+            ):
+                issues.add_error(
+                    issue=ValidationError.missing_schema_extension(extension_schema),
+                    proceed=True,
+                )
         return issues
 
 
@@ -370,11 +386,7 @@ class SchemaExtension:
         description: str = "",
     ):
         self._schema = schema
-        self._attrs = BoundedAttributes(
-            schema=schema,
-            extension=True,
-            attrs=attrs,
-        )
+        self._attrs = Attributes(attrs)
         self._name = name
         self._description = description
 
@@ -391,7 +403,7 @@ class SchemaExtension:
         return self._schema
 
     @property
-    def attrs(self) -> BoundedAttributes:
+    def attrs(self) -> Attributes:
         return self._attrs
 
     def to_dict(self) -> Dict[str, Any]:

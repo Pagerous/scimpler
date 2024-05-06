@@ -43,11 +43,11 @@ class ListResponse(BaseSchema):
                 resources,
             ],
         )
-        self._schemas = schemas
+        self._contained_schemas = list(schemas)
 
     @property
-    def schemas(self) -> Sequence[BaseSchema]:
-        return self._schemas
+    def contained_schemas(self) -> List[BaseSchema]:
+        return self._contained_schemas
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
@@ -100,10 +100,10 @@ class ListResponse(BaseSchema):
 
     def get_schemas_for_resources(self, resources_: List[Any]) -> List[Optional[ResourceSchema]]:
         schemas_ = []
-        n_schemas = len(self._schemas)
+        n_schemas = len(self._contained_schemas)
         for resource in resources_:
             if n_schemas == 1:
-                schemas_.append(self._schemas[0])
+                schemas_.append(self._contained_schemas[0])
             else:
                 schemas_.append(self._infer_schema_from_data(resource))
         return schemas_
@@ -117,7 +117,7 @@ class ListResponse(BaseSchema):
             schemas_value = {
                 item.lower() if isinstance(item, str) else item for item in schemas_value
             }
-            for schema in self._schemas:
+            for schema in self._contained_schemas:
                 if not schemas_value.difference({s.lower() for s in schema.schemas}):
                     return schema
         return None

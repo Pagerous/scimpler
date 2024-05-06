@@ -45,7 +45,12 @@ class AttrRep:
 
 class BoundedAttrRep:
     def __init__(
-        self, schema: str = "", attr: str = "", sub_attr: str = "", extension: bool = False
+        self,
+        schema: str = "",
+        attr: str = "",
+        sub_attr: str = "",
+        extension: bool = False,
+        extension_required: Optional[bool] = None,
     ):
         if not _ATTR_NAME.fullmatch(attr):
             raise ValueError(f"{attr!r} is not valid attr name")
@@ -67,6 +72,7 @@ class BoundedAttrRep:
         self._sub_attr = sub_attr
         self._repr = attr_
         self._extension = extension
+        self._extension_required = extension_required
 
     def __repr__(self) -> str:
         return self._repr
@@ -118,6 +124,10 @@ class BoundedAttrRep:
     @property
     def extension(self) -> bool:
         return self._extension
+
+    @property
+    def extension_required(self) -> Optional[bool]:
+        return self._extension_required
 
     @property
     def schema(self) -> str:
