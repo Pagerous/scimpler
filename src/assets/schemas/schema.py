@@ -10,7 +10,7 @@ from src.data.attributes import (
 )
 from src.data.container import Missing, SCIMDataContainer
 from src.data.schemas import ResourceSchema, SchemaExtension, ServiceResourceSchema
-from src.error import ValidationError, ValidationIssues
+from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 
 def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
@@ -24,6 +24,12 @@ def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
                     attributes.validate(sub_attributes),
                     location=(i, "subAttributes"),
                 )
+        elif attr_type == "complex":
+            issues.add_warning(
+                issue=ValidationWarning.missing(),
+                location=(i, "subAttributes"),
+            )
+
         if attr_type == "string" and item.get("caseExact") in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),

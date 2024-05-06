@@ -405,11 +405,3 @@ class SchemaExtension:
     @property
     def attrs(self) -> Attributes:
         return self._attrs
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "id": self.schema,
-            "name": self.name,
-            "description": self.description,
-            "attributes": [attr.to_dict() for attr in self.attrs],
-        }

@@ -106,6 +106,23 @@ def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializing_att
     assert "subAttributes" not in serialized[0].to_dict()
 
 
+def test_warning_is_returned_if_missing_sub_attrs_for_complex_attr():
+    expected_issues = {"0": {"subAttributes": {"_warnings": [{"code": 4}]}}}
+
+    issues = attributes.validate(
+        value=[
+            SCIMDataContainer(
+                {
+                    "name": "value",
+                    "type": "complex",
+                }
+            )
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_resource_schema_representation_can_be_generated():
     output = Schema.get_repr(User)
 
