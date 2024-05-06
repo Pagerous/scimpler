@@ -31,7 +31,7 @@ def test_resource_type_representation_can_be_generated():
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
         "id": "User",
         "name": "User",
-        "description": "",
+        "description": "User Account",
         "endpoint": "/Users",
         "schema": "urn:ietf:params:scim:schemas:core:2.0:User",
         "schemaExtensions": [

@@ -813,6 +813,7 @@ User = ResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:User",
     name="User",
     plural_name="Users",
+    description="User Account",
     endpoint="/Users",
     attrs=[
         user_name,
