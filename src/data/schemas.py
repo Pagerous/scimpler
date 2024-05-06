@@ -306,6 +306,10 @@ class ResourceSchema(BaseSchema):
             extension["extension"].schema for extension in self._schema_extensions.values()
         ]
 
+    @property
+    def extensions(self) -> Dict["SchemaExtension", bool]:
+        return {item["extension"]: item["required"] for item in self._schema_extensions.values()}
+
     def get_extension(self, name: str) -> "SchemaExtension":
         name = name.lower()
         if name not in self._schema_extensions:

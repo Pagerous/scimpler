@@ -850,5 +850,6 @@ User.add_extension(
             manager,
         ],
         name="EnterpriseUser",
-    )
+    ),
+    required=True,
 )
