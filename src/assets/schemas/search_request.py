@@ -20,60 +20,39 @@ def deserialize_attr_reps(value: List[str]) -> List[BoundedAttrRep]:
     return [BoundedAttrRep.deserialize(item) for item in value]
 
 
-attributes = String(
-    name="attributes",
-    multi_valued=True,
-    validators=[validate_attr_reps],
-    deserializer=deserialize_attr_reps,
-)
-
-
-exclude_attributes = String(
-    name="excludeAttributes",
-    multi_valued=True,
-    validators=[validate_attr_reps],
-    deserializer=deserialize_attr_reps,
-)
-
-
-filter_ = String(
-    name="filter",
-    validators=[Filter.validate],
-    deserializer=Filter.deserialize,
-)
-
-
-sort_by = String(
-    name="sortBy",
-    validators=[BoundedAttrRep.validate],
-    deserializer=BoundedAttrRep.deserialize,
-)
-
-
-sort_order = String(
-    name="sortOrder",
-    canonical_values=["ascending", "descending"],
-)
-
-
-start_index = Integer("startIndex")
-
-
-count = Integer("count")
-
-
 class SearchRequest(BaseSchema):
     def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:SearchRequest",
             attrs=[
-                attributes,
-                exclude_attributes,
-                filter_,
-                sort_by,
-                sort_order,
-                start_index,
-                count,
+                String(
+                    name="attributes",
+                    multi_valued=True,
+                    validators=[validate_attr_reps],
+                    deserializer=deserialize_attr_reps,
+                ),
+                String(
+                    name="excludeAttributes",
+                    multi_valued=True,
+                    validators=[validate_attr_reps],
+                    deserializer=deserialize_attr_reps,
+                ),
+                String(
+                    name="filter",
+                    validators=[Filter.validate],
+                    deserializer=Filter.deserialize,
+                ),
+                String(
+                    name="sortBy",
+                    validators=[BoundedAttrRep.validate],
+                    deserializer=BoundedAttrRep.deserialize,
+                ),
+                String(
+                    name="sortOrder",
+                    canonical_values=["ascending", "descending"],
+                ),
+                Integer("startIndex"),
+                Integer("count"),
             ],
         )
 

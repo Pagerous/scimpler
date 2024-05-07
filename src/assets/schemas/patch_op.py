@@ -6,42 +6,25 @@ from src.data.path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
-_operations_op = String(
-    "op",
-    canonical_values=["add", "remove", "replace"],
-    restrict_canonical_values=True,
-    required=True,
-)
-
-
-_operations_path = String(
-    "path",
-    validators=[PatchPath.validate],
-    deserializer=PatchPath.deserialize,
-)
-
-
-_operations_value = Unknown("value")
-
 
 def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        type_ = item.get(_operations_op.rep)
-        path = item.get(_operations_path.rep)
-        op_value = item.get(_operations_value.rep)
+        type_ = item.get("op")
+        path = item.get("path")
+        op_value = item.get("value")
         if type_ == "remove" and path in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, _operations_path.rep.attr),
+                location=(i, "path"),
             )
         elif type_ == "add":
             if op_value in [None, Missing]:
                 issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
-                    location=(i, _operations_value.rep.attr),
+                    location=(i, "value"),
                 )
             if (
                 path
@@ -51,7 +34,7 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
                 issues.add_error(
                     issue=ValidationError.complex_filter_without_sub_attr_for_add_op(),
                     proceed=False,
-                    location=(i, _operations_path.rep.attr),
+                    location=(i, "path"),
                 )
     return issues
 
@@ -59,29 +42,37 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
 def deserialize_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     for i, item in enumerate(value):
         if item == "remove":
-            item.pop(_operations_value.rep)
+            item.pop("value")
     return value
-
-
-operations = Complex(
-    sub_attributes=[
-        _operations_op,
-        _operations_path,
-        _operations_value,
-    ],
-    name="Operations",
-    required=True,
-    multi_valued=True,
-    validators=[validate_operations],
-    deserializer=deserialize_operations,
-)
 
 
 class PatchOp(BaseSchema):
     def __init__(self, resource_schema: ResourceSchema):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:PatchOp",
-            attrs=[operations],
+            attrs=[
+                Complex(
+                    sub_attributes=[
+                        String(
+                            "op",
+                            canonical_values=["add", "remove", "replace"],
+                            restrict_canonical_values=True,
+                            required=True,
+                        ),
+                        String(
+                            "path",
+                            validators=[PatchPath.validate],
+                            deserializer=PatchPath.deserialize,
+                        ),
+                        Unknown("value"),
+                    ],
+                    name="Operations",
+                    required=True,
+                    multi_valued=True,
+                    validators=[validate_operations],
+                    deserializer=deserialize_operations,
+                )
+            ],
         )
         self._resource_schema = resource_schema
 
@@ -279,7 +270,7 @@ class PatchOp(BaseSchema):
                 )
             else:
                 deserialized.append(SCIMDataContainer({"op": "remove", "path": path}))
-        data.set(operations.rep, deserialized)
+        data.set(self.attrs.operations.rep, deserialized)
         return data
 
     def _deserialize_operation_value(self, path: Optional[PatchPath], value: Any) -> Any:

@@ -24,31 +24,31 @@ def _validate_operation_method_existence(method: Any) -> ValidationIssues:
 def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        method = item.get(_operation__method.rep)
+        method = item.get("method")
         issues.merge(
             issues=_validate_operation_method_existence(method),
-            location=(i, _operation__method.rep.attr),
+            location=(i, "method"),
         )
-        bulk_id = item.get(_operation__bulk_id.rep)
+        bulk_id = item.get("bulkId")
         if method == "POST" and bulk_id in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, _operation__bulk_id.rep.attr),
+                location=(i, "bulkId"),
             )
-        path = item.get(_operation__path.rep)
+        path = item.get("path")
         if path in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, _operation__path.rep.attr),
+                location=(i, "path"),
             )
         else:
             if method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path):
                 issues.add_error(
                     issue=ValidationError.resource_type_endpoint_required(),
                     proceed=False,
-                    location=(i, _operation__path.rep.attr),
+                    location=(i, "path"),
                 )
             elif method in [
                 "GET",
@@ -59,14 +59,14 @@ def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIss
                 issues.add_error(
                     issue=ValidationError.resource_object_endpoint_required(),
                     proceed=False,
-                    location=(i, _operation__path.rep.attr),
+                    location=(i, "path"),
                 )
-        data = item.get(_operation__data.rep)
+        data = item.get("data")
         if method in ["POST", "PUT", "PATCH"] and data in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, _operation__data.rep.attr),
+                location=(i, "data"),
             )
     return issues
 
@@ -74,100 +74,82 @@ def validate_request_operations(value: List[SCIMDataContainer]) -> ValidationIss
 def deserialize_request_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
     value = deepcopy(value)
     for i, item in enumerate(value):
-        method = item.get(_operation__method.rep)
+        method = item.get("method")
         if method in ["GET", "DELETE"]:
-            item.pop(_operation__data.rep)
+            item.pop("data")
     return value
-
-
-_operation__method = String(
-    name="method",
-    required=True,
-    canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
-    restrict_canonical_values=True,
-)
-
-_operation__bulk_id = String("bulkId")
-
-_operation__version = String("version")
-
-_operation__path = String(
-    name="path",
-    required=True,
-)
-
-_operation__data = Unknown("data")
-
-
-request_operations = Complex(
-    sub_attributes=[
-        _operation__method,
-        _operation__bulk_id,
-        _operation__version,
-        _operation__path,
-        _operation__data,
-    ],
-    name="Operations",
-    required=True,
-    multi_valued=True,
-    validators=[validate_request_operations],
-    deserializer=deserialize_request_operations,
-)
-
-fail_on_errors = Integer("failOnErrors")
 
 
 class BulkRequest(BaseSchema):
     def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:BulkRequest",
-            attrs=[fail_on_errors, request_operations],
+            attrs=[
+                Integer("failOnErrors"),
+                Complex(
+                    sub_attributes=[
+                        String(
+                            name="method",
+                            required=True,
+                            canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
+                            restrict_canonical_values=True,
+                        ),
+                        String("bulkId"),
+                        String("version"),
+                        String(
+                            name="path",
+                            required=True,
+                        ),
+                        Unknown("data"),
+                    ],
+                    name="Operations",
+                    required=True,
+                    multi_valued=True,
+                    validators=[validate_request_operations],
+                    deserializer=deserialize_request_operations,
+                ),
+            ],
         )
 
 
 def validate_response_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        method = item.get(_operation__method.rep)
+        method = item.get("method")
         issues.merge(
             issues=_validate_operation_method_existence(method),
-            location=(i, _operation__method.rep.attr),
+            location=(i, "method"),
         )
-        bulk_id = item.get(_operation__bulk_id.rep)
+        bulk_id = item.get("bulkId")
         if method == "POST" and bulk_id in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, _operation__bulk_id.rep.attr),
+                location=(i, "bulkId"),
             )
-        status = item.get(_operation__status.rep)
+        status = item.get("status")
         if method and status:
-            location = item.get(_operation__location.rep)
+            location = item.get("location")
             if location in [None, Missing] and method and (method != "POST" or int(status) < 300):
                 issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
-                    location=(i, _operation__location.rep.attr),
+                    location=(i, "location"),
                 )
-            response = item.get(_operation__response.rep)
+            response = item.get("response")
             if response in [None, Missing] and int(status) >= 300:
                 issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
-                    location=(i, _operation__response.rep.attr),
+                    location=(i, "response"),
                 )
         elif status in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, _operation__status.rep.attr),
+                location=(i, "status"),
             )
     return issues
-
-
-_operation__location = ExternalReference("location")
-
-_operation__response = Unknown("response")
 
 
 def _validate_status(value: Any) -> ValidationIssues:
@@ -182,31 +164,33 @@ def _validate_status(value: Any) -> ValidationIssues:
     return issues
 
 
-_operation__status = String(
-    name="status",
-    required=True,
-    validators=[_validate_status],
-)
-
-
-response_operations = Complex(
-    sub_attributes=[
-        _operation__method,
-        _operation__bulk_id,
-        _operation__version,
-        _operation__location,
-        _operation__status,
-        _operation__response,
-    ],
-    name="Operations",
-    required=True,
-    multi_valued=True,
-    validators=[validate_response_operations],
-)
-
-
 class BulkResponse(BaseSchema):
     def __init__(self):
         super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:BulkResponse", attrs=[response_operations]
+            schema="urn:ietf:params:scim:api:messages:2.0:BulkResponse",
+            attrs=[
+                Complex(
+                    sub_attributes=[
+                        String(
+                            name="method",
+                            required=True,
+                            canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
+                            restrict_canonical_values=True,
+                        ),
+                        String("bulkId"),
+                        String("version"),
+                        ExternalReference("location"),
+                        String(
+                            name="status",
+                            required=True,
+                            validators=[_validate_status],
+                        ),
+                        Unknown("response"),
+                    ],
+                    name="Operations",
+                    required=True,
+                    multi_valued=True,
+                    validators=[validate_response_operations],
+                )
+            ],
         )

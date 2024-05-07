@@ -21,48 +21,37 @@ def validate_error_status(value: str) -> ValidationIssues:
     return issues
 
 
-status = String(
-    name="status",
-    required=True,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.ALWAYS,
-    validators=[validate_error_status],
-)
-
-
-scim_type = String(
-    name="scimType",
-    canonical_values=[
-        "invalidFilter",
-        "tooMany",
-        "uniqueness",
-        "mutability",
-        "invalidSyntax",
-        "invalidPath",
-        "noTarget",
-        "invalidValue",
-        "invalidVers",
-        "sensitive",
-    ],
-    restrict_canonical_values=True,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.ALWAYS,
-)
-
-detail = String(
-    name="detail",
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.ALWAYS,
-)
-
-
 class Error(BaseSchema):
     def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:Error",
             attrs=[
-                status,
-                scim_type,
-                detail,
+                String(
+                    name="status",
+                    required=True,
+                    returned=AttributeReturn.ALWAYS,
+                    validators=[validate_error_status],
+                ),
+                String(
+                    name="scimType",
+                    canonical_values=[
+                        "invalidFilter",
+                        "tooMany",
+                        "uniqueness",
+                        "mutability",
+                        "invalidSyntax",
+                        "invalidPath",
+                        "noTarget",
+                        "invalidValue",
+                        "invalidVers",
+                        "sensitive",
+                    ],
+                    restrict_canonical_values=True,
+                    returned=AttributeReturn.ALWAYS,
+                ),
+                String(
+                    name="detail",
+                    returned=AttributeReturn.ALWAYS,
+                ),
             ],
         )

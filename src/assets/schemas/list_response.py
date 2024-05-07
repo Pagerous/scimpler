@@ -5,12 +5,6 @@ from src.data.container import Invalid, Missing, SCIMDataContainer
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
-total_results = Integer("totalResults", required=True)
-
-start_index = Integer("startIndex")
-
-items_per_page = Integer("itemsPerPage")
-
 
 def validate_resources_type(value) -> ValidationIssues:
     issues = ValidationIssues()
@@ -25,22 +19,19 @@ def validate_resources_type(value) -> ValidationIssues:
     return issues
 
 
-resources = Unknown(
-    name="Resources",
-    multi_valued=True,
-    validators=[validate_resources_type],
-)
-
-
 class ListResponse(BaseSchema):
     def __init__(self, schemas: Sequence[BaseSchema]):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:ListResponse",
             attrs=[
-                total_results,
-                start_index,
-                items_per_page,
-                resources,
+                Integer("totalResults", required=True),
+                Integer("startIndex"),
+                Integer("itemsPerPage"),
+                Unknown(
+                    name="Resources",
+                    multi_valued=True,
+                    validators=[validate_resources_type],
+                ),
             ],
         )
         self._contained_schemas = list(schemas)
@@ -134,12 +125,12 @@ def validate_items_per_page_consistency(
     if items_per_page_ != n_resources:
         issues.add_error(
             issue=ValidationError.must_be_equal_to(value="number of resources"),
-            location=(items_per_page.rep.attr,),
+            location=("itemsPerPage",),
             proceed=True,
         )
         issues.add_error(
-            issue=ValidationError.must_be_equal_to(items_per_page.rep.attr),
-            location=(resources.rep.attr,),
+            issue=ValidationError.must_be_equal_to("itemsPerPage"),
+            location=("Resources",),
             proceed=True,
         )
     return issues

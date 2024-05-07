@@ -1,7 +1,6 @@
 import pytest
 
-from src.assets.schemas import patch_op, user
-from src.assets.schemas.patch_op import operations
+from src.assets.schemas import User, patch_op, user
 from src.data.container import (
     AttrRep,
     BoundedAttrRep,
@@ -51,7 +50,7 @@ from tests.conftest import SchemaForTests
     ),
 )
 def test_validate_patch_operations(value, expected_issues):
-    issues = operations.validate(value)
+    issues = patch_op.PatchOp(User).attrs.operations.validate(value)
 
     assert issues.to_dict() == expected_issues
 
