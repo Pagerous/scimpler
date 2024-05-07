@@ -29,13 +29,21 @@ ServiceProviderConfig = ServiceResourceSchema(
         ),
         ExternalReference(
             name="documentationUri",
+            description=(
+                "An HTTP-addressable URL pointing to the "
+                "service provider's human-consumable help documentation."
+            ),
             mutability=AttributeMutability.READ_ONLY,
         ),
         Complex(
             name="patch",
+            description="A complex type that specifies PATCH configuration options.",
             sub_attributes=[
                 Boolean(
                     name="supported",
+                    description=(
+                        "A Boolean value specifying whether or not the operation is supported."
+                    ),
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )
@@ -45,19 +53,25 @@ ServiceProviderConfig = ServiceResourceSchema(
         ),
         Complex(
             name="bulk",
+            description="A complex type that specifies bulk configuration options.",
             sub_attributes=[
                 Boolean(
                     name="supported",
+                    description=(
+                        "A Boolean value specifying whether or not the operation is supported."
+                    ),
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 Integer(
                     name="maxOperations",
+                    description="An integer value specifying the maximum number of operations.",
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 Integer(
                     name="maxPayloadSize",
+                    description="An integer value specifying the maximum payload size in bytes.",
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
@@ -70,11 +84,18 @@ ServiceProviderConfig = ServiceResourceSchema(
             sub_attributes=[
                 Boolean(
                     name="supported",
+                    description=(
+                        "A Boolean value specifying whether or not the operation is supported."
+                    ),
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 Integer(
                     name="maxResults",
+                    description=(
+                        "An integer value specifying the maximum "
+                        "number of resources returned in a response."
+                    ),
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
@@ -84,9 +105,16 @@ ServiceProviderConfig = ServiceResourceSchema(
         ),
         Complex(
             name="changePassword",
+            description=(
+                "A complex type that specifies configuration "
+                "options related to changing a password."
+            ),
             sub_attributes=[
                 Boolean(
                     name="supported",
+                    description=(
+                        "A Boolean value specifying whether or not the operation is supported."
+                    ),
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )
@@ -96,9 +124,13 @@ ServiceProviderConfig = ServiceResourceSchema(
         ),
         Complex(
             name="sort",
+            description="A complex type that specifies sort result options.",
             sub_attributes=[
                 Boolean(
                     name="supported",
+                    description=(
+                        "A Boolean value specifying whether or not the operation is supported."
+                    ),
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )
@@ -107,22 +139,35 @@ ServiceProviderConfig = ServiceResourceSchema(
             mutability=AttributeMutability.READ_ONLY,
         ),
         Complex(
+            name="etag",
+            description="A complex type that specifies ETag configuration options.",
+            required=True,
+            mutability=AttributeMutability.READ_ONLY,
             sub_attributes=[
                 Boolean(
                     name="supported",
+                    description=(
+                        "A Boolean value specifying whether or not the operation is supported."
+                    ),
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )
             ],
-            name="etag",
-            required=True,
-            mutability=AttributeMutability.READ_ONLY,
         ),
         Complex(
             name="authenticationSchemes",
+            description="A complex type that specifies supported authentication scheme properties.",
+            multi_valued=True,
+            mutability=AttributeMutability.READ_ONLY,
+            required=True,
             sub_attributes=[
                 String(
                     name="type",
+                    description=(
+                        "The authentication scheme.  This specification defines the "
+                        "values 'oauth', 'oauth2', 'oauthbearertoken', 'httpbasic', and "
+                        "'httpdigest'"
+                    ),
                     required=True,
                     canonical_values=[
                         "oauth",
@@ -135,26 +180,33 @@ ServiceProviderConfig = ServiceResourceSchema(
                 ),
                 String(
                     name="name",
+                    description="The common authentication scheme name, e.g., HTTP Basic.",
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 String(
                     name="description",
+                    description="A description of the authentication scheme.",
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 ExternalReference(
                     name="specUri",
+                    description=(
+                        "An HTTP-addressable URL pointing to the "
+                        "authentication scheme's specification."
+                    ),
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 ExternalReference(
-                    name="specUri",
+                    name="documentationUri",
+                    description=(
+                        "An HTTP-addressable URL pointing to the "
+                        "authentication scheme's usage documentation."
+                    ),
                     mutability=AttributeMutability.READ_ONLY,
                 ),
             ],
-            multi_valued=True,
-            mutability=AttributeMutability.READ_ONLY,
-            required=True,
         ),
     ],
 )
