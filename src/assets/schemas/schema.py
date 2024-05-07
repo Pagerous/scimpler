@@ -55,15 +55,26 @@ def serialize_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContain
 
 attributes = Complex(
     name="attributes",
+    description="A complex attribute that includes the attributes of a schema.",
+    multi_valued=True,
+    mutability=AttributeMutability.READ_ONLY,
+    validators=[validate_attributes],
+    serializer=serialize_attributes,
     sub_attributes=[
         String(
             name="name",
+            description="The attribute's name.",
             required=True,
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         String(
             name="type",
+            description=(
+                "The attribute's data type. "
+                "Valid values include 'string', 'complex', 'boolean', "
+                "'decimal', 'integer', 'dateTime', 'reference'."
+            ),
             canonical_values=[
                 "string",
                 "integer",
@@ -73,46 +84,58 @@ attributes = Complex(
                 "binary",
                 "complex",
             ],
-            restrict_canonical_values=False,
             required=True,
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         Unknown(
             name="subAttributes",
+            description="Used to define the sub-attributes of a complex attribute.",
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         Boolean(
             name="multiValued",
+            description="A Boolean value indicating an attribute's plurality.",
             required=True,
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         String(
             name="description",
+            description="A human-readable description of the attribute.",
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         Boolean(
             name="required",
+            description="A boolean value indicating whether or not the attribute is required.",
             required=True,
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         Unknown(
             name="canonicalValues",
+            description=(
+                "A collection of canonical values.  When "
+                "applicable, service providers MUST specify the "
+                "canonical types, e.g., 'work', 'home'."
+            ),
             multi_valued=True,
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         Boolean(
             name="caseExact",
+            description=(
+                "A Boolean value indicating whether or not a string attribute is case sensitive."
+            ),
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
         String(
             name="mutability",
+            description="Indicates whether or not an attribute is modifiable.",
             canonical_values=["readOnly", "readWrite", "immutable", "writeOnly"],
             restrict_canonical_values=True,
             required=True,
@@ -121,6 +144,7 @@ attributes = Complex(
         ),
         String(
             name="returned",
+            description="Indicates when an attribute is returned in a response (e.g., to a query).",
             canonical_values=["always", "never", "default", "request"],
             restrict_canonical_values=True,
             required=True,
@@ -129,6 +153,7 @@ attributes = Complex(
         ),
         String(
             name="uniqueness",
+            description="Indicates how unique a value must be.",
             canonical_values=["none", "server", "global"],
             restrict_canonical_values=True,
             mutability=AttributeMutability.READ_ONLY,
@@ -136,15 +161,16 @@ attributes = Complex(
         ),
         String(
             name="referenceTypes",
+            description=(
+                "Used only with an attribute of type "
+                "'reference'.  Specifies a SCIM resourceType that a "
+                "reference attribute MAY refer to, e.g., 'User'."
+            ),
             multi_valued=True,
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
     ],
-    multi_valued=True,
-    mutability=AttributeMutability.READ_ONLY,
-    validators=[validate_attributes],
-    serializer=serialize_attributes,
 )
 
 
@@ -157,16 +183,28 @@ class _Schema(ServiceResourceSchema):
             attrs=[
                 String(
                     name="id",
+                    description=(
+                        "The unique URI of the schema. "
+                        "When applicable, service providers MUST specify the URI."
+                    ),
                     mutability=AttributeMutability.READ_ONLY,
                     issuer=AttributeIssuer.SERVER,
                 ),
                 String(
                     name="name",
+                    description=(
+                        "The schema's human-readable name.  When "
+                        "applicable, service providers MUST specify the name e.g., 'User'."
+                    ),
                     mutability=AttributeMutability.READ_ONLY,
                     issuer=AttributeIssuer.SERVER,
                 ),
                 String(
                     name="description",
+                    description=(
+                        "The schema's human-readable description.  When "
+                        "applicable, service providers MUST specify the description."
+                    ),
                     mutability=AttributeMutability.READ_ONLY,
                     issuer=AttributeIssuer.SERVER,
                 ),
