@@ -1,5 +1,6 @@
 import abc
-from typing import Any, Dict, Iterable, List, Optional, Union
+import copy
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 from src.data.attributes import (
     Attribute,
@@ -28,84 +29,39 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-schemas = URIReference(
-    name="schemas",
-    required=True,
-    multi_valued=True,
-    mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.ALWAYS,
-)
-
-
-id_ = String(
-    name="id",
-    required=True,
-    issuer=AttributeIssuer.SERVER,
-    case_exact=True,
-    mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.ALWAYS,
-    uniqueness=AttributeUniqueness.SERVER,
-    validators=[bulk_id_validator],
-)
-
-external_id = String(
-    name="externalId",
-    issuer=AttributeIssuer.CLIENT,
-    case_exact=True,
-    mutability=AttributeMutability.READ_WRITE,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_meta__resource_type = String(
-    name="resourceType",
-    case_exact=True,
-    issuer=AttributeIssuer.SERVER,
-    mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_meta__created = DateTime(
-    name="created",
-    issuer=AttributeIssuer.SERVER,
-    mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_meta__last_modified = DateTime(
-    name="lastModified",
-    issuer=AttributeIssuer.SERVER,
-    mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_meta__location = URIReference(
-    name="location",
-    issuer=AttributeIssuer.SERVER,
-    mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.DEFAULT,
-)
-
-_meta__version = String(
-    name="version",
-    issuer=AttributeIssuer.SERVER,
-    case_exact=True,
-    mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.DEFAULT,
-)
-
-
 meta = Complex(
-    sub_attributes=[
-        _meta__resource_type,
-        _meta__created,
-        _meta__last_modified,
-        _meta__location,
-        _meta__version,
-    ],
     name="meta",
     issuer=AttributeIssuer.SERVER,
     mutability=AttributeMutability.READ_ONLY,
-    returned=AttributeReturn.DEFAULT,
+    sub_attributes=[
+        String(
+            name="resourceType",
+            case_exact=True,
+            issuer=AttributeIssuer.SERVER,
+            mutability=AttributeMutability.READ_ONLY,
+        ),
+        DateTime(
+            name="created",
+            issuer=AttributeIssuer.SERVER,
+            mutability=AttributeMutability.READ_ONLY,
+        ),
+        DateTime(
+            name="lastModified",
+            issuer=AttributeIssuer.SERVER,
+            mutability=AttributeMutability.READ_ONLY,
+        ),
+        URIReference(
+            name="location",
+            issuer=AttributeIssuer.SERVER,
+            mutability=AttributeMutability.READ_ONLY,
+        ),
+        String(
+            name="version",
+            issuer=AttributeIssuer.SERVER,
+            case_exact=True,
+            mutability=AttributeMutability.READ_ONLY,
+        ),
+    ],
 )
 
 
@@ -118,8 +74,16 @@ class BaseSchema(abc.ABC):
     ):
         self._attrs = BoundedAttributes(
             schema=schema,
-            extension=False,
-            attrs=[schemas, *attrs],
+            attrs=[
+                URIReference(
+                    name="schemas",
+                    required=True,
+                    multi_valued=True,
+                    mutability=AttributeMutability.READ_ONLY,
+                    returned=AttributeReturn.ALWAYS,
+                ),
+                *attrs,
+            ],
             common_attrs=(common_attrs or []) + ["schemas"],
         )
         self._schema = schema
@@ -162,7 +126,7 @@ class BaseSchema(abc.ABC):
         if issues.can_proceed(("schemas",)):
             issues.merge(
                 self._validate_schemas_field(data),
-                location=(schemas.rep.attr,),
+                location=("schemas",),
             )
         if issues.can_proceed():
             issues.merge(self._validate(data))
@@ -240,7 +204,33 @@ def validate_resource_type_consistency(
     return issues
 
 
-class ResourceSchema(BaseSchema):
+class BaseResourceSchema(BaseSchema):
+    def __init__(self, name: str, endpoint: str = "", **kwargs):
+        attrs = kwargs.pop("attrs", [])
+        attrs = [meta, *attrs]
+        super().__init__(attrs=attrs, **kwargs)
+        self._name = name
+        self._endpoint = endpoint or f"/{self._name}"
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def endpoint(self) -> str:
+        return self._endpoint
+
+    @endpoint.setter
+    def endpoint(self, value) -> None:
+        self._endpoint = value
+
+    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BaseResourceSchema":
+        cloned = copy.copy(self)
+        cloned._attrs = self._attrs.clone(attr_filter)
+        return cloned
+
+
+class ResourceSchema(BaseResourceSchema):
     def __init__(
         self,
         schema: str,
@@ -251,12 +241,31 @@ class ResourceSchema(BaseSchema):
         attrs: Optional[Iterable[Attribute]] = None,
     ):
         super().__init__(
+            name=name,
             schema=schema,
-            attrs=[id_, external_id, meta, *(attrs or [])],
+            attrs=[
+                String(
+                    name="id",
+                    required=True,
+                    issuer=AttributeIssuer.SERVER,
+                    case_exact=True,
+                    mutability=AttributeMutability.READ_ONLY,
+                    returned=AttributeReturn.ALWAYS,
+                    uniqueness=AttributeUniqueness.SERVER,
+                    validators=[bulk_id_validator],
+                ),
+                String(
+                    name="externalId",
+                    issuer=AttributeIssuer.CLIENT,
+                    case_exact=True,
+                    mutability=AttributeMutability.READ_WRITE,
+                    returned=AttributeReturn.DEFAULT,
+                ),
+                *(attrs or []),
+            ],
             common_attrs=["id", "externalId", "meta"],
         )
         self._schema_extensions: Dict[str, Dict] = {}
-        self._name = name
         self._plural_name = plural_name or name
         self._endpoint = endpoint or f"/{self._plural_name}"
         self._description = description
@@ -354,27 +363,6 @@ class ResourceSchema(BaseSchema):
                     proceed=True,
                 )
         return issues
-
-
-class ServiceResourceSchema(BaseSchema):
-    def __init__(self, name: str, endpoint: str = "", **kwargs):
-        attrs = kwargs.pop("attrs", [])
-        attrs = [meta, *attrs]
-        super().__init__(attrs=attrs, **kwargs)
-        self._name = name
-        self._endpoint = endpoint or f"/{self._name}"
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def endpoint(self) -> str:
-        return self._endpoint
-
-    @endpoint.setter
-    def endpoint(self, value) -> None:
-        self._endpoint = value
 
 
 class SchemaExtension:

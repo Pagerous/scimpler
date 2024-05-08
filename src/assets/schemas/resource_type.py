@@ -8,10 +8,10 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.data.schemas import ResourceSchema, ServiceResourceSchema
+from src.data.schemas import BaseResourceSchema, ResourceSchema
 
 
-class _ResourceType(ServiceResourceSchema):
+class _ResourceType(BaseResourceSchema):
     def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:ResourceType",

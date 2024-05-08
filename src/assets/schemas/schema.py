@@ -9,7 +9,7 @@ from src.data.attributes import (
     Unknown,
 )
 from src.data.container import Missing, SCIMDataContainer
-from src.data.schemas import ResourceSchema, SchemaExtension, ServiceResourceSchema
+from src.data.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 
@@ -174,7 +174,7 @@ attributes = Complex(
 )
 
 
-class _Schema(ServiceResourceSchema):
+class _Schema(BaseResourceSchema):
     def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
