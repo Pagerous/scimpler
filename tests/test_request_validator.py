@@ -1033,7 +1033,8 @@ def test_bulk_operations_request_is_valid_if_correct_data():
 def test_bulk_operations_request_validation_fails_for_bad_data():
     validator = BulkOperations(
         config=create_service_provider_config(
-            bulk={"max_operations": 2, "max_payload_size": 1024, "supported": True}
+            patch={"supported": True},
+            bulk={"max_operations": 2, "max_payload_size": 1024, "supported": True},
         ),
         resource_schemas=[user.User],
     )
@@ -1045,7 +1046,6 @@ def test_bulk_operations_request_validation_fails_for_bad_data():
                     "data": {
                         "userName": {"_errors": [{"code": 15}]},
                         "nickName": {"_errors": [{"code": 2}]},
-                        "schemas": {"_errors": [{"code": 29}]},
                     }
                 },
                 "1": {

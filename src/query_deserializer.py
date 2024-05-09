@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import search_request
+from src.assets.schemas.search_request import get_search_request_schema
 from src.data.container import Missing, SCIMDataContainer
 
 
@@ -49,12 +50,12 @@ class ResourceObjectPATCH(_AttributesDeserializer):
 
 
 class ServerRootResourcesGET(QueryStringDeserializer):
+    def __init__(self, config: ServiceProviderConfig):
+        super().__init__(config)
+        self._schema = get_search_request_schema(config)
+
     def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        return (
-            search_request.SearchRequest()
-            .deserialize(SCIMDataContainer(query_string or {}))
-            .to_dict()
-        )
+        return self._schema.deserialize(SCIMDataContainer(query_string or {})).to_dict()
 
 
 class ResourcesGET(ServerRootResourcesGET):

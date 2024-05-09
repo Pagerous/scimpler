@@ -129,7 +129,7 @@ class PatchOp(BaseSchema):
                     sub_attr=path.filter_sub_attr_rep.attr,
                 )
             )
-            if sub_attr.required:
+            if sub_attr.required and not sub_attr.multi_valued:
                 issues.add_error(
                     issue=ValidationError.attribute_can_not_be_deleted(),
                     proceed=True,
@@ -251,8 +251,8 @@ class PatchOp(BaseSchema):
                     )
         return issues
 
-    def deserialize(self, data: Any) -> SCIMDataContainer:
-        data = super().deserialize(data)
+    def deserialize(self, data: Any, include_unknown: bool = False) -> SCIMDataContainer:
+        data = super().deserialize(data, include_unknown)
         ops = data.get(self.attrs.operations__op.rep)
         paths = data.get(self.attrs.operations__path.rep)
         values = data.get(self.attrs.operations__value.rep)

@@ -113,10 +113,11 @@ class Sorter:
                             for sub_attr in attr.attrs:
                                 if sub_attr.rep.attr.lower() == "value":
                                     attr = sub_attr
+                                    value = v.get("value")
                                     break
                             else:
                                 attr = None
-                            value = v.get("value")
+                                value = None
                             break
                 else:
                     value = item_value[0]

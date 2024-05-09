@@ -1,5 +1,6 @@
 from typing import Any, List
 
+from src.assets.config import ServiceProviderConfig
 from src.attributes_presence import AttributePresenceChecker
 from src.data.attributes import Integer, String
 from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
@@ -56,8 +57,8 @@ class SearchRequest(BaseSchema):
             ],
         )
 
-    def deserialize(self, data: Any) -> SCIMDataContainer:
-        data = super().deserialize(data)
+    def deserialize(self, data: Any, include_unknown: bool = False) -> SCIMDataContainer:
+        data = super().deserialize(data, include_unknown)
         to_include = data.pop(self.attrs.attributes.rep)
         to_exclude = data.pop(self.attrs.excludeattributes.rep)
         if to_include or to_exclude:
@@ -95,3 +96,13 @@ class SearchRequest(BaseSchema):
                 location=(self.attrs.excludeattributes.rep.attr,),
             )
         return issues
+
+
+def get_search_request_schema(config: ServiceProviderConfig) -> SearchRequest:
+    exclude = set()
+    if not config.filter.supported:
+        exclude.add("filter")
+    if not config.sort.supported:
+        exclude.add("sortBy")
+        exclude.add("sortOrder")
+    return SearchRequest().clone(lambda attr: attr.rep.attr not in exclude)

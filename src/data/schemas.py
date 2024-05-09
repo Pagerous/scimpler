@@ -100,13 +100,18 @@ class BaseSchema(abc.ABC):
     def schema(self) -> str:
         return self._schema
 
-    def deserialize(self, data: Any) -> SCIMDataContainer:
+    def deserialize(self, data: Dict, include_unknown: bool = False) -> SCIMDataContainer:
+        original_data = data
         data = SCIMDataContainer(data)
         deserialized = SCIMDataContainer()
         for attr in self.attrs:
             value = data.get(attr.rep)
             if value is not Missing:
                 deserialized.set(attr.rep, attr.deserialize(value))
+        if include_unknown:
+            for k, v in original_data.items():
+                if v not in [None, "", []] and deserialized.get(k) is Missing:
+                    deserialized.set(k, v)
         return deserialized
 
     def serialize(self, data: Any) -> SCIMDataContainer:
@@ -131,6 +136,11 @@ class BaseSchema(abc.ABC):
         if issues.can_proceed():
             issues.merge(self._validate(data))
         return issues
+
+    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BaseSchema":
+        cloned = copy.copy(self)
+        cloned._attrs = self._attrs.clone(attr_filter)
+        return cloned
 
     def _validate_schemas_field(self, data):
         issues = ValidationIssues()
@@ -223,11 +233,6 @@ class BaseResourceSchema(BaseSchema):
     @endpoint.setter
     def endpoint(self, value) -> None:
         self._endpoint = value
-
-    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BaseResourceSchema":
-        cloned = copy.copy(self)
-        cloned._attrs = self._attrs.clone(attr_filter)
-        return cloned
 
 
 class ResourceSchema(BaseResourceSchema):
@@ -349,19 +354,6 @@ class ResourceSchema(BaseResourceSchema):
                     proceed=True,
                 )
                 reported_missing.add(k_lower)
-                break
-
-        for extension in self._schema_extensions.values():
-            extension_schema = extension["extension"].schema.lower()
-            if (
-                extension["required"]
-                and extension_schema not in provided_schemas
-                and extension_schema not in reported_missing
-            ):
-                issues.add_error(
-                    issue=ValidationError.missing_schema_extension(extension_schema),
-                    proceed=True,
-                )
         return issues
 
 

@@ -5,11 +5,12 @@ from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
+from src.assets.schemas.search_request import get_search_request_schema
 from src.attributes_presence import AttributePresenceChecker
-from src.data.attributes import Attribute, Complex
+from src.data.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
 from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.path import PatchPath
-from src.data.schemas import BaseSchema, ResourceSchema
+from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.filter import Filter
 from src.sorter import Sorter
@@ -190,7 +191,7 @@ def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> Val
 
 
 def _validate_resource_output_body(
-    schema: ResourceSchema,
+    schema: BaseResourceSchema,
     config: ServiceProviderConfig,
     location_header_required: bool,
     expected_status_code: int,
@@ -264,13 +265,16 @@ def _validate_resource_output_body(
 
 
 class ResourceObjectGET(Validator):
-    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+    def __init__(self, config: ServiceProviderConfig, *, resource_schema: BaseResourceSchema):
         super().__init__(config)
         self._schema = resource_schema
+        self._response_schema = resource_schema.clone(
+            lambda attr: attr.returned != AttributeReturn.NEVER
+        )
 
     @property
-    def response_schema(self) -> ResourceSchema:
-        return self._schema
+    def response_schema(self) -> BaseResourceSchema:
+        return self._response_schema
 
     def validate_request(
         self,
@@ -326,11 +330,17 @@ class ServiceResourceObjectGET(ResourceObjectGET):
 class ResourceObjectPUT(Validator):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
         super().__init__(config)
+        self._request_schema = resource_schema.clone(
+            lambda attr: attr.mutability != AttributeMutability.READ_ONLY or attr.required
+        )
+        self._response_schema = resource_schema.clone(
+            lambda attr: attr.returned != AttributeReturn.NEVER
+        )
         self._schema = resource_schema
 
     @property
     def request_schema(self) -> ResourceSchema:
-        return self._schema
+        return self._request_schema
 
     @property
     def response_schema(self) -> ResourceSchema:
@@ -388,14 +398,20 @@ class ResourcesPOST(Validator):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
         super().__init__(config)
         self._schema = resource_schema
+        self._request_schema = resource_schema.clone(
+            lambda attr: attr.mutability != AttributeMutability.READ_ONLY
+        )
+        self._response_schema = resource_schema.clone(
+            lambda attr: attr.returned != AttributeReturn.NEVER
+        )
 
     @property
     def request_schema(self) -> ResourceSchema:
-        return self._schema
+        return self._request_schema
 
     @property
     def response_schema(self) -> ResourceSchema:
-        return self._schema
+        return self._response_schema
 
     def validate_request(
         self,
@@ -675,11 +691,18 @@ class ServerRootResourcesGET(Validator):
         self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
     ):
         super().__init__(config)
-        self._schema = list_response.ListResponse(resource_schemas)
+        self._request_query_validation_schema = get_search_request_schema(config)
+        self._response_validation_schema = list_response.ListResponse(resource_schemas)
+        self._response_schema = list_response.ListResponse(
+            [
+                resource_schema.clone(lambda attr: attr.returned != AttributeReturn.NEVER)
+                for resource_schema in resource_schemas
+            ]
+        )
 
     @property
     def response_schema(self) -> list_response.ListResponse:
-        return self._schema
+        return self._response_schema
 
     def validate_request(
         self,
@@ -691,7 +714,7 @@ class ServerRootResourcesGET(Validator):
         issues = ValidationIssues()
         query_string = query_string or {}
         issues.merge(
-            search_request.SearchRequest().validate(query_string),
+            self._request_query_validation_schema.validate(query_string),
             location=("query_string",),
         )
         return issues
@@ -705,7 +728,7 @@ class ServerRootResourcesGET(Validator):
         **kwargs,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
-            schema=self._schema,
+            schema=self._response_validation_schema,
             status_code=status_code,
             body=SCIMDataContainer(body or {}),
             start_index=kwargs.get("start_index", 1),
@@ -726,16 +749,22 @@ class SearchRequestPOST(Validator):
         self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
     ):
         super().__init__(config)
-        self._schema = search_request.SearchRequest()
-        self._list_response_schema = list_response.ListResponse(resource_schemas)
+        self._request_validation_schema = get_search_request_schema(config)
+        self._response_validation_schema = list_response.ListResponse(resource_schemas)
+        self._response_schema = list_response.ListResponse(
+            [
+                resource_schema.clone(lambda attr: attr.returned != AttributeReturn.NEVER)
+                for resource_schema in resource_schemas
+            ]
+        )
 
     @property
     def request_schema(self) -> search_request.SearchRequest:
-        return self._schema
+        return self._request_validation_schema
 
     @property
     def response_schema(self) -> list_response.ListResponse:
-        return self._list_response_schema
+        return self._response_schema
 
     def validate_request(
         self,
@@ -745,7 +774,10 @@ class SearchRequestPOST(Validator):
         headers: Optional[Dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        issues.merge(self._schema.validate(SCIMDataContainer(body or {})), location=("body",))
+        issues.merge(
+            self._request_validation_schema.validate(SCIMDataContainer(body or {})),
+            location=("body",),
+        )
         return issues
 
     def validate_response(
@@ -757,7 +789,7 @@ class SearchRequestPOST(Validator):
         **kwargs,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
-            schema=self._list_response_schema,
+            schema=self._response_validation_schema,
             status_code=status_code,
             body=SCIMDataContainer(body or {}),
             start_index=kwargs.get("start_index", 1),
@@ -770,6 +802,9 @@ class SearchRequestPOST(Validator):
 
 class ResourceObjectPATCH(Validator):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+        if not config.patch.supported:
+            raise RuntimeError("patch operation is not configured")
+
         super().__init__(config)
         self._schema = patch_op.PatchOp(resource_schema)
         self._resource_schema = resource_schema
@@ -930,6 +965,9 @@ class BulkOperations(Validator):
     def __init__(
         self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
     ):
+        if not config.bulk.supported:
+            raise RuntimeError("bulk operations are not configured")
+
         super().__init__(config)
         self._validators = {
             "GET": {},
