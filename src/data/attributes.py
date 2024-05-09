@@ -794,6 +794,10 @@ class BoundedAttributes:
     def core_attrs(self) -> List[Attribute]:
         return self._core_attrs
 
+    @property
+    def extensions(self) -> Dict[str, "BoundedAttributes"]:
+        return self._extensions
+
     def extend(self, attrs: Attributes, schema: str, required: bool = False) -> None:
         self._extensions[schema.lower()] = BoundedAttributes(
             schema, attrs, extension=True, extension_required=required

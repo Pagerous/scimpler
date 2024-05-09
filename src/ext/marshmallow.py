@@ -1,7 +1,8 @@
-from typing import Iterable
+from typing import Dict, Iterable, Optional
 
 from marshmallow import Schema, fields, post_dump
 
+from src.assets.schemas import ListResponse
 from src.data.attributes import (
     Attribute,
     AttributeReturn,
@@ -20,12 +21,21 @@ from src.data.attributes import (
 from src.request_validator import Validator
 
 
-def _get_fields(attrs: Iterable[Attribute]) -> dict[str, fields.Field]:
+def _get_fields(
+    attrs: Iterable[Attribute],
+    field_by_attr_name: Optional[Dict[str, fields.Field]] = None,
+) -> dict[str, fields.Field]:
+    field_by_attr_name = field_by_attr_name or {}
     fields_ = {}
     for attr in attrs:
-        field = _get_field(attr, **_get_kwargs(attr))
-        if attr.multi_valued:
-            field = fields.List(field)
+        if attr.rep.attr in field_by_attr_name:
+            field = field_by_attr_name[attr.rep.attr]
+        else:
+            kwargs = _get_kwargs(attr)
+            if attr.multi_valued:
+                field = fields.List(_get_field(attr), **kwargs)
+            else:
+                field = _get_field(attr, **kwargs)
         fields_[attr.rep.attr] = field
     return fields_
 
@@ -63,7 +73,7 @@ def _get_kwargs(attr: Attribute):
 
 
 def _apply_validator_on_schema(schema, validator: Validator):
-    def _post_serialize(self, data, **kwargs):
+    def _post_dump(self, data, **kwargs):
         context_ = {k: v() if callable(v) else v for k, v in self.context.items()}
         issues = validator.validate_response(
             status_code=context_.get("status_code"),
@@ -74,17 +84,28 @@ def _apply_validator_on_schema(schema, validator: Validator):
         return data
 
     class_ = type(
-        schema.__name__, (schema,), {"_post_serialize": post_dump(_post_serialize, pass_many=False)}
+        schema.__name__, (schema,), {"_post_dump": post_dump(_post_dump, pass_many=False)}
     )
     return class_
 
 
 def response_serializer(validator: Validator):
     pyscim_schema = validator.response_schema
-    base_fields = _get_fields(pyscim_schema.attrs.core_attrs)
+    if isinstance(pyscim_schema, ListResponse) and len(pyscim_schema.contained_schemas) == 1:
+        base_fields = _get_fields(
+            pyscim_schema.attrs.core_attrs,
+            field_by_attr_name={
+                pyscim_schema.attrs.resources.rep.attr: fields.List(
+                    fields.Nested(_get_fields(pyscim_schema.contained_schemas[0].attrs)),
+                    **_get_kwargs(pyscim_schema.attrs.resources),
+                )
+            },
+        )
+    else:
+        base_fields = _get_fields(pyscim_schema.attrs.core_attrs)
     extension_fields = {
         extension_name: fields.Nested(_get_fields(attrs))
-        for extension_name, attrs in pyscim_schema.attrs._extensions.items()
+        for extension_name, attrs in pyscim_schema.attrs.extensions.items()
     }
     schema = Schema.from_dict(
         fields={**base_fields, **extension_fields},
