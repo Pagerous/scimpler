@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import search_request
 from src.assets.schemas.search_request import get_search_request_schema
-from src.data.container import Missing, SCIMDataContainer
+from src.container import Missing, SCIMDataContainer
 
 
 class QueryStringDeserializer(abc.ABC):

@@ -1,7 +1,7 @@
 import pytest
 
 from src.assets.schemas.user import User
-from src.data.container import BoundedAttrRep, SCIMDataContainer
+from src.container import BoundedAttrRep, SCIMDataContainer
 from src.sorter import Sorter
 from tests.conftest import SchemaForTests
 

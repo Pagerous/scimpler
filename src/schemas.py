@@ -2,7 +2,7 @@ import abc
 import copy
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
-from src.data.attributes import (
+from src.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
@@ -15,7 +15,7 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.data.container import Invalid, Missing, SCIMDataContainer
+from src.container import Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 
 

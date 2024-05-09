@@ -2,9 +2,9 @@ from typing import Optional
 
 import pytest
 
-from src.data.container import AttrRep, BoundedAttrRep
-from src.data.operator import ComplexAttributeOperator, Equal
-from src.data.path import PatchPath
+from src.container import AttrRep, BoundedAttrRep
+from src.operator import ComplexAttributeOperator, Equal
+from src.path import PatchPath
 from src.filter import Filter
 
 

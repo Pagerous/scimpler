@@ -1,5 +1,5 @@
-from src.data.attributes import AttributeMutability, AttributeReturn, String
-from src.data.schemas import BaseSchema
+from src.attributes import AttributeReturn, String
+from src.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 
 

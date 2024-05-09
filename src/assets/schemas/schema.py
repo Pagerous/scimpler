@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Union
 
-from src.data.attributes import (
+from src.attributes import (
     AttributeIssuer,
     AttributeMutability,
     Boolean,
@@ -8,8 +8,8 @@ from src.data.attributes import (
     String,
     Unknown,
 )
-from src.data.container import Missing, SCIMDataContainer
-from src.data.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
+from src.container import Missing, SCIMDataContainer
+from src.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 

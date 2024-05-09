@@ -1,6 +1,6 @@
 from typing import Any, Collection, Dict, Generic, List, Optional, TypeVar, Union
 
-from src.data.attributes import (
+from src.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeReturn,
@@ -8,7 +8,7 @@ from src.data.attributes import (
     BoundedAttributes,
     Complex,
 )
-from src.data.container import (
+from src.container import (
     AttrRep,
     BoundedAttrRep,
     Invalid,

@@ -5,7 +5,7 @@ import iso3166
 import phonenumbers
 import precis_i18n
 
-from src.data.attributes import (
+from src.attributes import (
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
@@ -17,7 +17,7 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.data.schemas import ResourceSchema, SchemaExtension
+from src.schemas import ResourceSchema, SchemaExtension
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 _ACCEPT_LANGUAGE_REGEX = re.compile(

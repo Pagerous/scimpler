@@ -7,10 +7,10 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import get_search_request_schema
 from src.attributes_presence import AttributePresenceChecker
-from src.data.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
-from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
-from src.data.path import PatchPath
-from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
+from src.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
+from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.path import PatchPath
+from src.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.filter import Filter
 from src.sorter import Sorter

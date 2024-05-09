@@ -1,8 +1,8 @@
 from typing import Any, List, Optional, Sequence
 
-from src.data.attributes import Integer, Unknown
-from src.data.container import Invalid, Missing, SCIMDataContainer
-from src.data.schemas import BaseSchema, ResourceSchema
+from src.attributes import Integer, Unknown
+from src.container import Invalid, Missing, SCIMDataContainer
+from src.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
 

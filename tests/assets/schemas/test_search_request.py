@@ -1,5 +1,5 @@
 from src.assets.schemas.search_request import SearchRequest
-from src.data.container import BoundedAttrRep
+from src.container import BoundedAttrRep
 
 
 def test_search_request_is_deserialized():

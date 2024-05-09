@@ -1,6 +1,6 @@
 from src.assets.schemas import User
 from src.assets.schemas.schema import Schema, attributes
-from src.data.container import SCIMDataContainer
+from src.container import SCIMDataContainer
 
 
 def test_validation_attributes_field_fails_for_bad_sub_attributes():

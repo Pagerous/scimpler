@@ -1,7 +1,7 @@
 import pytest
 
 from src.assets.schemas.bulk_ops import BulkRequest, BulkResponse
-from src.data.container import SCIMDataContainer
+from src.container import SCIMDataContainer
 
 
 def test_validation_bulk_request_operation_fails_if_no_method():

@@ -7,9 +7,9 @@ from src.assets.schemas import group, list_response, service_provider_config, us
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
-from src.data.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
-from src.data.operator import Present
-from src.data.path import PatchPath
+from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.operator import Present
+from src.path import PatchPath
 from src.filter import Filter
 from src.request_validator import (
     BulkOperations,

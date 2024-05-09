@@ -5,7 +5,7 @@ import pytest
 from src.assets.config import create_service_provider_config
 from src.assets.schemas import Group, User
 from src.assets.schemas.user import EnterpriseUserExtension
-from src.data.attributes import (
+from src.attributes import (
     Binary,
     Boolean,
     Complex,
@@ -17,7 +17,7 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.data.schemas import ResourceSchema
+from src.schemas import ResourceSchema
 from src.registry import register_resource_schema
 
 

@@ -1,9 +1,9 @@
 from typing import Any, List, Optional, Union
 
-from src.data.attributes import AttributeMutability, Complex, String, Unknown
-from src.data.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
-from src.data.path import PatchPath
-from src.data.schemas import BaseSchema, ResourceSchema
+from src.attributes import AttributeMutability, Complex, String, Unknown
+from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.path import PatchPath
+from src.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
 

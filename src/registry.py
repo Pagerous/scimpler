@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Callable, Dict
 
 if TYPE_CHECKING:
-    from src.data.schemas import ResourceSchema
+    from src.schemas import ResourceSchema
 
 
 resource_schemas: Dict[str, "ResourceSchema"] = {}

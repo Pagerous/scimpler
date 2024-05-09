@@ -1,7 +1,7 @@
 import pytest
 
 from src.assets.schemas import list_response, user
-from src.data.container import SCIMDataContainer
+from src.container import SCIMDataContainer
 
 
 def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):

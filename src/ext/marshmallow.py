@@ -3,7 +3,7 @@ from typing import Dict, Iterable, Optional
 from marshmallow import Schema, fields, post_dump
 
 from src.assets.schemas import ListResponse
-from src.data.attributes import (
+from src.attributes import (
     Attribute,
     AttributeReturn,
     Binary,

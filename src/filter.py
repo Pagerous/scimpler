@@ -2,8 +2,8 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, TypeAlias, Union
 
-from src.data import operator as op
-from src.data.container import AttrRep, BoundedAttrRep, SCIMDataContainer
+from src import operator as op
+from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.utils import (
     OP_REGEX,
@@ -15,7 +15,7 @@ from src.utils import (
 )
 
 if TYPE_CHECKING:
-    from src.data.schemas import BaseSchema
+    from src.schemas import BaseSchema
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)

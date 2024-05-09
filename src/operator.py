@@ -14,7 +14,7 @@ from typing import (
     Union,
 )
 
-from src.data.attributes import (
+from src.attributes import (
     Attribute,
     Attributes,
     AttributeWithCaseExact,
@@ -30,7 +30,7 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.data.container import (
+from src.container import (
     AttrRep,
     BoundedAttrRep,
     Invalid,

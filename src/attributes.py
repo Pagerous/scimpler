@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 import precis_i18n.profile
 from precis_i18n import get_profile
 
-from src.data.container import (
+from src.container import (
     AttrRep,
     BoundedAttrRep,
     Invalid,
@@ -34,7 +34,7 @@ from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.registry import resource_schemas
 
 if TYPE_CHECKING:
-    from src.data.path import PatchPath
+    from src.path import PatchPath
 
 
 class AttributeMutability(str, Enum):

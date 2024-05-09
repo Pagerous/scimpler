@@ -1,6 +1,6 @@
 import pytest
 
-from src.data.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 
 
 @pytest.mark.parametrize(

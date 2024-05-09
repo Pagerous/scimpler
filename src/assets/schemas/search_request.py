@@ -2,9 +2,9 @@ from typing import Any, List
 
 from src.assets.config import ServiceProviderConfig
 from src.attributes_presence import AttributePresenceChecker
-from src.data.attributes import Integer, String
-from src.data.container import BoundedAttrRep, Missing, SCIMDataContainer
-from src.data.schemas import BaseSchema
+from src.attributes import Integer, String
+from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
 from src.sorter import Sorter
