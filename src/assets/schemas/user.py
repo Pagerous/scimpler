@@ -105,6 +105,10 @@ def _validate_country(value: str) -> ValidationIssues:
     return issues
 
 
+def _process_ims_value(value: str) -> str:
+    return re.sub(r"\s", "", value.lower())
+
+
 class _User(ResourceSchema):
     def __init__(self):
         super().__init__(
@@ -358,6 +362,8 @@ class _User(ResourceSchema):
                         String(
                             name="value",
                             description="Instant messaging addresses for the User.",
+                            deserializer=_process_ims_value,
+                            serializer=_process_ims_value,
                         ),
                         String(
                             name="type",

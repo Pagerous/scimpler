@@ -118,3 +118,11 @@ def test_warning_is_raised_if_nickname_equals_username(user_data_client):
     issues = User.validate(user_data_client)
 
     assert issues.to_dict() == expected_issues
+
+
+def test_ims_value_is_canonicalized(user_data_client):
+    user_data_client["ims"][0]["value"] = "Gadu Gadu"
+
+    data = User.deserialize(user_data_client)
+
+    assert data.get("ims")[0].get("value") == "gadugadu"
