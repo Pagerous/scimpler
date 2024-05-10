@@ -109,3 +109,12 @@ def test_country_is_not_validated_if_not_specified_validated(user_data_client):
     issues = User.validate(user_data_client)
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_warning_is_raised_if_nickname_equals_username(user_data_client):
+    user_data_client["nickName"] = user_data_client["userName"]
+    expected_issues = {"nickName": {"_warnings": [{"code": 5}]}}
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == expected_issues

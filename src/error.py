@@ -320,6 +320,7 @@ class ValidationWarning:
         2: "multi-valued complex attribute should contain no more than once type-value pair",
         3: "unexpected content, {reason}",
         4: "missing",
+        5: "should be different than {than}",
     }
 
     def __init__(self, code: int, **context):
@@ -343,6 +344,10 @@ class ValidationWarning:
     @classmethod
     def missing(cls):
         return cls(code=4)
+
+    @classmethod
+    def should_be_different(cls, than: str):
+        return cls(code=5, than=than)
 
     @property
     def context(self) -> Dict:
