@@ -1,0 +1,2 @@
+class PySCIMUserWarning(UserWarning):
+    pass

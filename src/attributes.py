@@ -14,6 +14,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Set,
     Tuple,
     Type,
     Union,
@@ -714,7 +715,7 @@ class BoundedAttributes:
         self._extensions: Dict[str, BoundedAttributes] = {}
         self._attrs: Dict[Tuple[str, str], Attribute] = {}
         self._bounded_complex_sub_attrs: Dict[int, Dict[int, Attribute]] = {}
-        self._common_attrs = set(common_attrs or set())
+        self._common_attrs = {item.lower() for item in common_attrs or set()}
         self._extension = extension
         self._extension_required = extension_required
 
@@ -762,7 +763,7 @@ class BoundedAttributes:
             )
             self._attrs[bounded_attr.rep.schema, bounded_attr.rep.attr] = bounded_attr
 
-            if bounded_attr.rep.attr not in self._common_attrs:
+            if bounded_attr.rep.attr.lower() not in self._common_attrs:
                 self._core_attrs.append(bounded_attr)
 
             if isinstance(bounded_attr, Complex):

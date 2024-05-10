@@ -1,5 +1,6 @@
 import abc
 import copy
+import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 from src.attributes import (
@@ -15,8 +16,9 @@ from src.attributes import (
     String,
     URIReference,
 )
-from src.container import Invalid, Missing, SCIMDataContainer
+from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
+from src.wanings import PySCIMUserWarning
 
 
 def bulk_id_validator(value) -> ValidationIssues:
@@ -245,6 +247,7 @@ class ResourceSchema(BaseResourceSchema):
         endpoint: Optional[str] = None,
         attrs: Optional[Iterable[Attribute]] = None,
     ):
+        self._common_attrs = ["id", "externalid", "meta"]
         super().__init__(
             name=name,
             schema=schema,
@@ -266,7 +269,7 @@ class ResourceSchema(BaseResourceSchema):
                 ),
                 *(attrs or []),
             ],
-            common_attrs=["id", "externalId", "meta"],
+            common_attrs=self._common_attrs,
         )
         self._schema_extensions: Dict[str, Dict] = {}
         self._plural_name = plural_name or name
@@ -318,6 +321,19 @@ class ResourceSchema(BaseResourceSchema):
             "extension": extension,
             "required": required,
         }
+        for attr in extension.attrs:
+            if (
+                self.attrs.get(BoundedAttrRep(schema=self.schema, attr=attr.rep.attr)) is not None
+                or attr.rep.attr.lower() in self._common_attrs
+            ):
+                warnings.warn(
+                    message=(
+                        f"Resource extension {extension.name!r} defines {attr.rep.attr!r} "
+                        f"attribute, which is also present in base {self.name!r} schema."
+                    ),
+                    category=PySCIMUserWarning,
+                )
+
         self._attrs.extend(extension.attrs, extension.schema, required)
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
