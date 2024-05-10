@@ -8,13 +8,7 @@ from src.attributes import (
     BoundedAttributes,
     Complex,
 )
-from src.container import (
-    AttrRep,
-    BoundedAttrRep,
-    Invalid,
-    Missing,
-    SCIMDataContainer,
-)
+from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 
 TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])

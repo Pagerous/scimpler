@@ -9,8 +9,8 @@ from src.attributes import (
     Unknown,
 )
 from src.container import Missing, SCIMDataContainer
-from src.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 from src.error import ValidationError, ValidationIssues, ValidationWarning
+from src.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 
 
 def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:

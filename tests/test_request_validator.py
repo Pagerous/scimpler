@@ -8,9 +8,9 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.filter import Filter
 from src.operator import Present
 from src.path import PatchPath
-from src.filter import Filter
 from src.request_validator import (
     BulkOperations,
     Error,

@@ -30,13 +30,7 @@ from src.attributes import (
     String,
     URIReference,
 )
-from src.container import (
-    AttrRep,
-    BoundedAttrRep,
-    Invalid,
-    Missing,
-    SCIMDataContainer,
-)
+from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.registry import converters
 
 

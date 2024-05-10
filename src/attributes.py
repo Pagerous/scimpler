@@ -23,13 +23,7 @@ from urllib.parse import urlparse
 import precis_i18n.profile
 from precis_i18n import get_profile
 
-from src.container import (
-    AttrRep,
-    BoundedAttrRep,
-    Invalid,
-    Missing,
-    SCIMDataContainer,
-)
+from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.registry import resource_schemas
 

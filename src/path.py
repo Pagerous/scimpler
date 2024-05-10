@@ -1,9 +1,9 @@
 from typing import Any, Dict, Optional
 
 from src.container import AttrRep, BoundedAttrRep
-from src.operator import ComplexAttributeOperator
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
+from src.operator import ComplexAttributeOperator
 from src.utils import decode_placeholders, encode_strings
 
 

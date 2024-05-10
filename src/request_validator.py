@@ -6,13 +6,13 @@ from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import get_search_request_schema
-from src.attributes_presence import AttributePresenceChecker
 from src.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
+from src.attributes_presence import AttributePresenceChecker
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
-from src.path import PatchPath
-from src.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.filter import Filter
+from src.path import PatchPath
+from src.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.sorter import Sorter
 
 

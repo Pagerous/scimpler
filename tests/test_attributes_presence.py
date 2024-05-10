@@ -1,6 +1,6 @@
 from src.assets.schemas.user import User
-from src.attributes_presence import AttributePresenceChecker
 from src.attributes import Integer
+from src.attributes_presence import AttributePresenceChecker
 from src.container import BoundedAttrRep, SCIMDataContainer
 from src.schemas import ResourceSchema, SchemaExtension
 

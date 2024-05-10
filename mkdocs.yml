@@ -1,0 +1,5 @@
+site_name: PySCIM
+nav:
+  - Home: index.md
+  - About: about.md
+theme: readthedocs

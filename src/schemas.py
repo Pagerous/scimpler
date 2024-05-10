@@ -29,42 +29,6 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-meta = Complex(
-    name="meta",
-    issuer=AttributeIssuer.SERVER,
-    mutability=AttributeMutability.READ_ONLY,
-    sub_attributes=[
-        String(
-            name="resourceType",
-            case_exact=True,
-            issuer=AttributeIssuer.SERVER,
-            mutability=AttributeMutability.READ_ONLY,
-        ),
-        DateTime(
-            name="created",
-            issuer=AttributeIssuer.SERVER,
-            mutability=AttributeMutability.READ_ONLY,
-        ),
-        DateTime(
-            name="lastModified",
-            issuer=AttributeIssuer.SERVER,
-            mutability=AttributeMutability.READ_ONLY,
-        ),
-        URIReference(
-            name="location",
-            issuer=AttributeIssuer.SERVER,
-            mutability=AttributeMutability.READ_ONLY,
-        ),
-        String(
-            name="version",
-            issuer=AttributeIssuer.SERVER,
-            case_exact=True,
-            mutability=AttributeMutability.READ_ONLY,
-        ),
-    ],
-)
-
-
 class BaseSchema(abc.ABC):
     def __init__(
         self,
@@ -217,7 +181,43 @@ def validate_resource_type_consistency(
 class BaseResourceSchema(BaseSchema):
     def __init__(self, name: str, endpoint: str = "", **kwargs):
         attrs = kwargs.pop("attrs", [])
-        attrs = [meta, *attrs]
+        attrs = [
+            Complex(
+                name="meta",
+                issuer=AttributeIssuer.SERVER,
+                mutability=AttributeMutability.READ_ONLY,
+                sub_attributes=[
+                    String(
+                        name="resourceType",
+                        case_exact=True,
+                        issuer=AttributeIssuer.SERVER,
+                        mutability=AttributeMutability.READ_ONLY,
+                    ),
+                    DateTime(
+                        name="created",
+                        issuer=AttributeIssuer.SERVER,
+                        mutability=AttributeMutability.READ_ONLY,
+                    ),
+                    DateTime(
+                        name="lastModified",
+                        issuer=AttributeIssuer.SERVER,
+                        mutability=AttributeMutability.READ_ONLY,
+                    ),
+                    URIReference(
+                        name="location",
+                        issuer=AttributeIssuer.SERVER,
+                        mutability=AttributeMutability.READ_ONLY,
+                    ),
+                    String(
+                        name="version",
+                        issuer=AttributeIssuer.SERVER,
+                        case_exact=True,
+                        mutability=AttributeMutability.READ_ONLY,
+                    ),
+                ],
+            ),
+            *attrs,
+        ]
         super().__init__(attrs=attrs, **kwargs)
         self._name = name
         self._endpoint = endpoint or f"/{self._name}"
@@ -263,8 +263,6 @@ class ResourceSchema(BaseResourceSchema):
                     name="externalId",
                     issuer=AttributeIssuer.CLIENT,
                     case_exact=True,
-                    mutability=AttributeMutability.READ_WRITE,
-                    returned=AttributeReturn.DEFAULT,
                 ),
                 *(attrs or []),
             ],

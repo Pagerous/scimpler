@@ -3,9 +3,9 @@ from typing import Optional
 import pytest
 
 from src.container import AttrRep, BoundedAttrRep
+from src.filter import Filter
 from src.operator import ComplexAttributeOperator, Equal
 from src.path import PatchPath
-from src.filter import Filter
 
 
 @pytest.mark.parametrize(

@@ -17,8 +17,8 @@ from src.attributes import (
     String,
     URIReference,
 )
-from src.schemas import ResourceSchema, SchemaExtension
 from src.error import ValidationError, ValidationIssues, ValidationWarning
+from src.schemas import ResourceSchema, SchemaExtension
 
 _ACCEPT_LANGUAGE_REGEX = re.compile(
     r"\s*([a-z]{2})(?:-[A-Z]{2})?(?:\s*;q=([0-9]\.[0-9]))?(?:\s*,|$)"

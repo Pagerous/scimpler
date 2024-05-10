@@ -1,16 +1,10 @@
 import pytest
 
 from src.assets.schemas import User, patch_op, user
-from src.container import (
-    AttrRep,
-    BoundedAttrRep,
-    Invalid,
-    Missing,
-    SCIMDataContainer,
-)
+from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.filter import Filter
 from src.operator import ComplexAttributeOperator, Equal
 from src.path import PatchPath
-from src.filter import Filter
 from tests.conftest import SchemaForTests
 
 
