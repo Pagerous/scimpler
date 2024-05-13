@@ -18,7 +18,7 @@ from src.attributes import (
 )
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
-from src.wanings import PySCIMUserWarning
+from src.wanings import ScimpleUserWarning
 
 
 def bulk_id_validator(value) -> ValidationIssues:
@@ -331,7 +331,7 @@ class ResourceSchema(BaseResourceSchema):
                         f"Resource extension {extension.name!r} defines {attr.rep.attr!r} "
                         f"attribute, which is also present in base {self.name!r} schema."
                     ),
-                    category=PySCIMUserWarning,
+                    category=ScimpleUserWarning,
                 )
 
         self._attrs.extend(extension.attrs, extension.schema, required)

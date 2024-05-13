@@ -1,2 +1,2 @@
-class PySCIMUserWarning(UserWarning):
+class ScimpleUserWarning(UserWarning):
     pass

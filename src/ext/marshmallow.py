@@ -90,25 +90,25 @@ def _apply_validator_on_schema(schema, validator: Validator):
 
 
 def response_serializer(validator: Validator):
-    pyscim_schema = validator.response_schema
-    if isinstance(pyscim_schema, ListResponse) and len(pyscim_schema.contained_schemas) == 1:
+    scimple_schema = validator.response_schema
+    if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:
         base_fields = _get_fields(
-            pyscim_schema.attrs.core_attrs,
+            scimple_schema.attrs.core_attrs,
             field_by_attr_name={
-                pyscim_schema.attrs.resources.rep.attr: fields.List(
-                    fields.Nested(_get_fields(pyscim_schema.contained_schemas[0].attrs)),
-                    **_get_kwargs(pyscim_schema.attrs.resources),
+                scimple_schema.attrs.resources.rep.attr: fields.List(
+                    fields.Nested(_get_fields(scimple_schema.contained_schemas[0].attrs)),
+                    **_get_kwargs(scimple_schema.attrs.resources),
                 )
             },
         )
     else:
-        base_fields = _get_fields(pyscim_schema.attrs.core_attrs)
+        base_fields = _get_fields(scimple_schema.attrs.core_attrs)
     extension_fields = {
         extension_name: fields.Nested(_get_fields(attrs))
-        for extension_name, attrs in pyscim_schema.attrs.extensions.items()
+        for extension_name, attrs in scimple_schema.attrs.extensions.items()
     }
     schema = Schema.from_dict(
         fields={**base_fields, **extension_fields},
-        name=pyscim_schema.__class__.__name__,
+        name=scimple_schema.__class__.__name__,
     )
     return _apply_validator_on_schema(schema, validator)
