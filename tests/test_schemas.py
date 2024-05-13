@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from src.assets.schemas import user
+from src.assets.schemas import user, User
 from src.schemas import (
     ResourceSchema,
     SchemaExtension,
@@ -130,3 +130,9 @@ def test_adding_same_schema_extension_to_resource_fails():
         match="schema 'my:schema:extension' already in 'MyResource' resource",
     ):
         schema.extend(extension)
+
+
+def test_schema_can_be_cloned_with_attr_filter_specified():
+    schema = User.clone(attr_filter=lambda attr: attr.rep.attr in ["id", "userName"])
+
+    assert len(list(schema.attrs)) == 2
