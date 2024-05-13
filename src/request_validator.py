@@ -666,7 +666,7 @@ def _validate_resources_get_response(
     resource_schemas = schema.get_schemas_for_resources(resources)
     if filter_ is not None:
         issues.merge(
-            issues=validate_resources_filtered(resources, filter_, resource_schemas, False),
+            issues=validate_resources_filtered(resources, filter_, resource_schemas),
             location=resources_location,
         )
     if sorter is not None:

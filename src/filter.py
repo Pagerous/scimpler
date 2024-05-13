@@ -5,6 +5,12 @@ from typing import TYPE_CHECKING, Any, Dict, List, Tuple, TypeAlias, Union
 from src import operator as op
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
+from src.registry import (
+    binary_operators,
+    register_binary_operator,
+    register_unary_operator,
+    unary_operators,
+)
 from src.utils import (
     OP_REGEX,
     decode_placeholders,
@@ -22,34 +28,6 @@ AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
 NOT_LOGICAL_OPERATOR_REGEX = re.compile(r"\s*\bnot\b\s*(.*)", flags=re.DOTALL)
 COMPLEX_OPERATOR_REGEX = re.compile(r"([\w:.]+)\[(.*?)]", flags=re.DOTALL)
 GROUP_OPERATOR_REGEX = re.compile(r"\((?:[^()]|\([^()]*\))*\)", flags=re.DOTALL)
-
-_UNARY_ATTR_OPERATORS = {
-    "pr": op.Present,
-}
-
-_BINARY_ATTR_OPERATORS = {
-    "eq": op.Equal,
-    "ne": op.NotEqual,
-    "co": op.Contains,
-    "sw": op.StartsWith,
-    "ew": op.EndsWith,
-    "gt": op.GreaterThan,
-    "ge": op.GreaterThanOrEqual,
-    "lt": op.LesserThan,
-    "le": op.LesserThanOrEqual,
-}
-
-_ALLOWED_VALUE_TYPES_FOR_BINARY_OPERATORS = {
-    op.Equal: {int, float, str, bool, type(None)},
-    op.NotEqual: {int, float, str, bool, type(None)},
-    op.Contains: {str},
-    op.StartsWith: {str},
-    op.EndsWith: {str},
-    op.GreaterThan: {str, int, float},
-    op.GreaterThanOrEqual: {str, int, float},
-    op.LesserThan: {str, int, float},
-    op.LesserThanOrEqual: {str, int, float},
-}
 
 _AllowedOperandValues: TypeAlias = Union[str, bool, int, float, None]
 
@@ -325,9 +303,9 @@ class Filter:
         components = OP_REGEX.split(attr_exp)
         if len(components) == 2:
             op_exp = components[1].lower()
-            op_ = _UNARY_ATTR_OPERATORS.get(op_exp)
+            op_ = unary_operators.get(op_exp)
             if op_ is None:
-                if op_exp in _BINARY_ATTR_OPERATORS:
+                if op_exp in binary_operators:
                     issues.add_error(
                         issue=ValidationError.missing_operand_for_operator(
                             operator=op_exp,
@@ -349,7 +327,7 @@ class Filter:
             return issues
 
         elif len(components) == 3:
-            op_ = _BINARY_ATTR_OPERATORS.get(components[1].lower())
+            op_ = binary_operators.get(components[1].lower())
             if op_ is None:
                 issues.add_error(
                     issue=ValidationError.unknown_operator(
@@ -376,7 +354,7 @@ class Filter:
             if not issues.can_proceed():
                 return issues
 
-            if type(value) not in _ALLOWED_VALUE_TYPES_FOR_BINARY_OPERATORS[op_]:
+            if type(value) not in op_.SUPPORTED_TYPES:
                 issues.add_error(
                     issue=ValidationError.non_compatible_comparison_value(value, op_.SCIM_OP),
                     proceed=False,
@@ -520,7 +498,7 @@ class Filter:
 
         if len(components) == 2:
             op_exp = components[1].lower()
-            op_ = _UNARY_ATTR_OPERATORS[op_exp]
+            op_ = unary_operators[op_exp]
             attr_rep = BoundedAttrRep.deserialize(components[0])
             if complex_group:
                 attr_rep = AttrRep(attr_rep.sub_attr or attr_rep.attr)
@@ -530,7 +508,7 @@ class Filter:
                     sub_operator=op_(AttrRep(attr=attr_rep.sub_attr)),
                 )
             return op_(attr_rep)
-        op_ = _BINARY_ATTR_OPERATORS.get(components[1].lower())
+        op_ = binary_operators.get(components[1].lower())
         value = deserialize_comparison_value(decode_placeholders(components[2], placeholders))
 
         attr_rep = BoundedAttrRep.deserialize(components[0])
@@ -592,3 +570,15 @@ class Filter:
                 ],
             }
         raise TypeError(f"unsupported filter type '{type(operator).__name__}'")
+
+
+register_unary_operator(op.Present)
+register_binary_operator(op.Equal)
+register_binary_operator(op.NotEqual)
+register_binary_operator(op.Contains)
+register_binary_operator(op.StartsWith)
+register_binary_operator(op.EndsWith)
+register_binary_operator(op.GreaterThan)
+register_binary_operator(op.GreaterThanOrEqual)
+register_binary_operator(op.LesserThan)
+register_binary_operator(op.LesserThanOrEqual)

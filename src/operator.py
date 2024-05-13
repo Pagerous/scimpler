@@ -18,17 +18,9 @@ from src.attributes import (
     Attribute,
     Attributes,
     AttributeWithCaseExact,
-    Binary,
-    Boolean,
     BoundedAttributes,
     Complex,
-    DateTime,
-    Decimal,
-    ExternalReference,
-    Integer,
-    SCIMReference,
     String,
-    URIReference,
 )
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.registry import converters
@@ -219,8 +211,10 @@ class AttributeOperator(abc.ABC):
         ...
 
 
-class Present(AttributeOperator):
-    SCIM_OP = "pr"
+class UnaryAttributeOperator(AttributeOperator, abc.ABC):
+    SUPPORTED_SCIM_TYPES: Set[str]
+    SUPPORTED_TYPES: Set[Type]
+    OPERATOR: Callable[[Any], bool]
 
     def match(
         self,
@@ -232,18 +226,44 @@ class Present(AttributeOperator):
         if attr is None:
             return MatchResult.failed_no_attr()
 
-        if isinstance(attr, Complex):
+        if attr.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
+            return MatchResult.failed()
+
+        if attr.multi_valued:
             if isinstance(value, List):
-                match = any([item.get("value") for item in value])
+                match = any(
+                    [self.OPERATOR(item) for item in value if type(item) in self.SUPPORTED_TYPES]
+                )
             else:
                 match = False
-        elif isinstance(value, List):
-            match = any([bool(item) for item in value])
-        elif isinstance(value, str):
-            match = bool(value)
         else:
-            match = value not in [None, Missing, Invalid]
+            match = self.OPERATOR(value)
+
         return MatchResult.passed() if match else MatchResult.failed()
+
+
+def _pr_operator(value):
+    if isinstance(value, dict):
+        return any([_pr_operator(val) for val in value.values()])
+    if isinstance(value, str):
+        return value != ""
+    return value not in [None, Missing]
+
+
+class Present(UnaryAttributeOperator):
+    SCIM_OP = "pr"
+    SUPPORTED_SCIM_TYPES = {
+        "string",
+        "decimal",
+        "dateTime",
+        "reference",
+        "boolean",
+        "binary",
+        "integer",
+        "complex",
+    }
+    SUPPORTED_TYPES = {str, bool, int, dict, float, type(None)}
+    OPERATOR = staticmethod(_pr_operator)
 
 
 T2 = TypeVar("T2")
@@ -308,7 +328,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
             if isinstance(op_value, str):
                 op_value = op_value.lower()
-            return [(item.lower(), op_value) if isinstance(item, str) else item for item in value]
+            return [(item.lower() if isinstance(item, str) else item, op_value) for item in value]
 
         op_value = convert(op_value)
         return [(item, op_value) for item in value]
@@ -333,12 +353,13 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if values is None:
             return MatchResult.failed()
 
-        try:
-            for attr_value, op_value in values:
+        for attr_value, op_value in values:
+            try:
                 if self.OPERATOR(attr_value, op_value):
                     return MatchResult.passed()
-        except TypeError:
-            return MatchResult.failed()
+            except TypeError:
+                pass
+
         return MatchResult.failed()
 
 
@@ -346,48 +367,38 @@ class Equal(BinaryAttributeOperator):
     SCIM_OP = "eq"
     OPERATOR = operator.eq
     SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        Decimal.SCIM_NAME,
-        DateTime.SCIM_NAME,
-        ExternalReference.SCIM_NAME,
-        URIReference.SCIM_NAME,
-        SCIMReference.SCIM_NAME,
-        Boolean.SCIM_NAME,
-        Binary.SCIM_NAME,
-        Integer.SCIM_NAME,
-        Complex.SCIM_NAME,
+        "string",
+        "decimal",
+        "dateTime",
+        "reference",
+        "boolean",
+        "binary",
+        "integer",
+        "complex",
     }
-    SUPPORTED_TYPES = {str, bool, int, dict, float, type(None)}
+    SUPPORTED_TYPES = {str, bool, int, float, type(None)}
 
 
 class NotEqual(BinaryAttributeOperator):
     SCIM_OP = "ne"
     OPERATOR = operator.ne
     SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        Decimal.SCIM_NAME,
-        DateTime.SCIM_NAME,
-        ExternalReference.SCIM_NAME,
-        URIReference.SCIM_NAME,
-        SCIMReference.SCIM_NAME,
-        Boolean.SCIM_NAME,
-        Binary.SCIM_NAME,
-        Integer.SCIM_NAME,
-        Complex.SCIM_NAME,
+        "string",
+        "decimal",
+        "dateTime",
+        "reference",
+        "boolean",
+        "binary",
+        "integer",
+        "complex",
     }
-    SUPPORTED_TYPES = {str, bool, int, dict, float, type(None)}
+    SUPPORTED_TYPES = {str, bool, int, float, type(None)}
 
 
 class Contains(BinaryAttributeOperator):
     SCIM_OP = "co"
     OPERATOR = operator.contains
-    SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        URIReference.SCIM_NAME,
-        SCIMReference.SCIM_NAME,
-        ExternalReference.SCIM_NAME,
-        Complex.SCIM_NAME,
-    }
+    SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
     SUPPORTED_TYPES = {str, float}
 
 
@@ -398,13 +409,7 @@ class StartsWith(BinaryAttributeOperator):
 
     SCIM_OP = "sw"
     OPERATOR = _starts_with
-    SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        URIReference.SCIM_NAME,
-        SCIMReference.SCIM_NAME,
-        ExternalReference.SCIM_NAME,
-        Complex.SCIM_NAME,
-    }
+    SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
     SUPPORTED_TYPES = {str, float}
 
 
@@ -415,66 +420,36 @@ class EndsWith(BinaryAttributeOperator):
 
     SCIM_OP = "ew"
     OPERATOR = _ends_with
-    SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        URIReference.SCIM_NAME,
-        SCIMReference.SCIM_NAME,
-        ExternalReference.SCIM_NAME,
-        Complex.SCIM_NAME,
-    }
+    SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
     SUPPORTED_TYPES = {str, float}
 
 
 class GreaterThan(BinaryAttributeOperator):
     SCIM_OP = "gt"
     OPERATOR = operator.gt
-    SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        DateTime.SCIM_NAME,
-        Integer.SCIM_NAME,
-        Decimal.SCIM_NAME,
-        Complex.SCIM_NAME,
-    }
-    SUPPORTED_TYPES = {str, float, int, dict}
+    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
+    SUPPORTED_TYPES = {str, float, int}
 
 
 class GreaterThanOrEqual(BinaryAttributeOperator):
     SCIM_OP = "ge"
     OPERATOR = operator.ge
-    SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        DateTime.SCIM_NAME,
-        Integer.SCIM_NAME,
-        Decimal.SCIM_NAME,
-        Complex.SCIM_NAME,
-    }
-    SUPPORTED_TYPES = {str, float, int, dict}
+    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
+    SUPPORTED_TYPES = {str, float, int}
 
 
 class LesserThan(BinaryAttributeOperator):
     SCIM_OP = "lt"
     OPERATOR = operator.lt
-    SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        DateTime.SCIM_NAME,
-        Integer.SCIM_NAME,
-        Decimal.SCIM_NAME,
-        Complex.SCIM_NAME,
-    }
-    SUPPORTED_TYPES = {str, float, int, dict}
+    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
+    SUPPORTED_TYPES = {str, float, int}
 
 
 class LesserThanOrEqual(BinaryAttributeOperator):
     SCIM_OP = "le"
     OPERATOR = operator.le
-    SUPPORTED_SCIM_TYPES = {
-        String.SCIM_NAME,
-        DateTime.SCIM_NAME,
-        Integer.SCIM_NAME,
-        Decimal.SCIM_NAME,
-        Complex.SCIM_NAME,
-    }
-    SUPPORTED_TYPES = {str, float, int, dict}
+    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
+    SUPPORTED_TYPES = {str, float, int}
 
 
 TComplexAttributeSubOperator = TypeVar(

@@ -468,7 +468,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
                 "value": "abc",
             },
             BoundedAttrRep(attr="c"),
-            False,  # only multivalued complex attributes can be matched
+            True,
         ),
         (
             [

@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict
+from typing import TYPE_CHECKING, Any, Callable, Dict, Type
 
 if TYPE_CHECKING:
+    from src.operator import BinaryAttributeOperator, UnaryAttributeOperator
     from src.schemas import ResourceSchema
 
 
@@ -31,3 +32,21 @@ def register_converter(scim_type: str, converter: TypeConverter) -> None:
         raise RuntimeError(f"converter for {scim_type!r} already registered")
 
     converters[scim_type] = converter
+
+
+unary_operators = {}
+binary_operators = {}
+
+
+def register_unary_operator(operator: Type["UnaryAttributeOperator"]):
+    if operator.SCIM_OP in unary_operators:
+        raise RuntimeError(f"unary operator {operator.SCIM_OP!r} already registered")
+
+    unary_operators[operator.SCIM_OP] = operator
+
+
+def register_binary_operator(operator: Type["BinaryAttributeOperator"]):
+    if operator.SCIM_OP in binary_operators:
+        raise RuntimeError(f"binary operator {operator.SCIM_OP!r} already registered")
+
+    binary_operators[operator.SCIM_OP] = operator
