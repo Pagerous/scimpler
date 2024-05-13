@@ -94,7 +94,6 @@ class LogicalOperator(abc.ABC):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         ...
 
@@ -116,13 +115,12 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         self,
         value: SCIMDataContainer,
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> Generator[MatchResult, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
-                yield sub_operator.match(value, attrs, strict)
+                yield sub_operator.match(value, attrs)
             else:
-                yield sub_operator.match(value.get(sub_operator.attr_rep), attrs, strict)
+                yield sub_operator.match(value.get(sub_operator.attr_rep), attrs)
 
 
 class And(MultiOperandLogicalOperator):
@@ -132,11 +130,10 @@ class And(MultiOperandLogicalOperator):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         value = value or {}
         missing_data = False
-        for match in self._collect_matches(value, attrs, strict):
+        for match in self._collect_matches(value, attrs):
             if match.status == MatchStatus.FAILED:
                 return MatchResult.failed()
             if match.status == MatchStatus.MISSING_DATA:
@@ -153,11 +150,10 @@ class Or(MultiOperandLogicalOperator):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         value = value or {}
         missing_data = False
-        for match in self._collect_matches(value, attrs, strict):
+        for match in self._collect_matches(value, attrs):
             if match.status == MatchStatus.PASSED:
                 return MatchResult.passed()
             if match.status == MatchStatus.MISSING_DATA:
@@ -186,24 +182,17 @@ class Not(LogicalOperator):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         value = value or {}
         if isinstance(self._sub_operator, LogicalOperator):
-            match = self._sub_operator.match(value, attrs, strict=True)
+            match = self._sub_operator.match(value, attrs)
             if match.status == MatchStatus.MISSING_DATA:
-                if strict:
-                    return MatchResult.failed()
-                return MatchResult.passed()
+                return MatchResult.failed()
             if match.status == MatchStatus.FAILED:
                 return MatchResult.passed()
             return MatchResult.failed()
-        match = self._sub_operator.match(value.get(self._sub_operator.attr_rep), attrs, strict=True)
-        if (
-            match.status == MatchStatus.FAILED
-            or not strict
-            and match.status == MatchStatus.MISSING_DATA
-        ):
+        match = self._sub_operator.match(value.get(self._sub_operator.attr_rep), attrs)
+        if match.status == MatchStatus.FAILED:
             return MatchResult.passed()
         return MatchResult.failed()
 
@@ -226,7 +215,6 @@ class AttributeOperator(abc.ABC):
         self,
         value: Any,
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         ...
 
@@ -238,7 +226,6 @@ class Present(AttributeOperator):
         self,
         value: Any,
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
@@ -330,7 +317,6 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         self,
         value: Any,
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
@@ -338,8 +324,6 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             return MatchResult.failed_no_attr()
 
         if value in [None, Missing]:
-            if not strict:
-                return MatchResult.passed()
             return MatchResult.missing_data()
         elif value is Invalid:
             return MatchResult.failed()
@@ -519,7 +503,6 @@ class ComplexAttributeOperator:
         self,
         value: Optional[Union[List[SCIMDataContainer], SCIMDataContainer]],
         attrs: Union[Attributes, BoundedAttributes],
-        strict: bool = True,
     ) -> MatchResult:
         _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
@@ -539,28 +522,17 @@ class ComplexAttributeOperator:
             value = [value]
 
         if isinstance(self._sub_operator, AttributeOperator):
-            has_value = False
             for item in value:
                 item_value = item.get(self._sub_operator.attr_rep)
-                if item_value not in [None, Missing]:
-                    has_value = True
-                match = self._sub_operator.match(item_value, attr.attrs, strict)
+                match = self._sub_operator.match(item_value, attr.attrs)
                 if match.status == MatchStatus.PASSED:
                     return MatchResult.passed()
-            if not has_value and not strict:
-                return MatchResult.passed()
             return MatchResult.failed()
 
-        missing_data = False
         for item in value:
-            match = self._sub_operator.match(item, attr.attrs, strict)
+            match = self._sub_operator.match(item, attr.attrs)
             if match.status == MatchStatus.PASSED:
                 return MatchResult.passed()
-            if match.status == MatchStatus.MISSING_DATA:
-                missing_data = True
-
-        if missing_data and not strict:
-            return MatchResult.passed()
         return MatchResult.failed()
 
 

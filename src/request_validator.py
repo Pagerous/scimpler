@@ -574,11 +574,11 @@ def validate_start_index_consistency(
 
 
 def validate_resources_filtered(
-    resources: List[Any], filter_: Filter, resource_schemas: Sequence[ResourceSchema], strict: bool
+    resources: List[Any], filter_: Filter, resource_schemas: Sequence[ResourceSchema]
 ) -> ValidationIssues:
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
-        if not filter_(resource, schema, strict):
+        if not filter_(resource, schema):
             issues.add_error(
                 issue=ValidationError.included_resource_does_not_match_filter(),
                 proceed=True,

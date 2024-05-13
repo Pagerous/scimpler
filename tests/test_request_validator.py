@@ -284,7 +284,6 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
         resources=[SCIMDataContainer(r) for r in list_user_data["Resources"]],
         filter_=filter_,
         resource_schemas=[user.User, user.User],
-        strict=False,
     )
 
     assert issues.to_dict() == expected
@@ -313,7 +312,6 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
         resources=[SCIMDataContainer(r) for r in list_user_data["Resources"]],
         filter_=filter_,
         resource_schemas=[user.User, user.User],
-        strict=False,
     )
 
     assert issues.to_dict() == expected
@@ -340,7 +338,6 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
         resources=[SCIMDataContainer(r) for r in list_user_data["Resources"]],
         filter_=filter_,
         resource_schemas=[user.User, user.User],
-        strict=False,
     )
 
     assert issues.to_dict() == expected

@@ -397,7 +397,7 @@ class Filter:
     def deserialize(cls, filter_exp: str) -> "Filter":
         try:
             return cls._deserialize(filter_exp)
-        except Exception as e:
+        except Exception:
             raise ValueError("invalid filter expression")
 
     @classmethod
@@ -543,12 +543,10 @@ class Filter:
             )
         return op_(attr_rep, value)
 
-    def __call__(
-        self, data: SCIMDataContainer, schema: "BaseSchema", strict: bool = True
-    ) -> op.MatchResult:
+    def __call__(self, data: SCIMDataContainer, schema: "BaseSchema") -> op.MatchResult:
         if not isinstance(self._operator, op.LogicalOperator):
             data = data.get(self._operator.attr_rep)
-        return self._operator.match(data, schema.attrs, strict)
+        return self._operator.match(data, schema.attrs)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Filter):

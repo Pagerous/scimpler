@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from src.assets.schemas import user, User
+from src.assets.schemas import User, user
 from src.schemas import (
     ResourceSchema,
     SchemaExtension,

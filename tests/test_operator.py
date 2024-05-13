@@ -724,106 +724,71 @@ def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalue
     assert actual == expected
 
 
-def test_binary_op_returns_missing_data_if_no_value_provided_with_strict():
+def test_binary_op_returns_missing_data_if_no_value_provided():
     operator = Equal(BoundedAttrRep(attr="str"), "abc")
 
-    match = operator.match(None, SchemaForTests.attrs, True)
+    match = operator.match(None, SchemaForTests.attrs)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
-def test_binary_op_returns_matches_if_no_value_provided_without_strict():
-    operator = Equal(BoundedAttrRep(attr="str"), "abc")
-
-    match = operator.match(None, SchemaForTests.attrs, False)
-
-    assert match
-
-
-def test_complex_op_matches_if_sub_attr_value_not_provided_without_strict():
+def test_complex_op_does_not_matches_if_sub_attribute_not_provided():
     operator = ComplexAttributeOperator(
         attr_rep=BoundedAttrRep(attr="c"),
         sub_operator=Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, False)
-
-    assert match
-
-
-def test_complex_op_does_not_matches_if_sub_attribute_not_provided_with_strict():
-    operator = ComplexAttributeOperator(
-        attr_rep=BoundedAttrRep(attr="c"),
-        sub_operator=Equal(AttrRep(attr="str"), "abc"),
-    )
-
-    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, True)
+    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs)
 
     assert not match
 
 
-def test_or_op_returns_missing_data_if_no_sub_attr_matched_with_strict():
+def test_or_op_returns_missing_data_if_no_sub_attr_matched():
     operator = Or(
         Equal(BoundedAttrRep(attr="int"), 1),
         Equal(BoundedAttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs, True)
+    match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
-@pytest.mark.parametrize("strict", (True, False))
-def test_or_op_matches_if_any_sub_attr_matched(strict):
+def test_or_op_matches_if_any_sub_attr_matched():
     operator = Or(
         Equal(BoundedAttrRep(attr="int"), 1),
         Equal(BoundedAttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 1}), SchemaForTests.attrs, strict)
+    match = operator.match(SCIMDataContainer({"int": 1}), SchemaForTests.attrs)
 
     assert match
 
 
-def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data_with_strict():
+def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data():
     operator = And(
         Equal(BoundedAttrRep(attr="int"), 1),
         Equal(BoundedAttrRep(attr="str"), "abc"),
     )
     value = {"int": 1}  # value for this attr is correct, but missing 'str'
 
-    match = operator.match(SCIMDataContainer(value), SchemaForTests.attrs, True)
+    match = operator.match(SCIMDataContainer(value), SchemaForTests.attrs)
 
     assert match.status == MatchStatus.MISSING_DATA
 
 
-def test_and_op_does_not_match_if_any_sub_attr_does_not_match_with_strict():
+def test_and_op_does_not_match_if_any_sub_attr_does_not_match():
     operator = And(
         Equal(BoundedAttrRep(attr="int"), 1),
         Equal(BoundedAttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 1, "str": "cba"}), SchemaForTests.attrs, True)
+    match = operator.match(SCIMDataContainer({"int": 1, "str": "cba"}), SchemaForTests.attrs)
 
     assert not match
 
 
-def test_and_operator_matches_if_non_of_sub_attrs_fail_without_strict():
-    operator = And(
-        Equal(BoundedAttrRep(attr="int"), 1),
-        Equal(
-            BoundedAttrRep(attr="str"),
-            "abc",
-        ),
-    )
-    value = {"int": 1}  # value for this attr is correct, 'str' is missing, but no strict
-
-    match = operator.match(SCIMDataContainer(value), SchemaForTests.attrs, False)
-
-    assert match
-
-
-def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict():
+def test_not_op_does_not_match_for_missing_value_in_logical_sub_op():
     operator = Not(
         Or(
             Equal(BoundedAttrRep(attr="int"), 1),
@@ -831,36 +796,15 @@ def test_not_op_matches_for_missing_value_in_logical_sub_op_without_strict():
         ),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs, False)
-
-    assert match
-
-
-def test_not_op_does_not_match_for_missing_value_in_logical_sub_op_with_strict():
-    operator = Not(
-        Or(
-            Equal(BoundedAttrRep(attr="int"), 1),
-            Equal(BoundedAttrRep(attr="str"), "abc"),
-        ),
-    )
-
-    match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs, True)
+    match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs)
 
     assert not match
 
 
-def test_not_op_matches_for_missing_value_in_attr_sub_op_without_strict():
+def test_not_op_does_not_match_for_missing_value_in_attr_sub_op():
     operator = Not(Equal(BoundedAttrRep(attr="int"), 1))
 
-    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, False)
-
-    assert match
-
-
-def test_not_op_does_not_match_for_missing_value_in_attr_sub_op_with_strict():
-    operator = Not(Equal(BoundedAttrRep(attr="int"), 1))
-
-    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, True)
+    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs)
 
     assert not match
 
@@ -873,31 +817,28 @@ def test_not_op_does_not_match_if_op_attr_not_in_attrs():
     assert not match
 
 
-@pytest.mark.parametrize("strict", (True, False))
-def test_not_op_matches_if_no_data_for_pr_sub_op_with_strict(strict):
+def test_not_op_matches_if_no_data_for_pr_sub_op():
     operator = Not(Present(BoundedAttrRep(attr="int")))
 
-    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, strict)
+    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs)
 
     assert match
 
 
-@pytest.mark.parametrize("strict", (True, False))
 @pytest.mark.parametrize(("value", "expected"), ((1.0, True), (2.0, False)))
-def test_binary_attributes_allows_to_compare_int_with_decimal(strict, value, expected):
+def test_binary_attributes_allows_to_compare_int_with_decimal(value, expected):
     operator = Equal(BoundedAttrRep(attr="decimal"), 1)
 
-    match = operator.match(value, SchemaForTests.attrs, strict)
+    match = operator.match(value, SchemaForTests.attrs)
 
     assert bool(match) is expected
 
 
-@pytest.mark.parametrize("strict", (True, False))
 @pytest.mark.parametrize(("value", "expected"), ((1, True), (2, False)))
-def test_binary_attributes_allows_to_compare_decimal_with_int(strict, value, expected):
+def test_binary_attributes_allows_to_compare_decimal_with_int(value, expected):
     operator = Equal(BoundedAttrRep(attr="int"), 1.0)
 
-    match = operator.match(value, SchemaForTests.attrs, strict)
+    match = operator.match(value, SchemaForTests.attrs)
 
     assert bool(match) is expected
 
@@ -933,17 +874,6 @@ def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided():
     match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs)
 
     assert not match
-
-
-def test_complex_op_used_with_or_op_matches_if_no_values_provided_without_strict():
-    operator = ComplexAttributeOperator(
-        attr_rep=BoundedAttrRep(attr="c2"),
-        sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
-    )
-
-    match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs, False)
-
-    assert match
 
 
 def test_multivalued_complex_op_can_be_used_with_logical_op():
