@@ -521,7 +521,12 @@ class Filter:
             )
         return op_(attr_rep, value)
 
-    def __call__(self, data: SCIMDataContainer, schema: "BaseSchema") -> op.MatchResult:
+    def __call__(
+        self, data: Union[SCIMDataContainer, Dict], schema: "BaseSchema"
+    ) -> op.MatchResult:
+        if isinstance(data, dict):
+            data = SCIMDataContainer(data)
+
         if not isinstance(self._operator, op.LogicalOperator):
             data = data.get(self._operator.attr_rep)
         return self._operator.match(data, schema.attrs)

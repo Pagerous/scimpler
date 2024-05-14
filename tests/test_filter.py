@@ -1,6 +1,11 @@
+import re
+
 import pytest
 
+from src.assets.schemas import User
 from src.filter import Filter
+from src.operator import BinaryAttributeOperator, UnaryAttributeOperator
+from src.registry import register_binary_operator, register_unary_operator
 
 
 @pytest.mark.parametrize(
@@ -2428,3 +2433,33 @@ def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, exp
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+
+
+def test_binary_operator_can_be_registered():
+    class Regex(BinaryAttributeOperator):
+        SCIM_OP = "re"
+        SUPPORTED_SCIM_TYPES = {"string"}
+        SUPPORTED_TYPES = {str}
+        OPERATOR = staticmethod(lambda attr_value, op_value: re.fullmatch(op_value, attr_value))
+
+    register_binary_operator(Regex)
+
+    filter_ = Filter.deserialize("userName re 'super\\d{4}user'")
+
+    assert filter_({"userName": "super4132user"}, User)
+    assert not filter_({"userName": "super413user"}, User)
+
+
+def test_unary_operator_can_be_registered():
+    class IsNice(UnaryAttributeOperator):
+        SCIM_OP = "isNice"
+        SUPPORTED_SCIM_TYPES = {"string"}
+        SUPPORTED_TYPES = {str}
+        OPERATOR = staticmethod(lambda attr_value: attr_value == "Nice")
+
+    register_unary_operator(IsNice)
+
+    filter_ = Filter.deserialize("userName isNice")
+
+    assert filter_({"userName": "Nice"}, User)
+    assert not filter_({"userName": "NotNice"}, User)
