@@ -145,6 +145,37 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
     assert actual == expected
 
 
+def test_items_can_be_sorted_by_complex_sub_attr_if_attr_multivalued():
+    sorter = Sorter(BoundedAttrRep(attr="emails", sub_attr="value"), asc=True)
+    c_1 = SCIMDataContainer(
+        {
+            "id": "1",
+            "emails": [{"value": "z@example.com"}, {"value": "b@example.com"}],
+        }
+    )
+    c_2 = SCIMDataContainer(
+        {
+            "id": "2",
+            "emails": [
+                {"value": "c@example.com"},
+            ],
+        }
+    )
+    c_3 = SCIMDataContainer(
+        {
+            "id": "3",
+            "emails": [{"value": "a@example.com"}, {"value": "z@example.com"}],
+        }
+    )
+    c_4 = SCIMDataContainer({"id": "4", "emails": []})
+    values = [c_1, c_4, c_2, c_3]
+    expected = [c_3, c_2, c_1, c_4]
+
+    actual = sorter(values, schema=User)
+
+    assert actual == expected
+
+
 def test_case_insensitive_attributes_are_respected_if_schema_provided():
     sorter = Sorter(BoundedAttrRep(attr="userName"), asc=True)
     c_1 = SCIMDataContainer({"userName": "C", "id": "2"})
