@@ -199,6 +199,9 @@ class SCIMDataContainer:
             self._data = d._data
             self._lower_case_to_original = d._lower_case_to_original
 
+    def __repr__(self):
+        return str(self._data)
+
     def set(self, attr_rep: Union[AttrRep, BoundedAttrRep, str], value):
         attr_rep = self._normalize(attr_rep)
         if attr_rep.extension:

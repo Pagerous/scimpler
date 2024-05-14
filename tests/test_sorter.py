@@ -119,29 +119,26 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
     c_1 = SCIMDataContainer(
         {
             "id": "1",
-            "emails": [
-                {"primary": True, "value": "z@example.com"},
-            ],
+            "emails": [{"primary": True, "value": "z@example.com"}, {"value": "b@example.com"}],
         }
     )
     c_2 = SCIMDataContainer(
         {
             "id": "2",
             "emails": [
-                {"value": "a@example.com"},
+                {"value": "c@example.com"},
             ],
         }
     )
     c_3 = SCIMDataContainer(
         {
             "id": "3",
-            "emails": [
-                {"primary": True, "value": "a@example.com"},
-            ],
+            "emails": [{"primary": True, "value": "a@example.com"}, {"value": "z@example.com"}],
         }
     )
-    values = [c_1, c_2, c_3]
-    expected = [c_3, c_1, c_2]
+    c_4 = SCIMDataContainer({"id": "4", "emails": []})
+    values = [c_1, c_4, c_2, c_3]
+    expected = [c_3, c_2, c_1, c_4]
 
     actual = sorter(values, schema=User)
 

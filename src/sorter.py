@@ -107,17 +107,13 @@ class Sorter:
             item_value = item.get(self._attr_rep)
             if item_value is not Missing and attr.multi_valued:
                 if isinstance(attr, Complex):
-                    for v in item_value:
-                        primary = v.get("primary")
-                        if primary is True:
-                            for sub_attr in attr.attrs:
-                                if sub_attr.rep.attr.lower() == "value":
-                                    attr = sub_attr
-                                    value = v.get("value")
-                                    break
-                            else:
-                                attr = None
-                                value = None
+                    attr = getattr(attr.attrs, "value", None)
+                    value = None
+                    for i, v in enumerate(item_value):
+                        if i == 0:
+                            value = v.get("value")
+                        elif v.get("primary") is True:
+                            value = v.get("value")
                             break
                 else:
                     value = item_value[0]
