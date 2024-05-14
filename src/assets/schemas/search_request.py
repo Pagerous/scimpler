@@ -21,6 +21,18 @@ def deserialize_attr_reps(value: List[str]) -> List[BoundedAttrRep]:
     return [BoundedAttrRep.deserialize(item) for item in value]
 
 
+def _process_start_index(value: int) -> int:
+    if value < 1:
+        value = 1
+    return value
+
+
+def _process_count(value: int) -> int:
+    if value < 0:
+        value = 0
+    return value
+
+
 class SearchRequest(BaseSchema):
     def __init__(self):
         super().__init__(
@@ -52,8 +64,12 @@ class SearchRequest(BaseSchema):
                     name="sortOrder",
                     canonical_values=["ascending", "descending"],
                 ),
-                Integer("startIndex"),
-                Integer("count"),
+                Integer(
+                    name="startIndex",
+                    serializer=_process_start_index,
+                    deserializer=_process_start_index,
+                ),
+                Integer(name="count", serializer=_process_count, deserializer=_process_count),
             ],
         )
 

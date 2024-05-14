@@ -11,8 +11,8 @@ def test_search_request_is_deserialized():
             "filter": 'userName eq "bjensen"',
             "sortBy": "name.familyName",
             "sortOrder": "descending",
-            "startIndex": 2,
-            "count": 10,
+            "startIndex": 0,
+            "count": -1,
         }
     )
 
@@ -28,5 +28,5 @@ def test_search_request_is_deserialized():
     }
     assert data.get("sorter").attr_rep == BoundedAttrRep(attr="name", sub_attr="familyName")
     assert data.get("sorter").asc is False
-    assert data.get("startIndex") == 2
-    assert data.get("count") == 10
+    assert data.get("startIndex") == 1
+    assert data.get("count") == 0
