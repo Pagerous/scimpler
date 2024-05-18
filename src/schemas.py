@@ -1,7 +1,7 @@
 import abc
 import copy
 import warnings
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
 
 from src.attributes import (
     Attribute,
@@ -29,6 +29,9 @@ def bulk_id_validator(value) -> ValidationIssues:
             proceed=False,
         )
     return issues
+
+
+TData = TypeVar("TData", bound=Union[SCIMDataContainer, Dict])
 
 
 class BaseSchema(abc.ABC):
@@ -66,28 +69,46 @@ class BaseSchema(abc.ABC):
     def schema(self) -> str:
         return self._schema
 
-    def deserialize(self, data: Dict, include_unknown: bool = False) -> SCIMDataContainer:
-        original_data = data
+    def deserialize(self, data: TData) -> SCIMDataContainer:
         data = SCIMDataContainer(data)
         deserialized = SCIMDataContainer()
         for attr in self.attrs:
             value = data.get(attr.rep)
             if value is not Missing:
                 deserialized.set(attr.rep, attr.deserialize(value))
-        if include_unknown:
-            for k, v in original_data.items():
-                if v not in [None, "", []] and deserialized.get(k) is Missing:
-                    deserialized.set(k, v)
         return deserialized
 
-    def serialize(self, data: Any) -> SCIMDataContainer:
+    def serialize(self, data: Any) -> Dict[str, Any]:
         data = SCIMDataContainer(data)
         serialized = SCIMDataContainer()
         for attr in self.attrs:
             value = data.get(attr.rep)
             if value is not Missing:
                 serialized.set(attr.rep, attr.serialize(value))
-        return serialized
+        return self._serialize(data).to_dict()
+
+    def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
+        is_dict = isinstance(data, dict)
+        if is_dict:
+            data = SCIMDataContainer(data)
+
+        filtered = SCIMDataContainer()
+        for attr in self.attrs:
+            value = data.get(attr.rep)
+            if value is Missing:
+                continue
+
+            if isinstance(attr, Complex):
+                value = attr.filter(value, attr_filter)
+                if all(value) if isinstance(value, List) else value:
+                    filtered.set(attr.rep, value)
+            elif attr_filter(attr):
+                filtered.set(attr.rep, value)
+
+        return filtered.to_dict() if is_dict else filtered
+
+    def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:  # noqa
+        return data
 
     def validate(self, data: Union[SCIMDataContainer, Dict[str, Any]]) -> ValidationIssues:
         issues = ValidationIssues()

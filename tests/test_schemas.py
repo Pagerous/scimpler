@@ -136,3 +136,38 @@ def test_schema_can_be_cloned_with_attr_filter_specified():
     schema = User.clone(attr_filter=lambda attr: attr.rep.attr in ["id", "userName"])
 
     assert len(list(schema.attrs)) == 2
+
+
+def test_data_can_be_filtered_according_to_attr_filter(user_data_client):
+    expected = {
+        "schemas": [
+            "urn:ietf:params:scim:schemas:core:2.0:User",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+        ],
+        "groups": [
+            {
+                "value": "e9e30dba-f08f-4109-8486-d5c6a331660a",
+                "$ref": "../Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
+                "display": "Tour Guides",
+            },
+            {
+                "value": "fc348aa8-3835-40eb-a20b-c726e15c55b5",
+                "$ref": "../Groups/fc348aa8-3835-40eb-a20b-c726e15c55b5",
+                "display": "Employees",
+            },
+            {
+                "value": "71ddacd2-a8e7-49b8-a5db-ae50d0a5bfd7",
+                "$ref": "../Groups/71ddacd2-a8e7-49b8-a5db-ae50d0a5bfd7",
+                "display": "US Employees",
+            },
+        ],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+            "manager": {
+                "displayName": "John Smith",
+            },
+        },
+    }
+
+    actual = User.filter(user_data_client, lambda attr: attr.mutability == "readOnly")
+
+    assert actual == expected

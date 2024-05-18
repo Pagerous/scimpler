@@ -16,6 +16,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypeVar,
     Union,
 )
 from urllib.parse import urlparse
@@ -255,9 +256,9 @@ class Attribute(abc.ABC):
     def clone(
         self,
         attr_rep: Optional[Union[AttrRep, BoundedAttrRep]] = None,
-        filter_: Optional[Callable[["Attribute"], bool]] = None,
+        attr_filter: Optional[Callable[["Attribute"], bool]] = None,
     ) -> "Attribute":
-        if filter_ and not filter_(self):
+        if attr_filter and not attr_filter(self):
             raise ValueError("attribute does not match the filter")
         clone = copy(self)
         if attr_rep:
@@ -501,6 +502,9 @@ _default_sub_attrs = [
 ]
 
 
+TData = TypeVar("TData", bound=[SCIMDataContainer, Dict])
+
+
 class Complex(Attribute):
     SCIM_NAME = "complex"
     BASE_TYPE = SCIMDataContainer
@@ -549,14 +553,31 @@ class Complex(Attribute):
     def attrs(self) -> "Attributes":
         return self._sub_attributes
 
+    def filter(
+        self, data: Union[TData, List[TData]], attr_filter: Callable[[Attribute], bool]
+    ) -> TData:
+        if isinstance(data, List):
+            return [self.filter(item, attr_filter) for item in data]
+
+        is_dict = isinstance(data, dict)
+        if is_dict:
+            data = SCIMDataContainer(data)
+
+        filtered = SCIMDataContainer()
+        for attr in self.attrs:
+            if attr_filter(attr) and (value := data.get(attr.rep)) is not Missing:
+                filtered.set(attr.rep, value, expand=False)
+
+        return filtered.to_dict() if is_dict else filtered
+
     def clone(
         self,
         attr_rep: Optional[Union[AttrRep, BoundedAttrRep]] = None,
-        filter_: Optional[Callable[["Attribute"], bool]] = None,
+        attr_filter: Optional[Callable[["Attribute"], bool]] = None,
     ) -> "Attribute":
-        cloned = super().clone(attr_rep, filter_)
-        if filter_:
-            cloned._sub_attributes = self._sub_attributes.clone(filter_)
+        cloned = super().clone(attr_rep, attr_filter)
+        if attr_filter:
+            cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
         return cloned
 
     def validate(self, value: Any) -> ValidationIssues:
@@ -798,13 +819,13 @@ class BoundedAttributes:
         )
         self._refresh_attrs()
 
-    def clone(self, filter_: Callable[[Attribute], bool]) -> "BoundedAttributes":
+    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BoundedAttributes":
         cloned = BoundedAttributes(schema=self._schema)
         cloned._raw_attrs = [
-            attr.clone(filter_=filter_) for attr in self._raw_attrs if filter_(attr)
+            attr.clone(attr_filter=attr_filter) for attr in self._raw_attrs if attr_filter(attr)
         ]
         cloned._extensions = {
-            schema: bounded_attrs.clone(filter_)
+            schema: bounded_attrs.clone(attr_filter)
             for schema, bounded_attrs in self._extensions.items()
         }
         cloned._refresh_attrs()
