@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, TypeAlias, Union
+from typing import Generic, TYPE_CHECKING, Any, Dict, List, Tuple, TypeAlias, TypeVar, Union
 
 from src import operator as op
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
@@ -38,6 +38,8 @@ _DeserializedOperator: TypeAlias = Union[
     op.ComplexAttributeOperator,
 ]
 
+TOperator = TypeVar("TOperator", bound=_DeserializedOperator)
+
 
 @dataclass
 class _ValidatedComplexOperator:
@@ -51,12 +53,48 @@ class _ValidatedGroupOperator:
     expression: str
 
 
-class Filter:
-    def __init__(self, operator: _DeserializedOperator):
+class Filter(Generic[TOperator]):
+    def __init__(self, operator: TOperator):
         self._operator = operator
 
     @property
-    def operator(self) -> _DeserializedOperator:
+    def attr_reps(self):
+        return self._get_attr_reps(self._operator)
+
+    @staticmethod
+    def _get_attr_reps(operator):
+        reps = []
+
+        def extend_reps(reps_):
+            for rep_ in reps_:
+                if rep_ not in reps:
+                    reps.append(rep_)
+
+        if isinstance(operator, op.AttributeOperator):
+            reps.append(operator.attr_rep)
+        elif isinstance(operator, op.ComplexAttributeOperator):
+            rep = operator.attr_rep
+            sub_reps = [
+                BoundedAttrRep(
+                    schema=rep.schema if isinstance(rep, BoundedAttrRep) else "",
+                    attr=rep.attr,
+                    sub_attr=sub_rep.attr,
+                )
+                for sub_rep in Filter._get_attr_reps(operator.sub_operator)
+            ]
+            extend_reps(sub_reps)
+
+        elif isinstance(operator, op.Not):
+            extend_reps(Filter._get_attr_reps(operator.sub_operator))
+
+        elif isinstance(operator, op.MultiOperandLogicalOperator):
+            for sub_op in operator.sub_operators:
+                extend_reps(Filter._get_attr_reps(sub_op))
+
+        return reps
+
+    @property
+    def operator(self) -> TOperator:
         return self._operator
 
     @classmethod

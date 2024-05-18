@@ -55,7 +55,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="nonexisting"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             {"_errors": [{"code": 303}]},
@@ -63,7 +63,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="non", sub_attr="existing"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             {"_errors": [{"code": 303}]},
@@ -71,7 +71,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="emails"),
-                filter=Filter(
+                filter_=Filter(
                     ComplexAttributeOperator(
                         attr_rep=BoundedAttrRep(attr="emails"),
                         sub_operator=Equal(
@@ -87,7 +87,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="emails"),
-                filter=Filter(
+                filter_=Filter(
                     ComplexAttributeOperator(
                         attr_rep=BoundedAttrRep(attr="emails"),
                         sub_operator=Equal(attr_rep=AttrRep(attr="type"), value="whatever"),
@@ -100,7 +100,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="emails"),
-                filter=Filter(
+                filter_=Filter(
                     ComplexAttributeOperator(
                         attr_rep=BoundedAttrRep(attr="emails"),
                         sub_operator=Equal(
@@ -116,7 +116,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="emails"),
-                filter=Filter(
+                filter_=Filter(
                     ComplexAttributeOperator(
                         attr_rep=BoundedAttrRep(attr="emails"),
                         sub_operator=Equal(attr_rep=AttrRep(attr="type"), value="work"),
@@ -129,7 +129,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="name", sub_attr="familyName"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             {},
@@ -137,7 +137,7 @@ def test_validate_patch_operations(value, expected_issues):
         (
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="name"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             {},
@@ -364,7 +364,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
             "userName",
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="userName"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             "bjensen",
@@ -374,7 +374,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
             "name.formatted",
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="name", sub_attr="formatted"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             "Jan Kowalski",
@@ -384,7 +384,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
             "name",
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="name"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             {"formatted": "Jan Kowalski", "familyName": "Kowalski"},
@@ -394,7 +394,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
             "emails",
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="emails"),
-                filter=None,
+                filter_=None,
                 filter_sub_attr_rep=None,
             ),
             [{"type": "work", "value": "work@example.com"}],
@@ -404,7 +404,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
             'emails[type eq "work"].value',
             PatchPath(
                 attr_rep=BoundedAttrRep(attr="emails"),
-                filter=Filter(
+                filter_=Filter(
                     ComplexAttributeOperator(
                         attr_rep=BoundedAttrRep(attr="emails"),
                         sub_operator=Equal(

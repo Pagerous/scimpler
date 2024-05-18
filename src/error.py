@@ -37,7 +37,7 @@ class ValidationError:
             "does not correspond to query parameter {query_param_name!r} ({query_param_value}): "
             "{reason}"
         ),
-        25: "resource included in the result, but does not match the filter",
+        25: "does not match the filter",
         26: "resources are not sorted",
         27: "unknown schema",
         28: "main schema not included",
@@ -171,7 +171,7 @@ class ValidationError:
         )
 
     @classmethod
-    def included_resource_does_not_match_filter(cls):
+    def filter_mismatch(cls):
         return cls(code=25)
 
     @classmethod

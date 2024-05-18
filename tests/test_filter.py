@@ -3,6 +3,7 @@ import re
 import pytest
 
 from src.assets.schemas import User
+from src.container import BoundedAttrRep
 from src.filter import Filter
 from src.operator import BinaryAttributeOperator, UnaryAttributeOperator
 from src.registry import register_binary_operator, register_unary_operator
@@ -25,6 +26,7 @@ def test_deserialize_basic_binary_attribute_filter(attr_rep, operator):
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [BoundedAttrRep.deserialize(attr_rep)]
 
 
 @pytest.mark.parametrize(
@@ -36,15 +38,13 @@ def test_deserialize_basic_binary_attribute_filter(attr_rep, operator):
 )
 @pytest.mark.parametrize("operator", ("eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"))
 def test_deserialize_basic_binary_complex_attribute_filter(full_attr_rep, operator):
-    sub_attr_rep, attr_rep = full_attr_rep[::-1].split(".", 1)
-    attr_rep = attr_rep[::-1]
-    sub_attr_rep = sub_attr_rep[::-1]
+    attr_rep = BoundedAttrRep.deserialize(full_attr_rep)
     expected = {
         "op": "complex",
-        "attr_rep": attr_rep,
+        "attr_rep": attr_rep.attr_with_schema,
         "sub_op": {
             "op": operator,
-            "attr_rep": sub_attr_rep,
+            "attr_rep": attr_rep.sub_attr,
             "value": "bjensen",
         },
     }
@@ -55,6 +55,7 @@ def test_deserialize_basic_binary_complex_attribute_filter(full_attr_rep, operat
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [attr_rep]
 
 
 @pytest.mark.parametrize(
@@ -77,6 +78,7 @@ def test_deserialize_basic_unary_attribute_filter(attr_rep, operator):
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [BoundedAttrRep.deserialize(attr_rep)]
 
 
 @pytest.mark.parametrize(
@@ -88,15 +90,13 @@ def test_deserialize_basic_unary_attribute_filter(attr_rep, operator):
 )
 @pytest.mark.parametrize("operator", ("pr",))
 def test_deserialize_basic_unary_attribute_filter_with_complex_attribute(full_attr_rep, operator):
-    sub_attr_rep, attr_rep = full_attr_rep[::-1].split(".", 1)
-    attr_rep = attr_rep[::-1]
-    sub_attr_rep = sub_attr_rep[::-1]
+    attr_rep = BoundedAttrRep.deserialize(full_attr_rep)
     expected = {
         "op": "complex",
-        "attr_rep": attr_rep,
+        "attr_rep": attr_rep.attr_with_schema,
         "sub_op": {
             "op": operator,
-            "attr_rep": sub_attr_rep,
+            "attr_rep": attr_rep.sub_attr,
         },
     }
     filter_exp = f"{full_attr_rep} {operator}"
@@ -106,6 +106,7 @@ def test_deserialize_basic_unary_attribute_filter_with_complex_attribute(full_at
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [attr_rep]
 
 
 @pytest.mark.parametrize(
@@ -125,6 +126,7 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [BoundedAttrRep.deserialize(attr_rep)]
 
 
 @pytest.mark.parametrize(
@@ -138,16 +140,13 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
 def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_with_complex_attr(
     full_attr_rep, sequence
 ):
-    sub_attr_rep, attr_rep = full_attr_rep[::-1].split(".", 1)
-    attr_rep = attr_rep[::-1]
-    sub_attr_rep = sub_attr_rep[::-1]
-
+    attr_rep = BoundedAttrRep.deserialize(full_attr_rep)
     expected = {
         "op": "complex",
-        "attr_rep": attr_rep,
+        "attr_rep": attr_rep.attr_with_schema,
         "sub_op": {
             "op": "eq",
-            "attr_rep": sub_attr_rep,
+            "attr_rep": attr_rep.sub_attr,
             "value": f"bjen{sequence}sen",
         },
     }
@@ -159,6 +158,7 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_w
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [attr_rep]
 
 
 def test_basic_filters_can_be_combined_with_and_operator():
@@ -219,6 +219,11 @@ def test_basic_filters_can_be_combined_with_or_operator():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name", sub_attr="formatted"),
+        BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nickName"),
+    ]
 
 
 def test_basic_filter_can_be_combined_with_not_operator():
@@ -237,6 +242,7 @@ def test_basic_filter_can_be_combined_with_not_operator():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [BoundedAttrRep(attr="userName")]
 
 
 def test_precedence_of_logical_operators_is_preserved():
@@ -279,6 +285,11 @@ def test_precedence_of_logical_operators_is_preserved():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name", sub_attr="formatted"),
+        BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nickName"),
+    ]
 
 
 def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_filter():
@@ -321,6 +332,11 @@ def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_f
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name", sub_attr="formatted"),
+        BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nickName"),
+    ]
 
 
 def test_filter_groups_are_deserialized():
@@ -373,6 +389,12 @@ def test_filter_groups_are_deserialized():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name", sub_attr="formatted"),
+        BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nickName"),
+        BoundedAttrRep(attr="id"),
+    ]
 
 
 def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
@@ -428,6 +450,12 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name", sub_attr="formatted"),
+        BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nickName"),
+        BoundedAttrRep(attr="id"),
+    ]
 
 
 def test_basic_complex_attribute_filter_is_deserialized():
@@ -447,6 +475,7 @@ def test_basic_complex_attribute_filter_is_deserialized():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [BoundedAttrRep(attr="emails", sub_attr="type")]
 
 
 def test_complex_attribute_filter_with_logical_operators_is_deserialized():
@@ -476,6 +505,10 @@ def test_complex_attribute_filter_with_logical_operators_is_deserialized():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="emails", sub_attr="type"),
+        BoundedAttrRep(attr="emails", sub_attr="value"),
+    ]
 
 
 def test_complex_attribute_filter_with_logical_operators_and_groups_is_deserialized():
@@ -532,6 +565,14 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_deseriali
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="emails", sub_attr="type"),
+        BoundedAttrRep(attr="emails", sub_attr="primary"),
+        BoundedAttrRep(attr="emails", sub_attr="value"),
+        BoundedAttrRep(
+            schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="emails", sub_attr="display"
+        ),
+    ]
 
 
 def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attribute_filter():
@@ -590,6 +631,14 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="emails", sub_attr="type"),
+        BoundedAttrRep(attr="emails", sub_attr="primary"),
+        BoundedAttrRep(attr="emails", sub_attr="value"),
+        BoundedAttrRep(
+            schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="emails", sub_attr="display"
+        ),
+    ]
 
 
 def test_gargantuan_filter():
@@ -735,6 +784,22 @@ def test_gargantuan_filter():
 
     filter_ = Filter.deserialize(filter_exp)
     assert filter_.to_dict() == expected
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="userName"),
+        BoundedAttrRep(attr="name", sub_attr="formatted"),
+        BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nickName"),
+        BoundedAttrRep(attr="id"),
+        BoundedAttrRep(attr="emails", sub_attr="type"),
+        BoundedAttrRep(attr="emails", sub_attr="primary"),
+        BoundedAttrRep(attr="emails", sub_attr="value"),
+        BoundedAttrRep(
+            schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="emails", sub_attr="display"
+        ),
+        BoundedAttrRep(attr="ims", sub_attr="type"),
+        BoundedAttrRep(attr="ims", sub_attr="primary"),
+        BoundedAttrRep(attr="ims", sub_attr="value"),
+        BoundedAttrRep(attr="ims", sub_attr="display"),
+    ]
 
 
 @pytest.mark.parametrize(

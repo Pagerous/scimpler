@@ -11,21 +11,18 @@ class PatchPath:
     def __init__(
         self,
         attr_rep: BoundedAttrRep,
-        filter: Optional[Filter],  # noqa
+        filter_: Optional[Filter[ComplexAttributeOperator]],
         filter_sub_attr_rep: Optional[AttrRep],
     ):
-        if attr_rep.sub_attr and (filter or filter_sub_attr_rep):
+        if attr_rep.sub_attr and (filter_ or filter_sub_attr_rep):
             raise ValueError("sub-attribute can not be complex")
 
-        if filter is not None:
-            if not isinstance(filter.operator, ComplexAttributeOperator):
-                raise ValueError("only ComplexAttributeOperator is supported as path filter")
-
-            if filter.operator.attr_rep != attr_rep:
+        if filter_ is not None:
+            if filter_.operator.attr_rep != attr_rep:
                 raise ValueError("non-matching top-level attributes for 'attr_rep' and 'filter'")
 
         self._attr_rep = attr_rep
-        self._filter = filter
+        self._filter = filter_
         self._filter_sub_attr_rep = filter_sub_attr_rep
 
     @property
@@ -92,7 +89,7 @@ class PatchPath:
         assert "[" not in path and "]" not in path
         return PatchPath(
             attr_rep=BoundedAttrRep.deserialize(decode_placeholders(path, placeholders)),
-            filter=None,
+            filter_=None,
             filter_sub_attr_rep=None,
         )
 
@@ -112,7 +109,7 @@ class PatchPath:
 
         return cls(
             attr_rep=filter_.operator.attr_rep,
-            filter=filter_,
+            filter_=filter_,
             filter_sub_attr_rep=val_attr_rep,
         )
 

@@ -139,7 +139,7 @@ def test_patch_path_parsing_success(
     (
         {
             "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
-            "filter": Filter(
+            "filter_": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
@@ -149,7 +149,7 @@ def test_patch_path_parsing_success(
         },
         {
             "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
-            "filter": Filter(
+            "filter_": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
@@ -159,7 +159,7 @@ def test_patch_path_parsing_success(
         },
         {
             "attr_rep": BoundedAttrRep(attr="attr"),
-            "filter": Filter(
+            "filter_": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="different_attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),

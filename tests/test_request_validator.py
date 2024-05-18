@@ -1016,10 +1016,10 @@ def test_bulk_operations_request_is_valid_if_correct_data():
     expected_body: dict = deepcopy(data)
     expected_body["Operations"][1]["data"] = {"userName": "Bob"}
     expected_body["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath(
-        attr_rep=BoundedAttrRep(attr="nickName"), filter=None, filter_sub_attr_rep=None
+        attr_rep=BoundedAttrRep(attr="nickName"), filter_=None, filter_sub_attr_rep=None
     )
     expected_body["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath(
-        attr_rep=BoundedAttrRep(attr="userName"), filter=None, filter_sub_attr_rep=None
+        attr_rep=BoundedAttrRep(attr="userName"), filter_=None, filter_sub_attr_rep=None
     )
 
     issues = validator.validate_request(body=data)

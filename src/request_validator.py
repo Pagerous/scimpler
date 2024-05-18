@@ -580,7 +580,7 @@ def validate_resources_filtered(
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
         if not filter_(resource, schema):
             issues.add_error(
-                issue=ValidationError.included_resource_does_not_match_filter(),
+                issue=ValidationError.filter_mismatch(),
                 proceed=True,
                 location=(i,),
             )
