@@ -4,15 +4,15 @@ from src.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeReturn,
-    Attributes,
-    BoundedAttributes,
     Complex,
 )
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
+from src.schemas import BaseSchema
+
 
 TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
-TAttrs = TypeVar("TAttrs", bound=Union[Attributes, BoundedAttributes])
+TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[BaseSchema, Complex])
 
 
 class AttributePresenceChecker(Generic[TAttrRep]):
@@ -35,29 +35,33 @@ class AttributePresenceChecker(Generic[TAttrRep]):
     def include(self) -> Optional[bool]:
         return self._include
 
-    def _ensure_valid_attrs(self, attrs: TAttrs):
+    def _ensure_valid_obj(self, schema: TSchemaOrComplex):
         attr_rep_ = next(iter(self._attr_reps), None)
         ignore = next(iter(self._ignore_issuer), None)
 
-        if isinstance(attrs, Attributes) and (
+        if isinstance(schema, Complex) and (
             isinstance(attr_rep_, BoundedAttrRep) or isinstance(ignore, BoundedAttrRep)
         ):
-            raise TypeError("incompatible attributes, use BoundedAttributes class")
-        elif isinstance(attrs, BoundedAttributes) and (
+            raise TypeError(
+                "provided complex attribute, but schema is required for bounded attributes"
+            )
+        elif isinstance(schema, BaseSchema) and (
             isinstance(attr_rep_, AttrRep) or isinstance(ignore, AttrRep)
         ):
-            raise TypeError("incompatible attributes, use Attributes class")
+            raise TypeError(
+                "provided schema, but complex attribute is required for non-bounded attributes"
+            )
 
     def __call__(
         self,
         data: Union[Dict[str, Any], SCIMDataContainer],
-        attrs: TAttrs,
+        schema_or_complex: TSchemaOrComplex,
         direction: str,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        self._ensure_valid_attrs(attrs)
+        self._ensure_valid_obj(schema_or_complex)
         data = SCIMDataContainer(data)
-        for attr in attrs:
+        for attr in schema_or_complex.attrs:
             attr_value = data.get(attr.rep)
             issues.merge(
                 issues=self._check_presence(

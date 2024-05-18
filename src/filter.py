@@ -1,6 +1,16 @@
 import re
 from dataclasses import dataclass
-from typing import Generic, TYPE_CHECKING, Any, Dict, List, Tuple, TypeAlias, TypeVar, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Generic,
+    List,
+    Tuple,
+    TypeAlias,
+    TypeVar,
+    Union,
+)
 
 from src import operator as op
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer

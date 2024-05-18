@@ -2528,3 +2528,14 @@ def test_unary_operator_can_be_registered():
 
     assert filter_({"userName": "Nice"}, User)
     assert not filter_({"userName": "NotNice"}, User)
+
+
+def test_attr_reps_do_not_contain_duplicates():
+    filter_ = Filter.deserialize(
+        "emails[type eq 'work' or Type eq 'home'] and (userName sw 'a' or username ew 'b')"
+    )
+
+    assert filter_.attr_reps == [
+        BoundedAttrRep(attr="emails", sub_attr="type"),
+        BoundedAttrRep(attr="userName"),
+    ]

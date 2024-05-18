@@ -89,7 +89,7 @@ class Error(Validator):
             return issues
 
         issues.merge(
-            issues=AttributePresenceChecker()(body, self._schema.attrs, "RESPONSE"),
+            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
             location=body_location,
         )
         status_attr_rep = self._schema.attrs.status.rep
@@ -185,7 +185,7 @@ def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> Val
     issues = schema.validate(body)
     if issues.can_proceed():
         issues.merge(
-            issues=AttributePresenceChecker(**kwargs)(body, schema.attrs, "REQUEST"),
+            issues=AttributePresenceChecker(**kwargs)(body, schema, "REQUEST"),
         )
     return issues
 
@@ -215,7 +215,7 @@ def _validate_resource_output_body(
     issues.merge(
         issues=(presence_checker or AttributePresenceChecker())(
             data=body,
-            attrs=schema.attrs,
+            schema_or_complex=schema,
             direction="RESPONSE",
         ),
         location=body_location,
@@ -494,7 +494,7 @@ def validate_resources_attributes_presence(
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
         issues.merge(
-            issues=presence_checker(resource, schema.attrs, "RESPONSE"),
+            issues=presence_checker(resource, schema, "RESPONSE"),
             location=(i,),
         )
     return issues
@@ -607,7 +607,7 @@ def _validate_resources_get_response(
     issues_ = schema.validate(body)
     issues.merge(issues_, location=body_location)
     issues.merge(
-        issues=AttributePresenceChecker()(body, schema.attrs, "RESPONSE"),
+        issues=AttributePresenceChecker()(body, schema, "RESPONSE"),
         location=body_location,
     )
     issues.merge(
@@ -664,6 +664,14 @@ def _validate_resources_get_response(
         return issues
 
     resource_schemas = schema.get_schemas_for_resources(resources)
+    if resource_presence_checker is None:
+        resource_presence_checker = AttributePresenceChecker()
+    issues.merge(
+        issues=validate_resources_attributes_presence(
+            resource_presence_checker, resources, resource_schemas
+        ),
+        location=resources_location,
+    )
     if filter_ is not None:
         issues.merge(
             issues=validate_resources_filtered(resources, filter_, resource_schemas),
@@ -674,15 +682,6 @@ def _validate_resources_get_response(
             issues=validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
         )
-    if resource_presence_checker is None:
-        resource_presence_checker = AttributePresenceChecker()
-    issues.merge(
-        issues=validate_resources_attributes_presence(
-            resource_presence_checker, resources, resource_schemas
-        ),
-        location=resources_location,
-    )
-
     return issues
 
 
@@ -891,7 +890,7 @@ class ResourceObjectPATCH(Validator):
                     issues=presence_checker(
                         data=item,
                         direction="REQUEST",
-                        attrs=attr.attrs,
+                        schema_or_complex=attr,
                     ),
                     location=item_location,
                 )
@@ -1016,7 +1015,7 @@ class BulkOperations(Validator):
         issues_ = self._request_schema.validate(body)
         issues.merge(issues_, location=body_location)
         issues.merge(
-            issues=AttributePresenceChecker()(body, self._request_schema.attrs, "RESPONSE"),
+            issues=AttributePresenceChecker()(body, self._request_schema, "RESPONSE"),
             location=body_location,
         )
         if not issues_.can_proceed(
@@ -1081,7 +1080,7 @@ class BulkOperations(Validator):
         issues_ = self._response_schema.validate(body)
         issues.merge(issues_, location=body_location)
         issues.merge(
-            issues=AttributePresenceChecker()(body, self._response_schema.attrs, "RESPONSE"),
+            issues=AttributePresenceChecker()(body, self._response_schema, "RESPONSE"),
             location=body_location,
         )
         issues.merge(

@@ -20,7 +20,7 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
         }
     }
 
-    issues = checker(SCIMDataContainer(user_data_server), User.attrs, "RESPONSE")
+    issues = checker(SCIMDataContainer(user_data_server), User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -29,7 +29,7 @@ def test_restricted_attributes_can_be_sent_with_request(user_data_client):
     checker = AttributePresenceChecker()
     user_data_client["password"] = "1234"
 
-    issues = checker(SCIMDataContainer(user_data_client), User.attrs, "REQUEST")
+    issues = checker(SCIMDataContainer(user_data_client), User, "REQUEST")
 
     assert issues.to_dict(msg=True) == {}
 
@@ -47,7 +47,7 @@ def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
 
     expected = {"name": {"_errors": [{"code": 19}]}}
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -79,7 +79,7 @@ def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
         }
     }
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -109,7 +109,7 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
         }
     }
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -138,7 +138,7 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_inclusion():
         }
     }
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -170,7 +170,7 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
         },
     }
 
-    issues = checker(SCIMDataContainer(), User.attrs, "RESPONSE")
+    issues = checker(SCIMDataContainer(), User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -193,7 +193,7 @@ def test_presence_checker_fails_if_not_provided_requested_required_attribute():
         },
     }
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -209,7 +209,7 @@ def test_presence_checker_passes_if_not_provided_requested_optional_attribute():
         }
     )
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict(msg=True) == {}
 
@@ -238,7 +238,7 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exc
         }
     }
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -266,7 +266,7 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inc
         }
     }
 
-    issues = checker(data, User.attrs, "RESPONSE")
+    issues = checker(data, User, "RESPONSE")
 
     assert issues.to_dict() == expected
 
@@ -278,7 +278,7 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
     user_data_client["id"] = "should-not-be-provided"
     expected_issues = {"id": {"_errors": [{"code": 18}]}}
 
-    issues = checker(SCIMDataContainer(user_data_client), User.attrs, "REQUEST")
+    issues = checker(SCIMDataContainer(user_data_client), User, "REQUEST")
 
     assert issues.to_dict() == expected_issues
 
@@ -293,7 +293,7 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
     expected_issues = {"age": {"_errors": [{"code": 15}]}}
 
     issues = checker(
-        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema.attrs, "RESPONSE"
+        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE"
     )
 
     assert issues.to_dict() == expected_issues
@@ -308,7 +308,7 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
     checker = AttributePresenceChecker()
 
     issues = checker(
-        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema.attrs, "RESPONSE"
+        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE"
     )
 
     assert issues.to_dict(msg=True) == {}
