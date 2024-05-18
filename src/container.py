@@ -185,6 +185,7 @@ class SCIMDataContainer:
                 if not isinstance(key, str):
                     continue
 
+                self._data.pop(self._lower_case_to_original.get(key.lower()), None)
                 self._lower_case_to_original[key.lower()] = key
                 if isinstance(value, Dict):
                     self._data[key] = SCIMDataContainer(value)
@@ -202,7 +203,12 @@ class SCIMDataContainer:
     def __repr__(self):
         return str(self._data)
 
-    def set(self, attr_rep: Union[AttrRep, BoundedAttrRep, str], value):
+    def set(
+        self,
+        attr_rep: Union[AttrRep, BoundedAttrRep, str],
+        value: Any,
+        expand: bool = False,
+    ) -> None:
         attr_rep = self._normalize(attr_rep)
         if attr_rep.extension:
             extension_key = self._lower_case_to_original.get(attr_rep.schema.lower())
@@ -210,33 +216,42 @@ class SCIMDataContainer:
                 self._lower_case_to_original[attr_rep.schema.lower()] = attr_rep.schema
                 self._data[attr_rep.schema] = SCIMDataContainer()
             self._data[attr_rep.schema].set(
-                BoundedAttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr), value
+                BoundedAttrRep(attr=attr_rep.attr, sub_attr=attr_rep.sub_attr), value, expand
             )
-        elif attr_rep.sub_attr:
-            initial_key = self._lower_case_to_original.get(attr_rep.attr.lower())
-            if initial_key is None:
-                initial_key = attr_rep.attr
-                self._lower_case_to_original[initial_key.lower()] = initial_key
-                if isinstance(value, List):
-                    self._data[initial_key] = []
-                else:
-                    self._data[initial_key] = SCIMDataContainer()
-            elif not self._can_assign_to_complex(self._data[initial_key], value):
-                raise KeyError(
-                    f"can not assign ({attr_rep.sub_attr}, {value}) to '{attr_rep.attr}'"
-                )
-            if isinstance(value, List):
-                to_create = len(value) - len(self._data[initial_key])
-                if to_create > 0:
-                    self._data[initial_key].extend([SCIMDataContainer() for _ in range(to_create)])
-                for item, container in zip(value, self._data[initial_key]):
-                    if item is not Missing:
-                        container.set(BoundedAttrRep(attr=attr_rep.sub_attr), item)
-            else:
-                self._data[initial_key].set(BoundedAttrRep(attr=attr_rep.sub_attr), value)
-        else:
+            return
+
+        if not attr_rep.sub_attr:
+            self._data.pop(self._lower_case_to_original.get(attr_rep.attr.lower()), None)
             self._lower_case_to_original[attr_rep.attr.lower()] = attr_rep.attr
             self._data[attr_rep.attr] = value
+            return
+
+        parent_attr_key = self._lower_case_to_original.get(attr_rep.attr.lower())
+        if parent_attr_key is None:
+            parent_attr_key = attr_rep.attr
+            self._lower_case_to_original[parent_attr_key.lower()] = parent_attr_key
+            if isinstance(value, List) and expand:
+                self._data[parent_attr_key] = []
+            else:
+                self._data[parent_attr_key] = SCIMDataContainer()
+
+        parent_value = self._data[self._lower_case_to_original[parent_attr_key.lower()]]
+        if not self._is_child_value_compatible(parent_value, value, expand):
+            raise KeyError(f"can not assign ({attr_rep.sub_attr}, {value}) to '{attr_rep.attr}'")
+
+        if not isinstance(value, List):
+            self._data[parent_attr_key].set(BoundedAttrRep(attr=attr_rep.sub_attr), value)
+            return
+
+        if expand:
+            to_create = len(value) - len(self._data[parent_attr_key])
+            if to_create > 0:
+                self._data[parent_attr_key].extend([SCIMDataContainer() for _ in range(to_create)])
+            for item, container in zip(value, self._data[parent_attr_key]):
+                if item is not Missing:
+                    container.set(BoundedAttrRep(attr=attr_rep.sub_attr), item)
+            return
+        self._data[parent_attr_key].set(BoundedAttrRep(attr=attr_rep.sub_attr), value)
 
     def get(self, attr_rep: Union[AttrRep, BoundedAttrRep, str]):
         attr_rep = self._normalize(attr_rep)
@@ -255,7 +270,12 @@ class SCIMDataContainer:
             if isinstance(attr_value, SCIMDataContainer):
                 return attr_value.get(BoundedAttrRep(attr=attr_rep.sub_attr))
             if isinstance(attr_value, List):
-                return [item.get(BoundedAttrRep(attr=attr_rep.sub_attr)) for item in attr_value]
+                return [
+                    item.get(BoundedAttrRep(attr=attr_rep.sub_attr))
+                    if isinstance(item, SCIMDataContainer)
+                    else item
+                    for item in attr_value
+                ]
             return Missing
         return self._data[attr]
 
@@ -291,16 +311,28 @@ class SCIMDataContainer:
         return attr_rep
 
     @staticmethod
-    def _can_assign_to_complex(current_value, new_value) -> bool:
-        if isinstance(current_value, SCIMDataContainer):
+    def _is_child_value_compatible(
+        parent_value: Any,
+        child_value: Any,
+        expand: True,
+    ) -> bool:
+        if isinstance(parent_value, List):
+            if len(parent_value) == 0:
+                return True
+            parent_item_type = {type(item) for item in parent_value}
+            if parent_item_type != {SCIMDataContainer}:
+                return False
+            if not isinstance(child_value, List):
+                return False
             return True
 
-        if isinstance(new_value, List) and isinstance(current_value, List):
-            current_item_type = {type(item) for item in current_value}
-            if current_item_type == {SCIMDataContainer}:
-                return True
+        if not isinstance(parent_value, SCIMDataContainer):
+            return False
 
-        return False
+        if isinstance(child_value, List) and expand:
+            return False
+
+        return True
 
     def to_dict(self) -> Dict[str, Any]:
         output = {}
@@ -337,3 +369,6 @@ class SCIMDataContainer:
                 return False
 
         return True
+
+    def __bool__(self):
+        return bool(self._data)
