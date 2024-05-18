@@ -1,5 +1,5 @@
 import functools
-from typing import Any, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, TypeVar, Union
 
 from src.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
@@ -49,6 +49,9 @@ class StringKey:
         return value.lower() < other_value.lower()
 
 
+TSorterData = TypeVar("TSorterData", bound=Union[List[SCIMDataContainer], List[Dict[str, Any]]])
+
+
 class Sorter:
     def __init__(self, attr_rep: BoundedAttrRep, asc: bool = True):
         self._attr_rep = attr_rep
@@ -65,21 +68,29 @@ class Sorter:
 
     def __call__(
         self,
-        data: List[SCIMDataContainer],
+        data: TSorterData,
         schema: Union[ResourceSchema, Sequence[ResourceSchema]],
-    ) -> List[SCIMDataContainer]:
-        if not any(item.get(self._attr_rep) for item in data):
+    ) -> TSorterData:
+        if not data:
             return data
 
-        if not isinstance(schema, ResourceSchema) and len(set(schema)) == 1:
-            schema = schema[0]
+        item_type = type(data[0])
+        data = [SCIMDataContainer(item) if isinstance(item, Dict) else item for item in data]
 
-        if isinstance(schema, ResourceSchema):
-            key = functools.partial(self._attr_key, schema=schema)
+        if not any(item.get(self._attr_rep) for item in data):
+            sorted_data = data
         else:
-            key = self._attr_key_many_schemas(data, schema)
+            if not isinstance(schema, ResourceSchema) and len(set(schema)) == 1:
+                schema = schema[0]
+            if isinstance(schema, ResourceSchema):
+                key = functools.partial(self._attr_key, schema=schema)
+            else:
+                key = self._attr_key_many_schemas(data, schema)
+            sorted_data = sorted(data, key=key, reverse=not self._asc)
 
-        return sorted(data, key=key, reverse=not self._asc)
+        if item_type is dict:
+            return [item.to_dict() for item in sorted_data]
+        return sorted_data
 
     def _get_key(self, value: Any, attr: Optional[Attribute]):
         if not value or attr is None:

@@ -474,7 +474,7 @@ class ResourcesPOST(Validator):
 
 def validate_resources_sorted(
     sorter: Sorter,
-    resources: List[Any],
+    resources: List[SCIMDataContainer],
     resource_schemas: Sequence[ResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -574,7 +574,7 @@ def validate_start_index_consistency(
 
 
 def validate_resources_filtered(
-    resources: List[Any], filter_: Filter, resource_schemas: Sequence[ResourceSchema]
+    filter_: Filter, resources: List[Any], resource_schemas: Sequence[ResourceSchema]
 ) -> ValidationIssues:
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
@@ -674,7 +674,7 @@ def _validate_resources_get_response(
     )
     if filter_ is not None:
         issues.merge(
-            issues=validate_resources_filtered(resources, filter_, resource_schemas),
+            issues=validate_resources_filtered(filter_, resources, resource_schemas),
             location=resources_location,
         )
     if sorter is not None:

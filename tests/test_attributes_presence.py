@@ -292,9 +292,7 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
     checker = AttributePresenceChecker()
     expected_issues = {"age": {"_errors": [{"code": 15}]}}
 
-    issues = checker(
-        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE"
-    )
+    issues = checker(SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE")
 
     assert issues.to_dict() == expected_issues
 
@@ -307,8 +305,6 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
     schema.extend(extension, required=False)
     checker = AttributePresenceChecker()
 
-    issues = checker(
-        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE"
-    )
+    issues = checker(SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE")
 
     assert issues.to_dict(msg=True) == {}
