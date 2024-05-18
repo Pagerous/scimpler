@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Sequence, TypeVar, Union
 
 from src.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
-from src.schemas import BaseSchema, ResourceSchema
+from src.schemas import BaseSchema
 
 
 class AlwaysLastKey:
@@ -69,7 +69,7 @@ class Sorter:
     def __call__(
         self,
         data: TSorterData,
-        schema: Union[ResourceSchema, Sequence[ResourceSchema]],
+        schema: Union[BaseSchema, Sequence[BaseSchema]],
     ) -> TSorterData:
         if not data:
             return data
@@ -80,9 +80,9 @@ class Sorter:
         if not any(item.get(self._attr_rep) for item in data):
             sorted_data = data
         else:
-            if not isinstance(schema, ResourceSchema) and len(set(schema)) == 1:
+            if not isinstance(schema, BaseSchema) and len(set(schema)) == 1:
                 schema = schema[0]
-            if isinstance(schema, ResourceSchema):
+            if isinstance(schema, BaseSchema):
                 key = functools.partial(self._attr_key, schema=schema)
             else:
                 key = self._attr_key_many_schemas(data, schema)

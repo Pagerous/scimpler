@@ -478,7 +478,7 @@ def validate_resources_sorted(
     resource_schemas: Sequence[ResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if resources != sorter(resources, schema=resource_schemas):
+    if resources != sorter(resources, resource_schemas):
         issues.add_error(
             issue=ValidationError.resources_not_sorted(),
             proceed=True,
@@ -672,17 +672,70 @@ def _validate_resources_get_response(
         ),
         location=resources_location,
     )
-    if filter_ is not None:
+    if filter_ is not None and can_validate_filtering(filter_, resource_presence_checker):
         issues.merge(
             issues=validate_resources_filtered(filter_, resources, resource_schemas),
             location=resources_location,
         )
-    if sorter is not None:
+    if sorter is not None and can_validate_sorting(sorter, resource_presence_checker):
         issues.merge(
             issues=validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
         )
     return issues
+
+
+def _is_contained(attr_rep, attr_reps) -> bool:
+    return attr_rep in attr_reps
+
+
+def _is_parent_contained(attr_rep, attr_reps) -> bool:
+    return bool(
+        attr_rep.sub_attr
+        and BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr) in attr_reps
+    )
+
+
+def _is_child_contained(attr_rep, attr_reps) -> bool:
+    for attr_rep_ in attr_reps:
+        if attr_rep_.sub_attr and attr_rep_.parent_equals(attr_rep):
+            return True
+    return False
+
+
+def can_validate_filtering(filter_: Filter, checker: AttributePresenceChecker) -> bool:
+    filter_attr_reps = filter_.attr_reps
+    if not checker.attr_reps:
+        return True
+
+    if checker.include:
+        for attr_rep in filter_attr_reps:
+            if not (
+                _is_contained(attr_rep, checker.attr_reps)
+                or _is_parent_contained(attr_rep, checker.attr_reps)
+                or _is_child_contained(attr_rep, checker.attr_reps)
+            ):
+                return False
+        return True
+
+    for attr_rep in checker.attr_reps:
+        if _is_contained(attr_rep, filter_attr_reps) or _is_child_contained(
+            attr_rep, filter_attr_reps
+        ):
+            return False
+    return True
+
+
+def can_validate_sorting(sorter: Sorter, checker: AttributePresenceChecker) -> bool:
+    if not checker.attr_reps:
+        return True
+
+    is_contained = _is_contained(sorter.attr_rep, checker.attr_reps) or _is_parent_contained(
+        sorter.attr_rep, checker.attr_reps
+    )
+    if checker.include and not is_contained or not checker.include and is_contained:
+        return False
+    return True
 
 
 class ServerRootResourcesGET(Validator):

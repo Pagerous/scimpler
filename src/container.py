@@ -147,7 +147,7 @@ class BoundedAttrRep:
     def sub_attr(self) -> str:
         return self._sub_attr
 
-    def top_level_equals(self, other: "BoundedAttrRep") -> bool:
+    def parent_equals(self, other: "BoundedAttrRep") -> bool:
         if all([self.schema, other.schema]):
             return self.attr_with_schema.lower() == other.attr_with_schema.lower()
         return self.attr.lower() == other.attr.lower()

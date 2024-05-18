@@ -24,6 +24,8 @@ from src.request_validator import (
     SchemasGET,
     SearchRequestPOST,
     ServerRootResourcesGET,
+    can_validate_filtering,
+    can_validate_sorting,
     validate_error_status_code,
     validate_error_status_code_consistency,
     validate_number_of_resources,
@@ -470,30 +472,11 @@ def test_validation_failure_on_missing_meta_version_when_etag_supported(user_dat
     assert issues.to_dict() == expected_issues
 
 
-def test_validation_failure_on_etag_and_meta_version_mismatch_when_etag_supported(user_data_server):
-    validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
-    expected_issues = {
-        "body": {"meta": {"version": {"_errors": [{"code": 11}]}}},
-        "headers": {"ETag": {"_errors": [{"code": 11}]}},
-    }
-
-    issues = validator.validate_response(
-        status_code=200,
-        body=user_data_server,
-        headers={
-            "Location": user_data_server["meta"]["location"],
-            "ETag": 'W/"3694e05e9dff592"',
-        },
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-def test_validation_failure_on_etag_and_meta_version_mismatch_when_etag_not_supported(
-    user_data_server,
-):
+@pytest.mark.parametrize("etag_supported", (True, False))
+def test_validation_failure_on_etag_and_meta_version_mismatch(etag_supported, user_data_server):
     config = deepcopy(CONFIG)
-    config.etag.supported = False
+    config.etag.supported = etag_supported
+
     validator = ResourceObjectGET(config, resource_schema=user.User)
     expected_issues = {
         "body": {"meta": {"version": {"_errors": [{"code": 11}]}}},
@@ -1483,3 +1466,135 @@ def test_resource_types_response_can_be_validated():
     issues = validator.validate_response(status_code=200, body=body)
 
     assert issues.to_dict(msg=True) == {}
+
+
+@pytest.mark.parametrize(
+    ("filter_", "checker", "expected"),
+    (
+        (
+            Filter.deserialize("userName pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
+            True,
+        ),
+        (
+            Filter.deserialize("userName pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            False,
+        ),
+        (
+            Filter.deserialize("userName pr and name.formatted pr"),
+            AttributePresenceChecker(
+                attr_reps=[BoundedAttrRep(attr="userName"), BoundedAttrRep(attr="name")],
+                include=True,
+            ),
+            True,
+        ),
+        (
+            Filter.deserialize("userName pr and name.formatted pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            False,
+        ),
+        (
+            Filter.deserialize("name.formatted pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            True,
+        ),
+        (
+            Filter.deserialize("name pr"),
+            AttributePresenceChecker(
+                attr_reps=[BoundedAttrRep(attr="name", sub_attr="display")], include=True
+            ),
+            True,
+        ),
+        (
+            Filter.deserialize("userName pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
+            False,
+        ),
+        (
+            Filter.deserialize("userName pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            True,
+        ),
+        (
+            Filter.deserialize("userName pr and name.formatted pr"),
+            AttributePresenceChecker(
+                attr_reps=[BoundedAttrRep(attr="userName"), BoundedAttrRep(attr="name")],
+                include=False,
+            ),
+            False,
+        ),
+        (
+            Filter.deserialize("userName pr and name.formatted pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            False,
+        ),
+        (
+            Filter.deserialize("name.formatted pr"),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            False,
+        ),
+        (
+            Filter.deserialize("name pr"),
+            AttributePresenceChecker(
+                attr_reps=[BoundedAttrRep(attr="name", sub_attr="display")], include=False
+            ),
+            True,
+        ),
+    ),
+)
+def test_can_validate_filtering(filter_, checker, expected):
+    assert can_validate_filtering(filter_, checker) == expected
+
+
+@pytest.mark.parametrize(
+    ("sorter", "checker", "expected"),
+    (
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
+            True,
+        ),
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            False,
+        ),
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="name", sub_attr="formatted")),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            True,
+        ),
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="name")),
+            AttributePresenceChecker(
+                attr_reps=[BoundedAttrRep(attr="name", sub_attr="formatted")], include=True
+            ),
+            False,
+        ),
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
+            False,
+        ),
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            True,
+        ),
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="name", sub_attr="formatted")),
+            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            False,
+        ),
+        (
+            Sorter(attr_rep=BoundedAttrRep(attr="name")),
+            AttributePresenceChecker(
+                attr_reps=[BoundedAttrRep(attr="name", sub_attr="formatted")], include=False
+            ),
+            True,
+        ),
+    ),
+)
+def test_can_validate_sorting(sorter, checker, expected):
+    assert can_validate_sorting(sorter, checker) == expected

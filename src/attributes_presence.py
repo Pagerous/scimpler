@@ -19,6 +19,9 @@ class AttributePresenceChecker(Generic[TAttrRep]):
         self._attr_reps = list(attr_reps or [])
         self._include = include
 
+        if self._attr_reps and self._include is None:
+            raise ValueError("'include' must be specified if 'attr_reps' is specified")
+
         self._ignore_issuer = list(ignore_issuer or [])
 
     @property
@@ -135,11 +138,11 @@ class AttributePresenceChecker(Generic[TAttrRep]):
                 )
 
             elif attr.returned != AttributeReturn.ALWAYS and (
-                (attr_rep in self._attr_reps and self._include is False)
+                (attr_rep in self._attr_reps and not self._include)
                 or (
                     attr_rep not in self._attr_reps
                     and not self._sub_attr_or_top_attr_in_attr_reps(attr_rep)
-                    and self._include is True
+                    and self._include
                 )
             ):
                 issues.add_error(
@@ -161,7 +164,7 @@ class AttributePresenceChecker(Generic[TAttrRep]):
                 )
                 and (
                     not self._attr_reps
-                    or (attr_rep in self._attr_reps and self._include is True)
+                    or (attr_rep in self._attr_reps and self._include)
                     or (direction == "RESPONSE" and attr.returned == AttributeReturn.ALWAYS)
                 )
             ):
@@ -179,12 +182,12 @@ class AttributePresenceChecker(Generic[TAttrRep]):
             if (
                 # sub-attr in attr names check
                 not attr_rep.sub_attr
-                and attr_rep.top_level_equals(attr_rep_)
+                and attr_rep.parent_equals(attr_rep_)
                 # top-attr in attr names check
                 or (
                     attr_rep.sub_attr
                     and not attr_rep_.sub_attr
-                    and attr_rep.top_level_equals(attr_rep_)
+                    and attr_rep.parent_equals(attr_rep_)
                 )
             ):
                 return True
