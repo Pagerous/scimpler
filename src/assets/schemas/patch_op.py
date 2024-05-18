@@ -251,8 +251,8 @@ class PatchOp(BaseSchema):
                     )
         return issues
 
-    def deserialize(self, data: Any, include_unknown: bool = False) -> SCIMDataContainer:
-        data = super().deserialize(data, include_unknown)
+    def deserialize(self, data: Any) -> SCIMDataContainer:
+        data = super().deserialize(data)
         ops = data.get(self.attrs.operations__op.rep)
         paths = data.get(self.attrs.operations__path.rep)
         values = data.get(self.attrs.operations__value.rep)

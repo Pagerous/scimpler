@@ -77,8 +77,7 @@ class ListResponse(BaseSchema):
                 )
         return issues
 
-    def serialize(self, data: Any) -> SCIMDataContainer:
-        data = super().serialize(data)
+    def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
         resources_ = data.get(self.attrs.resources.rep)
         if resources_ is Missing:
             return data

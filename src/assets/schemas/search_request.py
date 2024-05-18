@@ -73,8 +73,8 @@ class SearchRequest(BaseSchema):
             ],
         )
 
-    def deserialize(self, data: Any, include_unknown: bool = False) -> SCIMDataContainer:
-        data = super().deserialize(data, include_unknown)
+    def deserialize(self, data: Any) -> SCIMDataContainer:
+        data = super().deserialize(data)
         to_include = data.pop(self.attrs.attributes.rep)
         to_exclude = data.pop(self.attrs.excludeattributes.rep)
         if to_include or to_exclude:

@@ -11,6 +11,10 @@ class QueryStringDeserializer(abc.ABC):
     def __init__(self, config: ServiceProviderConfig):
         self._config = config
 
+    @property
+    def config(self) -> ServiceProviderConfig:
+        return self._config
+
     @abc.abstractmethod
     def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         ...
@@ -19,18 +23,20 @@ class QueryStringDeserializer(abc.ABC):
 class _AttributesDeserializer(QueryStringDeserializer, abc.ABC):
     def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         query_string = query_string or {}
-        return (
+        deserialized = (
             search_request.SearchRequest()
             .deserialize(
                 SCIMDataContainer(
                     {
-                        "attributes": query_string.get("attributes", Missing),
-                        "excludeAttributes": query_string.get("excludeAttributes", Missing),
+                        "attributes": query_string.pop("attributes", Missing),
+                        "excludeAttributes": query_string.pop("excludeAttributes", Missing),
                     }
                 )
             )
             .to_dict()
         )
+        deserialized.update(query_string)
+        return deserialized
 
 
 class ResourcesPOST(_AttributesDeserializer):
@@ -55,7 +61,16 @@ class ServerRootResourcesGET(QueryStringDeserializer):
         self._schema = get_search_request_schema(config)
 
     def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        return self._schema.deserialize(SCIMDataContainer(query_string or {})).to_dict()
+        query_string = query_string or {}
+        additional_params = SCIMDataContainer(query_string)
+
+        input_ = SCIMDataContainer(query_string)
+        for attr in self._schema.attrs:
+            additional_params.pop(attr.rep)
+
+        deserialized = self._schema.deserialize(input_).to_dict()
+        deserialized.update(additional_params.to_dict())
+        return deserialized
 
 
 class ResourcesGET(ServerRootResourcesGET):

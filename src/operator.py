@@ -123,7 +123,7 @@ class And(MultiOperandLogicalOperator):
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
     ) -> MatchResult:
-        value = value or {}
+        value = value or SCIMDataContainer()
         missing_data = False
         for match in self._collect_matches(value, attrs):
             if match.status == MatchStatus.FAILED:
@@ -143,7 +143,7 @@ class Or(MultiOperandLogicalOperator):
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
     ) -> MatchResult:
-        value = value or {}
+        value = value or SCIMDataContainer()
         missing_data = False
         for match in self._collect_matches(value, attrs):
             if match.status == MatchStatus.PASSED:
@@ -175,7 +175,7 @@ class Not(LogicalOperator):
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
     ) -> MatchResult:
-        value = value or {}
+        value = value or SCIMDataContainer()
         if isinstance(self._sub_operator, LogicalOperator):
             match = self._sub_operator.match(value, attrs)
             if match.status == MatchStatus.MISSING_DATA:
