@@ -124,8 +124,20 @@ class PatchPath:
             attr_rep=filter_.operator.attr_rep,
             sub_attr_rep=sub_attr_rep,
             filter_=filter_,
-            filter_sub_attr_rep=val_attr_rep,
         )
+
+    def __repr__(self):
+        if self._filter:
+            repr_ = self._filter.serialize()
+        else:
+            repr_ = str(
+                BoundedAttrRep(
+                    schema=self._attr_rep.schema,
+                    attr=self._attr_rep.attr,
+                    sub_attr=self._sub_attr_rep.attr if self._sub_attr_rep else None,
+                )
+            )
+        return f"PatchPath({repr_})"
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, PatchPath):
