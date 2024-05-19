@@ -13,31 +13,33 @@ class PatchPath:
     def __init__(
         self,
         attr_rep: BoundedAttrRep,
-        filter_: Optional[Filter[ComplexAttributeOperator]],
-        filter_sub_attr_rep: Optional[AttrRep],
+        sub_attr_rep: Optional[AttrRep],
+        filter_: Optional[Filter[ComplexAttributeOperator]] = None,
     ):
-        if attr_rep.sub_attr and (filter_ or filter_sub_attr_rep):
-            raise ValueError("sub-attribute can not be complex")
+        if attr_rep.sub_attr:
+            raise ValueError("'attr_rep' must not be a sub attribute")
 
-        if filter_ is not None:
-            if filter_.operator.attr_rep != attr_rep:
-                raise ValueError("non-matching top-level attributes for 'attr_rep' and 'filter'")
+        if filter_ is not None and filter_.operator.attr_rep != attr_rep:
+            raise ValueError(
+                f"provided filter is configured for {filter_.operator.attr_rep!r}, "
+                f"but {attr_rep!r} is required"
+            )
 
         self._attr_rep = attr_rep
+        self._sub_attr_rep = sub_attr_rep
         self._filter = filter_
-        self._filter_sub_attr_rep = filter_sub_attr_rep
 
     @property
     def attr_rep(self) -> BoundedAttrRep:
         return self._attr_rep
 
     @property
-    def filter(self) -> Optional[Filter]:
-        return self._filter
+    def sub_attr_rep(self) -> Optional[AttrRep]:
+        return self._sub_attr_rep
 
     @property
-    def filter_sub_attr_rep(self) -> Optional[AttrRep]:
-        return self._filter_sub_attr_rep
+    def has_filter(self) -> bool:
+        return self._filter is not None
 
     @classmethod
     def validate(cls, path: str) -> ValidationIssues:
@@ -88,11 +90,20 @@ class PatchPath:
         if "[" in path and "]" in path:
             return cls._deserialize_complex_multivalued_path(path, placeholders)
 
-        assert "[" not in path and "]" not in path
+        if "[" in path or "]" in path:
+            raise ValueError("invalid path expression")
+
+        attr_rep = BoundedAttrRep.deserialize(decode_placeholders(path, placeholders))
+        if attr_rep.sub_attr:
+            sub_attr_rep = AttrRep(attr=attr_rep.sub_attr)
+            attr_rep = BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
+        else:
+            sub_attr_rep = None
+
         return PatchPath(
-            attr_rep=BoundedAttrRep.deserialize(decode_placeholders(path, placeholders)),
+            attr_rep=attr_rep,
+            sub_attr_rep=sub_attr_rep,
             filter_=None,
-            filter_sub_attr_rep=None,
         )
 
     @classmethod
@@ -101,16 +112,17 @@ class PatchPath:
     ) -> "PatchPath":
         filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
         filter_ = Filter.deserialize(filter_exp)
-        val_attr_rep = None
-        val_attr_exp = path[path.index("]") + 1 :]
-        if val_attr_exp:
-            if val_attr_exp.startswith("."):
-                val_attr_exp = val_attr_exp[1:]
-            val_attr_exp = decode_placeholders(val_attr_exp, placeholders)
-            val_attr_rep = AttrRep(val_attr_exp)
+        sub_attr_rep = None
+        sub_attr_exp = path[path.index("]") + 1 :]
+        if sub_attr_exp:
+            if sub_attr_exp.startswith("."):
+                sub_attr_exp = sub_attr_exp[1:]
+            sub_attr_exp = decode_placeholders(sub_attr_exp, placeholders)
+            sub_attr_rep = AttrRep(sub_attr_exp)
 
         return cls(
             attr_rep=filter_.operator.attr_rep,
+            sub_attr_rep=sub_attr_rep,
             filter_=filter_,
             filter_sub_attr_rep=val_attr_rep,
         )
@@ -121,8 +133,8 @@ class PatchPath:
 
         return bool(
             self.attr_rep == other.attr_rep
-            and self.filter == other.filter
-            and self.filter_sub_attr_rep == other.filter_sub_attr_rep
+            and self._filter == other._filter
+            and self.sub_attr_rep == other.sub_attr_rep
         )
 
     def __call__(self, value: Any, schema: BaseSchema) -> bool:

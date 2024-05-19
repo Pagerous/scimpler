@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, Union
 
-from src.attributes import AttributeMutability, Complex, String, Unknown
+from src.attributes import Attribute, AttributeMutability, Complex, String, Unknown
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.path import PatchPath
@@ -101,7 +101,7 @@ class PatchOp(BaseSchema):
 
         attr = self._resource_schema.attrs.get(path.attr_rep)
         path_location = (self.attrs.operations__path.rep.sub_attr,)
-        if path.filter_sub_attr_rep is None:
+        if path.sub_attr_rep is None:
             if attr.mutability == AttributeMutability.READ_ONLY:
                 issues.add_error(
                     issue=ValidationError.attribute_can_not_be_modified(),
@@ -119,7 +119,7 @@ class PatchOp(BaseSchema):
                 BoundedAttrRep(
                     schema=path.attr_rep.schema,
                     attr=path.attr_rep.attr,
-                    sub_attr=path.filter_sub_attr_rep.attr,
+                    sub_attr=path.sub_attr_rep.attr,
                 )
             )
             if sub_attr.required and not sub_attr.multi_valued:
@@ -195,30 +195,16 @@ class PatchOp(BaseSchema):
                         )
             return issues
 
-        # sub-attribute of filtered multivalued complex attribute
-        if (
-            isinstance(self._resource_schema.attrs.get(path.attr_rep), Complex)
-            and path.filter
-            and path.filter_sub_attr_rep
-        ):
-            attr_rep = BoundedAttrRep(
-                schema=path.attr_rep.schema,
-                attr=path.attr_rep.attr,
-                sub_attr=path.filter_sub_attr_rep.attr,
-            )
-        else:
-            attr_rep = path.attr_rep
-        return self._validate_update_attr_value(attr_rep, value, path)
+        attr = self._resource_schema.attrs.get_by_path(path)
+        if attr is None:
+            return ValidationIssues()
+        return self._validate_update_attr_value(attr, value, path)
 
+    @staticmethod
     def _validate_update_attr_value(
-        self, attr_rep: BoundedAttrRep, attr_value: Any, path: PatchPath
+        attr: Attribute, attr_value: Any, path: PatchPath
     ) -> ValidationIssues:
         issues = ValidationIssues()
-
-        attr = self._resource_schema.attrs.get(attr_rep)
-        if attr is None:
-            return issues
-
         if attr.mutability == AttributeMutability.READ_ONLY:
             issues.add_error(
                 issue=ValidationError.attribute_can_not_be_modified(),
@@ -226,8 +212,9 @@ class PatchOp(BaseSchema):
             )
             return issues
 
+        # e.g. emails[value ew '.com']
         updating_multivalued_items = (
-            path.filter and not path.filter_sub_attr_rep and not isinstance(attr_value, List)
+            path.has_filter and not path.sub_attr_rep and not isinstance(attr_value, List)
         )
 
         if updating_multivalued_items:
@@ -277,29 +264,20 @@ class PatchOp(BaseSchema):
         if path in [None, Missing]:
             return self._resource_schema.deserialize(value)
 
-        # sub-attribute of filtered multivalued complex attribute
         attr = self._resource_schema.attrs.get(path.attr_rep)
-        if isinstance(attr, Complex) and path.filter and path.filter_sub_attr_rep:
-            return attr.attrs.get(path.filter_sub_attr_rep).deserialize(value)
 
-        if path.filter and not path.filter_sub_attr_rep and not isinstance(value, List):
+        if isinstance(attr, Complex) and path.sub_attr_rep:
+            return attr.attrs.get(path.sub_attr_rep).deserialize(value)
+
+        if path.has_filter and not path.sub_attr_rep and not isinstance(value, List):
             return attr.deserialize([value])[0]
+
         return attr.deserialize(value)
 
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:
     issues = ValidationIssues()
-    if schema.attrs.get(path.attr_rep) is None or (
-        path.filter_sub_attr_rep is not None
-        and schema.attrs.get(
-            BoundedAttrRep(
-                schema=path.attr_rep.schema,
-                attr=path.attr_rep.attr,
-                sub_attr=path.filter_sub_attr_rep.attr,
-            )
-        )
-        is None
-    ):
+    if schema.attrs.get_by_path(path) is None:
         issues.add_error(
             issue=ValidationError.unknown_operation_target(),
             proceed=False,

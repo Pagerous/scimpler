@@ -1,5 +1,3 @@
-from typing import Optional
-
 import pytest
 
 from src.assets.schemas import User
@@ -75,66 +73,61 @@ def test_patch_path_parsing_failure(path, expected_issues):
 
 
 @pytest.mark.parametrize(
+    ("path", "expected"),
     (
-        "path",
-        "expected_attr_rep",
-        "expected_multivalued_filter",
-        "expected_filter_sub_attr_rep",
-    ),
-    (
-        ("members", BoundedAttrRep(attr="members"), None, None),
-        ("name.familyName", BoundedAttrRep(attr="name", sub_attr="familyName"), None, None),
+        (
+            "members",
+            PatchPath(
+                attr_rep=BoundedAttrRep(attr="members"),
+                sub_attr_rep=None,
+                filter_=None,
+            ),
+        ),
+        (
+            "name.familyName",
+            PatchPath(
+                attr_rep=BoundedAttrRep(attr="name"),
+                sub_attr_rep=AttrRep(attr="familyName"),
+                filter_=None,
+            ),
+        ),
         (
             'addresses[type eq "work"]',
-            BoundedAttrRep(attr="addresses"),
-            Filter(
-                ComplexAttributeOperator(
-                    attr_rep=BoundedAttrRep(attr="addressed"),
-                    sub_operator=Equal(AttrRep(attr="type"), "work"),
-                )
+            PatchPath(
+                attr_rep=BoundedAttrRep(attr="addresses"),
+                sub_attr_rep=None,
+                filter_=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=BoundedAttrRep(attr="addresses"),
+                        sub_operator=Equal(AttrRep(attr="type"), "work"),
+                    )
+                ),
             ),
-            None,
         ),
         (
             'members[value eq "2819c223-7f76-453a-919d-413861904646"].displayName',
-            BoundedAttrRep(attr="members"),
-            Filter(
-                ComplexAttributeOperator(
-                    attr_rep=BoundedAttrRep(attr="members"),
-                    sub_operator=Equal(
-                        AttrRep(attr="value"),
-                        "2819c223-7f76-453a-919d-413861904646",
-                    ),
-                )
+            PatchPath(
+                attr_rep=BoundedAttrRep(attr="members"),
+                sub_attr_rep=AttrRep(attr="displayName"),
+                filter_=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=BoundedAttrRep(attr="members"),
+                        sub_operator=Equal(
+                            AttrRep(attr="value"),
+                            "2819c223-7f76-453a-919d-413861904646",
+                        ),
+                    )
+                ),
             ),
-            AttrRep(attr="displayName"),
         ),
     ),
 )
-def test_patch_path_parsing_success(
-    path,
-    expected_attr_rep: AttrRep,
-    expected_multivalued_filter: Optional[Filter],
-    expected_filter_sub_attr_rep: Optional[AttrRep],
-):
+def test_patch_path_deserialization_success(path, expected):
     issues = PatchPath.validate(path)
     assert issues.to_dict(msg=True) == {}
 
     deserialized = PatchPath.deserialize(path)
-    assert deserialized.attr_rep == expected_attr_rep
-    if expected_multivalued_filter is not None:
-        assert isinstance(deserialized.filter, type(expected_multivalued_filter))
-        assert (
-            deserialized.filter.operator.sub_operator.value
-            == expected_multivalued_filter.operator.sub_operator.value
-        )
-        assert (
-            deserialized.filter.operator.sub_operator.attr_rep
-            == expected_multivalued_filter.operator.sub_operator.attr_rep
-        )
-    else:
-        assert deserialized.filter is None
-    assert deserialized.filter_sub_attr_rep == expected_filter_sub_attr_rep
+    assert deserialized == expected
 
 
 @pytest.mark.parametrize(
@@ -142,33 +135,23 @@ def test_patch_path_parsing_success(
     (
         {
             "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
+            "sub_attr_rep": None,
             "filter_": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
-            "filter_sub_attr_rep": None,
-        },
-        {
-            "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
-            "filter_": Filter(
-                ComplexAttributeOperator(
-                    attr_rep=BoundedAttrRep(attr="attr"),
-                    sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
-                )
-            ),
-            "filter_sub_attr_rep": AttrRep(attr="other_attr"),
         },
         {
             "attr_rep": BoundedAttrRep(attr="attr"),
+            "sub_attr_rep": AttrRep(attr="other_attr"),
             "filter_": Filter(
                 ComplexAttributeOperator(
                     attr_rep=BoundedAttrRep(attr="different_attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
-            "filter_sub_attr_rep": AttrRep(attr="other_attr"),
         },
     ),
 )
@@ -192,7 +175,7 @@ def test_complex_filter_string_values_can_contain_anything(path, expected_filter
     assert issues.to_dict(msg=True) == {}
 
     deserialized = PatchPath.deserialize(path)
-    assert deserialized.filter.operator.sub_operator.value == expected_filter_value
+    assert deserialized({"value": expected_filter_value}, User)
 
 
 @pytest.mark.parametrize(
