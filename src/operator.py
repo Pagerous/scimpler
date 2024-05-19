@@ -1,6 +1,5 @@
 import abc
 import operator
-from enum import Enum
 from typing import (
     Any,
     Callable,
@@ -26,58 +25,6 @@ from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataCon
 from src.registry import converters
 
 
-class MatchStatus(Enum):
-    PASSED = "PASSED"
-    FAILED = "FAILED"
-    FAILED_NO_ATTR = "FAILED_NO_ATTR"
-    MISSING_DATA = "MISSING_DATA"
-
-
-class MatchResult:
-    def __init__(self, status: MatchStatus):
-        self._status = status
-
-    @classmethod
-    def passed(cls):
-        return cls(MatchStatus.PASSED)
-
-    @classmethod
-    def failed(cls):
-        return cls(MatchStatus.FAILED)
-
-    @classmethod
-    def failed_no_attr(cls):
-        return cls(MatchStatus.FAILED_NO_ATTR)
-
-    @classmethod
-    def missing_data(cls):
-        return cls(MatchStatus.MISSING_DATA)
-
-    @property
-    def status(self) -> MatchStatus:
-        return self._status
-
-    def __eq__(self, other):
-        if isinstance(other, bool):
-            if self._status == MatchStatus.PASSED and other is True:
-                return True
-            elif (
-                self._status in [MatchStatus.FAILED, MatchStatus.FAILED_NO_ATTR] and other is False
-            ):
-                return True
-            return False
-        if isinstance(other, MatchResult):
-            return self.status == other.status
-        return False
-
-    def __bool__(self):
-        if self._status == MatchStatus.PASSED:
-            return True
-        elif self._status in [MatchStatus.FAILED, MatchStatus.FAILED_NO_ATTR]:
-            return False
-        raise ValueError("unable to determine result for missing data")
-
-
 class LogicalOperator(abc.ABC):
     SCIM_OP = None
 
@@ -86,7 +33,7 @@ class LogicalOperator(abc.ABC):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         ...
 
 
@@ -107,7 +54,7 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
         self,
         value: SCIMDataContainer,
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> Generator[MatchResult, None, None]:
+    ) -> Generator[bool, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
                 yield sub_operator.match(value, attrs)
@@ -122,17 +69,12 @@ class And(MultiOperandLogicalOperator):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         value = value or SCIMDataContainer()
-        missing_data = False
         for match in self._collect_matches(value, attrs):
-            if match.status == MatchStatus.FAILED:
-                return MatchResult.failed()
-            if match.status == MatchStatus.MISSING_DATA:
-                missing_data = True
-        if missing_data:
-            return MatchResult.missing_data()
-        return MatchResult.passed()
+            if not match:
+                return False
+        return True
 
 
 class Or(MultiOperandLogicalOperator):
@@ -142,17 +84,12 @@ class Or(MultiOperandLogicalOperator):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         value = value or SCIMDataContainer()
-        missing_data = False
         for match in self._collect_matches(value, attrs):
-            if match.status == MatchStatus.PASSED:
-                return MatchResult.passed()
-            if match.status == MatchStatus.MISSING_DATA:
-                missing_data = True
-        if missing_data:
-            return MatchResult.missing_data()
-        return MatchResult.failed()
+            if match:
+                return True
+        return False
 
 
 TNotSubOperator = TypeVar(
@@ -174,19 +111,13 @@ class Not(LogicalOperator):
         self,
         value: Optional[SCIMDataContainer],
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         value = value or SCIMDataContainer()
         if isinstance(self._sub_operator, LogicalOperator):
             match = self._sub_operator.match(value, attrs)
-            if match.status == MatchStatus.MISSING_DATA:
-                return MatchResult.failed()
-            if match.status == MatchStatus.FAILED:
-                return MatchResult.passed()
-            return MatchResult.failed()
-        match = self._sub_operator.match(value.get(self._sub_operator.attr_rep), attrs)
-        if match.status == MatchStatus.FAILED:
-            return MatchResult.passed()
-        return MatchResult.failed()
+        else:
+            match = self._sub_operator.match(value.get(self._sub_operator.attr_rep), attrs)
+        return not match
 
 
 TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
@@ -207,7 +138,7 @@ class AttributeOperator(abc.ABC):
         self,
         value: Any,
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         ...
 
 
@@ -220,14 +151,14 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         self,
         value: Any,
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
         if attr is None:
-            return MatchResult.failed_no_attr()
+            return False
 
         if attr.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
-            return MatchResult.failed()
+            return False
 
         if attr.multi_valued:
             if isinstance(value, List):
@@ -239,7 +170,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         else:
             match = self.OPERATOR(value)
 
-        return MatchResult.passed() if match else MatchResult.failed()
+        return match
 
 
 def _pr_operator(value):
@@ -337,30 +268,28 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         self,
         value: Any,
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
         if attr is None:
-            return MatchResult.failed_no_attr()
+            return False
 
-        if value in [None, Missing]:
-            return MatchResult.missing_data()
-        elif value is Invalid:
-            return MatchResult.failed()
+        if value in [None, Missing, Invalid]:
+            return False
 
         values = self._get_values_for_comparison(value, attr)
 
         if values is None:
-            return MatchResult.failed()
+            return False
 
         for attr_value, op_value in values:
             try:
                 if self.OPERATOR(attr_value, op_value):
-                    return MatchResult.passed()
+                    return True
             except TypeError:
                 pass
 
-        return MatchResult.failed()
+        return False
 
 
 class Equal(BinaryAttributeOperator):
@@ -478,18 +407,18 @@ class ComplexAttributeOperator:
         self,
         value: Optional[Union[List[SCIMDataContainer], SCIMDataContainer]],
         attrs: Union[Attributes, BoundedAttributes],
-    ) -> MatchResult:
+    ) -> bool:
         _ensure_correct_attrs(attrs, self._attr_rep)
         attr = attrs.get(self._attr_rep)
         if attr is None or not isinstance(attr, Complex):
-            return MatchResult.failed_no_attr()
+            return False
         if (
             attr.multi_valued
             and not isinstance(value, List)
             or not attr.multi_valued
             and isinstance(value, List)
         ):
-            return MatchResult.failed()
+            return False
 
         value = value or ([] if attr.multi_valued else SCIMDataContainer())
 
@@ -500,15 +429,15 @@ class ComplexAttributeOperator:
             for item in value:
                 item_value = item.get(self._sub_operator.attr_rep)
                 match = self._sub_operator.match(item_value, attr.attrs)
-                if match.status == MatchStatus.PASSED:
-                    return MatchResult.passed()
-            return MatchResult.failed()
+                if match:
+                    return True
+            return False
 
         for item in value:
             match = self._sub_operator.match(item, attr.attrs)
-            if match.status == MatchStatus.PASSED:
-                return MatchResult.passed()
-        return MatchResult.failed()
+            if match:
+                return True
+        return False
 
 
 def _ensure_correct_attrs(

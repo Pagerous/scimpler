@@ -82,6 +82,9 @@ class PatchOp(BaseSchema):
         paths = data.get(self.attrs.operations__path.rep)
         values = data.get(self.attrs.operations__value.rep)
 
+        if not all([ops, paths, values]):
+            return issues
+
         for i, (op, path, value) in enumerate(zip(ops, paths, values)):
             if Invalid in (op, path, value):
                 continue

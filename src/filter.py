@@ -569,9 +569,7 @@ class Filter(Generic[TOperator]):
             )
         return op_(attr_rep, value)
 
-    def __call__(
-        self, data: Union[SCIMDataContainer, Dict], schema: "BaseSchema"
-    ) -> op.MatchResult:
+    def __call__(self, data: Union[SCIMDataContainer, Dict], schema: "BaseSchema") -> bool:
         if isinstance(data, dict):
             data = SCIMDataContainer(data)
 

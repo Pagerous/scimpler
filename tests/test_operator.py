@@ -13,7 +13,6 @@ from src.operator import (
     GreaterThanOrEqual,
     LesserThan,
     LesserThanOrEqual,
-    MatchStatus,
     Not,
     NotEqual,
     Or,
@@ -724,12 +723,12 @@ def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalue
     assert actual == expected
 
 
-def test_binary_op_returns_missing_data_if_no_value_provided():
+def test_binary_op_does_not_match_if_no_value_provided():
     operator = Equal(BoundedAttrRep(attr="str"), "abc")
 
     match = operator.match(None, SchemaForTests.attrs)
 
-    assert match.status == MatchStatus.MISSING_DATA
+    assert not match
 
 
 def test_complex_op_does_not_matches_if_sub_attribute_not_provided():
@@ -743,7 +742,7 @@ def test_complex_op_does_not_matches_if_sub_attribute_not_provided():
     assert not match
 
 
-def test_or_op_returns_missing_data_if_no_sub_attr_matched():
+def test_or_op_does_not_match_if_no_sub_attr_matched():
     operator = Or(
         Equal(BoundedAttrRep(attr="int"), 1),
         Equal(BoundedAttrRep(attr="str"), "abc"),
@@ -751,7 +750,7 @@ def test_or_op_returns_missing_data_if_no_sub_attr_matched():
 
     match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs)
 
-    assert match.status == MatchStatus.MISSING_DATA
+    assert not match
 
 
 def test_or_op_matches_if_any_sub_attr_matched():
@@ -765,7 +764,7 @@ def test_or_op_matches_if_any_sub_attr_matched():
     assert match
 
 
-def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data():
+def test_and_op_does_not_match_if_any_sub_attr_is_without_data():
     operator = And(
         Equal(BoundedAttrRep(attr="int"), 1),
         Equal(BoundedAttrRep(attr="str"), "abc"),
@@ -774,7 +773,7 @@ def test_and_op_returns_missing_data_if_any_sub_attr_is_without_data():
 
     match = operator.match(SCIMDataContainer(value), SchemaForTests.attrs)
 
-    assert match.status == MatchStatus.MISSING_DATA
+    assert not match
 
 
 def test_and_op_does_not_match_if_any_sub_attr_does_not_match():
@@ -788,7 +787,7 @@ def test_and_op_does_not_match_if_any_sub_attr_does_not_match():
     assert not match
 
 
-def test_not_op_does_not_match_for_missing_value_in_logical_sub_op():
+def test_not_op_matches_if_missing_value_in_logical_sub_op():
     operator = Not(
         Or(
             Equal(BoundedAttrRep(attr="int"), 1),
@@ -798,23 +797,23 @@ def test_not_op_does_not_match_for_missing_value_in_logical_sub_op():
 
     match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests.attrs)
 
-    assert not match
+    assert match
 
 
-def test_not_op_does_not_match_for_missing_value_in_attr_sub_op():
+def test_not_op_matches_for_missing_value_in_attr_sub_op():
     operator = Not(Equal(BoundedAttrRep(attr="int"), 1))
 
     match = operator.match(SCIMDataContainer({}), SchemaForTests.attrs)
 
-    assert not match
+    assert match
 
 
-def test_not_op_does_not_match_if_op_attr_not_in_attrs():
+def test_not_op_matches_if_op_attr_not_in_attrs():
     operator = Not(Equal(BoundedAttrRep(attr="other_attr"), 1))
 
     match = operator.match(SCIMDataContainer({"other_attr": 2}), SchemaForTests.attrs)
 
-    assert not match
+    assert match
 
 
 def test_not_op_matches_if_no_data_for_pr_sub_op():

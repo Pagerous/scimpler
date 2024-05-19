@@ -5,6 +5,7 @@ from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataCon
 from src.filter import Filter
 from src.operator import ComplexAttributeOperator, Equal
 from src.path import PatchPath
+from src.schemas import ResourceSchema
 from tests.conftest import SchemaForTests
 
 
@@ -555,7 +556,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
     ),
 )
 def test_remove_operation__fails_if_attribute_is_readonly_or_required(
-    path, expected_path_issue_codes, resource_schema
+    path, expected_path_issue_codes, resource_schema: ResourceSchema
 ):
     schema = patch_op.PatchOp(resource_schema)
     input_data = {
@@ -575,3 +576,11 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
 
     assert schema.validate(input_data).to_dict() == expected_issues
     assert schema.deserialize(input_data).to_dict() == expected_data
+
+
+def test_validate_empty_body():
+    schema = patch_op.PatchOp(resource_schema=user.User)
+
+    issues = schema.validate({})
+
+    assert issues.to_dict() == {}
