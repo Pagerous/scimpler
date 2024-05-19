@@ -33,15 +33,6 @@ from tests.conftest import SchemaForTests
             ],
             {"1": {"value": {"_errors": [{"code": 15}]}}},
         ),
-        (
-            [
-                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
-                SCIMDataContainer(
-                    {"op": "add", "path": 'emails[type eq "work"]', "value": {"primary": True}}
-                ),
-            ],
-            {"1": {"path": {"_errors": [{"code": 305}]}}},
-        ),
     ),
 )
 def test_validate_patch_operations(value, expected_issues):
@@ -418,6 +409,24 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
             ),
             "work@example.com",
             "work@example.com",
+        ),
+        (
+            'emails[type eq "work"]',
+            PatchPath(
+                attr_rep=BoundedAttrRep(attr="emails"),
+                filter_=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=BoundedAttrRep(attr="emails"),
+                        sub_operator=Equal(
+                            attr_rep=AttrRep(attr="type"),
+                            value="work",
+                        ),
+                    )
+                ),
+                filter_sub_attr_rep=None,
+            ),
+            {"value": "work@example.com"},
+            {"value": "work@example.com"},
         ),
     ),
 )

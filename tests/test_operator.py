@@ -506,9 +506,7 @@ def test_present_operator(value, attribute_name, expected):
 def test_complex_attribute_matches_binary_operator_if_one_of_values_matches():
     operator = StartsWith(BoundedAttrRep(attr="c_mv"), "abc")
 
-    match = operator.match(
-        [{"value": "a"}, {"value": "bac"}, {"value": "abcd"}], SchemaForTests
-    )
+    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "abcd"}], SchemaForTests)
 
     assert match
 
@@ -516,9 +514,7 @@ def test_complex_attribute_matches_binary_operator_if_one_of_values_matches():
 def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches():
     operator = StartsWith(BoundedAttrRep(attr="c_mv"), "abc")
 
-    match = operator.match(
-        [{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}], SchemaForTests
-    )
+    match = operator.match([{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}], SchemaForTests)
 
     assert not match
 

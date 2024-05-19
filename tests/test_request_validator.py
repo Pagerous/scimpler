@@ -867,6 +867,49 @@ def test_correct_remove_operations_pass_validation():
     assert issues.to_dict(msg=True) == {}
 
 
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_correct_add_and_replace_operations_pass_validation(op):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
+    issues = validator.validate_request(
+        body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": op,
+                    "path": "str",
+                    "value": "abc",
+                },
+                {
+                    "op": op,
+                    "path": "str_mv[value eq 'abc']",
+                    "value": "def",
+                },
+                {
+                    "op": op,
+                    "path": "c2.int",
+                    "value": 42,
+                },
+                {
+                    "op": op,
+                    "path": "c2_mv[int eq 1]",
+                    "value": {
+                        "str": "abc",
+                        "int": 42,
+                        "bool": True,
+                    },
+                },
+                {
+                    "op": op,
+                    "path": "c2_mv[int eq 1].str",
+                    "value": "def",
+                },
+            ],
+        }
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
 def test_resource_object_patch_response_validation_fails_if_204_but_attributes_requested():
     validator = ResourceObjectPATCH(CONFIG, resource_schema=user.User)
 

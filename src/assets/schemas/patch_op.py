@@ -26,16 +26,6 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
                     proceed=False,
                     location=(i, "value"),
                 )
-            if (
-                path
-                and (path := PatchPath.deserialize(path)).filter is not None
-                and path.filter_sub_attr_rep is None
-            ):
-                issues.add_error(
-                    issue=ValidationError.complex_filter_without_sub_attr_for_add_op(),
-                    proceed=False,
-                    location=(i, "path"),
-                )
     return issues
 
 
@@ -218,10 +208,10 @@ class PatchOp(BaseSchema):
             )
         else:
             attr_rep = path.attr_rep
-        return self._validate_update_attr_value(attr_rep, value)
+        return self._validate_update_attr_value(attr_rep, value, path)
 
     def _validate_update_attr_value(
-        self, attr_rep: BoundedAttrRep, attr_value: Any
+        self, attr_rep: BoundedAttrRep, attr_value: Any, path: PatchPath
     ) -> ValidationIssues:
         issues = ValidationIssues()
 
@@ -236,12 +226,19 @@ class PatchOp(BaseSchema):
             )
             return issues
 
-        issues_ = attr.validate(attr_value)
+        updating_multivalued_items = (
+            path.filter and not path.filter_sub_attr_rep and not isinstance(attr_value, List)
+        )
+
+        if updating_multivalued_items:
+            issues_ = attr.validate([attr_value])
+        else:
+            issues_ = attr.validate(attr_value)
         issues.merge(issues_)
         if not issues_.can_proceed():
             return issues
 
-        elif isinstance(attr, Complex) and not attr.multi_valued:
+        if isinstance(attr, Complex) and (updating_multivalued_items or not attr.multi_valued):
             for sub_attr in attr.attrs:
                 if sub_attr.mutability != AttributeMutability.READ_ONLY:
                     # non-read-only attributes can be updated
@@ -284,6 +281,9 @@ class PatchOp(BaseSchema):
         attr = self._resource_schema.attrs.get(path.attr_rep)
         if isinstance(attr, Complex) and path.filter and path.filter_sub_attr_rep:
             return attr.attrs.get(path.filter_sub_attr_rep).deserialize(value)
+
+        if path.filter and not path.filter_sub_attr_rep and not isinstance(value, List):
+            return attr.deserialize([value])[0]
         return attr.deserialize(value)
 
 
