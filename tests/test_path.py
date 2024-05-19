@@ -2,10 +2,13 @@ from typing import Optional
 
 import pytest
 
+from src.assets.schemas import User
 from src.container import AttrRep, BoundedAttrRep
 from src.filter import Filter
 from src.operator import ComplexAttributeOperator, Equal
 from src.path import PatchPath
+from src.schemas import BaseSchema
+from tests.conftest import SchemaForTests
 
 
 @pytest.mark.parametrize(
@@ -190,3 +193,68 @@ def test_complex_filter_string_values_can_contain_anything(path, expected_filter
 
     deserialized = PatchPath.deserialize(path)
     assert deserialized.filter.operator.sub_operator.value == expected_filter_value
+
+
+@pytest.mark.parametrize(
+    ("path", "data", "schema", "expected"),
+    (
+        (
+            PatchPath.deserialize("name.formatted"),
+            "John Doe",
+            User,
+            True,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work']"),
+            {"type": "work", "value": "my@example.com"},
+            User,
+            True,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work']"),
+            42,
+            User,
+            False,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work']"),
+            {"type": "home", "value": "my@example.com"},
+            User,
+            False,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work'].display"),
+            "MY@EXAMPLE.COM",
+            User,
+            False,
+        ),
+        (
+            PatchPath.deserialize("str_mv[value sw 'a']"),
+            "abc",
+            SchemaForTests,
+            True,
+        ),
+        (
+            PatchPath.deserialize("str_mv[value sw 'a']"),
+            "cba",
+            SchemaForTests,
+            False,
+        ),
+        (
+            PatchPath.deserialize("str_mv[value sw 'a' or value ew 'a']"),
+            "cba",
+            SchemaForTests,
+            True,
+        ),
+        (
+            PatchPath.deserialize("str_mv[value sw 'a']"),
+            {"bad": "value"},
+            SchemaForTests,
+            False,
+        ),
+    ),
+)
+def test_check_if_data_matches_path(path, data, schema: BaseSchema, expected):
+    actual = path(data, schema)
+
+    assert actual is expected

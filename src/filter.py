@@ -13,6 +13,7 @@ from typing import (
 )
 
 from src import operator as op
+from src.attributes import Complex
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.registry import (
@@ -569,13 +570,15 @@ class Filter(Generic[TOperator]):
             )
         return op_(attr_rep, value)
 
-    def __call__(self, data: Union[SCIMDataContainer, Dict], schema: "BaseSchema") -> bool:
+    def __call__(
+        self, data: Union[SCIMDataContainer, Dict], schema_or_complex: Union["BaseSchema", Complex]
+    ) -> bool:
         if isinstance(data, dict):
             data = SCIMDataContainer(data)
 
         if not isinstance(self._operator, op.LogicalOperator):
             data = data.get(self._operator.attr_rep)
-        return self._operator.match(data, schema)
+        return self._operator.match(data, schema_or_complex)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Filter):

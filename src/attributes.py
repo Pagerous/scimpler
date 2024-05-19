@@ -854,8 +854,6 @@ class BoundedAttributes:
         return self._bounded_complex_sub_attrs[id(attr_obj)][id(sub_attr_obj)]
 
     def get_by_path(self, path: "PatchPath") -> Optional[Attribute]:
-        if path.filter is not None:
-            return None
         attr = self.get(path.attr_rep)
         if attr is None or path.filter_sub_attr_rep is None:
             return attr

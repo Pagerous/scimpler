@@ -285,7 +285,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             try:
                 if self.OPERATOR(attr_value, op_value):
                     return True
-            except TypeError:
+            except (AttributeError, TypeError):
                 pass
 
         return False
@@ -423,6 +423,10 @@ class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
 
         if not isinstance(value, List):
             value = [value]
+
+        value = [
+            SCIMDataContainer(item) for item in value if isinstance(item, (dict, SCIMDataContainer))
+        ]
 
         if isinstance(self._sub_operator, AttributeOperator):
             for item in value:

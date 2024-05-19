@@ -932,7 +932,11 @@ class ResourceObjectPATCH(Validator):
         value: Any,
         value_location,
     ) -> None:
-        if not (isinstance(attr, Complex) and attr.multi_valued) or value is Missing:
+        if (
+            not (isinstance(attr, Complex) and attr.multi_valued)
+            or value is Missing
+            or not isinstance(value, List)
+        ):
             return
 
         presence_checker = AttributePresenceChecker()

@@ -1,9 +1,11 @@
 from typing import Any, Dict, Optional
 
-from src.container import AttrRep, BoundedAttrRep
+from src.attributes import Complex
+from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
 from src.filter import Filter
-from src.operator import ComplexAttributeOperator
+from src.operator import ComplexAttributeOperator, LogicalOperator
+from src.schemas import BaseSchema
 from src.utils import decode_placeholders, encode_strings
 
 
@@ -121,4 +123,36 @@ class PatchPath:
             self.attr_rep == other.attr_rep
             and self.filter == other.filter
             and self.filter_sub_attr_rep == other.filter_sub_attr_rep
+        )
+
+    def __call__(self, value: Any, schema: BaseSchema) -> bool:
+        attr = schema.attrs.get_by_path(self)
+        if attr is None:
+            raise ValueError(f"path does not indicate any attribute for {schema!r} schema")
+
+        if not self._filter:
+            return True
+
+        if isinstance(value, Dict):
+            value = SCIMDataContainer(value)
+
+        if attr.multi_valued:
+            value = [value]
+
+        if isinstance(attr, Complex):
+            data = SCIMDataContainer()
+            data.set(attr.rep, value)
+            return self._filter(data, schema)
+
+        operator = self._filter.operator.sub_operator
+        if isinstance(operator, LogicalOperator):
+            data = SCIMDataContainer()
+            data.set("value", value)
+        else:
+            data = value
+        return self._filter.operator.sub_operator.match(
+            value=data,
+            schema_or_complex=Complex(
+                name=attr.rep.attr, sub_attributes=[attr.clone(attr_rep=AttrRep("value"))]
+            ),
         )
