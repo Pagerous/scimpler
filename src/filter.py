@@ -420,6 +420,36 @@ class Filter(Generic[TOperator]):
         )
         return issues
 
+    def serialize(self) -> str:
+        output = self._serialize(self._operator)
+        if output.startswith("(") and output.endswith(")"):
+            output = output[1:-1]
+        return output
+
+    @staticmethod
+    def _serialize(operator) -> str:
+        if isinstance(operator, op.AttributeOperator):
+            output = f"{operator.attr_rep} {operator.SCIM_OP}"
+            if isinstance(operator, op.BinaryAttributeOperator):
+                output += f" {operator.value!r}"
+            return output
+
+        if isinstance(operator, op.ComplexAttributeOperator):
+            return (
+                f"{operator.attr_rep.attr_with_schema}[{Filter._serialize(operator.sub_operator)}]"
+            )
+
+        if isinstance(operator, op.Not):
+            return f"{operator.SCIM_OP} {Filter._serialize(operator.sub_operator)}"
+
+        if isinstance(operator, op.MultiOperandLogicalOperator):
+            output = f" {operator.SCIM_OP} ".join(
+                [Filter._serialize(sub_operator) for sub_operator in operator.sub_operators]
+            )
+            return f"({output})"
+
+        raise TypeError(f"unsupported filter type '{type(operator).__name__}'")
+
     @classmethod
     def deserialize(cls, filter_exp: str) -> "Filter":
         try:

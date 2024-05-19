@@ -768,6 +768,7 @@ def test_gargantuan_filter():
         BoundedAttrRep(attr="ims", sub_attr="value"),
         BoundedAttrRep(attr="ims", sub_attr="display"),
     ]
+    assert Filter.deserialize(filter_.serialize()).to_dict() == expected
 
 
 @pytest.mark.parametrize(
