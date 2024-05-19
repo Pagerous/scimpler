@@ -575,7 +575,7 @@ class Filter(Generic[TOperator]):
 
         if not isinstance(self._operator, op.LogicalOperator):
             data = data.get(self._operator.attr_rep)
-        return self._operator.match(data, schema.attrs)
+        return self._operator.match(data, schema)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Filter):

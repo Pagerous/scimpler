@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 
 from src.assets.config import create_service_provider_config
-from src.assets.schemas import User, group, list_response, service_provider_config, user
+from src.assets.schemas import group, list_response, service_provider_config, user
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker

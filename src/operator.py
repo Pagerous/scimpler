@@ -4,6 +4,7 @@ from typing import (
     Any,
     Callable,
     Generator,
+    Generic,
     List,
     Optional,
     Set,
@@ -13,26 +14,22 @@ from typing import (
     Union,
 )
 
-from src.attributes import (
-    Attribute,
-    Attributes,
-    AttributeWithCaseExact,
-    BoundedAttributes,
-    Complex,
-    String,
-)
+from src.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.registry import converters
+from src.schemas import BaseSchema
+
+TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[])
 
 
-class LogicalOperator(abc.ABC):
+class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
     SCIM_OP = None
 
     @abc.abstractmethod
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         ...
 
@@ -53,13 +50,13 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
     def _collect_matches(
         self,
         value: SCIMDataContainer,
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> Generator[bool, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
-                yield sub_operator.match(value, attrs)
+                yield sub_operator.match(value, schema_or_complex)
             else:
-                yield sub_operator.match(value.get(sub_operator.attr_rep), attrs)
+                yield sub_operator.match(value.get(sub_operator.attr_rep), schema_or_complex)
 
 
 class And(MultiOperandLogicalOperator):
@@ -68,10 +65,10 @@ class And(MultiOperandLogicalOperator):
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         value = value or SCIMDataContainer()
-        for match in self._collect_matches(value, attrs):
+        for match in self._collect_matches(value, schema_or_complex):
             if not match:
                 return False
         return True
@@ -83,10 +80,10 @@ class Or(MultiOperandLogicalOperator):
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         value = value or SCIMDataContainer()
-        for match in self._collect_matches(value, attrs):
+        for match in self._collect_matches(value, schema_or_complex):
             if match:
                 return True
         return False
@@ -110,20 +107,22 @@ class Not(LogicalOperator):
     def match(
         self,
         value: Optional[SCIMDataContainer],
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         value = value or SCIMDataContainer()
         if isinstance(self._sub_operator, LogicalOperator):
-            match = self._sub_operator.match(value, attrs)
+            match = self._sub_operator.match(value, schema_or_complex)
         else:
-            match = self._sub_operator.match(value.get(self._sub_operator.attr_rep), attrs)
+            match = self._sub_operator.match(
+                value.get(self._sub_operator.attr_rep), schema_or_complex
+            )
         return not match
 
 
 TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
 
 
-class AttributeOperator(abc.ABC):
+class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
     SCIM_OP = None
 
     def __init__(self, attr_rep: TAttrRep):
@@ -137,7 +136,7 @@ class AttributeOperator(abc.ABC):
     def match(
         self,
         value: Any,
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         ...
 
@@ -150,10 +149,10 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
     def match(
         self,
         value: Any,
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        _ensure_correct_attrs(attrs, self._attr_rep)
-        attr = attrs.get(self._attr_rep)
+        _ensure_correct_obj(schema_or_complex, self._attr_rep)
+        attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None:
             return False
 
@@ -267,10 +266,10 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     def match(
         self,
         value: Any,
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        _ensure_correct_attrs(attrs, self._attr_rep)
-        attr = attrs.get(self._attr_rep)
+        _ensure_correct_obj(schema_or_complex, self._attr_rep)
+        attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None:
             return False
 
@@ -386,7 +385,7 @@ TComplexAttributeSubOperator = TypeVar(
 )
 
 
-class ComplexAttributeOperator:
+class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
     def __init__(
         self,
         attr_rep: TAttrRep,
@@ -406,10 +405,10 @@ class ComplexAttributeOperator:
     def match(
         self,
         value: Optional[Union[List[SCIMDataContainer], SCIMDataContainer]],
-        attrs: Union[Attributes, BoundedAttributes],
+        schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        _ensure_correct_attrs(attrs, self._attr_rep)
-        attr = attrs.get(self._attr_rep)
+        _ensure_correct_obj(schema_or_complex, self._attr_rep)
+        attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None or not isinstance(attr, Complex):
             return False
         if (
@@ -428,22 +427,20 @@ class ComplexAttributeOperator:
         if isinstance(self._sub_operator, AttributeOperator):
             for item in value:
                 item_value = item.get(self._sub_operator.attr_rep)
-                match = self._sub_operator.match(item_value, attr.attrs)
+                match = self._sub_operator.match(item_value, attr)
                 if match:
                     return True
             return False
 
         for item in value:
-            match = self._sub_operator.match(item, attr.attrs)
+            match = self._sub_operator.match(item, attr)
             if match:
                 return True
         return False
 
 
-def _ensure_correct_attrs(
-    attrs: Union[Attributes, BoundedAttributes], attr_rep: Union[AttrRep, BoundedAttrRep]
-):
-    if isinstance(attrs, BoundedAttributes) and not isinstance(attr_rep, BoundedAttrRep):
-        raise TypeError(f"bounded attr can be handled by BoundedAttributes only")
-    elif isinstance(attrs, Attributes) and not isinstance(attr_rep, AttrRep):
-        raise TypeError(f"attr can be handled by Attributes only")
+def _ensure_correct_obj(schema_or_complex: TSchemaOrComplex, attr_rep: TAttrRep):
+    if isinstance(schema_or_complex, BaseSchema) and not isinstance(attr_rep, BoundedAttrRep):
+        raise TypeError(f"bounded attr can be handled by BaseSchema only")
+    elif isinstance(schema_or_complex, Complex) and not isinstance(attr_rep, AttrRep):
+        raise TypeError(f"attr can be handled by Complex only")
