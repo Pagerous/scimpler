@@ -226,11 +226,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         convert = converters.get(attr.SCIM_NAME, lambda _: _)
 
         if isinstance(attr, Complex):
-            value_sub_attr = None
-            for sub_attr in attr.attrs:
-                if sub_attr.rep.attr == "value":
-                    value_sub_attr = sub_attr
-                    break
+            value_sub_attr = getattr(attr.attrs, "value", None)
             if value_sub_attr is None:
                 return None
 
@@ -239,6 +235,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
             attr = value_sub_attr
             value = [item.get("value") for item in value]
+
         elif not isinstance(value, List):
             value = [value]
 

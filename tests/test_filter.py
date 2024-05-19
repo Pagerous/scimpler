@@ -40,13 +40,9 @@ def test_deserialize_basic_binary_attribute_filter(attr_rep, operator):
 def test_deserialize_basic_binary_complex_attribute_filter(full_attr_rep, operator):
     attr_rep = BoundedAttrRep.deserialize(full_attr_rep)
     expected = {
-        "op": "complex",
-        "attr_rep": attr_rep.attr_with_schema,
-        "sub_op": {
-            "op": operator,
-            "attr_rep": attr_rep.sub_attr,
-            "value": "bjensen",
-        },
+        "op": operator,
+        "attr_rep": full_attr_rep,
+        "value": "bjensen",
     }
     filter_exp = f'{full_attr_rep} {operator} "bjensen"'
 
@@ -92,12 +88,8 @@ def test_deserialize_basic_unary_attribute_filter(attr_rep, operator):
 def test_deserialize_basic_unary_attribute_filter_with_complex_attribute(full_attr_rep, operator):
     attr_rep = BoundedAttrRep.deserialize(full_attr_rep)
     expected = {
-        "op": "complex",
-        "attr_rep": attr_rep.attr_with_schema,
-        "sub_op": {
-            "op": operator,
-            "attr_rep": attr_rep.sub_attr,
-        },
+        "op": operator,
+        "attr_rep": full_attr_rep,
     }
     filter_exp = f"{full_attr_rep} {operator}"
 
@@ -142,13 +134,9 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_w
 ):
     attr_rep = BoundedAttrRep.deserialize(full_attr_rep)
     expected = {
-        "op": "complex",
-        "attr_rep": attr_rep.attr_with_schema,
-        "sub_op": {
-            "op": "eq",
-            "attr_rep": attr_rep.sub_attr,
-            "value": f"bjen{sequence}sen",
-        },
+        "op": "eq",
+        "attr_rep": str(attr_rep),
+        "value": f"bjen{sequence}sen",
     }
 
     filter_exp = f'{full_attr_rep}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
@@ -167,9 +155,9 @@ def test_basic_filters_can_be_combined_with_and_operator():
         "sub_ops": [
             {"op": "eq", "attr_rep": "userName", "value": "bjensen"},
             {
-                "op": "complex",
-                "attr_rep": "name",
-                "sub_op": {"op": "ne", "attr_rep": "formatted", "value": "Crazy"},
+                "op": "ne",
+                "attr_rep": "name.formatted",
+                "value": "Crazy",
             },
             {
                 "op": "co",
@@ -197,9 +185,9 @@ def test_basic_filters_can_be_combined_with_or_operator():
         "sub_ops": [
             {"op": "eq", "attr_rep": "userName", "value": "bjensen"},
             {
-                "op": "complex",
-                "attr_rep": "name",
-                "sub_op": {"op": "ne", "attr_rep": "formatted", "value": "Crazy"},
+                "op": "ne",
+                "attr_rep": "name.formatted",
+                "value": "Crazy",
             },
             {
                 "op": "co",
@@ -254,13 +242,9 @@ def test_precedence_of_logical_operators_is_preserved():
                 "op": "and",
                 "sub_ops": [
                     {
-                        "op": "complex",
-                        "attr_rep": "name",
-                        "sub_op": {
-                            "op": "ne",
-                            "attr_rep": "formatted",
-                            "value": "Crazy",
-                        },
+                        "op": "ne",
+                        "attr_rep": "name.formatted",
+                        "value": "Crazy",
                     },
                     {
                         "op": "not",
@@ -301,13 +285,9 @@ def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_f
                 "op": "and",
                 "sub_ops": [
                     {
-                        "op": "complex",
-                        "attr_rep": "name",
-                        "sub_op": {
-                            "op": "ne",
-                            "attr_rep": "formatted",
-                            "value": "Craz\ny",
-                        },
+                        "op": "ne",
+                        "attr_rep": "name.formatted",
+                        "value": "Craz\ny",
                     },
                     {
                         "op": "not",
@@ -348,13 +328,9 @@ def test_filter_groups_are_deserialized():
                 "op": "or",
                 "sub_ops": [
                     {
-                        "op": "complex",
-                        "attr_rep": "name",
-                        "sub_op": {
-                            "op": "ne",
-                            "attr_rep": "formatted",
-                            "value": "Crazy",
-                        },
+                        "op": "ne",
+                        "attr_rep": "name.formatted",
+                        "value": "Crazy",
                     },
                     {
                         "op": "and",
@@ -406,13 +382,9 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                 "op": "or",
                 "sub_ops": [
                     {
-                        "op": "complex",
-                        "attr_rep": "name",
-                        "sub_op": {
-                            "op": "ne",
-                            "attr_rep": "formatted",
-                            "value": "Craz\ny",
-                        },
+                        "op": "ne",
+                        "attr_rep": "name.formatted",
+                        "value": "Craz\ny",
                     },
                     {
                         "op": "and",
@@ -650,13 +622,9 @@ def test_gargantuan_filter():
                 "op": "or",
                 "sub_ops": [
                     {
-                        "op": "complex",
-                        "attr_rep": "name",
-                        "sub_op": {
-                            "op": "ne",
-                            "attr_rep": "formatted",
-                            "value": "Crazy",
-                        },
+                        "op": "ne",
+                        "attr_rep": "name.formatted",
+                        "value": "Crazy",
                     },
                     {
                         "op": "and",
@@ -816,13 +784,9 @@ def test_gargantuan_filter():
         (
             'name.familyName co "O\'Malley"',
             {
-                "op": "complex",
-                "attr_rep": "name",
-                "sub_op": {
-                    "op": "co",
-                    "attr_rep": "familyName",
-                    "value": "O'Malley",
-                },
+                "op": "co",
+                "attr_rep": "name.familyName",
+                "value": "O'Malley",
             },
         ),
         (
@@ -851,49 +815,33 @@ def test_gargantuan_filter():
         (
             'meta.lastModified gt "2011-05-13T04:42:34Z"',
             {
-                "op": "complex",
-                "attr_rep": "meta",
-                "sub_op": {
-                    "op": "gt",
-                    "attr_rep": "lastModified",
-                    "value": "2011-05-13T04:42:34Z",
-                },
+                "op": "gt",
+                "attr_rep": "meta.lastModified",
+                "value": "2011-05-13T04:42:34Z",
             },
         ),
         (
             'meta.lastModified ge "2011-05-13T04:42:34Z"',
             {
-                "op": "complex",
-                "attr_rep": "meta",
-                "sub_op": {
-                    "op": "ge",
-                    "attr_rep": "lastModified",
-                    "value": "2011-05-13T04:42:34Z",
-                },
+                "op": "ge",
+                "attr_rep": "meta.lastModified",
+                "value": "2011-05-13T04:42:34Z",
             },
         ),
         (
             'meta.lastModified lt "2011-05-13T04:42:34Z"',
             {
-                "op": "complex",
-                "attr_rep": "meta",
-                "sub_op": {
-                    "op": "lt",
-                    "attr_rep": "lastModified",
-                    "value": "2011-05-13T04:42:34Z",
-                },
+                "op": "lt",
+                "attr_rep": "meta.lastModified",
+                "value": "2011-05-13T04:42:34Z",
             },
         ),
         (
             'meta.lastModified le "2011-05-13T04:42:34Z"',
             {
-                "op": "complex",
-                "attr_rep": "meta",
-                "sub_op": {
-                    "op": "le",
-                    "attr_rep": "lastModified",
-                    "value": "2011-05-13T04:42:34Z",
-                },
+                "op": "le",
+                "attr_rep": "meta.lastModified",
+                "value": "2011-05-13T04:42:34Z",
             },
         ),
         (
@@ -957,13 +905,9 @@ def test_gargantuan_filter():
                                 "value": "example.com",
                             },
                             {
-                                "op": "complex",
-                                "attr_rep": "emails",
-                                "sub_op": {
-                                    "op": "co",
-                                    "attr_rep": "value",
-                                    "value": "example.org",
-                                },
+                                "op": "co",
+                                "attr_rep": "emails.value",
+                                "value": "example.org",
                             },
                         ],
                     },
@@ -992,13 +936,9 @@ def test_gargantuan_filter():
                                     "value": "example.com",
                                 },
                                 {
-                                    "op": "complex",
-                                    "attr_rep": "emails",
-                                    "sub_op": {
-                                        "op": "co",
-                                        "attr_rep": "value",
-                                        "value": "example.org",
-                                    },
+                                    "op": "co",
+                                    "attr_rep": "emails.value",
+                                    "value": "example.org",
                                 },
                             ],
                         },
@@ -1017,13 +957,9 @@ def test_gargantuan_filter():
                         "value": "Employee",
                     },
                     {
-                        "op": "complex",
-                        "attr_rep": "emails",
-                        "sub_op": {
-                            "op": "eq",
-                            "attr_rep": "type",
-                            "value": "work",
-                        },
+                        "op": "eq",
+                        "attr_rep": "emails.type",
+                        "value": "work",
                     },
                 ],
             },
@@ -2539,3 +2475,24 @@ def test_attr_reps_do_not_contain_duplicates():
         BoundedAttrRep(attr="emails", sub_attr="type"),
         BoundedAttrRep(attr="userName"),
     ]
+
+
+def test_filter_can_be_applied_on_multivalued_complex_attribute_if_no_sub_attr_specified():
+    filter_ = Filter.deserialize("emails co 'example.com'")
+
+    assert filter_({"emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, User)
+    assert not filter_({"emails": [{"value": "a@bad.com"}]}, User)
+
+
+def test_filter_can_be_applied_on_multivalued_complex_attribute_if_value_sub_attr_specified():
+    filter_ = Filter.deserialize("emails.value co 'example.com'")
+
+    assert filter_({"emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, User)
+    assert not filter_({"emails": [{"value": "a@bad.com"}]}, User)
+
+
+def test_filter_can_be_applied_on_multivalued_complex_attribute_if_other_sub_attr_specified():
+    filter_ = Filter.deserialize("emails.display co 'example.com'")
+
+    assert filter_({"emails": [{"display": "a@bad.com"}, {"display": "a@example.com"}]}, User)
+    assert not filter_({"emails": [{"display": "a@bad.com"}]}, User)
