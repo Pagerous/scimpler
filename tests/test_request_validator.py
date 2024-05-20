@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 
 from src.assets.config import create_service_provider_config
-from src.assets.schemas import group, list_response, service_provider_config, user
+from src.assets.schemas import group, Group, list_response, service_provider_config, user, User
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
@@ -1641,3 +1641,35 @@ def test_can_validate_filtering(filter_, checker, expected):
 )
 def test_can_validate_sorting(sorter, checker, expected):
     assert can_validate_sorting(sorter, checker) == expected
+
+
+def test_bulk_request_with_bulk_ids_is_validated():
+    validator = BulkOperations(CONFIG, resource_schemas=[User, Group])
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "Operations": [
+            {
+                "method": "POST",
+                "path": "/Users",
+                "bulkId": "qwerty",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                    "userName": "Alice",
+                },
+            },
+            {
+                "method": "POST",
+                "path": "/Groups",
+                "bulkId": "ytrewq",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+                    "displayName": "Tour Guides",
+                    "members": [{"type": "User", "value": "bulkId:qwerty"}],
+                },
+            },
+        ],
+    }
+
+    issues = validator.validate_request(body=data)
+
+    assert issues.to_dict(msg=True) == {}
