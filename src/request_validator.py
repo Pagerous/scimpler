@@ -113,12 +113,12 @@ def validate_error_status_code_consistency(
     issues = ValidationIssues()
     if str(status_code) != status_code_body:
         issues.add_error(
-            issue=ValidationError.error_status_mismatch(str(status_code), status_code_body),
+            issue=ValidationError.must_be_equal_to("response status code"),
             location=("body", status_code_attr_name),
             proceed=True,
         )
         issues.add_error(
-            issue=ValidationError.error_status_mismatch(str(status_code), status_code_body),
+            issue=ValidationError.must_be_equal_to(f"{status_code_attr_name!r} attribute"),
             location=("status",),
             proceed=True,
         )
@@ -175,7 +175,7 @@ def validate_status_code(expected: int, actual: int) -> ValidationIssues:
     issues = ValidationIssues()
     if expected != actual:
         issues.add_error(
-            issue=ValidationError.bad_status_code(expected, actual),
+            issue=ValidationError.bad_status_code(expected),
             proceed=True,
         )
     return issues
@@ -502,26 +502,28 @@ def validate_resources_attributes_presence(
 
 def validate_number_of_resources(
     count: Optional[int],
-    total_results: Any,
+    total_results: int,
     resources: List[Any],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     n_resources = len(resources)
     if total_results < n_resources:
         issues.add_error(
-            issue=ValidationError.total_results_mismatch(
-                total_results=total_results, n_resources=n_resources
+            issue=ValidationError.bad_number_of_resources(
+                "must not be greater than 'totalResults'"
             ),
             proceed=True,
         )
-    if count is None and total_results > n_resources:
+    elif count is None and total_results > n_resources:
         issues.add_error(
-            issue=ValidationError.too_little_results(must="be equal to 'totalResults'"),
+            issue=ValidationError.bad_number_of_resources("must be equal to 'totalResults'"),
             proceed=True,
         )
     if count is not None and count < n_resources:
         issues.add_error(
-            issue=ValidationError.too_many_results(must="be lesser or equal to 'count' parameter"),
+            issue=ValidationError.bad_number_of_resources(
+                "must be lesser or equal to 'count' parameter"
+            ),
             proceed=True,
         )
     return issues
@@ -561,13 +563,7 @@ def validate_start_index_consistency(
     issues = ValidationIssues()
     if start_index_body > start_index:
         issues.add_error(
-            issue=ValidationError.response_value_does_not_correspond_to_parameter(
-                response_key="startIndex",
-                response_value=start_index_body,
-                query_param_name="startIndex",
-                query_param_value=start_index,
-                reason="bigger value than requested",
-            ),
+            issue=ValidationError.bad_value_content(),
             proceed=True,
         )
     return issues
@@ -580,7 +576,7 @@ def validate_resources_filtered(
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
         if not filter_(resource, schema):
             issues.add_error(
-                issue=ValidationError.filter_mismatch(),
+                issue=ValidationError.resources_not_filtered(),
                 proceed=True,
                 location=(i,),
             )
@@ -965,7 +961,7 @@ class ResourceObjectPATCH(Validator):
         if status_code == 204:
             if presence_checker is not None and presence_checker.attr_reps:
                 issues.add_error(
-                    issue=ValidationError.bad_status_code(200, status_code),
+                    issue=ValidationError.bad_status_code(200),
                     proceed=True,
                     location=("status",),
                 )
@@ -983,9 +979,9 @@ class ResourceObjectPATCH(Validator):
         )
         meta_location = self.response_schema.attrs.meta__version.rep
         if body.get(meta_location) is Missing:
-            issues.pop_error(("body", *_location(meta_location)), 11)
-            issues.pop_error(("body", *_location(meta_location)), 15)
-            issues.pop_error(("headers", "ETag"), 11)
+            issues.pop_error(("body", *_location(meta_location)), 8)
+            issues.pop_error(("body", *_location(meta_location)), 5)
+            issues.pop_error(("headers", "ETag"), 8)
         return issues
 
 
@@ -1010,7 +1006,7 @@ class ResourceObjectDELETE(Validator):
         issues = ValidationIssues()
         if status_code != 204:
             issues.add_error(
-                issue=ValidationError.bad_status_code(204, status_code),
+                issue=ValidationError.bad_status_code(204),
                 proceed=True,
                 location=("status",),
             )
@@ -1104,7 +1100,7 @@ class BulkOperations(Validator):
                 validator = self._validators[method].get(resource_name)
                 if validator is None:
                     issues.add_error(
-                        issue=ValidationError.unknown_resource(),
+                        issue=ValidationError.unknown_operation_resource(),
                         proceed=False,
                         location=path_location,
                     )
@@ -1116,7 +1112,7 @@ class BulkOperations(Validator):
             > self.config.bulk.max_operations
         ):
             issues.add_error(
-                issue=ValidationError.too_many_operations(self.config.bulk.max_operations),
+                issue=ValidationError.too_many_bulk_operations(self.config.bulk.max_operations),
                 proceed=True,
                 location=body_location + _location(self._response_schema.attrs.operations.rep),
             )
@@ -1180,7 +1176,7 @@ class BulkOperations(Validator):
                         break
                 else:
                     issues.add_error(
-                        issue=ValidationError.unknown_resource(),
+                        issue=ValidationError.unknown_operation_resource(),
                         proceed=False,
                         location=location_location,
                     )
@@ -1209,8 +1205,8 @@ class BulkOperations(Validator):
                     status_code=status,
                     headers={"Location": location},
                 )
-                meta_location_missmatch = issues_.pop_error(("body", "meta", "location"), code=11)
-                header_location_mismatch = issues_.pop_error(("headers", "Location"), code=11)
+                meta_location_missmatch = issues_.pop_error(("body", "meta", "location"), code=8)
+                header_location_mismatch = issues_.pop_error(("headers", "Location"), code=8)
                 issues.merge(issues_.get(("body",)), location=response_location)
                 if meta_location_missmatch.has_errors() and header_location_mismatch.has_errors():
                     issues.add_error(
@@ -1241,7 +1237,7 @@ class BulkOperations(Validator):
         fail_on_errors = kwargs.get("fail_on_errors")
         if fail_on_errors is not None and n_errors > fail_on_errors:
             issues.add_error(
-                issue=ValidationError.too_many_errors(fail_on_errors),
+                issue=ValidationError.too_many_errors_in_bulk(fail_on_errors),
                 proceed=True,
                 location=body_location + _location(self._response_schema.attrs.operations.rep),
             )

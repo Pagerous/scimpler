@@ -365,7 +365,6 @@ class Filter(Generic[TOperator]):
                 else:
                     issues.add_error(
                         issue=ValidationError.unknown_operator(
-                            operator_type="unary",
                             operator=decode_placeholders(components[1], placeholders),
                             expression=decode_placeholders(attr_exp, placeholders),
                         ),
@@ -380,7 +379,6 @@ class Filter(Generic[TOperator]):
             if op_ is None:
                 issues.add_error(
                     issue=ValidationError.unknown_operator(
-                        operator_type="binary",
                         operator=decode_placeholders(components[1], placeholders),
                         expression=decode_placeholders(attr_exp, placeholders),
                     ),

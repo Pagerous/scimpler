@@ -182,7 +182,7 @@ def test_attribute_identifier_is_deserialized(
 )
 def test_attribute_identifier_is_not_deserialized_when_bad_input(input_):
     issues = BoundedAttrRep.validate(input_)
-    assert issues.to_dict() == {"_errors": [{"code": 111}]}
+    assert issues.to_dict() == {"_errors": [{"code": 17}]}
 
     with pytest.raises(ValueError):
         BoundedAttrRep.deserialize(input_)
@@ -194,7 +194,7 @@ def test_validation_fails_in_not_one_of_canonical_values():
         canonical_values=["A", "B", "C"],
         restrict_canonical_values=True,
     )
-    expected_issues = {"_errors": [{"code": 14}]}
+    expected_issues = {"_errors": [{"code": 9}]}
 
     assert attr.validate("D").to_dict() == expected_issues
 
@@ -206,7 +206,7 @@ def test_validation_fails_in_not_one_of_canonical_values__multivalued():
         restrict_canonical_values=True,
         multi_valued=True,
     )
-    expected_issues = {"1": {"_errors": [{"code": 14}]}}
+    expected_issues = {"1": {"_errors": [{"code": 9}]}}
 
     assert attr.validate(["A", "D", "C"]).to_dict() == expected_issues
 
@@ -339,7 +339,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
             {
                 "_errors": [
                     {
-                        "code": 40,
+                        "code": 16,
                         "context": {
                             "allowed_resources": ["User"],
                         },
@@ -362,7 +362,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
         (
             "/not/absolute/url",
             ExternalReference("external"),
-            {"_errors": [{"code": 8, "context": {"value": "/not/absolute/url"}}]},
+            {"_errors": [{"code": 1, "context": {}}]},
         ),
         (
             123,
@@ -376,7 +376,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 ]
             },
         ),
-        ("bad", Binary("binary"), {"_errors": [{"code": 3, "context": {"scim_type": "binary"}}]}),
+        ("bad", Binary("binary"), {"_errors": [{"code": 3, "context": {"expected": "base64"}}]}),
         (
             123,
             DateTime("datetime"),
@@ -471,7 +471,7 @@ def test_validate_correct_type(input_value, attr):
 
 def test_complex_mv_attr_fails_if_multiple_primary_items():
     attr = Complex("complex", multi_valued=True)
-    expected_issues = {"_errors": [{"code": 9}]}
+    expected_issues = {"_errors": [{"code": 15}]}
 
     issues = attr.validate(
         [

@@ -52,7 +52,7 @@ class PatchPath:
             or ("]" in path and "[" not in path)
             or ("[" in path and "]" in path and path.index("[") > path.index("]"))
         ):
-            issues.add_error(issue=ValidationError.bad_operation_path(), proceed=False)
+            issues.add_error(issue=ValidationError.bad_value_syntax(), proceed=False)
             return issues
 
         if "[" in path and "]" in path:

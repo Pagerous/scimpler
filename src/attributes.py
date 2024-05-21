@@ -381,12 +381,12 @@ class Binary(AttributeWithCaseExact):
             value = bytes(value, "ascii")
             if base64.b64encode(base64.b64decode(value)) != value:
                 issues.add_error(
-                    issue=ValidationError.base_64_encoding_required(self.SCIM_NAME),
+                    issue=ValidationError.bad_encoding("base64"),
                     proceed=False,
                 )
         except binascii.Error:
             issues.add_error(
-                issue=ValidationError.base_64_encoding_required(self.SCIM_NAME),
+                issue=ValidationError.bad_encoding("base64"),
                 proceed=False,
             )
         return issues
@@ -452,13 +452,13 @@ class ExternalReference(_Reference):
                 is_valid = all([result.scheme, result.netloc])
                 if not is_valid:
                     issues.add_error(
-                        issue=ValidationError.bad_url(value),
+                        issue=ValidationError.bad_value_syntax(),
                         proceed=False,
                     )
                     return issues
             except ValueError:
                 issues.add_error(
-                    issue=ValidationError.bad_url(value),
+                    issue=ValidationError.bad_value_syntax(),
                     proceed=False,
                 )
         return issues

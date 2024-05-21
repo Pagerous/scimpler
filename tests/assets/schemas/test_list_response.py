@@ -6,8 +6,8 @@ from src.container import SCIMDataContainer
 
 def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):
     expected = {
-        "itemsPerPage": {"_errors": [{"code": 11}]},
-        "Resources": {"_errors": [{"code": 11}]},
+        "itemsPerPage": {"_errors": [{"code": 8}]},
+        "Resources": {"_errors": [{"code": 8}]},
     }
 
     issues = list_response.validate_items_per_page_consistency(

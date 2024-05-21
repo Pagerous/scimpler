@@ -5,7 +5,7 @@ from src.container import SCIMDataContainer
 
 
 def test_validation_bulk_request_operation_fails_if_no_method():
-    expected_issues = {"0": {"method": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"method": {"_errors": [{"code": 5}]}}}
 
     issues = BulkRequest().attrs.operations.validate([SCIMDataContainer({"path": "/Users"})])
 
@@ -13,7 +13,7 @@ def test_validation_bulk_request_operation_fails_if_no_method():
 
 
 def test_validation_bulk_request_operation_fails_if_unknown_method():
-    expected_issues = {"0": {"method": {"_errors": [{"code": 14}]}}}
+    expected_issues = {"0": {"method": {"_errors": [{"code": 9}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [SCIMDataContainer({"method": "TERMINATE", "path": "/Users"})]
@@ -23,7 +23,7 @@ def test_validation_bulk_request_operation_fails_if_unknown_method():
 
 
 def test_validation_bulk_request_operation_fails_if_no_bulk_id_for_post():
-    expected_issues = {"0": {"bulkId": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"bulkId": {"_errors": [{"code": 5}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [SCIMDataContainer({"method": "POST", "data": {"a": 1, "b": 2}, "path": "/NiceResource"})]
@@ -33,7 +33,7 @@ def test_validation_bulk_request_operation_fails_if_no_bulk_id_for_post():
 
 
 def test_validation_bulk_request_operation_fails_if_no_data_for_post():
-    expected_issues = {"0": {"data": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"data": {"_errors": [{"code": 5}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [SCIMDataContainer({"method": "POST", "bulkId": "abc", "path": "/NiceResource"})]
@@ -43,7 +43,7 @@ def test_validation_bulk_request_operation_fails_if_no_data_for_post():
 
 
 def test_validation_bulk_request_operation_fails_if_no_data_for_patch():
-    expected_issues = {"0": {"data": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"data": {"_errors": [{"code": 5}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [SCIMDataContainer({"method": "PATCH", "path": "/NiceResource/123"})]
@@ -53,7 +53,7 @@ def test_validation_bulk_request_operation_fails_if_no_data_for_patch():
 
 
 def test_validation_bulk_request_operation_fails_if_no_data_for_put():
-    expected_issues = {"0": {"data": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"data": {"_errors": [{"code": 5}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [SCIMDataContainer({"method": "PUT", "path": "/NiceResource/123"})]
@@ -63,7 +63,7 @@ def test_validation_bulk_request_operation_fails_if_no_data_for_put():
 
 
 def test_validation_bulk_request_operation_fails_if_path_missing():
-    expected_issues = {"0": {"path": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"path": {"_errors": [{"code": 5}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [SCIMDataContainer({"method": "PUT", "data": {"a": 1}})]
@@ -73,7 +73,7 @@ def test_validation_bulk_request_operation_fails_if_path_missing():
 
 
 def test_validation_bulk_request_operation_fails_if_bad_path_for_post():
-    expected_issues = {"0": {"path": {"_errors": [{"code": 34}]}}}
+    expected_issues = {"0": {"path": {"_errors": [{"code": 23}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [
@@ -88,7 +88,7 @@ def test_validation_bulk_request_operation_fails_if_bad_path_for_post():
 
 @pytest.mark.parametrize("method", ["GET", "PATCH", "PUT", "DELETE"])
 def test_validation_bulk_request_operation_fails_if_bad_path(method):
-    expected_issues = {"0": {"path": {"_errors": [{"code": 35}]}}}
+    expected_issues = {"0": {"path": {"_errors": [{"code": 24}]}}}
 
     issues = BulkRequest().attrs.operations.validate(
         [
@@ -181,7 +181,7 @@ def test_validation_bulk_request_delete_operation_succeeds():
 
 
 def test_validation_bulk_response_operation_fails_if_no_method():
-    expected_issues = {"0": {"method": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"method": {"_errors": [{"code": 5}]}}}
 
     issues = BulkResponse().attrs.operations.validate([SCIMDataContainer({"status": "200"})])
 
@@ -189,7 +189,7 @@ def test_validation_bulk_response_operation_fails_if_no_method():
 
 
 def test_validation_bulk_response_operation_fails_if_unknown_method():
-    expected_issues = {"0": {"method": {"_errors": [{"code": 14}]}}}
+    expected_issues = {"0": {"method": {"_errors": [{"code": 9}]}}}
 
     issues = BulkResponse().attrs.operations.validate(
         [
@@ -207,7 +207,7 @@ def test_validation_bulk_response_operation_fails_if_unknown_method():
 
 
 def test_validation_bulk_response_operation_fails_if_no_bulk_id_for_post():
-    expected_issues = {"0": {"bulkId": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"bulkId": {"_errors": [{"code": 5}]}}}
 
     issues = BulkResponse().attrs.operations.validate(
         [
@@ -225,7 +225,7 @@ def test_validation_bulk_response_operation_fails_if_no_bulk_id_for_post():
 
 
 def test_validation_bulk_response_operation_fails_if_no_status():
-    expected_issues = {"0": {"status": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"status": {"_errors": [{"code": 5}]}}}
 
     issues = BulkResponse().attrs.operations.validate(
         [
@@ -243,7 +243,7 @@ def test_validation_bulk_response_operation_fails_if_no_status():
 
 
 def test_validation_bulk_response_operation_fails_if_no_location_for_normal_completion():
-    expected_issues = {"0": {"location": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"location": {"_errors": [{"code": 5}]}}}
 
     issues = BulkResponse().attrs.operations.validate(
         [SCIMDataContainer({"method": "POST", "bulkId": "qwerty", "status": "200"})]
@@ -277,7 +277,7 @@ def test_validation_bulk_response_operation_succeeds_if_no_location_for_post_fai
 
 
 def test_validation_bulk_response_operation_fails_if_no_response_for_failed_operation():
-    expected_issues = {"0": {"response": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"0": {"response": {"_errors": [{"code": 5}]}}}
 
     issues = BulkResponse().attrs.operations.validate(
         [SCIMDataContainer({"method": "POST", "bulkId": "qwerty", "status": "401"})]

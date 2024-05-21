@@ -14,7 +14,7 @@ def test_presence_checker_fails_if_returned_attribute_that_never_should_be_retur
         "password": {
             "_errors": [
                 {
-                    "code": 19,
+                    "code": 7,
                 }
             ]
         }
@@ -45,7 +45,7 @@ def test_presence_checker_fails_on_attr_not_requested_by_exclusion():
         }
     )
 
-    expected = {"name": {"_errors": [{"code": 19}]}}
+    expected = {"name": {"_errors": [{"code": 7}]}}
 
     issues = checker(data, User, "RESPONSE")
 
@@ -70,12 +70,12 @@ def test_presence_checker_fails_on_attr_not_requested_by_inclusion():
     )
     expected = {
         "meta": {
-            "_errors": [{"code": 19}],
-            "resourceType": {"_errors": [{"code": 19}]},
-            "created": {"_errors": [{"code": 19}]},
-            "lastModified": {"_errors": [{"code": 19}]},
-            "location": {"_errors": [{"code": 19}]},
-            "version": {"_errors": [{"code": 19}]},
+            "_errors": [{"code": 7}],
+            "resourceType": {"_errors": [{"code": 7}]},
+            "created": {"_errors": [{"code": 7}]},
+            "lastModified": {"_errors": [{"code": 7}]},
+            "location": {"_errors": [{"code": 7}]},
+            "version": {"_errors": [{"code": 7}]},
         }
     }
 
@@ -102,7 +102,7 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_exclusion():
             "familyName": {
                 "_errors": [
                     {
-                        "code": 19,
+                        "code": 7,
                     }
                 ]
             }
@@ -131,7 +131,7 @@ def test_presence_checker_fails_on_sub_attr_not_requested_by_inclusion():
             "givenName": {
                 "_errors": [
                     {
-                        "code": 19,
+                        "code": 7,
                     }
                 ]
             }
@@ -150,21 +150,21 @@ def test_presence_checker_fails_if_not_provided_attribute_that_always_should_be_
         "id": {
             "_errors": [
                 {
-                    "code": 15,
+                    "code": 5,
                 }
             ]
         },
         "schemas": {
             "_errors": [
                 {
-                    "code": 15,
+                    "code": 5,
                 }
             ]
         },
         "userName": {
             "_errors": [
                 {
-                    "code": 15,
+                    "code": 5,
                 }
             ]
         },
@@ -187,7 +187,7 @@ def test_presence_checker_fails_if_not_provided_requested_required_attribute():
         "userName": {
             "_errors": [
                 {
-                    "code": 15,
+                    "code": 5,
                 }
             ]
         },
@@ -233,8 +233,8 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_exc
 
     expected = {
         "emails": {
-            "0": {"display": {"_errors": [{"code": 19}]}},
-            "2": {"display": {"_errors": [{"code": 19}]}},
+            "0": {"display": {"_errors": [{"code": 7}]}},
+            "2": {"display": {"_errors": [{"code": 7}]}},
         }
     }
 
@@ -261,8 +261,8 @@ def test_presence_checker_fails_on_multivalued_complex_attr_not_requested_by_inc
 
     expected = {
         "emails": {
-            "0": {"type": {"_errors": [{"code": 19}]}, "primary": {"_errors": [{"code": 19}]}},
-            "2": {"type": {"_errors": [{"code": 19}]}, "primary": {"_errors": [{"code": 19}]}},
+            "0": {"type": {"_errors": [{"code": 7}]}, "primary": {"_errors": [{"code": 7}]}},
+            "2": {"type": {"_errors": [{"code": 7}]}, "primary": {"_errors": [{"code": 7}]}},
         }
     }
 
@@ -276,7 +276,7 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
 ):
     checker = AttributePresenceChecker()
     user_data_client["id"] = "should-not-be-provided"
-    expected_issues = {"id": {"_errors": [{"code": 18}]}}
+    expected_issues = {"id": {"_errors": [{"code": 6}]}}
 
     issues = checker(SCIMDataContainer(user_data_client), User, "REQUEST")
 
@@ -290,7 +290,7 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
     )
     schema.extend(extension, required=True)
     checker = AttributePresenceChecker()
-    expected_issues = {"age": {"_errors": [{"code": 15}]}}
+    expected_issues = {"age": {"_errors": [{"code": 5}]}}
 
     issues = checker(SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE")
 

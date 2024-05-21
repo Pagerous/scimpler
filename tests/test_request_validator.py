@@ -3,7 +3,14 @@ from copy import deepcopy
 import pytest
 
 from src.assets.config import create_service_provider_config
-from src.assets.schemas import group, Group, list_response, service_provider_config, user, User
+from src.assets.schemas import (
+    Group,
+    User,
+    group,
+    list_response,
+    service_provider_config,
+    user,
+)
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.attributes_presence import AttributePresenceChecker
@@ -62,8 +69,8 @@ def test_validate_error_status_code(status_code, expected):
         (
             404,
             {
-                "status": {"_errors": [{"code": 13}]},
-                "body": {"status": {"_errors": [{"code": 13}]}},
+                "status": {"_errors": [{"code": 8}]},
+                "body": {"status": {"_errors": [{"code": 8}]}},
             },
         ),
         (400, {}),
@@ -80,8 +87,8 @@ def test_validate_error_status_code_consistency(status_code, expected):
     (
         ({}, False, {}),
         (None, False, {}),
-        ({}, True, {"Location": {"_errors": [{"code": 15}]}}),
-        ([1, 2, 3], True, {"Location": {"_errors": [{"code": 15}]}}),
+        ({}, True, {"Location": {"_errors": [{"code": 5}]}}),
+        ([1, 2, 3], True, {"Location": {"_errors": [{"code": 5}]}}),
         (
             {"Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646"},
             True,
@@ -103,7 +110,7 @@ def test_validate_resource_location_consistency__fails_if_no_consistency(user_da
                 "location": {
                     "_errors": [
                         {
-                            "code": 11,
+                            "code": 8,
                         }
                     ]
                 }
@@ -113,7 +120,7 @@ def test_validate_resource_location_consistency__fails_if_no_consistency(user_da
             "Location": {
                 "_errors": [
                     {
-                        "code": 11,
+                        "code": 8,
                     }
                 ]
             }
@@ -139,7 +146,7 @@ def test_validate_resource_location_consistency__succeeds_if_consistency(user_da
 
 @pytest.mark.parametrize(
     ("status_code", "expected"),
-    ((200, {"_errors": [{"code": 16}]}), (201, {})),
+    ((200, {"_errors": [{"code": 19}]}), (201, {})),
 )
 def test_validate_status_code(status_code, expected):
     issues = validate_status_code(201, status_code)
@@ -149,7 +156,7 @@ def test_validate_status_code(status_code, expected):
 
 def test_validate_number_of_resources__fails_if_more_resources_than_total_results(list_user_data):
     list_user_data["totalResults"] = 1
-    expected = {"_errors": [{"code": 22}]}
+    expected = {"_errors": [{"code": 20}]}
 
     issues = validate_number_of_resources(
         count=None,
@@ -163,7 +170,7 @@ def test_validate_number_of_resources__fails_if_more_resources_than_total_result
 def test_validate_number_of_resources__fails_if_less_resources_than_total_results_without_count(
     list_user_data,
 ):
-    expected = {"_errors": [{"code": 23}]}
+    expected = {"_errors": [{"code": 20}]}
 
     issues = validate_number_of_resources(
         count=None,
@@ -175,7 +182,7 @@ def test_validate_number_of_resources__fails_if_less_resources_than_total_result
 
 
 def test_validate_number_of_resources__fails_if_more_resources_than_specified_count(list_user_data):
-    expected = {"_errors": [{"code": 21}]}
+    expected = {"_errors": [{"code": 20}]}
 
     issues = validate_number_of_resources(
         count=1,
@@ -201,7 +208,7 @@ def test_validate_number_of_resources__succeeds_if_correct_number_of_resources(
 
 def test_validate_pagination_info__fails_if_start_index_is_missing_when_pagination(list_user_data):
     expected = {
-        "startIndex": {"_errors": [{"code": 15}]},
+        "startIndex": {"_errors": [{"code": 5}]},
     }
 
     issues = validate_pagination_info(
@@ -220,7 +227,7 @@ def test_validate_pagination_info__fails_if_items_per_page_is_missing_when_pagin
     list_user_data,
 ):
     expected = {
-        "itemsPerPage": {"_errors": [{"code": 15}]},
+        "itemsPerPage": {"_errors": [{"code": 5}]},
     }
 
     issues = validate_pagination_info(
@@ -249,7 +256,7 @@ def test_validate_pagination_info__correct_data_when_pagination(list_user_data):
 
 
 def test_validate_start_index_consistency__fails_if_start_index_bigger_than_requested():
-    expected = {"_errors": [{"code": 24}]}
+    expected = {"_errors": [{"code": 4}]}
 
     issues = validate_start_index_consistency(start_index=1, start_index_body=2)
 
@@ -276,7 +283,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
         "0": {
             "_errors": [
                 {
-                    "code": 25,
+                    "code": 21,
                 }
             ]
         }
@@ -297,14 +304,14 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
         "0": {
             "_errors": [
                 {
-                    "code": 25,
+                    "code": 21,
                 }
             ]
         },
         "1": {
             "_errors": [
                 {
-                    "code": 25,
+                    "code": 21,
                 }
             ]
         },
@@ -330,7 +337,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
         "0": {
             "_errors": [
                 {
-                    "code": 25,
+                    "code": 21,
                 }
             ]
         },
@@ -360,7 +367,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
     ),
 )
 def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
-    expected = {"_errors": [{"code": 26}]}
+    expected = {"_errors": [{"code": 22}]}
 
     issues = validate_resources_sorted(
         sorter=sorter,
@@ -380,7 +387,7 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
             "name": {
                 "_errors": [
                     {
-                        "code": 19,
+                        "code": 7,
                     }
                 ]
             }
@@ -389,7 +396,7 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
             "name": {
                 "_errors": [
                     {
-                        "code": 19,
+                        "code": 7,
                     }
                 ]
             }
@@ -442,7 +449,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
 
 def test_validation_failure_on_missing_etag_header_when_etag_supported(user_data_server):
     validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
-    expected_issues = {"headers": {"ETag": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"headers": {"ETag": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
         status_code=200,
@@ -458,7 +465,7 @@ def test_validation_failure_on_missing_etag_header_when_etag_supported(user_data
 def test_validation_failure_on_missing_meta_version_when_etag_supported(user_data_server):
     validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
     user_data_server["meta"].pop("version")
-    expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 15}]}}}}
+    expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 5}]}}}}
 
     issues = validator.validate_response(
         status_code=200,
@@ -479,8 +486,8 @@ def test_validation_failure_on_etag_and_meta_version_mismatch(etag_supported, us
 
     validator = ResourceObjectGET(config, resource_schema=user.User)
     expected_issues = {
-        "body": {"meta": {"version": {"_errors": [{"code": 11}]}}},
-        "headers": {"ETag": {"_errors": [{"code": 11}]}},
+        "body": {"meta": {"version": {"_errors": [{"code": 8}]}}},
+        "headers": {"ETag": {"_errors": [{"code": 8}]}},
     }
 
     issues = validator.validate_response(
@@ -571,7 +578,7 @@ def test_resources_post_response_validation_fails_if_different_created_and_last_
 ):
     validator = ResourcesPOST(CONFIG, resource_schema=user.User)
     user_data_server["meta"]["lastModified"] = "2011-05-13T04:42:34Z"
-    expected_issues = {"body": {"meta": {"lastModified": {"_errors": [{"code": 11}]}}}}
+    expected_issues = {"body": {"meta": {"lastModified": {"_errors": [{"code": 8}]}}}}
 
     issues = validator.validate_response(
         body=user_data_server,
@@ -600,7 +607,7 @@ def test_correct_resource_object_put_request_passes_validation(user_data_client)
 def test_resource_object_put_request__fails_when_missing_required_field(user_data_client):
     validator = ResourceObjectPUT(CONFIG, resource_schema=user.User)
     # user_data_client misses 'id' and 'meta'
-    expected_issues = {"body": {"id": {"_errors": [{"code": 15}]}}}
+    expected_issues = {"body": {"id": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_request(body=user_data_client)
 
@@ -676,9 +683,9 @@ def test_attributes_existence_is_validated_in_list_response(validator):
     expected_issues = {
         "body": {
             "schemas": {
-                "_errors": [{"code": 15}],
+                "_errors": [{"code": 5}],
             },
-            "totalResults": {"_errors": [{"code": 15}]},
+            "totalResults": {"_errors": [{"code": 5}]},
         }
     }
 
@@ -703,9 +710,9 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
         "body": {
             "Resources": {
                 "0": {
-                    "id": {"_errors": [{"code": 15}]},
-                    "schemas": {"_errors": [{"code": 15}]},
-                    "userName": {"_errors": [{"code": 15}]},
+                    "id": {"_errors": [{"code": 5}]},
+                    "schemas": {"_errors": [{"code": 5}]},
+                    "userName": {"_errors": [{"code": 5}]},
                 }
             },
         }
@@ -744,8 +751,8 @@ def test_search_request_validation_fails_if_attributes_and_exclude_attributes_pr
     validator = SearchRequestPOST(CONFIG, resource_schemas=[user.User])
     expected_issues = {
         "body": {
-            "attributes": {"_errors": [{"code": 30}]},
-            "excludeAttributes": {"_errors": [{"code": 30}]},
+            "attributes": {"_errors": [{"code": 11}]},
+            "excludeAttributes": {"_errors": [{"code": 11}]},
         }
     }
 
@@ -767,7 +774,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_items(o
             "Operations": {
                 "0": {
                     "value": {
-                        "0": {"bool": {"_errors": [{"code": 15}]}},
+                        "0": {"bool": {"_errors": [{"code": 5}]}},
                         "2": {"bool": {"_errors": [{"code": 2}]}},
                     }
                 }
@@ -804,7 +811,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op
                 "0": {
                     "value": {
                         "c2_mv": {
-                            "0": {"bool": {"_errors": [{"code": 15}]}},
+                            "0": {"bool": {"_errors": [{"code": 5}]}},
                             "2": {"bool": {"_errors": [{"code": 2}]}},
                         }
                     }
@@ -921,7 +928,7 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
         ),
     )
 
-    assert issues.to_dict() == {"status": {"_errors": [{"code": 16}]}}
+    assert issues.to_dict() == {"status": {"_errors": [{"code": 19}]}}
 
 
 def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attributes_requested():
@@ -978,7 +985,7 @@ def test_resource_object_delete_response_validation_fails_if_status_different_th
 
     issues = validator.validate_response(status_code=200)
 
-    assert issues.to_dict() == {"status": {"_errors": [{"code": 16}]}}
+    assert issues.to_dict() == {"status": {"_errors": [{"code": 19}]}}
 
 
 def test_resource_object_delete_response_validation_succeeds_if_status_204():
@@ -1064,16 +1071,16 @@ def test_bulk_operations_request_validation_fails_for_bad_data():
     expected_issues = {
         "body": {
             "Operations": {
-                "_errors": [{"code": 37}],
+                "_errors": [{"code": 26}],
                 "0": {
                     "data": {
-                        "userName": {"_errors": [{"code": 15}]},
+                        "userName": {"_errors": [{"code": 5}]},
                         "nickName": {"_errors": [{"code": 2}]},
                     }
                 },
                 "1": {
                     "data": {
-                        "schemas": {"_errors": [{"code": 15}]},
+                        "schemas": {"_errors": [{"code": 5}]},
                         "userName": {"_errors": [{"code": 2}]},
                     }
                 },
@@ -1081,8 +1088,8 @@ def test_bulk_operations_request_validation_fails_for_bad_data():
                     "version": {"_errors": [{"code": 2}]},
                     "data": {
                         "Operations": {
-                            "0": {"path": {"_errors": [{"code": 111}]}},
-                            "1": {"op": {"_errors": [{"code": 14}]}},
+                            "0": {"path": {"_errors": [{"code": 17}]}},
+                            "1": {"op": {"_errors": [{"code": 9}]}},
                         }
                     },
                 },
@@ -1211,21 +1218,21 @@ def test_bulk_operations_response_validation_fails_for_incorrect_data(user_data_
         "body": {
             "Operations": {
                 "0": {
-                    "location": {"_errors": [{"code": 11}]},
+                    "location": {"_errors": [{"code": 8}]},
                     "response": {
-                        "id": {"_errors": [{"code": 15}]},
-                        "meta": {"location": {"_errors": [{"code": 11}]}},
+                        "id": {"_errors": [{"code": 5}]},
+                        "meta": {"location": {"_errors": [{"code": 8}]}},
                         "userName": {"_errors": [{"code": 2}]},
                     },
                 },
                 "1": {
-                    "version": {"_errors": [{"code": 11}]},
-                    "response": {"meta": {"version": {"_errors": [{"code": 11}]}}},
+                    "version": {"_errors": [{"code": 8}]},
+                    "response": {"meta": {"version": {"_errors": [{"code": 8}]}}},
                 },
                 "2": {
-                    "method": {"_errors": [{"code": 14}]},
+                    "method": {"_errors": [{"code": 9}]},
                 },
-                "3": {"location": {"_errors": [{"code": 36}]}},
+                "3": {"location": {"_errors": [{"code": 25}]}},
             }
         }
     }
@@ -1270,7 +1277,7 @@ def test_bulk_operations_response_validation_fails_for_incorrect_data(user_data_
 def test_bulk_operations_response_validation_fails_if_too_many_failed_operations(user_data_server):
     validator = BulkOperations(CONFIG, resource_schemas=[user.User])
 
-    expected_issues = {"body": {"Operations": {"_errors": [{"code": 38}]}}}
+    expected_issues = {"body": {"Operations": {"_errors": [{"code": 27}]}}}
 
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
@@ -1411,7 +1418,7 @@ def test_schemas_output_can_be_validated():
 
 @pytest.mark.parametrize("validator", [SchemasGET(CONFIG), ResourceTypesGET(CONFIG)])
 def test_service_config_request_parsing_fails_if_requested_filtering(validator):
-    expected_issues = {"query_string": {"filter": {"_errors": [{"code": 39}]}}}
+    expected_issues = {"query_string": {"filter": {"_errors": [{"code": 31}]}}}
 
     issues = validator.validate_request(query_string={"filter": 'description sw "Hello, World!"'})
 

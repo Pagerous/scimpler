@@ -25,7 +25,7 @@ def bulk_id_validator(value) -> ValidationIssues:
     issues = ValidationIssues()
     if "bulkId" in value:
         issues.add_error(
-            issue=ValidationError.reserved_keyword("bulkId"),
+            issue=ValidationError.bad_value_content(),
             proceed=False,
         )
     return issues
@@ -191,10 +191,7 @@ def validate_resource_type_consistency(
     issues = ValidationIssues()
     if resource_type != expected:
         issues.add_error(
-            issue=ValidationError.resource_type_mismatch(
-                resource_type=expected,
-                provided=resource_type,
-            ),
+            issue=ValidationError.must_be_equal_to(expected),
             proceed=True,
             location=("meta", "resourceType"),
         )

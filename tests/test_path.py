@@ -12,53 +12,52 @@ from tests.conftest import SchemaForTests
 @pytest.mark.parametrize(
     ("path", "expected_issues"),
     (
-        ("bad^attr", {"_errors": [{"code": 111, "context": {"attribute": "bad^attr"}}]}),
+        ("bad^attr", {"_errors": [{"code": 17, "context": {"attribute": "bad^attr"}}]}),
         (
             "good_attr.bad^sub_attr",
-            {"_errors": [{"code": 111, "context": {"attribute": "good_attr.bad^sub_attr"}}]},
+            {"_errors": [{"code": 17, "context": {"attribute": "good_attr.bad^sub_attr"}}]},
         ),
-        ("attr[", {"_errors": [{"code": 300, "context": {}}]}),
-        ("attr]", {"_errors": [{"code": 300, "context": {}}]}),
-        ("attr[[]", {"_errors": [{"code": 300, "context": {}}]}),
-        ("attr[]]", {"_errors": [{"code": 300, "context": {}}]}),
-        ("attr[]", {"_errors": [{"code": 110, "context": {"attribute": "attr"}}]}),
+        ("attr[", {"_errors": [{"code": 1, "context": {}}]}),
+        ("attr]", {"_errors": [{"code": 1, "context": {}}]}),
+        ("attr[[]", {"_errors": [{"code": 1, "context": {}}]}),
+        ("attr[]]", {"_errors": [{"code": 1, "context": {}}]}),
+        ("attr[]", {"_errors": [{"code": 108, "context": {"attribute": "attr"}}]}),
         (
             "attr.sub_attr[value eq 1]",
-            {"_errors": [{"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
+            {"_errors": [{"code": 102, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
         ),
         (
             "attr.sub_attr[value eq 1]",
-            {"_errors": [{"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
+            {"_errors": [{"code": 102, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
         ),
         (
             "attr[value eq 1].sub_attr.sub_sub_attr",
-            {"_errors": [{"code": 111, "context": {"attribute": "sub_attr.sub_sub_attr"}}]},
+            {"_errors": [{"code": 17, "context": {"attribute": "sub_attr.sub_sub_attr"}}]},
         ),
         (
             "attr[value eq]",
-            {"_errors": [{"code": 104, "context": {"expression": "value eq", "operator": "eq"}}]},
+            {"_errors": [{"code": 103, "context": {"expression": "value eq", "operator": "eq"}}]},
         ),
         (
             "attr[eq 1]",
             {
                 "_errors": [
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
                             "expression": "eq 1",
                             "operator": "1",
-                            "operator_type": "unary",
                         },
                     }
                 ]
             },
         ),
-        ("attr[value eq abc]", {"_errors": [{"code": 112, "context": {"value": "abc"}}]}),
+        ("attr[value eq abc]", {"_errors": [{"code": 109, "context": {"value": "abc"}}]}),
         (
             "attr.sub_attr[value eq abc].sub_attr.sub_sub_attr",
             {
                 "_errors": [
-                    {"code": 33, "context": {"attr": "attr", "sub_attr": "sub_attr"}},
+                    {"code": 102, "context": {"attr": "attr", "sub_attr": "sub_attr"}},
                 ]
             },
         ),

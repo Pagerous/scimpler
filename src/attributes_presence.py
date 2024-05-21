@@ -126,14 +126,14 @@ class AttributePresenceChecker(Generic[TAttrRep]):
             if direction == "REQUEST":
                 if attr.issuer == AttributeIssuer.SERVER and attr not in self._ignore_issuer:
                     issues.add_error(
-                        issue=ValidationError.must_not_be_specified(),
+                        issue=ValidationError.must_not_be_provided(),
                         proceed=True,
                     )
                 return issues
 
             if attr.returned == AttributeReturn.NEVER:
                 issues.add_error(
-                    issue=ValidationError.restricted_or_not_requested(),
+                    issue=ValidationError.must_not_be_returned(),
                     proceed=True,
                 )
 
@@ -146,7 +146,7 @@ class AttributePresenceChecker(Generic[TAttrRep]):
                 )
             ):
                 issues.add_error(
-                    issue=ValidationError.restricted_or_not_requested(),
+                    issue=ValidationError.must_not_be_returned(),
                     proceed=True,
                 )
         else:

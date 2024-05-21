@@ -1169,17 +1169,17 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
     (
         (
             'emails[type eq "work" and display co "@example.com" or value co "@example"',
-            {"_errors": [{"code": 102}]},
+            {"_errors": [{"code": 101}]},
         ),
         (
             'emails type eq "work" and display co "@example.com" or value co "@example"]',
-            {"_errors": [{"code": 102}]},
+            {"_errors": [{"code": 101}]},
         ),
-        ('emails[type eq "work" and ims[type eq "work"', {"_errors": [{"code": 109}]}),
-        ('emails[type eq "work"] and ims[type eq "work"', {"_errors": [{"code": 102}]}),
+        ('emails[type eq "work" and ims[type eq "work"', {"_errors": [{"code": 107}]}),
+        ('emails[type eq "work"] and ims[type eq "work"', {"_errors": [{"code": 101}]}),
         (
             'emails type eq "work"] and ims type eq "work"]',
-            {"_errors": [{"code": 102}, {"code": 102}]},
+            {"_errors": [{"code": 101}, {"code": 101}]},
         ),
     ),
 )
@@ -1244,7 +1244,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'userName eq "user123" and',
@@ -1258,7 +1258,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'and userName eq "user123"',
@@ -1272,14 +1272,14 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": "id eq 1 and",
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'and userName eq "user123"',
@@ -1293,7 +1293,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'userName eq "user123" and',
@@ -1307,7 +1307,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'type eq "work" and',
@@ -1321,7 +1321,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'and type eq "work"',
@@ -1335,14 +1335,14 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'and type eq "work"',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'type eq "work" and',
@@ -1356,21 +1356,21 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'and emails[ and type eq "work" and]',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'and type eq "work"',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'type eq "work" and',
@@ -1384,7 +1384,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'userName eq "user123" or',
@@ -1398,7 +1398,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or userName eq "user123"',
@@ -1412,14 +1412,14 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": "id eq 1 or",
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or userName eq "user123"',
@@ -1433,7 +1433,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'userName eq "user123" or',
@@ -1447,7 +1447,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'type eq "work" or',
@@ -1461,7 +1461,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or type eq "work"',
@@ -1475,14 +1475,14 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or type eq "work"',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'type eq "work" or',
@@ -1496,21 +1496,21 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or emails[ or type eq "work" or]',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or type eq "work"',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'type eq "work" or',
@@ -1524,14 +1524,14 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or type eq "work" and',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'type eq "work" and',
@@ -1545,21 +1545,21 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'or emails[ and type eq "work" or]',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": 'and type eq "work" or',
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": 'and type eq "work"',
@@ -1573,7 +1573,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": "id eq 1 and",
@@ -1587,7 +1587,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": "and id eq 1",
@@ -1601,14 +1601,14 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": "and id eq 1 or",
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": "and id eq 1",
@@ -1622,21 +1622,21 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": "(and id eq 1 or ) and",
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "or",
                             "expression": "and id eq 1 or",
                         },
                     },
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "and",
                             "expression": "and id eq 1",
@@ -1650,7 +1650,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "not",
                             "expression": "not",
@@ -1664,7 +1664,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
             {
                 "_errors": [
                     {
-                        "code": 104,
+                        "code": 103,
                         "context": {
                             "operator": "eq",
                             "expression": "userName eq",
@@ -1691,9 +1691,8 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
             {
                 "_errors": [
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
-                            "operator_type": "unary",
                             "operator": "banana",
                             "expression": "apple banana",
                         },
@@ -1706,9 +1705,8 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
             {
                 "_errors": [
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
-                            "operator_type": "binary",
                             "operator": "banana",
                             "expression": 'apple banana "pear"',
                         },
@@ -1721,17 +1719,15 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
             {
                 "_errors": [
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
-                            "operator_type": "binary",
                             "operator": "b",
                             "expression": 'a b "c"',
                         },
                     },
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
-                            "operator_type": "binary",
                             "operator": "d",
                             "expression": 'c d "e"',
                         },
@@ -1744,25 +1740,22 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
             {
                 "_errors": [
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
-                            "operator_type": "unary",
                             "operator": "b",
                             "expression": "a b",
                         },
                     },
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
-                            "operator_type": "binary",
                             "operator": "d",
                             "expression": 'c d "e"',
                         },
                     },
                     {
-                        "code": 105,
+                        "code": 104,
                         "context": {
-                            "operator_type": "unary",
                             "operator": "h",
                             "expression": "g h",
                         },
@@ -1781,7 +1774,7 @@ def test_unknown_operator_causes_parsing_issues(filter_exp, expected_issues):
 
 
 def test_putting_complex_attribute_operator_inside_other_complex_attribute_operator_fails():
-    expected_issues = {"_errors": [{"code": 109}]}
+    expected_issues = {"_errors": [{"code": 107}]}
     filter_exp = 'emails[type eq work and phones[type eq "home"]]'
     issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
@@ -1795,14 +1788,14 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
     (
         (
             'emai..ls[type eq "work"]',
-            {"_errors": [{"code": 111, "context": {"attribute": "emai..ls"}}]},
+            {"_errors": [{"code": 17, "context": {"attribute": "emai..ls"}}]},
         ),
         (
             'urn:ietf:params:scim:schemas:core:2.0:User:emai..ls[type eq "work"]',
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:emai..ls",
                         },
@@ -1815,7 +1808,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": (
                                 "urn:ietf:params:scim:schemas:core:2.0:User:emails.bla.bla"
@@ -1830,7 +1823,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "user..name",
                         },
@@ -1843,7 +1836,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "user..name",
                         },
@@ -1856,13 +1849,13 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "user..name",
                         },
                     },
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "very.first.name",
                         },
@@ -1875,7 +1868,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
                         },
@@ -1888,7 +1881,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
                         },
@@ -1904,13 +1897,13 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": "urn:ietf:params:scim:schemas:core:2.0:User:user..name",
                         },
                     },
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {
                             "attribute": (
                                 "urn:ietf:params:scim:schemas:core:2.0:User:very.first.name"
@@ -1938,7 +1931,7 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 110,
+                        "code": 108,
                         "context": {
                             "attribute": "emails",
                         },
@@ -1951,7 +1944,7 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 110,
+                        "code": 108,
                         "context": {
                             "attribute": "ims",
                         },
@@ -1964,13 +1957,13 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 110,
+                        "code": 108,
                         "context": {
                             "attribute": "emails",
                         },
                     },
                     {
-                        "code": 110,
+                        "code": 108,
                         "context": {
                             "attribute": "ims",
                         },
@@ -1996,7 +1989,7 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {"attribute": ""},
                     }
                 ]
@@ -2007,11 +2000,11 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {"attribute": ""},
                     },
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {"attribute": ""},
                     },
                 ]
@@ -2022,7 +2015,7 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
             {
                 "_errors": [
                     {
-                        "code": 111,
+                        "code": 17,
                         "context": {"attribute": ""},
                     }
                 ]
@@ -2048,7 +2041,7 @@ def test_lack_of_top_level_complex_attribute_name_is_discovered(filter_exp, expe
 def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discovered(
     filter_exp,
 ):
-    expected_issues = {"_errors": [{"code": 109}]}
+    expected_issues = {"_errors": [{"code": 107}]}
     issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues
 
@@ -2059,31 +2052,31 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
     (
-        ("", {"_errors": [{"code": 107}]}),
-        ("()", {"_errors": [{"code": 107}]}),
-        ('userName eq "John" and ()', {"_errors": [{"code": 107}]}),
-        ('() and userName eq "John"', {"_errors": [{"code": 107}]}),
+        ("", {"_errors": [{"code": 105}]}),
+        ("()", {"_errors": [{"code": 105}]}),
+        ('userName eq "John" and ()', {"_errors": [{"code": 105}]}),
+        ('() and userName eq "John"', {"_errors": [{"code": 105}]}),
         (
             '() or userName eq "John" and ()',
-            {"_errors": [{"code": 107}, {"code": 107}]},
+            {"_errors": [{"code": 105}, {"code": 105}]},
         ),
-        ('emails[type eq "work" and ()]', {"_errors": [{"code": 107}]}),
-        ('emails[() and type eq "work"]', {"_errors": [{"code": 107}]}),
+        ('emails[type eq "work" and ()]', {"_errors": [{"code": 105}]}),
+        ('emails[() and type eq "work"]', {"_errors": [{"code": 105}]}),
         (
             'emails[() or type eq "work" and ()]',
-            {"_errors": [{"code": 107}, {"code": 107}]},
+            {"_errors": [{"code": 105}, {"code": 105}]},
         ),
         (
             'userName eq "John" and emails[() or type eq "work" and ()]',
-            {"_errors": [{"code": 107}, {"code": 107}]},
+            {"_errors": [{"code": 105}, {"code": 105}]},
         ),
         (
             'userName eq "John" and emails[() or type eq "work" and ()] and ()',
-            {"_errors": [{"code": 107}, {"code": 107}, {"code": 107}]},
+            {"_errors": [{"code": 105}, {"code": 105}, {"code": 105}]},
         ),
         (
             '() or userName eq "John" and emails[() or type eq "work" and ()] and ()',
-            {"_errors": [{"code": 107}, {"code": 107}, {"code": 107}, {"code": 107}]},
+            {"_errors": [{"code": 105}, {"code": 105}, {"code": 105}, {"code": 105}]},
         ),
     ),
 )
@@ -2190,7 +2183,7 @@ def test_operators_are_case_insensitive(filter_exp, expected):
             {
                 "_errors": [
                     {
-                        "code": 112,
+                        "code": 109,
                         "context": {
                             "value": "blabla",
                         },
@@ -2203,13 +2196,13 @@ def test_operators_are_case_insensitive(filter_exp, expected):
             {
                 "_errors": [
                     {
-                        "code": 112,
+                        "code": 109,
                         "context": {
                             "value": "blabla",
                         },
                     },
                     {
-                        "code": 112,
+                        "code": 109,
                         "context": {
                             "value": "not_true",
                         },
@@ -2222,7 +2215,7 @@ def test_operators_are_case_insensitive(filter_exp, expected):
             {
                 "_errors": [
                     {
-                        "code": 112,
+                        "code": 109,
                         "context": {
                             "value": "blabla",
                         },
@@ -2235,13 +2228,13 @@ def test_operators_are_case_insensitive(filter_exp, expected):
             {
                 "_errors": [
                     {
-                        "code": 112,
+                        "code": 109,
                         "context": {
                             "value": "blabla",
                         },
                     },
                     {
-                        "code": 112,
+                        "code": 109,
                         "context": {
                             "value": "omnomnom",
                         },
@@ -2267,7 +2260,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 113,
+                        "code": 110,
                         "context": {
                             "value": True,
                             "operator": "gt",
@@ -2281,7 +2274,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 113,
+                        "code": 110,
                         "context": {
                             "value": True,
                             "operator": "ge",
@@ -2295,7 +2288,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 113,
+                        "code": 110,
                         "context": {
                             "value": True,
                             "operator": "lt",
@@ -2309,7 +2302,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 113,
+                        "code": 110,
                         "context": {
                             "value": True,
                             "operator": "le",
@@ -2323,7 +2316,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 113,
+                        "code": 110,
                         "context": {
                             "value": None,
                             "operator": "co",
@@ -2337,7 +2330,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 113,
+                        "code": 110,
                         "context": {
                             "value": 1,
                             "operator": "sw",
@@ -2351,7 +2344,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
             {
                 "_errors": [
                     {
-                        "code": 113,
+                        "code": 110,
                         "context": {
                             "value": 2,
                             "operator": "ew",
@@ -2373,7 +2366,7 @@ def test_binary_operator_non_compatible_comparison_values_are_discovered(
 
 
 def test_complex_sub_attribute_is_discovered():
-    expected_issues = {"_errors": [{"code": 33}]}
+    expected_issues = {"_errors": [{"code": 102}]}
     filter_exp = 'attr.sub_attr[type eq "work"]'
     issues = Filter.validate(filter_exp)
     assert issues.to_dict() == expected_issues

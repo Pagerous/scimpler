@@ -5,76 +5,54 @@ from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
 class ValidationError:
     _message_for_code = {
         1: "bad value syntax",
-        2: "'{expected}' is expected",
-        3: "SCIM '{scim_type}' values are expected to be encoded in base 64",
+        2: "bad type, expecting '{expected}'",
+        3: "bad encoding, expecting '{expected}'",
         4: "bad value content",
-        7: "'{keyword}' is SCIM reserved keyword that MUST NOT occur in a attribute value",
-        8: "'{value}' is not a valid URL",
-        9: (
-            "'primary' attribute set to 'True', in multi-valued complex attribute, "
-            "MUST appear no more than once"
-        ),
-        11: "must be equal to {value!r}",
-        12: "error status must be greater or equal to 300 and lesser than 600",
-        13: (
-            "HTTP response status ({response_status}) and error status in body "
-            "({body_status}) must match"
-        ),
-        14: "value must be one of: {expected_values}",
-        15: "missing",
-        16: "bad status code, expecting '{expected}', but provided '{provided}'",
-        17: (
-            "meta.resourceType must match configured type `{resource_type}`, "
-            "but provided '{provided}'"
-        ),
-        18: "must not be specified",
-        19: "should not be returned",
-        21: "too many results, must {must}",
-        22: "total results ({total_results}) do not match number of resources ({n_resources})",
-        23: "too little results, must {must}",
-        24: (
-            "response value of {response_key!r} ({response_value}) "
-            "does not correspond to query parameter {query_param_name!r} ({query_param_value}): "
-            "{reason}"
-        ),
-        25: "does not match the filter",
-        26: "resources are not sorted",
-        27: "unknown schema",
-        28: "main schema not included",
-        29: "extension {extension!r} is missing",
-        30: "can not be used together with {other!r}",
-        33: "sub-attribute {sub_attr!r} of {attr!r} can not be complex",
-        34: "resource type endpoint is required",
-        35: "resource object endpoint is required",
-        36: "unknown resource",
-        37: "too many operations (max {max})",
-        38: "too many errors (max {max})",
-        39: "value or operation not supported",
-        40: "bad SCIM reference, allowed resources: {allowed_resources}",
-        41: "value contains duplicates",
+        5: "missing",
+        6: "must not be provided",
+        7: "must not be returned",
+        8: "must be equal to {value!r}",
+        9: "must be one of: {expected_values}",
+        10: "contains duplicates, which are not allowed",
+        11: "can not be used together with {other!r}",
+        12: "missing main schema",
+        13: "missing schema extension {extension!r}",
+        14: "unknown schema",
+        15: "'primary' attribute set to 'True' MUST appear no more than once",
+        16: "bad SCIM reference, allowed resources: {allowed_resources}",
+        17: "attribute {attribute!r} does not conform the rules",
+        18: "error status must be greater or equal to 400 and lesser than 600",
+        19: "bad status code, expecting '{expected}'",
+        20: "bad number of resources, {reason}",
+        21: "does not match the filter",
+        22: "resources are not sorted",
+        23: "value must be resource type endpoint",
+        24: "value must be resource object endpoint",
+        25: "unknown bulk operation resource",
+        26: "too many operations in bulk (max {max})",
+        27: "too many errors in bulk (max {max})",
+        28: "unknown modification target",
+        29: "attribute can not be modified",
+        30: "attribute can not be deleted",
+        31: "value or operation not supported",
+        # Error codes specific to filter validation
         100: "one of brackets is not opened / closed",
-        102: "one of complex attribute brackets is not opened / closed",
-        104: "missing operand for operator '{operator}' in expression '{expression}'",
-        105: "unknown {operator_type} operator '{operator}' in expression '{expression}'",
+        101: "one of complex attribute brackets is not opened / closed",
+        102: "sub-attribute {sub_attr!r} of {attr!r} can not be complex",
+        103: "missing operand for operator '{operator}' in expression '{expression}'",
+        104: "unknown operator '{operator}' in expression '{expression}'",
+        105: "no expression or empty expression inside grouping operator",
         106: "unknown expression '{expression}'",
-        107: "no expression or empty expression inside grouping operator",
-        109: "complex attribute can not contain inner complex attributes or square brackets",
-        110: "complex attribute {attribute!r} has no expression",
-        111: "attribute {attribute!r} does not conform the rules",
-        112: "bad comparison value {value!r}",
-        113: "comparison value {value!r} is not compatible with {operator!r} operator",
-        300: "bad operation path",
-        303: "unknown operation target",
-        304: "attribute can not be modified",
-        305: "can not use complex filter without sub-attribute specified for 'add' operation",
-        306: "attribute can not be deleted",
+        107: "complex attribute group can not contain inner complex attributes or square brackets",
+        108: "complex attribute group {attribute!r} has no expression",
+        109: "bad comparison value {value!r}",
+        110: "comparison value {value!r} is not compatible with {operator!r} operator",
     }
 
     def __init__(self, code: int, **context):
         self._code = code
         self._message = self._message_for_code[code].format(**context)
         self._context = context
-        self._location: Optional[str] = None
 
     @classmethod
     def bad_value_syntax(cls):
@@ -85,150 +63,120 @@ class ValidationError:
         return cls(code=2, expected=expected)
 
     @classmethod
-    def base_64_encoding_required(cls, scim_type: str):
-        return cls(code=3, scim_type=scim_type)
+    def bad_encoding(cls, expected: str):
+        return cls(code=3, expected=expected)
 
     @classmethod
     def bad_value_content(cls):
         return cls(code=4)
 
     @classmethod
-    def reserved_keyword(cls, keyword: str):
-        return cls(code=7, keyword=keyword)
+    def missing(cls):
+        return cls(code=5)
 
     @classmethod
-    def bad_url(cls, value: str):
-        return cls(code=8, value=value)
+    def must_not_be_provided(cls):
+        return cls(code=6)
 
     @classmethod
-    def multiple_primary_values(cls):
-        return cls(code=9)
+    def must_not_be_returned(cls):
+        return cls(code=7)
 
     @classmethod
     def must_be_equal_to(cls, value: Any):
-        return cls(code=11, value=value)
-
-    @classmethod
-    def bad_error_status(cls):
-        return cls(code=12)
-
-    @classmethod
-    def error_status_mismatch(cls, response_status: str, body_status: str):
-        return cls(code=13, response_status=response_status, body_status=body_status)
+        return cls(code=8, value=value)
 
     @classmethod
     def must_be_one_of(cls, expected_values: Collection[Any]):
-        return cls(code=14, expected_values=expected_values)
-
-    @classmethod
-    def missing(cls):
-        return cls(code=15)
-
-    @classmethod
-    def bad_status_code(cls, expected: int, provided: int):
-        return cls(code=16, expected=expected, provided=provided)
-
-    @classmethod
-    def resource_type_mismatch(cls, resource_type: str, provided: str):
-        return cls(code=17, resource_type=resource_type, provided=provided)
-
-    @classmethod
-    def must_not_be_specified(cls):
-        return cls(code=18)
-
-    @classmethod
-    def restricted_or_not_requested(cls):
-        return cls(code=19)
-
-    @classmethod
-    def too_many_results(cls, must: str):
-        return cls(code=21, must=must)
-
-    @classmethod
-    def total_results_mismatch(cls, total_results: int, n_resources: int):
-        return cls(code=22, total_results=total_results, n_resources=n_resources)
-
-    @classmethod
-    def too_little_results(cls, must: str):
-        return cls(code=23, must=must)
-
-    @classmethod
-    def response_value_does_not_correspond_to_parameter(
-        cls,
-        response_key: str,
-        response_value: Any,
-        query_param_name: str,
-        query_param_value: Any,
-        reason: str,
-    ):
-        return cls(
-            code=24,
-            response_key=response_key,
-            response_value=response_value,
-            query_param_name=query_param_name,
-            query_param_value=query_param_value,
-            reason=reason,
-        )
-
-    @classmethod
-    def filter_mismatch(cls):
-        return cls(code=25)
-
-    @classmethod
-    def resources_not_sorted(cls):
-        return cls(code=26)
-
-    @classmethod
-    def unknown_schema(cls):
-        return cls(code=27)
-
-    @classmethod
-    def missing_main_schema(cls):
-        return cls(code=28)
-
-    @classmethod
-    def missing_schema_extension(cls, extension: str):
-        return cls(code=29, extension=extension)
-
-    @classmethod
-    def can_not_be_used_together(cls, other: str):
-        return cls(code=30, other=other)
-
-    @classmethod
-    def complex_sub_attribute(cls, attr: str, sub_attr: str):
-        return cls(code=33, attr=attr, sub_attr=sub_attr)
-
-    @classmethod
-    def resource_type_endpoint_required(cls):
-        return cls(code=34)
-
-    @classmethod
-    def resource_object_endpoint_required(cls):
-        return cls(code=35)
-
-    @classmethod
-    def unknown_resource(cls):
-        return cls(code=36)
-
-    @classmethod
-    def too_many_operations(cls, max_: int):
-        return cls(code=37, max=max_)
-
-    @classmethod
-    def too_many_errors(cls, max_: int):
-        return cls(code=38, max=max_)
-
-    @classmethod
-    def not_supported(cls):
-        return cls(code=39)
-
-    @classmethod
-    def bad_scim_reference(cls, allowed_resources: Collection[str]):
-        return cls(code=40, allowed_resources=list(allowed_resources))
+        return cls(code=9, expected_values=expected_values)
 
     @classmethod
     def duplicated_values(cls):
-        return cls(code=41)
+        return cls(code=10)
+
+    @classmethod
+    def can_not_be_used_together(cls, other: str):
+        return cls(code=11, other=other)
+
+    @classmethod
+    def missing_main_schema(cls):
+        return cls(code=12)
+
+    @classmethod
+    def missing_schema_extension(cls, extension: str):
+        return cls(code=13, extension=extension)
+
+    @classmethod
+    def unknown_schema(cls):
+        return cls(code=14)
+
+    @classmethod
+    def multiple_primary_values(cls):
+        return cls(code=15)
+
+    @classmethod
+    def bad_scim_reference(cls, allowed_resources: Collection[str]):
+        return cls(code=16, allowed_resources=list(allowed_resources))
+
+    @classmethod
+    def bad_attribute_name(cls, attribute: str):
+        return cls(code=17, attribute=attribute)
+
+    @classmethod
+    def bad_error_status(cls):
+        return cls(code=18)
+
+    @classmethod
+    def bad_status_code(cls, expected: int):
+        return cls(code=19, expected=expected)
+
+    @classmethod
+    def bad_number_of_resources(cls, reason: str):
+        return cls(code=20, reason=reason)
+
+    @classmethod
+    def resources_not_filtered(cls):
+        return cls(code=21)
+
+    @classmethod
+    def resources_not_sorted(cls):
+        return cls(code=22)
+
+    @classmethod
+    def resource_type_endpoint_required(cls):
+        return cls(code=23)
+
+    @classmethod
+    def resource_object_endpoint_required(cls):
+        return cls(code=24)
+
+    @classmethod
+    def unknown_operation_resource(cls):
+        return cls(code=25)
+
+    @classmethod
+    def too_many_bulk_operations(cls, max_: int):
+        return cls(code=26, max=max_)
+
+    @classmethod
+    def too_many_errors_in_bulk(cls, max_: int):
+        return cls(code=27, max=max_)
+
+    @classmethod
+    def unknown_modification_target(cls):
+        return cls(code=28)
+
+    @classmethod
+    def attribute_can_not_be_modified(cls):
+        return cls(code=29)
+
+    @classmethod
+    def attribute_can_not_be_deleted(cls):
+        return cls(code=30)
+
+    @classmethod
+    def not_supported(cls):
+        return cls(code=31)
 
     @classmethod
     def bracket_not_opened_or_closed(cls):
@@ -236,68 +184,43 @@ class ValidationError:
 
     @classmethod
     def complex_attribute_bracket_not_opened_or_closed(cls):
-        return cls(code=102)
+        return cls(code=101)
+
+    @classmethod
+    def complex_sub_attribute(cls, attr: str, sub_attr: str):
+        return cls(code=102, attr=attr, sub_attr=sub_attr)
 
     @classmethod
     def missing_operand_for_operator(cls, operator: str, expression: str):
+        return cls(code=103, operator=operator, expression=expression)
+
+    @classmethod
+    def unknown_operator(cls, operator: str, expression: str):
         return cls(code=104, operator=operator, expression=expression)
 
     @classmethod
-    def unknown_operator(cls, operator_type: str, operator: str, expression: str):
-        return cls(
-            code=105,
-            operator_type=operator_type,
-            operator=operator,
-            expression=expression,
-        )
+    def empty_filter_expression(cls):
+        return cls(code=105)
 
     @classmethod
     def unknown_expression(cls, expression: str):
         return cls(code=106, expression=expression)
 
     @classmethod
-    def empty_filter_expression(cls):
+    def inner_complex_attribute_or_square_bracket(cls):
         return cls(code=107)
 
     @classmethod
-    def inner_complex_attribute_or_square_bracket(cls):
-        return cls(code=109)
-
-    @classmethod
     def empty_complex_attribute_expression(cls, attribute: str):
-        return cls(code=110, attribute=attribute)
-
-    @classmethod
-    def bad_attribute_name(cls, attribute: str):
-        return cls(code=111, attribute=attribute)
+        return cls(code=108, attribute=attribute)
 
     @classmethod
     def bad_comparison_value(cls, value: Any):
-        return cls(code=112, value=value)
+        return cls(code=109, value=value)
 
     @classmethod
     def non_compatible_comparison_value(cls, value: Any, operator: str):
-        return cls(code=113, value=value, operator=operator)
-
-    @classmethod
-    def bad_operation_path(cls):
-        return cls(code=300)
-
-    @classmethod
-    def unknown_operation_target(cls):
-        return cls(code=303)
-
-    @classmethod
-    def attribute_can_not_be_modified(cls):
-        return cls(code=304)
-
-    @classmethod
-    def complex_filter_without_sub_attr_for_add_op(cls):
-        return cls(code=305)
-
-    @classmethod
-    def attribute_can_not_be_deleted(cls):
-        return cls(code=306)
+        return cls(code=110, value=value, operator=operator)
 
     @property
     def context(self) -> Dict:
@@ -317,10 +240,13 @@ class ValidationError:
 class ValidationWarning:
     _message_for_code = {
         1: "value should be one of: {expected_values}",
-        2: "multi-valued complex attribute should contain no more than once type-value pair",
+        2: (
+            "multi-valued complex attribute should contain a given type-value pair "
+            "no more than once"
+        ),
         3: "unexpected content, {reason}",
         4: "missing",
-        5: "should be different than {than}",
+        5: "should not equal to {value}",
     }
 
     def __init__(self, code: int, **context):
@@ -346,8 +272,8 @@ class ValidationWarning:
         return cls(code=4)
 
     @classmethod
-    def should_be_different(cls, than: str):
-        return cls(code=5, than=than)
+    def should_not_equal_to(cls, value: Any):
+        return cls(code=5, value=value)
 
     @property
     def context(self) -> Dict:

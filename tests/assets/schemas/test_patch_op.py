@@ -17,21 +17,21 @@ from tests.conftest import SchemaForTests
                 SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
                 SCIMDataContainer({"op": "unknown"}),
             ],
-            {"1": {"op": {"_errors": [{"code": 14}]}}},
+            {"1": {"op": {"_errors": [{"code": 9}]}}},
         ),
         (
             [
                 SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
                 SCIMDataContainer({"op": "remove", "path": None}),
             ],
-            {"1": {"path": {"_errors": [{"code": 15}]}}},
+            {"1": {"path": {"_errors": [{"code": 5}]}}},
         ),
         (
             [
                 SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
                 SCIMDataContainer({"op": "add", "value": None}),
             ],
-            {"1": {"value": {"_errors": [{"code": 15}]}}},
+            {"1": {"value": {"_errors": [{"code": 5}]}}},
         ),
     ),
 )
@@ -50,7 +50,7 @@ def test_validate_patch_operations(value, expected_issues):
                 sub_attr_rep=None,
                 filter_=None,
             ),
-            {"_errors": [{"code": 303}]},
+            {"_errors": [{"code": 28}]},
         ),
         (
             PatchPath(
@@ -58,7 +58,7 @@ def test_validate_patch_operations(value, expected_issues):
                 sub_attr_rep=AttrRep(attr="existing"),
                 filter_=None,
             ),
-            {"_errors": [{"code": 303}]},
+            {"_errors": [{"code": 28}]},
         ),
         (
             PatchPath(
@@ -87,7 +87,7 @@ def test_validate_patch_operations(value, expected_issues):
                     ),
                 ),
             ),
-            {"_errors": [{"code": 303}]},
+            {"_errors": [{"code": 28}]},
         ),
         (
             PatchPath(
@@ -232,7 +232,7 @@ def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_da
                     "emails": {"0": {"type": {"_errors": [{"code": 2}]}}},
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                         "department": {"_errors": [{"code": 2}]},
-                        "manager": {"displayName": {"_errors": [{"code": 2}, {"code": 304}]}},
+                        "manager": {"displayName": {"_errors": [{"code": 2}, {"code": 29}]}},
                     },
                 }
             }
@@ -260,8 +260,8 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
             "0": {
                 "value": {
                     "meta": {
-                        "_errors": [{"code": 304}],
-                        "resourceType": {"_errors": [{"code": 17}, {"code": 304}]},
+                        "_errors": [{"code": 29}],
+                        "resourceType": {"_errors": [{"code": 8}, {"code": 29}]},
                     },
                 }
             }
@@ -479,7 +479,7 @@ def test_add_operation__fails_if_attribute_is_readonly(op, path, value):
             }
         ],
     }
-    expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 304}]}}}}
+    expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 29}]}}}}
 
     issues = schema.validate(input_data)
 
@@ -544,17 +544,17 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
 @pytest.mark.parametrize(
     ("path", "expected_path_issue_codes", "resource_schema"),
     (
-        ("id", [{"code": 304}, {"code": 306}], user.User),
-        ("userName", [{"code": 306}], user.User),
+        ("id", [{"code": 29}, {"code": 30}], user.User),
+        ("userName", [{"code": 30}], user.User),
         (
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
-            [{"code": 304}],
+            [{"code": 29}],
             user.User,
         ),
-        ("meta", [{"code": 304}], user.User),
-        ("groups", [{"code": 304}], user.User),
-        ('groups[type eq "direct"].value', [{"code": 304}], user.User),
-        ("c2_mv[int eq 1].bool", [{"code": 306}], SchemaForTests),
+        ("meta", [{"code": 29}], user.User),
+        ("groups", [{"code": 29}], user.User),
+        ('groups[type eq "direct"].value', [{"code": 29}], user.User),
+        ("c2_mv[int eq 1].bool", [{"code": 30}], SchemaForTests),
     ),
 )
 def test_remove_operation__fails_if_attribute_is_readonly_or_required(

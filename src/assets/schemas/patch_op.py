@@ -279,7 +279,7 @@ def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> Validati
     issues = ValidationIssues()
     if schema.attrs.get_by_path(path) is None:
         issues.add_error(
-            issue=ValidationError.unknown_operation_target(),
+            issue=ValidationError.unknown_modification_target(),
             proceed=False,
         )
     return issues

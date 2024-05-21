@@ -49,7 +49,7 @@ def test_validation_fails_if_bad_types(user_data_client):
 
 def test_validate_schemas_field__unknown_additional_field_is_validated(user_data_client):
     user_data_client["schemas"].append("bad:user:schema")
-    expected_issues = {"schemas": {"_errors": [{"code": 27}]}}
+    expected_issues = {"schemas": {"_errors": [{"code": 14}]}}
 
     issues = user.User.validate(user_data_client)
 
@@ -58,7 +58,7 @@ def test_validate_schemas_field__unknown_additional_field_is_validated(user_data
 
 def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data_client):
     user_data_client["schemas"] = ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
-    expected_issues = {"schemas": {"_errors": [{"code": 28}]}}
+    expected_issues = {"schemas": {"_errors": [{"code": 12}]}}
 
     issues = user.User.validate(user_data_client)
 
@@ -67,7 +67,7 @@ def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data_clien
 
 def test_validate_schemas_field__fails_if_extension_schema_is_missing(user_data_client):
     user_data_client["schemas"] = ["urn:ietf:params:scim:schemas:core:2.0:User"]
-    expected_issues = {"schemas": {"_errors": [{"code": 29}]}}
+    expected_issues = {"schemas": {"_errors": [{"code": 13}]}}
 
     issues = user.User.validate(user_data_client)
 
@@ -80,7 +80,7 @@ def test_validate_schemas_field__fails_if_duplicated_values(user_data_client):
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:user",
     ]
-    expected_issues = {"schemas": {"_errors": [{"code": 41}]}}
+    expected_issues = {"schemas": {"_errors": [{"code": 10}]}}
 
     issues = user.User.validate(user_data_client)
 
@@ -89,7 +89,7 @@ def test_validate_schemas_field__fails_if_duplicated_values(user_data_client):
 
 def test_validate_schemas_field__multiple_errors(user_data_client):
     user_data_client["schemas"] = ["bad:user:schema"]
-    expected_issues = {"schemas": {"_errors": [{"code": 27}, {"code": 28}, {"code": 29}]}}
+    expected_issues = {"schemas": {"_errors": [{"code": 14}, {"code": 12}, {"code": 13}]}}
 
     issues = user.User.validate(user_data_client)
 
@@ -102,7 +102,7 @@ def test_validate_resource_type_consistency__fails_if_no_consistency():
             "resourceType": {
                 "_errors": [
                     {
-                        "code": 17,
+                        "code": 8,
                     }
                 ]
             }

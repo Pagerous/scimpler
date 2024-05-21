@@ -614,7 +614,8 @@ class _User(ResourceSchema):
         nickname = data.get("nickName")
         if username and nickname and username == nickname:
             issues.add_warning(
-                issue=ValidationWarning.should_be_different("userName"), location=("nickName",)
+                issue=ValidationWarning.should_not_equal_to("'userName' attribute"),
+                location=("nickName",),
             )
         return issues
 
