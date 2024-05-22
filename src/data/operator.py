@@ -14,10 +14,10 @@ from typing import (
     Union,
 )
 
-from src.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.registry import converters
-from src.schemas import BaseSchema
+from src.schema.attributes import Attribute, AttributeWithCaseExact, Complex, String
+from src.schema.schemas import BaseSchema
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[])
 

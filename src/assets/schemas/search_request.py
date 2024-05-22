@@ -1,13 +1,13 @@
 from typing import Any, List
 
 from src.assets.config import ServiceProviderConfig
-from src.attributes import Integer, String
-from src.attributes_presence import AttributePresenceChecker
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.data.attributes_presence import AttributePresenceChecker
+from src.data.filter import Filter
+from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues
-from src.filter import Filter
-from src.schemas import BaseSchema
-from src.sorter import Sorter
+from src.schema.attributes import Integer, String
+from src.schema.schemas import BaseSchema
 
 
 def validate_attr_reps(value: List[str]) -> ValidationIssues:

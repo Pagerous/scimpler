@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
-from src.operator import (
+from src.data.operator import (
     And,
     ComplexAttributeOperator,
     Contains,

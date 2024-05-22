@@ -4,8 +4,8 @@ import pytest
 
 from src.assets.schemas import User
 from src.container import BoundedAttrRep
-from src.filter import Filter
-from src.operator import BinaryAttributeOperator, UnaryAttributeOperator
+from src.data.filter import Filter
+from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
 from src.registry import register_binary_operator, register_unary_operator
 
 

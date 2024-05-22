@@ -13,12 +13,13 @@ from src.assets.schemas import (
 )
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
-from src.attributes_presence import AttributePresenceChecker
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
-from src.filter import Filter
-from src.operator import Present
-from src.path import PatchPath
-from src.request_validator import (
+from src.data.attributes_presence import AttributePresenceChecker
+from src.data.filter import Filter
+from src.data.operator import Present
+from src.data.path import PatchPath
+from src.data.sorter import Sorter
+from src.request.validator import (
     BulkOperations,
     Error,
     ResourceObjectDELETE,
@@ -45,7 +46,6 @@ from src.request_validator import (
     validate_start_index_consistency,
     validate_status_code,
 )
-from src.sorter import Sorter
 from tests.conftest import CONFIG, SchemaForTests
 
 

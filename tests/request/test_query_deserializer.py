@@ -1,7 +1,7 @@
 import pytest
 
 from src.container import BoundedAttrRep
-from src.query_deserializer import (
+from src.request.query_deserializer import (
     ResourceObjectGET,
     ResourceObjectPATCH,
     ResourceObjectPUT,

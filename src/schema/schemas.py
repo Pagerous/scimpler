@@ -3,7 +3,9 @@ import copy
 import warnings
 from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
 
-from src.attributes import (
+from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.error import ValidationError, ValidationIssues
+from src.schema.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
@@ -16,9 +18,7 @@ from src.attributes import (
     String,
     URIReference,
 )
-from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
-from src.error import ValidationError, ValidationIssues
-from src.wanings import ScimpleUserWarning
+from src.warning import ScimpleUserWarning
 
 
 def bulk_id_validator(value) -> ValidationIssues:

@@ -1,9 +1,9 @@
 from typing import Any, List, Optional, Sequence
 
-from src.attributes import Integer, Unknown
 from src.container import Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema, ResourceSchema
+from src.schema.attributes import Integer, Unknown
+from src.schema.schemas import BaseSchema, ResourceSchema
 
 
 def validate_resources_type(value) -> ValidationIssues:

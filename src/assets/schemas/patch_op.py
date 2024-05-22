@@ -1,10 +1,16 @@
 from typing import Any, List, Optional, Union
 
-from src.attributes import Attribute, AttributeMutability, Complex, String, Unknown
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.path import PatchPath
 from src.error import ValidationError, ValidationIssues
-from src.path import PatchPath
-from src.schemas import BaseSchema, ResourceSchema
+from src.schema.attributes import (
+    Attribute,
+    AttributeMutability,
+    Complex,
+    String,
+    Unknown,
+)
+from src.schema.schemas import BaseSchema, ResourceSchema
 
 
 def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:

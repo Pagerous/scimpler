@@ -12,17 +12,9 @@ from typing import (
     Union,
 )
 
-from src import operator as op
-from src.attributes import Complex
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
-from src.error import ValidationError, ValidationIssues
-from src.registry import (
-    binary_operators,
-    register_binary_operator,
-    register_unary_operator,
-    unary_operators,
-)
-from src.utils import (
+from src.data import operator as op
+from src.data.utils import (
     OP_REGEX,
     decode_placeholders,
     deserialize_comparison_value,
@@ -30,9 +22,15 @@ from src.utils import (
     encode_strings,
     get_placeholder,
 )
-
-if TYPE_CHECKING:
-    from src.schemas import BaseSchema
+from src.error import ValidationError, ValidationIssues
+from src.registry import (
+    binary_operators,
+    register_binary_operator,
+    register_unary_operator,
+    unary_operators,
+)
+from src.schema.attributes import Complex
+from src.schema.schemas import BaseSchema
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
@@ -593,7 +591,9 @@ class Filter(Generic[TOperator]):
         return op_(attr_rep, value)
 
     def __call__(
-        self, data: Union[SCIMDataContainer, Dict], schema_or_complex: Union["BaseSchema", Complex]
+        self,
+        data: Union[SCIMDataContainer, Dict],
+        schema_or_complex: Union[BaseSchema, Complex],
     ) -> bool:
         if isinstance(data, dict):
             data = SCIMDataContainer(data)

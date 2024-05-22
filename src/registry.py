@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, Any, Callable, Dict, Type
 
 if TYPE_CHECKING:
-    from src.operator import BinaryAttributeOperator, UnaryAttributeOperator
-    from src.schemas import ResourceSchema
+    from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
+    from src.schema.schemas import ResourceSchema
 
 
 resource_schemas: Dict[str, "ResourceSchema"] = {}

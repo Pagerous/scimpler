@@ -1,7 +1,7 @@
 from src.assets.config import create_service_provider_config
 from src.assets.schemas import user
 from src.ext.marshmallow import response_serializer
-from src.request_validator import ResourceObjectGET, ServerRootResourcesGET
+from src.request.validator import ResourceObjectGET, ServerRootResourcesGET
 
 CONFIG = create_service_provider_config(
     patch={"supported": True},

@@ -1,6 +1,6 @@
 from typing import Any, Dict
 
-from src.attributes import (
+from src.schema.attributes import (
     AttributeIssuer,
     AttributeMutability,
     Boolean,
@@ -8,7 +8,7 @@ from src.attributes import (
     String,
     URIReference,
 )
-from src.schemas import BaseResourceSchema, ResourceSchema
+from src.schema.schemas import BaseResourceSchema, ResourceSchema
 
 
 class _ResourceType(BaseResourceSchema):

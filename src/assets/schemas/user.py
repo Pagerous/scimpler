@@ -5,7 +5,9 @@ import iso3166
 import phonenumbers
 import precis_i18n
 
-from src.attributes import (
+from src.container import SCIMDataContainer
+from src.error import ValidationError, ValidationIssues, ValidationWarning
+from src.schema.attributes import (
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
@@ -17,9 +19,7 @@ from src.attributes import (
     String,
     URIReference,
 )
-from src.container import SCIMDataContainer
-from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src.schemas import ResourceSchema, SchemaExtension
+from src.schema.schemas import ResourceSchema, SchemaExtension
 
 _ACCEPT_LANGUAGE_REGEX = re.compile(
     r"\s*([a-z]{2})(?:-[A-Z]{2})?(?:\s*;q=([0-9]\.[0-9]))?(?:\s*,|$)"

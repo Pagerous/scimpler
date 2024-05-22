@@ -3,7 +3,8 @@ import base64
 import pytest
 
 from src.assets.schemas import User  # noqa; schema must be registered
-from src.attributes import (
+from src.container import BoundedAttrRep, SCIMDataContainer
+from src.schema.attributes import (
     Binary,
     Boolean,
     Complex,
@@ -15,7 +16,6 @@ from src.attributes import (
     String,
     URIReference,
 )
-from src.container import BoundedAttrRep, SCIMDataContainer
 
 
 def test_validation_is_skipped_if_value_not_provided():

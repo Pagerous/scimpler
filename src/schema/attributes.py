@@ -29,7 +29,7 @@ from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.registry import resource_schemas
 
 if TYPE_CHECKING:
-    from src.path import PatchPath
+    from src.data.path import PatchPath
 
 
 class AttributeMutability(str, Enum):
@@ -376,7 +376,8 @@ class Binary(AttributeWithCaseExact):
             return issues
         return issues
 
-    def _validate_encoding(self, value: Any, issues: ValidationIssues) -> ValidationIssues:
+    @staticmethod
+    def _validate_encoding(value: Any, issues: ValidationIssues) -> ValidationIssues:
         try:
             value = bytes(value, "ascii")
             if base64.b64encode(base64.b64decode(value)) != value:

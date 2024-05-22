@@ -1,9 +1,9 @@
 import functools
 from typing import Any, Dict, List, Optional, Sequence, TypeVar, Union
 
-from src.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
-from src.schemas import BaseSchema
+from src.schema.attributes import Attribute, AttributeWithCaseExact, Complex, String
+from src.schema.schemas import BaseSchema
 
 
 class AlwaysLastKey:
