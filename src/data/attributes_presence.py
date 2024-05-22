@@ -1,4 +1,4 @@
-from typing import Any, Collection, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Any, Collection, Generic, Optional, TypeVar, Union
 
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
@@ -25,7 +25,7 @@ class AttributePresenceChecker(Generic[TAttrRep]):
         self._ignore_issuer = list(ignore_issuer or [])
 
     @property
-    def attr_reps(self) -> List[TAttrRep]:
+    def attr_reps(self) -> list[TAttrRep]:
         return self._attr_reps
 
     @property
@@ -51,7 +51,7 @@ class AttributePresenceChecker(Generic[TAttrRep]):
 
     def __call__(
         self,
-        data: Union[Dict[str, Any], SCIMDataContainer],
+        data: Union[dict[str, Any], SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
         direction: str,
     ) -> ValidationIssues:

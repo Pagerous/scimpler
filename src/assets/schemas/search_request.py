@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from src.assets.config import ServiceProviderConfig
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
@@ -10,14 +10,14 @@ from src.schema.attributes import Integer, String
 from src.schema.schemas import BaseSchema
 
 
-def validate_attr_reps(value: List[str]) -> ValidationIssues:
+def validate_attr_reps(value: list[str]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         issues.merge(issues=BoundedAttrRep.validate(item), location=(i,))
     return issues
 
 
-def deserialize_attr_reps(value: List[str]) -> List[BoundedAttrRep]:
+def deserialize_attr_reps(value: list[str]) -> list[BoundedAttrRep]:
     return [BoundedAttrRep.deserialize(item) for item in value]
 
 

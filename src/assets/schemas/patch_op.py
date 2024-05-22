@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.path import PatchPath
@@ -13,7 +13,7 @@ from src.schema.attributes import (
 from src.schema.schemas import BaseSchema, ResourceSchema
 
 
-def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
+def validate_operations(value: list[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         type_ = item.get("op")
@@ -35,7 +35,7 @@ def validate_operations(value: List[SCIMDataContainer]) -> ValidationIssues:
     return issues
 
 
-def deserialize_operations(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+def deserialize_operations(value: list[SCIMDataContainer]) -> list[SCIMDataContainer]:
     for i, item in enumerate(value):
         if item == "remove":
             item.pop("value")
@@ -220,7 +220,7 @@ class PatchOp(BaseSchema):
 
         # e.g. emails[value ew '.com']
         updating_multivalued_items = (
-            path.has_filter and not path.sub_attr_rep and not isinstance(attr_value, List)
+            path.has_filter and not path.sub_attr_rep and not isinstance(attr_value, list)
         )
 
         if updating_multivalued_items:
@@ -275,7 +275,7 @@ class PatchOp(BaseSchema):
         if isinstance(attr, Complex) and path.sub_attr_rep:
             return attr.attrs.get(path.sub_attr_rep).deserialize(value)
 
-        if path.has_filter and not path.sub_attr_rep and not isinstance(value, List):
+        if path.has_filter and not path.sub_attr_rep and not isinstance(value, list):
             return attr.deserialize([value])[0]
 
         return attr.deserialize(value)

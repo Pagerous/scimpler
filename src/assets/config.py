@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -49,18 +49,18 @@ class ServiceProviderConfig:
     change_password: _GenericOption
     sort: _GenericOption
     etag: _GenericOption
-    authentication_schemes: List[_AuthenticationScheme]
+    authentication_schemes: list[_AuthenticationScheme]
 
 
 def create_service_provider_config(
     documentation_uri: str = "",
-    patch: Optional[Dict[str, Any]] = None,
-    bulk: Optional[Dict[str, Any]] = None,
-    filter_: Optional[Dict[str, Any]] = None,
-    change_password: Optional[Dict[str, Any]] = None,
-    sort: Optional[Dict[str, Any]] = None,
-    etag: Optional[Dict[str, Any]] = None,
-    authentication_schemes: Optional[List[Dict[str, Any]]] = None,
+    patch: Optional[dict[str, Any]] = None,
+    bulk: Optional[dict[str, Any]] = None,
+    filter_: Optional[dict[str, Any]] = None,
+    change_password: Optional[dict[str, Any]] = None,
+    sort: Optional[dict[str, Any]] = None,
+    etag: Optional[dict[str, Any]] = None,
+    authentication_schemes: Optional[list[dict[str, Any]]] = None,
 ):
     return ServiceProviderConfig(
         documentation_uri=documentation_uri,

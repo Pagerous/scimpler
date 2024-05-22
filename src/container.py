@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from src.error import ValidationError, ValidationIssues
 
@@ -176,7 +176,7 @@ Missing = MissingType()
 
 
 class SCIMDataContainer:
-    def __init__(self, d: Optional[Union[Dict, "SCIMDataContainer"]] = None):
+    def __init__(self, d: Optional[Union[dict, "SCIMDataContainer"]] = None):
         self._data = {}
         self._lower_case_to_original = {}
 
@@ -187,11 +187,11 @@ class SCIMDataContainer:
 
                 self._data.pop(self._lower_case_to_original.get(key.lower()), None)
                 self._lower_case_to_original[key.lower()] = key
-                if isinstance(value, Dict):
+                if isinstance(value, dict):
                     self._data[key] = SCIMDataContainer(value)
-                elif isinstance(value, List):
+                elif isinstance(value, list):
                     self._data[key] = [
-                        SCIMDataContainer(item) if isinstance(item, Dict) else item
+                        SCIMDataContainer(item) if isinstance(item, dict) else item
                         for item in value
                     ]
                 else:
@@ -230,7 +230,7 @@ class SCIMDataContainer:
         if parent_attr_key is None:
             parent_attr_key = attr_rep.attr
             self._lower_case_to_original[parent_attr_key.lower()] = parent_attr_key
-            if isinstance(value, List) and expand:
+            if isinstance(value, list) and expand:
                 self._data[parent_attr_key] = []
             else:
                 self._data[parent_attr_key] = SCIMDataContainer()
@@ -239,7 +239,7 @@ class SCIMDataContainer:
         if not self._is_child_value_compatible(parent_value, value, expand):
             raise KeyError(f"can not assign ({attr_rep.sub_attr}, {value}) to '{attr_rep.attr}'")
 
-        if not isinstance(value, List):
+        if not isinstance(value, list):
             self._data[parent_attr_key].set(BoundedAttrRep(attr=attr_rep.sub_attr), value)
             return
 
@@ -269,7 +269,7 @@ class SCIMDataContainer:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMDataContainer):
                 return attr_value.get(BoundedAttrRep(attr=attr_rep.sub_attr))
-            if isinstance(attr_value, List):
+            if isinstance(attr_value, list):
                 return [
                     item.get(BoundedAttrRep(attr=attr_rep.sub_attr))
                     if isinstance(item, SCIMDataContainer)
@@ -295,7 +295,7 @@ class SCIMDataContainer:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMDataContainer):
                 return attr_value.pop(attr_rep.sub_attr)
-            elif isinstance(attr_value, List):
+            elif isinstance(attr_value, list):
                 return [item.pop(attr_rep.sub_attr) for item in attr_value]
             return None
 
@@ -316,35 +316,35 @@ class SCIMDataContainer:
         child_value: Any,
         expand: True,
     ) -> bool:
-        if isinstance(parent_value, List):
+        if isinstance(parent_value, list):
             if len(parent_value) == 0:
                 return True
             parent_item_type = {type(item) for item in parent_value}
             if parent_item_type != {SCIMDataContainer}:
                 return False
-            if not isinstance(child_value, List):
+            if not isinstance(child_value, list):
                 return False
             return True
 
         if not isinstance(parent_value, SCIMDataContainer):
             return False
 
-        if isinstance(child_value, List) and expand:
+        if isinstance(child_value, list) and expand:
             return False
 
         return True
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         output = {}
         for key, value in self._data.items():
             if isinstance(value, SCIMDataContainer):
                 output[key] = value.to_dict()
-            elif isinstance(value, List):
+            elif isinstance(value, list):
                 value_output = []
                 for item in value:
                     if isinstance(item, SCIMDataContainer):
                         value_output.append(item.to_dict())
-                    elif isinstance(item, Dict):
+                    elif isinstance(item, dict):
                         value_output.append(
                             {
                                 k: v.to_dict() if isinstance(v, SCIMDataContainer) else v
@@ -359,7 +359,7 @@ class SCIMDataContainer:
         return output
 
     def __eq__(self, other: Any) -> bool:
-        if isinstance(other, Dict):
+        if isinstance(other, dict):
             other = SCIMDataContainer(other)
         elif not isinstance(other, SCIMDataContainer):
             return False

@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Optional, Sequence, TypeVar, Union
 
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.schema.attributes import Attribute, AttributeWithCaseExact, Complex, String
@@ -49,7 +49,7 @@ class StringKey:
         return value.lower() < other_value.lower()
 
 
-TSorterData = TypeVar("TSorterData", bound=Union[List[SCIMDataContainer], List[Dict[str, Any]]])
+TSorterData = TypeVar("TSorterData", bound=Union[list[SCIMDataContainer], list[dict[str, Any]]])
 
 
 class Sorter:
@@ -75,7 +75,7 @@ class Sorter:
             return data
 
         item_type = type(data[0])
-        data = [SCIMDataContainer(item) if isinstance(item, Dict) else item for item in data]
+        data = [SCIMDataContainer(item) if isinstance(item, dict) else item for item in data]
 
         if not any(item.get(self._attr_rep) for item in data):
             sorted_data = data
@@ -104,7 +104,7 @@ class Sorter:
 
         return StringKey(value, attr)
 
-    def _attr_key_many_schemas(self, data: List[SCIMDataContainer], schemas: Sequence[BaseSchema]):
+    def _attr_key_many_schemas(self, data: list[SCIMDataContainer], schemas: Sequence[BaseSchema]):
         def attr_key(item):
             schema = schemas[data.index(item)]
             return self._attr_key(item, schema)

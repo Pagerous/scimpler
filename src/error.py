@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Collection, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Collection, Optional, Union
 
 
 class ValidationError:
@@ -223,7 +223,7 @@ class ValidationError:
         return cls(code=110, value=value, operator=operator)
 
     @property
-    def context(self) -> Dict:
+    def context(self) -> dict:
         return self._context
 
     @property
@@ -276,7 +276,7 @@ class ValidationWarning:
         return cls(code=5, value=value)
 
     @property
-    def context(self) -> Dict:
+    def context(self) -> dict:
         return self._context
 
     @property
@@ -292,11 +292,11 @@ class ValidationWarning:
 
 class ValidationIssues:
     def __init__(self):
-        self._errors: Dict[Tuple, List[ValidationError]] = defaultdict(list)
-        self._warnings: Dict[Tuple, List[ValidationWarning]] = defaultdict(list)
-        self._stop_proceeding: Dict[Tuple, Set[int]] = defaultdict(set)
+        self._errors: dict[tuple, list[ValidationError]] = defaultdict(list)
+        self._warnings: dict[tuple, list[ValidationWarning]] = defaultdict(list)
+        self._stop_proceeding: dict[tuple, set[int]] = defaultdict(set)
 
-    def merge(self, issues: "ValidationIssues", location: Optional[Tuple] = None):
+    def merge(self, issues: "ValidationIssues", location: Optional[tuple] = None):
         location = location or tuple()
         for other_location, location_issues in issues._errors.items():
             new_location = location + other_location
@@ -395,7 +395,7 @@ class ValidationIssues:
         return output
 
     @staticmethod
-    def _to_dict(key: str, structure: Dict, output: Dict, msg: bool = False, ctx: bool = False):
+    def _to_dict(key: str, structure: dict, output: dict, msg: bool = False, ctx: bool = False):
         for location, errors in structure.items():
             if location:
                 current_level = output

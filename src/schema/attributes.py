@@ -10,12 +10,8 @@ from typing import (
     Any,
     Callable,
     Collection,
-    Dict,
     Iterable,
-    List,
     Optional,
-    Tuple,
-    Type,
     TypeVar,
     Union,
 )
@@ -64,7 +60,7 @@ _AttributeValidator = Callable[[Any], ValidationIssues]
 
 class Attribute(abc.ABC):
     SCIM_NAME: str
-    BASE_TYPE: Type
+    BASE_TYPE: type
 
     def __init__(
         self,
@@ -78,7 +74,7 @@ class Attribute(abc.ABC):
         restrict_canonical_values: bool = False,
         mutability: AttributeMutability = AttributeMutability.READ_WRITE,
         returned: AttributeReturn = AttributeReturn.DEFAULT,
-        validators: Optional[List[_AttributeValidator]] = None,
+        validators: Optional[list[_AttributeValidator]] = None,
         deserializer: Optional[_AttributeProcessor] = None,
         serializer: Optional[_AttributeProcessor] = None,
     ):
@@ -128,7 +124,7 @@ class Attribute(abc.ABC):
         return self._returned
 
     @property
-    def validators(self) -> List[_AttributeValidator]:
+    def validators(self) -> list[_AttributeValidator]:
         return self._validators
 
     @property
@@ -239,7 +235,7 @@ class Attribute(abc.ABC):
             return self._deserializer(value)
         return value
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         output = {
             "name": self.rep.attr,
             "type": self.SCIM_NAME,
@@ -403,10 +399,10 @@ class _Reference(AttributeWithCaseExact, abc.ABC):
         self._reference_types = list(reference_types)
 
     @property
-    def reference_types(self) -> List[str]:
+    def reference_types(self) -> list[str]:
         return self._reference_types
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         output = super().to_dict()
         output["referenceTypes"] = self.reference_types
         return output
@@ -503,7 +499,7 @@ _default_sub_attrs = [
 ]
 
 
-TData = TypeVar("TData", bound=[SCIMDataContainer, Dict])
+TData = TypeVar("TData", bound=[SCIMDataContainer, dict])
 
 
 class Complex(Attribute):
@@ -555,9 +551,9 @@ class Complex(Attribute):
         return self._sub_attributes
 
     def filter(
-        self, data: Union[TData, List[TData]], attr_filter: Callable[[Attribute], bool]
+        self, data: Union[TData, list[TData]], attr_filter: Callable[[Attribute], bool]
     ) -> TData:
-        if isinstance(data, List):
+        if isinstance(data, list):
             return [self.filter(item, attr_filter) for item in data]
 
         is_dict = isinstance(data, dict)
@@ -660,7 +656,7 @@ class Complex(Attribute):
                 serialized.set(sub_attr.rep, sub_attr.serialize(sub_attr_value))
         return super().serialize(serialized)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         output = super().to_dict()
         output["subAttributes"] = [sub_attr.to_dict() for sub_attr in self.attrs]
         return output
@@ -732,10 +728,10 @@ class BoundedAttributes:
     ):
         self._raw_attrs = list(attrs or [])
         self._schema = schema
-        self._core_attrs: List[Attribute] = []
-        self._extensions: Dict[str, BoundedAttributes] = {}
-        self._attrs: Dict[Tuple[str, str], Attribute] = {}
-        self._bounded_complex_sub_attrs: Dict[int, Dict[int, Attribute]] = {}
+        self._core_attrs: list[Attribute] = []
+        self._extensions: dict[str, BoundedAttributes] = {}
+        self._attrs: dict[tuple[str, str], Attribute] = {}
+        self._bounded_complex_sub_attrs: dict[int, dict[int, Attribute]] = {}
         self._common_attrs = {item.lower() for item in common_attrs or set()}
         self._extension = extension
         self._extension_required = extension_required
@@ -807,11 +803,11 @@ class BoundedAttributes:
             self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
 
     @property
-    def core_attrs(self) -> List[Attribute]:
+    def core_attrs(self) -> list[Attribute]:
         return self._core_attrs
 
     @property
-    def extensions(self) -> Dict[str, "BoundedAttributes"]:
+    def extensions(self) -> dict[str, "BoundedAttributes"]:
         return self._extensions
 
     def extend(self, attrs: Attributes, schema: str, required: bool = False) -> None:

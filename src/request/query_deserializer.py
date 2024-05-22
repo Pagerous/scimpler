@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import search_request
@@ -16,12 +16,12 @@ class QueryStringDeserializer(abc.ABC):
         return self._config
 
     @abc.abstractmethod
-    def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def deserialize(self, query_string: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         ...
 
 
 class _AttributesDeserializer(QueryStringDeserializer, abc.ABC):
-    def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def deserialize(self, query_string: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         query_string = query_string or {}
         deserialized = (
             search_request.SearchRequest()
@@ -60,7 +60,7 @@ class ServerRootResourcesGET(QueryStringDeserializer):
         super().__init__(config)
         self._schema = get_search_request_schema(config)
 
-    def deserialize(self, query_string: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def deserialize(self, query_string: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         query_string = query_string or {}
         additional_params = SCIMDataContainer(query_string)
 

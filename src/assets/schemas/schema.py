@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from src.container import Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues, ValidationWarning
@@ -13,7 +13,7 @@ from src.schema.attributes import (
 from src.schema.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 
 
-def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
+def validate_attributes(value: list[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         attr_type = item.get("type")
@@ -39,7 +39,7 @@ def validate_attributes(value: List[SCIMDataContainer]) -> ValidationIssues:
     return issues
 
 
-def serialize_attributes(value: List[SCIMDataContainer]) -> List[SCIMDataContainer]:
+def serialize_attributes(value: list[SCIMDataContainer]) -> list[SCIMDataContainer]:
     for i, item in enumerate(value):
         attr_type = item.get("type")
         sub_attributes = item.get("subAttributes")
@@ -216,7 +216,7 @@ class _Schema(BaseResourceSchema):
         self,
         schema: Union[ResourceSchema, SchemaExtension],
         version: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         attrs = schema.attrs if isinstance(schema, SchemaExtension) else schema.attrs.core_attrs
         output = {
             "id": schema.schema,

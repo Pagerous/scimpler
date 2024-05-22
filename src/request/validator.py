@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Union
 
 from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
@@ -41,9 +41,9 @@ class Validator(abc.ABC):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         ...
 
@@ -52,8 +52,8 @@ class Validator(abc.ABC):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         ...
@@ -71,9 +71,9 @@ class Error(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         raise NotImplementedError
 
@@ -81,8 +81,8 @@ class Error(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         body_location = ("body",)
@@ -147,7 +147,7 @@ def validate_resource_location_in_header(
 ) -> ValidationIssues:
     issues = ValidationIssues()
     headers = headers or {}
-    if not isinstance(headers, Dict) or "Location" not in (headers or {}):
+    if not isinstance(headers, dict) or "Location" not in (headers or {}):
         if header_required:
             issues.add_error(
                 issue=ValidationError.missing(),
@@ -202,7 +202,7 @@ def _validate_resource_output_body(
     expected_status_code: int,
     status_code: int,
     body: SCIMDataContainer,
-    headers: Dict[str, Any],
+    headers: dict[str, Any],
     presence_checker: Optional[AttributePresenceChecker],
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -284,9 +284,9 @@ class ResourceObjectGET(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         query_string = query_string or {}
@@ -305,8 +305,8 @@ class ResourceObjectGET(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         return _validate_resource_output_body(
@@ -325,9 +325,9 @@ class ServiceResourceObjectGET(ResourceObjectGET):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         return ValidationIssues()
 
@@ -354,9 +354,9 @@ class ResourceObjectPUT(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         query_string = query_string or {}
@@ -383,8 +383,8 @@ class ResourceObjectPUT(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         return _validate_resource_output_body(
@@ -421,9 +421,9 @@ class ResourcesPOST(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         body, query_string = SCIMDataContainer(body or {}), query_string or {}
@@ -446,8 +446,8 @@ class ResourcesPOST(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -479,7 +479,7 @@ class ResourcesPOST(Validator):
 
 def validate_resources_sorted(
     sorter: Sorter,
-    resources: List[SCIMDataContainer],
+    resources: list[SCIMDataContainer],
     resource_schemas: Sequence[ResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -493,7 +493,7 @@ def validate_resources_sorted(
 
 def validate_resources_attributes_presence(
     presence_checker: AttributePresenceChecker,
-    resources: List[SCIMDataContainer],
+    resources: list[SCIMDataContainer],
     resource_schemas: Sequence[ResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -508,7 +508,7 @@ def validate_resources_attributes_presence(
 def validate_number_of_resources(
     count: Optional[int],
     total_results: int,
-    resources: List[Any],
+    resources: list[Any],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     n_resources = len(resources)
@@ -538,7 +538,7 @@ def validate_pagination_info(
     schema: list_response.ListResponse,
     count: Optional[int],
     total_results: Any,
-    resources: List[Any],
+    resources: list[Any],
     start_index: Any,
     items_per_page: Any,
 ) -> ValidationIssues:
@@ -575,7 +575,7 @@ def validate_start_index_consistency(
 
 
 def validate_resources_filtered(
-    filter_: Filter, resources: List[Any], resource_schemas: Sequence[ResourceSchema]
+    filter_: Filter, resources: list[Any], resource_schemas: Sequence[ResourceSchema]
 ) -> ValidationIssues:
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
@@ -760,9 +760,9 @@ class ServerRootResourcesGET(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         query_string = query_string or {}
@@ -776,8 +776,8 @@ class ServerRootResourcesGET(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
@@ -822,9 +822,9 @@ class SearchRequestPOST(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         issues.merge(
@@ -837,8 +837,8 @@ class SearchRequestPOST(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         return _validate_resources_get_response(
@@ -873,9 +873,9 @@ class ResourceObjectPATCH(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         body, query_string = SCIMDataContainer(body or {}), query_string or {}
@@ -936,7 +936,7 @@ class ResourceObjectPATCH(Validator):
         if (
             not (isinstance(attr, Complex) and attr.multi_valued)
             or value is Missing
-            or not isinstance(value, List)
+            or not isinstance(value, list)
         ):
             return
 
@@ -957,8 +957,8 @@ class ResourceObjectPATCH(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -994,9 +994,9 @@ class ResourceObjectDELETE(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         return ValidationIssues()
 
@@ -1004,8 +1004,8 @@ class ResourceObjectDELETE(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -1063,9 +1063,9 @@ class BulkOperations(Validator):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         body_location = ("body",)
@@ -1128,8 +1128,8 @@ class BulkOperations(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -1258,9 +1258,9 @@ class _ServiceProviderConfig(ResourcesGET):
     def validate_request(
         self,
         *,
-        body: Optional[Dict[str, Any]] = None,
-        query_string: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, Any]] = None,
+        body: Optional[dict[str, Any]] = None,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         query_string = query_string or {}
@@ -1283,7 +1283,7 @@ class ResourceTypesGET(_ServiceProviderConfig):
         super().__init__(config, resource_schema=ResourceType)
 
 
-def _location(attr_rep: BoundedAttrRep) -> Union[Tuple[str], Tuple[str, str]]:
+def _location(attr_rep: BoundedAttrRep) -> Union[tuple[str], tuple[str, str]]:
     if attr_rep.sub_attr:
         return attr_rep.attr, attr_rep.sub_attr
     return (attr_rep.attr,)

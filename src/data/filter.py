@@ -1,16 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Generic,
-    List,
-    Tuple,
-    TypeAlias,
-    TypeVar,
-    Union,
-)
+from typing import Any, Generic, TypeAlias, TypeVar, Union
 
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.data import operator as op
@@ -189,7 +179,7 @@ class Filter(Generic[TOperator]):
         return issues
 
     @staticmethod
-    def _validate_operator(exp: str, placeholders: Dict[str, Any]) -> ValidationIssues:
+    def _validate_operator(exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
         bracket_open = False
         bracket_open_index = None
@@ -237,7 +227,7 @@ class Filter(Generic[TOperator]):
         return issues
 
     @staticmethod
-    def _validate_op_or_exp(exp: str, placeholders: Dict[str, Any]) -> ValidationIssues:
+    def _validate_op_or_exp(exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
         or_operands, issues_ = Filter._validate_logical_operands(
             exp=exp,
@@ -253,7 +243,7 @@ class Filter(Generic[TOperator]):
         return issues
 
     @staticmethod
-    def _validate_op_and_exp(exp: str, placeholders: Dict[str, Any]) -> ValidationIssues:
+    def _validate_op_and_exp(exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
         and_operands, issues_ = Filter._validate_logical_operands(
             exp=exp,
@@ -288,8 +278,8 @@ class Filter(Generic[TOperator]):
         exp: str,
         regexp: re.Pattern[str],
         operator_name: str,
-        placeholders: Dict[str, Any],
-    ) -> Tuple[List[str], ValidationIssues]:
+        placeholders: dict[str, Any],
+    ) -> tuple[list[str], ValidationIssues]:
         issues = ValidationIssues()
         operands = []
         current_position = 0
@@ -340,7 +330,7 @@ class Filter(Generic[TOperator]):
         return operands, issues
 
     @staticmethod
-    def _validate_op_attr_exp(attr_exp: str, placeholders: Dict[str, Any]) -> ValidationIssues:
+    def _validate_op_attr_exp(attr_exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
         attr_exp = attr_exp.strip()
         sub_or_complex = placeholders.get(deserialize_placeholder(attr_exp))
@@ -479,7 +469,7 @@ class Filter(Generic[TOperator]):
 
     @staticmethod
     def _deserialize_operator(
-        exp: str, placeholders: Dict[str, Any], in_complex_group: bool
+        exp: str, placeholders: dict[str, Any], in_complex_group: bool
     ) -> _DeserializedOperator:
         for match in GROUP_OPERATOR_REGEX.finditer(exp):
             sub_op_exp = match.group(0)
@@ -495,7 +485,7 @@ class Filter(Generic[TOperator]):
 
     @staticmethod
     def _deserialize_op_or_exp(
-        exp: str, placeholders: Dict[str, Any], in_complex_group: bool
+        exp: str, placeholders: dict[str, Any], in_complex_group: bool
     ) -> _DeserializedOperator:
         or_operands = Filter._split_exp_to_logical_operands(
             exp=exp,
@@ -513,7 +503,7 @@ class Filter(Generic[TOperator]):
     @staticmethod
     def _deserialize_op_and_exp(
         exp: str,
-        placeholders: Dict[str, Any],
+        placeholders: dict[str, Any],
         in_complex_group: bool,
     ) -> _DeserializedOperator:
         and_operands = Filter._split_exp_to_logical_operands(
@@ -537,7 +527,7 @@ class Filter(Generic[TOperator]):
         return op.And(*deserialized_and_operands)
 
     @staticmethod
-    def _split_exp_to_logical_operands(exp: str, regexp: re.Pattern[str]) -> List[str]:
+    def _split_exp_to_logical_operands(exp: str, regexp: re.Pattern[str]) -> list[str]:
         operands = []
         current_position = 0
         matches = list(regexp.finditer(exp))
@@ -561,7 +551,7 @@ class Filter(Generic[TOperator]):
     @staticmethod
     def _deserialize_op_attr_exp(
         exp: str,
-        placeholders: Dict[str, Any],
+        placeholders: dict[str, Any],
         in_complex_group: bool,
     ) -> _DeserializedOperator:
         exp = exp.strip()
@@ -592,7 +582,7 @@ class Filter(Generic[TOperator]):
 
     def __call__(
         self,
-        data: Union[SCIMDataContainer, Dict],
+        data: Union[SCIMDataContainer, dict],
         schema_or_complex: Union[BaseSchema, Complex],
     ) -> bool:
         if isinstance(data, dict):

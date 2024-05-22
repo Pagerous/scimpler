@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Optional
 from uuid import uuid4
 
 OP_REGEX = re.compile(r"\s+", flags=re.DOTALL)
@@ -7,7 +7,7 @@ PLACEHOLDER_REGEX = re.compile(r"\|&PLACE_HOLDER_(\w+)&\|")
 STRING_VALUES_REGEX = re.compile(r"'(.*?)'|\"(.*?)\"", flags=re.DOTALL)
 
 
-def get_placeholder() -> Tuple[str, str]:
+def get_placeholder() -> tuple[str, str]:
     id_ = uuid4().hex
     return id_, f"|&PLACE_HOLDER_{id_}&|"
 
@@ -19,7 +19,7 @@ def deserialize_placeholder(exp: str) -> Optional[str]:
     return None
 
 
-def encode_strings(exp: str) -> Tuple[str, Dict[str, Any]]:
+def encode_strings(exp: str) -> tuple[str, dict[str, Any]]:
     placeholders = {}
     for match in STRING_VALUES_REGEX.finditer(exp):
         start, stop = match.span()
@@ -30,7 +30,7 @@ def encode_strings(exp: str) -> Tuple[str, Dict[str, Any]]:
     return exp, placeholders
 
 
-def decode_placeholders(exp: str, placeholders: Dict[str, Any]) -> str:
+def decode_placeholders(exp: str, placeholders: dict[str, Any]) -> str:
     encoded = exp
     for match in PLACEHOLDER_REGEX.finditer(exp):
         id_ = match.group(1)

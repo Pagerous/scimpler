@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.data.filter import Filter
@@ -64,7 +64,7 @@ class PatchPath:
 
     @classmethod
     def _validate_complex_multivalued_path(
-        cls, path: str, placeholders: Dict[str, Any]
+        cls, path: str, placeholders: dict[str, Any]
     ) -> ValidationIssues:
         filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
         issues = Filter.validate(filter_exp)
@@ -108,7 +108,7 @@ class PatchPath:
 
     @classmethod
     def _deserialize_complex_multivalued_path(
-        cls, path: str, placeholders: Dict[str, Any]
+        cls, path: str, placeholders: dict[str, Any]
     ) -> "PatchPath":
         filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
         filter_ = Filter.deserialize(filter_exp)
@@ -157,7 +157,7 @@ class PatchPath:
         if not self._filter:
             return True
 
-        if isinstance(value, Dict):
+        if isinstance(value, dict):
             value = SCIMDataContainer(value)
 
         if attr.multi_valued:

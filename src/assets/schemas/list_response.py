@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from src.container import Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
@@ -37,7 +37,7 @@ class ListResponse(BaseSchema):
         self._contained_schemas = list(schemas)
 
     @property
-    def contained_schemas(self) -> List[BaseSchema]:
+    def contained_schemas(self) -> list[BaseSchema]:
         return self._contained_schemas
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
@@ -46,7 +46,7 @@ class ListResponse(BaseSchema):
         if resources_ is Missing:
             return issues
 
-        if not isinstance(resources_, List):
+        if not isinstance(resources_, list):
             issues.add_error(
                 issue=ValidationError.bad_type("list"),
                 location=(self.attrs.resources.rep.attr,),
@@ -88,7 +88,7 @@ class ListResponse(BaseSchema):
         data.set(self.attrs.resources.rep, serialized_resources)
         return data
 
-    def get_schemas_for_resources(self, resources_: List[Any]) -> List[Optional[ResourceSchema]]:
+    def get_schemas_for_resources(self, resources_: list[Any]) -> list[Optional[ResourceSchema]]:
         schemas_ = []
         n_schemas = len(self._contained_schemas)
         for resource in resources_:
@@ -103,7 +103,7 @@ class ListResponse(BaseSchema):
             return None
 
         schemas_value = data.get(self.attrs.schemas.rep)
-        if isinstance(schemas_value, List) and len(schemas_value) > 0:
+        if isinstance(schemas_value, list) and len(schemas_value) > 0:
             schemas_value = {
                 item.lower() if isinstance(item, str) else item for item in schemas_value
             }
@@ -114,7 +114,7 @@ class ListResponse(BaseSchema):
 
 
 def validate_items_per_page_consistency(
-    resources_: List[Any], items_per_page_: Any
+    resources_: list[Any], items_per_page_: Any
 ) -> ValidationIssues:
     issues = ValidationIssues()
     if not isinstance(items_per_page_, int):

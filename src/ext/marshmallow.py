@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, Optional
+from typing import Iterable, Optional
 
 from marshmallow import Schema, fields, post_dump
 
@@ -23,7 +23,7 @@ from src.schema.attributes import (
 
 def _get_fields(
     attrs: Iterable[Attribute],
-    field_by_attr_name: Optional[Dict[str, fields.Field]] = None,
+    field_by_attr_name: Optional[dict[str, fields.Field]] = None,
 ) -> dict[str, fields.Field]:
     field_by_attr_name = field_by_attr_name or {}
     fields_ = {}

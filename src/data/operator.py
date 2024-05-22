@@ -1,18 +1,6 @@
 import abc
 import operator
-from typing import (
-    Any,
-    Callable,
-    Generator,
-    Generic,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
 
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.registry import converters
@@ -44,7 +32,7 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
     @property
     def sub_operators(
         self,
-    ) -> List[Union["LogicalOperator", "AttributeOperator", "ComplexAttributeOperator"]]:
+    ) -> list[Union["LogicalOperator", "AttributeOperator", "ComplexAttributeOperator"]]:
         return self._sub_operators
 
     def _collect_matches(
@@ -142,8 +130,8 @@ class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
 
 
 class UnaryAttributeOperator(AttributeOperator, abc.ABC):
-    SUPPORTED_SCIM_TYPES: Set[str]
-    SUPPORTED_TYPES: Set[Type]
+    SUPPORTED_SCIM_TYPES: set[str]
+    SUPPORTED_TYPES: set[type]
     OPERATOR: Callable[[Any], bool]
 
     def match(
@@ -160,7 +148,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
             return False
 
         if attr.multi_valued:
-            if isinstance(value, List):
+            if isinstance(value, list):
                 match = any(
                     [self.OPERATOR(item) for item in value if type(item) in self.SUPPORTED_TYPES]
                 )
@@ -200,8 +188,8 @@ T2 = TypeVar("T2")
 
 
 class BinaryAttributeOperator(AttributeOperator, abc.ABC):
-    SUPPORTED_SCIM_TYPES: Set[str]
-    SUPPORTED_TYPES: Set[Type]
+    SUPPORTED_SCIM_TYPES: set[str]
+    SUPPORTED_TYPES: set[type]
     OPERATOR: Callable[[Any, Any], bool]
 
     def __init__(self, attr_rep: TAttrRep, value: T2):
@@ -218,7 +206,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def _get_values_for_comparison(
         self, value: Any, attr: Attribute
-    ) -> Optional[List[Tuple[Any, Any]]]:
+    ) -> Optional[list[tuple[Any, Any]]]:
         if attr.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
             return None
 
@@ -236,7 +224,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             attr = value_sub_attr
             value = [item.get("value") for item in value]
 
-        elif not isinstance(value, List):
+        elif not isinstance(value, list):
             value = [value]
 
         if isinstance(attr, AttributeWithCaseExact):
@@ -401,7 +389,7 @@ class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
 
     def match(
         self,
-        value: Optional[Union[List[SCIMDataContainer], SCIMDataContainer]],
+        value: Optional[Union[list[SCIMDataContainer], SCIMDataContainer]],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         _ensure_correct_obj(schema_or_complex, self._attr_rep)
@@ -410,15 +398,15 @@ class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
             return False
         if (
             attr.multi_valued
-            and not isinstance(value, List)
+            and not isinstance(value, list)
             or not attr.multi_valued
-            and isinstance(value, List)
+            and isinstance(value, list)
         ):
             return False
 
         value = value or ([] if attr.multi_valued else SCIMDataContainer())
 
-        if not isinstance(value, List):
+        if not isinstance(value, list):
             value = [value]
 
         value = [

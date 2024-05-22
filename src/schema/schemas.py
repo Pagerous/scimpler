@@ -1,7 +1,7 @@
 import abc
 import copy
 import warnings
-from typing import Any, Callable, Dict, Iterable, List, Optional, TypeVar, Union
+from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues
@@ -31,7 +31,7 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-TData = TypeVar("TData", bound=Union[SCIMDataContainer, Dict])
+TData = TypeVar("TData", bound=Union[SCIMDataContainer, dict])
 
 
 class BaseSchema(abc.ABC):
@@ -62,7 +62,7 @@ class BaseSchema(abc.ABC):
         return self._attrs
 
     @property
-    def schemas(self) -> List[str]:
+    def schemas(self) -> list[str]:
         return [self._schema]
 
     @property
@@ -78,7 +78,7 @@ class BaseSchema(abc.ABC):
                 deserialized.set(attr.rep, attr.deserialize(value))
         return deserialized
 
-    def serialize(self, data: Any) -> Dict[str, Any]:
+    def serialize(self, data: Any) -> dict[str, Any]:
         data = SCIMDataContainer(data)
         serialized = SCIMDataContainer()
         for attr in self.attrs:
@@ -100,7 +100,7 @@ class BaseSchema(abc.ABC):
 
             if isinstance(attr, Complex):
                 value = attr.filter(value, attr_filter)
-                if all(value) if isinstance(value, List) else value:
+                if all(value) if isinstance(value, list) else value:
                     filtered.set(attr.rep, value)
             elif attr_filter(attr):
                 filtered.set(attr.rep, value)
@@ -110,9 +110,9 @@ class BaseSchema(abc.ABC):
     def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:  # noqa
         return data
 
-    def validate(self, data: Union[SCIMDataContainer, Dict[str, Any]]) -> ValidationIssues:
+    def validate(self, data: Union[SCIMDataContainer, dict[str, Any]]) -> ValidationIssues:
         issues = ValidationIssues()
-        if isinstance(data, Dict):
+        if isinstance(data, dict):
             data = SCIMDataContainer(data)
         issues.merge(self._validate_data(data))
         if issues.can_proceed(("schemas",)):
@@ -289,7 +289,7 @@ class ResourceSchema(BaseResourceSchema):
             ],
             common_attrs=self._common_attrs,
         )
-        self._schema_extensions: Dict[str, Dict] = {}
+        self._schema_extensions: dict[str, dict] = {}
         self._plural_name = plural_name or name
         self._endpoint = endpoint or f"/{self._plural_name}"
         self._description = description
@@ -315,13 +315,13 @@ class ResourceSchema(BaseResourceSchema):
         return self._plural_name
 
     @property
-    def schemas(self) -> List[str]:
+    def schemas(self) -> list[str]:
         return [self.schema] + [
             extension["extension"].schema for extension in self._schema_extensions.values()
         ]
 
     @property
-    def extensions(self) -> Dict["SchemaExtension", bool]:
+    def extensions(self) -> dict["SchemaExtension", bool]:
         return {item["extension"]: item["required"] for item in self._schema_extensions.values()}
 
     def get_extension(self, name: str) -> "SchemaExtension":

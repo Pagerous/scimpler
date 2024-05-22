@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from src.schema.attributes import (
     AttributeIssuer,
@@ -96,7 +96,7 @@ class _ResourceType(BaseResourceSchema):
             ],
         )
 
-    def get_repr(self, schema: ResourceSchema) -> Dict[str, Any]:
+    def get_repr(self, schema: ResourceSchema) -> dict[str, Any]:
         return {
             "schemas": self.schemas,
             "id": schema.name,
