@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Collection, Optional, Union
+from typing import Any, Collection, Optional, Sequence, Union
 
 
 class ValidationError:
@@ -20,7 +20,7 @@ class ValidationError:
         14: "unknown schema",
         15: "'primary' attribute set to 'True' MUST appear no more than once",
         16: "bad SCIM reference, allowed resources: {allowed_resources}",
-        17: "attribute {attribute!r} does not conform the rules",
+        17: "bad attribute name {attribute!r}",
         18: "error status must be greater or equal to 400 and lesser than 600",
         19: "bad status code, expecting '{expected}'",
         20: "bad number of resources, {reason}",
@@ -45,8 +45,8 @@ class ValidationError:
         106: "unknown expression '{expression}'",
         107: "complex attribute group can not contain inner complex attributes or square brackets",
         108: "complex attribute group {attribute!r} has no expression",
-        109: "bad comparison value {value!r}",
-        110: "comparison value {value!r} is not compatible with {operator!r} operator",
+        109: "bad operand {value!r}",
+        110: "operand {value!r} is not compatible with {operator!r} operator",
     }
 
     def __init__(self, code: int, **context):
@@ -215,11 +215,11 @@ class ValidationError:
         return cls(code=108, attribute=attribute)
 
     @classmethod
-    def bad_comparison_value(cls, value: Any):
+    def bad_operand(cls, value: Any):
         return cls(code=109, value=value)
 
     @classmethod
-    def non_compatible_comparison_value(cls, value: Any, operator: str):
+    def non_compatible_operand(cls, value: Any, operator: str):
         return cls(code=110, value=value, operator=operator)
 
     @property
@@ -296,8 +296,12 @@ class ValidationIssues:
         self._warnings: dict[tuple, list[ValidationWarning]] = defaultdict(list)
         self._stop_proceeding: dict[tuple, set[int]] = defaultdict(set)
 
-    def merge(self, issues: "ValidationIssues", location: Optional[tuple] = None):
-        location = location or tuple()
+    def merge(
+        self,
+        issues: "ValidationIssues",
+        location: Optional[Sequence[Union[str, int]]] = None,
+    ):
+        location = tuple(location or tuple())
         for other_location, location_issues in issues._errors.items():
             new_location = location + other_location
             self._errors[new_location].extend(location_issues)
@@ -327,35 +331,60 @@ class ValidationIssues:
         location = tuple(location or tuple())
         self._warnings[location].append(issue)
 
-    def get(self, location: Collection[Union[str, int]]) -> "ValidationIssues":
+    def get(
+        self,
+        error_codes: Optional[Collection[int]] = None,
+        warning_codes: Optional[Collection[int]] = None,
+        location: Optional[Sequence[Union[str, int]]] = None,
+    ) -> "ValidationIssues":
         copy = ValidationIssues()
-        copy._errors = {
-            location_[len(location) :]: errors
-            for location_, errors in self._errors.items()
-            if location_[: len(location)] == location
-        }
-        copy._warnings = {
-            location_[len(location) :]: warnings
-            for location_, warnings in self._warnings.items()
-            if location_[: len(location)] == location
-        }
-        copy._stop_proceeding = {
-            location_[len(location) :]: codes
-            for location_, codes in self._stop_proceeding.items()
-            if location_[: len(location)] == location
-        }
+        location = tuple(location or tuple())
+
+        errors_copy = {}
+        for location_, errors in self._errors.items():
+            if location_[: len(location)] != location:
+                continue
+            errors = [error for error in errors if not error_codes or error.code in error_codes]
+            if errors:
+                errors_copy[location_[len(location) :]] = errors
+        copy._errors = errors_copy
+
+        warnings_copy = {}
+        for location_, warnings in self._warnings.items():
+            if location_[: len(location)] != location:
+                continue
+            warnings = [
+                warning
+                for warning in warnings
+                if not warning_codes or warning.code in warning_codes
+            ]
+            if warnings:
+                warnings_copy[location_[len(location) :]] = warnings
+        copy._warnings = warnings_copy
+
+        stop_proceeding_copy = {}
+        for location_, codes in self._stop_proceeding.items():
+            if location_[: len(location)] != location:
+                continue
+            codes = [code for code in codes if not error_codes or code in error_codes]
+            if codes:
+                stop_proceeding_copy[location_[len(location) :]] = codes
+        copy._stop_proceeding = stop_proceeding_copy
+
         return copy
 
-    def pop_error(self, location: Collection[Union[str, int]], code: int) -> "ValidationIssues":
-        location = tuple(location)
+    def pop_errors(
+        self, codes: Collection[int], location: Optional[Sequence[Union[str, int]]] = None
+    ) -> "ValidationIssues":
+        location = tuple(location or tuple())
 
         if location not in self._errors:
             return ValidationIssues()
 
-        popped = self.get(location)
+        popped = self.get(error_codes=codes, location=location)
 
         for issue in self._errors[location]:
-            if issue.code == code:
+            if issue.code in codes:
                 self._errors[location].remove(issue)
                 if issue.code in self._stop_proceeding.get(location, set()):
                     self._stop_proceeding[location].remove(issue.code)
@@ -412,17 +441,48 @@ class ValidationIssues:
                                 item["error"] = str(error)
                             if ctx:
                                 item["context"] = error.context
-                            current_level[part][key].append(item)  # noqa
+                            current_level[part][key].append(
+                                ValidationIssues._issue_to_dict(error, msg=msg, ctx=ctx)
+                            )
                     current_level = current_level[part]
             else:
                 if key not in output:
                     output[key] = []
                 for error in errors:
-                    item = {"code": error.code}
-                    if msg:
-                        item["error"] = str(error)
-                    if ctx:
-                        item["context"] = error.context
-                    output[key].append(item)
+                    output[key].append(ValidationIssues._issue_to_dict(error, msg=msg, ctx=ctx))
 
+        return output
+
+    def flatten(self, msg: bool = False, ctx: bool = False) -> dict:
+        return {
+            "errors": self._flatten(self._errors, msg=msg, ctx=ctx),
+            "warnings": self._flatten(self._warnings, msg=msg, ctx=ctx),
+        }
+
+    @staticmethod
+    def _flatten(structure: dict, msg: bool = False, ctx: bool = False):
+        output = {}
+        for location, issues in structure.items():
+            if location:
+                location_key = ".".join([str(part) for part in location])
+                output[location_key] = [
+                    ValidationIssues._issue_to_dict(issue, msg=msg, ctx=ctx) for issue in issues
+                ]
+            else:
+                output[""] = [
+                    ValidationIssues._issue_to_dict(issue, msg=msg, ctx=ctx) for issue in issues
+                ]
+        return output
+
+    @staticmethod
+    def _issue_to_dict(
+        issue: Union[ValidationError, ValidationWarning],
+        msg: bool = False,
+        ctx: bool = False,
+    ):
+        output = {"code": issue.code}
+        if msg:
+            output["error"] = str(issue)
+        if ctx:
+            output["context"] = issue.context
         return output

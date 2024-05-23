@@ -1,12 +1,12 @@
 from typing import Any, Optional, Sequence
 
 from src.container import Invalid, Missing, SCIMDataContainer
+from src.data.attributes import Integer, Unknown
 from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import Integer, Unknown
-from src.schema.schemas import BaseSchema, ResourceSchema
+from src.schemas import BaseSchema, ResourceSchema
 
 
-def validate_resources_type(value) -> ValidationIssues:
+def _validate_resources_type(value) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         if not isinstance(item, SCIMDataContainer):
@@ -30,7 +30,7 @@ class ListResponse(BaseSchema):
                 Unknown(
                     name="Resources",
                     multi_valued=True,
-                    validators=[validate_resources_type],
+                    validators=[_validate_resources_type],
                 ),
             ],
         )
@@ -42,28 +42,21 @@ class ListResponse(BaseSchema):
 
     def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
         issues = ValidationIssues()
-        resources_ = data.get(self.attrs.resources.rep)
-        if resources_ is Missing:
-            return issues
 
-        if not isinstance(resources_, list):
-            issues.add_error(
-                issue=ValidationError.bad_type("list"),
-                location=(self.attrs.resources.rep.attr,),
-                proceed=False,
-            )
+        resources = data.get(self.attrs.resources.rep)
+        if resources in [Missing, Invalid]:
             return issues
 
         if (items_per_page_ := data.get(self.attrs.itemsperpage.rep)) is not Invalid:
             issues.merge(
                 validate_items_per_page_consistency(
-                    resources_=resources_,
+                    resources_=resources,
                     items_per_page_=items_per_page_,
                 )
             )
 
-        schemas_ = self.get_schemas_for_resources(resources_)
-        for i, (resource, schema) in enumerate(zip(resources_, schemas_)):
+        schemas = self.get_schemas_for_resources(resources)
+        for i, (resource, schema) in enumerate(zip(resources, schemas)):
             if schema is None:
                 issues.add_error(
                     issue=ValidationError.unknown_schema(),
@@ -78,30 +71,36 @@ class ListResponse(BaseSchema):
         return issues
 
     def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
-        resources_ = data.get(self.attrs.resources.rep)
-        if resources_ is Missing:
+        resources = data.get(self.attrs.resources.rep)
+        if resources is Missing or not isinstance(resources, list):
             return data
-        schemas_ = self.get_schemas_for_resources(resources_)
+
+        schemas = self.get_schemas_for_resources(resources)
         serialized_resources = []
-        for i, (resource, schema) in enumerate(zip(resources_, schemas_)):
-            serialized_resources.append(schema.serialize(resource))
+        for i, (resource, schema) in enumerate(zip(resources, schemas)):
+            if schema is None:
+                serialized_resources.append({})
+            else:
+                serialized_resources.append(schema.serialize(resource))
         data.set(self.attrs.resources.rep, serialized_resources)
         return data
 
-    def get_schemas_for_resources(self, resources_: list[Any]) -> list[Optional[ResourceSchema]]:
-        schemas_ = []
+    def get_schemas_for_resources(
+        self,
+        resources: list[Any],
+    ) -> list[Optional[ResourceSchema]]:
+        schemas = []
         n_schemas = len(self._contained_schemas)
-        for resource in resources_:
-            if n_schemas == 1:
-                schemas_.append(self._contained_schemas[0])
+        for resource in resources:
+            if not isinstance(resource, SCIMDataContainer):
+                schemas.append(None)
+            elif n_schemas == 1:
+                schemas.append(self._contained_schemas[0])
             else:
-                schemas_.append(self._infer_schema_from_data(resource))
-        return schemas_
+                schemas.append(self._infer_schema_from_data(resource))
+        return schemas
 
-    def _infer_schema_from_data(self, data: Any) -> Optional[BaseSchema]:
-        if not isinstance(data, SCIMDataContainer):
-            return None
-
+    def _infer_schema_from_data(self, data: SCIMDataContainer) -> Optional[BaseSchema]:
         schemas_value = data.get(self.attrs.schemas.rep)
         if isinstance(schemas_value, list) and len(schemas_value) > 0:
             schemas_value = {

@@ -4,7 +4,7 @@ import pytest
 
 from src.assets.schemas import User  # noqa; schema must be registered
 from src.container import BoundedAttrRep, SCIMDataContainer
-from src.schema.attributes import (
+from src.data.attributes import (
     Binary,
     Boolean,
     Complex,

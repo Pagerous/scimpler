@@ -5,20 +5,15 @@ from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
-from src.assets.schemas.search_request import get_search_request_schema
+from src.assets.schemas.search_request import create_search_request_schema
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.data.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
 from src.data.attributes_presence import AttributePresenceChecker
 from src.data.filter import Filter
 from src.data.path import PatchPath
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src.schema.attributes import (
-    Attribute,
-    AttributeMutability,
-    AttributeReturn,
-    Complex,
-)
-from src.schema.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
+from src.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 
 
 class Validator(abc.ABC):
@@ -62,10 +57,10 @@ class Validator(abc.ABC):
 class Error(Validator):
     def __init__(self, config: ServiceProviderConfig):
         super().__init__(config)
-        self._schema = error.Error()
+        self._schema = error.Error
 
     @property
-    def response_schema(self) -> error.Error:
+    def response_schema(self) -> error.ErrorSchema:
         return self._schema
 
     def validate_request(
@@ -744,7 +739,7 @@ class ServerRootResourcesGET(Validator):
         self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
     ):
         super().__init__(config)
-        self._request_query_validation_schema = get_search_request_schema(config)
+        self._request_query_validation_schema = create_search_request_schema(config)
         self._response_validation_schema = list_response.ListResponse(resource_schemas)
         self._response_schema = list_response.ListResponse(
             [
@@ -802,7 +797,7 @@ class SearchRequestPOST(Validator):
         self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
     ):
         super().__init__(config)
-        self._request_validation_schema = get_search_request_schema(config)
+        self._request_validation_schema = create_search_request_schema(config)
         self._response_validation_schema = list_response.ListResponse(resource_schemas)
         self._response_schema = list_response.ListResponse(
             [
@@ -984,9 +979,8 @@ class ResourceObjectPATCH(Validator):
         )
         meta_location = self.response_schema.attrs.meta__version.rep
         if body.get(meta_location) is Missing:
-            issues.pop_error(("body", *_location(meta_location)), 8)
-            issues.pop_error(("body", *_location(meta_location)), 5)
-            issues.pop_error(("headers", "ETag"), 8)
+            issues.pop_errors([5, 8], ("body", *_location(meta_location)))
+            issues.pop_errors([8], ("headers", "ETag"))
         return issues
 
 
@@ -1111,7 +1105,7 @@ class BulkOperations(Validator):
                     )
                     continue
                 issues_ = validator.validate_request(body=data_item)
-                issues.merge(issues_.get(("body",)), location=data_item_location)
+                issues.merge(issues_.get(location=("body",)), location=data_item_location)
         if (
             len(body.get(self._request_schema.attrs.operations.rep))
             > self.config.bulk.max_operations
@@ -1197,11 +1191,11 @@ class BulkOperations(Validator):
                     body=response,
                 )
                 issues.merge(
-                    issues=issues_.get(("body",)),
+                    issues=issues_.get(location=("body",)),
                     location=response_location,
                 )
                 issues.merge(
-                    issues=issues_.get(("status",)),
+                    issues=issues_.get(location=("status",)),
                     location=status_location,
                 )
             elif all([location, method, resource_validator]):
@@ -1210,9 +1204,9 @@ class BulkOperations(Validator):
                     status_code=status,
                     headers={"Location": location},
                 )
-                meta_location_missmatch = issues_.pop_error(("body", "meta", "location"), code=8)
-                header_location_mismatch = issues_.pop_error(("headers", "Location"), code=8)
-                issues.merge(issues_.get(("body",)), location=response_location)
+                meta_location_missmatch = issues_.pop_errors([8], ("body", "meta", "location"))
+                header_location_mismatch = issues_.pop_errors([8], ("headers", "Location"))
+                issues.merge(issues_.get(location=("body",)), location=response_location)
                 if meta_location_missmatch.has_errors() and header_location_mismatch.has_errors():
                     issues.add_error(
                         issue=ValidationError.must_be_equal_to("operation's location"),

@@ -1,4 +1,4 @@
-from src.schema.attributes import (
+from src.data.attributes import (
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
@@ -9,7 +9,7 @@ from src.schema.attributes import (
     Integer,
     String,
 )
-from src.schema.schemas import BaseResourceSchema, bulk_id_validator
+from src.schemas import BaseResourceSchema, bulk_id_validator
 
 ServiceProviderConfig = BaseResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",

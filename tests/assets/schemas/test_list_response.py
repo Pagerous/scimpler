@@ -62,7 +62,7 @@ def test_resources_validation_fails_if_bad_resource_type(list_user_data):
     list_user_data["Resources"][1]["userName"] = 123
     expected = {
         "Resources": {
-            "0": {"_errors": [{"code": 2}]},
+            "0": {"_errors": [{"code": 2}, {"code": 14}]},
             "1": {"userName": {"_errors": [{"code": 2}]}},
         }
     }
@@ -185,3 +185,69 @@ def test_get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(
     actual = schema.get_schemas_for_resources(data)
 
     assert isinstance(actual, type(expected))
+
+
+def test_list_response_can_be_serialized(user_data_client):
+    schema = list_response.ListResponse(schemas=[user.User])
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "totalResults": 3,
+        "Resources": [
+            user.User.deserialize(user_data_client),
+            user.User.deserialize(user_data_client),
+            user.User.deserialize(user_data_client),
+        ],
+    }
+    expected_data = {
+        "schemas": data["schemas"],
+        "totalResults": data["totalResults"],
+        "Resources": [item.to_dict() for item in data["Resources"]],
+    }
+
+    serialized = schema.serialize(data)
+
+    assert serialized == expected_data
+
+
+def test_list_response_with_missing_resources_can_be_serialized(user_data_client):
+    schema = list_response.ListResponse(schemas=[user.User])
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "totalResults": 3,
+    }
+
+    serialized = schema.serialize(data)
+
+    assert serialized == data
+
+
+def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client):
+    schema = list_response.ListResponse(schemas=[user.User])
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "totalResults": 3,
+        "Resources": ["bad_type", ["also_bad_type"]],
+    }
+    expected_data = {
+        "schemas": data["schemas"],
+        "totalResults": data["totalResults"],
+        "Resources": [{}, {}],
+    }
+
+    serialized = schema.serialize(data)
+
+    assert serialized == expected_data
+
+
+def test_bad_resources_type_is_validated(user_data_client):
+    schema = list_response.ListResponse(schemas=[user.User])
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "totalResults": 3,
+        "Resources": "foo",
+    }
+    expected_issues = {"Resources": {"_errors": [{"code": 2}]}}
+
+    issues = schema.validate(data)
+
+    assert issues.to_dict() == expected_issues

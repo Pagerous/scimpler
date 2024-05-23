@@ -1,6 +1,6 @@
+from src.data.attributes import AttributeReturn, String
 from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import AttributeReturn, String
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 
 
 def validate_error_status(value: str) -> ValidationIssues:
@@ -9,7 +9,7 @@ def validate_error_status(value: str) -> ValidationIssues:
         value = int(value)
     except ValueError:
         issues.add_error(
-            issue=ValidationError.bad_error_status(),
+            issue=ValidationError.bad_value_syntax(),
             proceed=False,
         )
         return issues
@@ -21,7 +21,7 @@ def validate_error_status(value: str) -> ValidationIssues:
     return issues
 
 
-class Error(BaseSchema):
+class ErrorSchema(BaseSchema):
     def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:Error",
@@ -55,3 +55,6 @@ class Error(BaseSchema):
                 ),
             ],
         )
+
+
+Error = ErrorSchema()

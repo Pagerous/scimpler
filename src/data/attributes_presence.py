@@ -1,9 +1,9 @@
 from typing import Any, Collection, Generic, Optional, TypeVar, Union
 
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.attributes import Attribute, AttributeIssuer, AttributeReturn, Complex
 from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import Attribute, AttributeIssuer, AttributeReturn, Complex
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 
 TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[BaseSchema, Complex])

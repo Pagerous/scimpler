@@ -2,10 +2,11 @@ import pytest
 
 from src.assets.schemas import User, patch_op, user
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.attributes import AttributeMutability, String
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
-from src.schema.schemas import ResourceSchema
+from src.schemas import ResourceSchema, SchemaExtension
 from tests.conftest import SchemaForTests
 
 
@@ -586,3 +587,150 @@ def test_validate_empty_body():
     issues = schema.validate({})
 
     assert issues.to_dict() == {}
+
+
+def test_value_is_removed_if_remove_operation_during_deserialization():
+    schema = patch_op.PatchOp(resource_schema=user.User)
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "add",
+                "path": "name.formatted",
+                "value": "John Doe",
+            },
+            {
+                "op": "remove",
+                "path": "name.formatted",
+                "value": "John Doe",
+            },
+        ],
+    }
+
+    deserialized = schema.deserialize(data)
+
+    assert "value" in deserialized.get("Operations")[0].to_dict()
+    assert "value" not in deserialized.get("Operations")[1].to_dict()
+
+
+def test_operation_value_is_not_validated_if_bad_path():
+    schema = patch_op.PatchOp(resource_schema=user.User)
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "add",
+                "path": "non.existing",
+                "value": "John Doe",
+            },
+            {
+                "op": "replace",
+                "path": "non.existing",
+                "value": "John Doe",
+            },
+            {
+                "op": "remove",
+                "path": "non.existing",
+                "value": "John Doe",
+            },
+        ],
+    }
+    expected_issues = {
+        "Operations": {
+            "0": {"path": {"_errors": [{"code": 28}]}},
+            "1": {"path": {"_errors": [{"code": 28}]}},
+            "2": {"path": {"_errors": [{"code": 28}]}},
+        }
+    }
+
+    issues = schema.validate(data)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_extension():
+    schema = patch_op.PatchOp(resource_schema=user.User)
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "add",
+                "value": {
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "manager": {"displayName": "John Doe"}
+                    }
+                },
+            },
+        ],
+    }
+    expected_issues = {
+        "Operations": {
+            "0": {
+                "value": {
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "manager": {"displayName": {"_errors": [{"code": 29}]}}
+                    }
+                }
+            },
+        }
+    }
+
+    issues = schema.validate(data)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_operation_value_is_validated_against_mutability_for_attribute_in_extension():
+    my_resource = ResourceSchema(
+        schema="my:custom:schema",
+        name="MyResource",
+    )
+    my_resource.extend(
+        extension=SchemaExtension(
+            schema="my:custom:schema:extension",
+            name="MyResourceExtension",
+            attrs=[String(name="my_attr", mutability=AttributeMutability.READ_ONLY)],
+        )
+    )
+    schema = patch_op.PatchOp(resource_schema=my_resource)
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "add",
+                "value": {"my:custom:schema:extension": {"my_attr": "abc"}},
+            },
+        ],
+    }
+    expected_issues = {
+        "Operations": {
+            "0": {
+                "value": {"my:custom:schema:extension": {"my_attr": {"_errors": [{"code": 29}]}}}
+            },
+        }
+    }
+
+    issues = schema.validate(data)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_extension_with_path():
+    schema = patch_op.PatchOp(resource_schema=user.User)
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "add",
+                "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
+                "value": {"displayName": "John Doe"},
+            },
+        ],
+    }
+    expected_issues = {
+        "Operations": {"0": {"value": {"displayName": {"_errors": [{"code": 29}]}}}},
+    }
+
+    issues = schema.validate(data)
+
+    assert issues.to_dict() == expected_issues

@@ -1,19 +1,13 @@
 from typing import Any, Optional, Union
 
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.attributes import Attribute, AttributeMutability, Complex, String, Unknown
 from src.data.path import PatchPath
 from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import (
-    Attribute,
-    AttributeMutability,
-    Complex,
-    String,
-    Unknown,
-)
-from src.schema.schemas import BaseSchema, ResourceSchema
+from src.schemas import BaseSchema, ResourceSchema
 
 
-def validate_operations(value: list[SCIMDataContainer]) -> ValidationIssues:
+def _validate_operations(value: list[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         type_ = item.get("op")
@@ -33,13 +27,6 @@ def validate_operations(value: list[SCIMDataContainer]) -> ValidationIssues:
                     location=(i, "value"),
                 )
     return issues
-
-
-def deserialize_operations(value: list[SCIMDataContainer]) -> list[SCIMDataContainer]:
-    for i, item in enumerate(value):
-        if item == "remove":
-            item.pop("value")
-    return value
 
 
 class PatchOp(BaseSchema):
@@ -65,8 +52,7 @@ class PatchOp(BaseSchema):
                     name="Operations",
                     required=True,
                     multi_valued=True,
-                    validators=[validate_operations],
-                    deserializer=deserialize_operations,
+                    validators=[_validate_operations],
                 )
             ],
         )
@@ -101,8 +87,9 @@ class PatchOp(BaseSchema):
         return issues
 
     def _validate_remove_operation(self, path: PatchPath) -> ValidationIssues:
-        issues = validate_operation_path(self._resource_schema, path)
-        if issues.has_errors():
+        issues = ValidationIssues()
+        if (issues_ := validate_operation_path(self._resource_schema, path)).has_errors():
+            issues.merge(issues_, location=(self.attrs.operations__path.rep.sub_attr,))
             return issues
 
         attr = self._resource_schema.attrs.get(path.attr_rep)
@@ -165,9 +152,7 @@ class PatchOp(BaseSchema):
     def _validate_operation_value(self, path: Optional[PatchPath], value: Any) -> ValidationIssues:
         if path in [None, Missing]:
             issues = self._resource_schema.validate(value)
-            issues.pop_error(("schemas",), code=27)
-            issues.pop_error(("schemas",), code=28)
-            issues.pop_error(("schemas",), code=29)
+            issues.pop_errors([27, 28, 29], ("schemas",))
             for attr in self._resource_schema.attrs:
                 location = (attr.rep.attr,)
                 attr_value = value.get(attr.rep)
@@ -183,7 +168,7 @@ class PatchOp(BaseSchema):
                         location=location,
                     )
 
-                elif not isinstance(attr, Complex):
+                if not isinstance(attr, Complex):
                     continue
 
                 for sub_attr in attr.attrs:
@@ -202,8 +187,6 @@ class PatchOp(BaseSchema):
             return issues
 
         attr = self._resource_schema.attrs.get_by_path(path)
-        if attr is None:
-            return ValidationIssues()
         return self._validate_update_attr_value(attr, value, path)
 
     @staticmethod
@@ -236,7 +219,7 @@ class PatchOp(BaseSchema):
                 if sub_attr.mutability != AttributeMutability.READ_ONLY:
                     # non-read-only attributes can be updated
                     continue
-                if attr_value[sub_attr.rep] is not Missing:
+                if attr_value.get(sub_attr.rep) is not Missing:
                     issues.add_error(
                         issue=ValidationError.attribute_can_not_be_modified(),
                         proceed=False,

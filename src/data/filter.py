@@ -4,6 +4,7 @@ from typing import Any, Generic, TypeAlias, TypeVar, Union
 
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.data import operator as op
+from src.data.attributes import Complex
 from src.data.utils import (
     OP_REGEX,
     decode_placeholders,
@@ -19,8 +20,7 @@ from src.registry import (
     register_unary_operator,
     unary_operators,
 )
-from src.schema.attributes import Complex
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
@@ -380,7 +380,7 @@ class Filter(Generic[TOperator]):
             except ValueError:
                 value = None
                 issues.add_error(
-                    issue=ValidationError.bad_comparison_value(
+                    issue=ValidationError.bad_operand(
                         decode_placeholders(components[2], placeholders)
                     ),
                     proceed=False,
@@ -391,7 +391,7 @@ class Filter(Generic[TOperator]):
 
             if type(value) not in op_.SUPPORTED_TYPES:
                 issues.add_error(
-                    issue=ValidationError.non_compatible_comparison_value(value, op_.SCIM_OP),
+                    issue=ValidationError.non_compatible_operand(value, op_.SCIM_OP),
                     proceed=False,
                 )
 

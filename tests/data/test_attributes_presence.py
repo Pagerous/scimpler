@@ -1,8 +1,8 @@
 from src.assets.schemas.user import User
 from src.container import BoundedAttrRep, SCIMDataContainer
+from src.data.attributes import Integer
 from src.data.attributes_presence import AttributePresenceChecker
-from src.schema.attributes import Integer
-from src.schema.schemas import ResourceSchema, SchemaExtension
+from src.schemas import ResourceSchema, SchemaExtension
 
 
 def test_presence_checker_fails_if_returned_attribute_that_never_should_be_returned(

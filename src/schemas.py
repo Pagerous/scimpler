@@ -1,11 +1,9 @@
-import abc
 import copy
 import warnings
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
-from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import (
+from src.data.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
@@ -18,6 +16,7 @@ from src.schema.attributes import (
     String,
     URIReference,
 )
+from src.error import ValidationError, ValidationIssues
 from src.warning import ScimpleUserWarning
 
 
@@ -34,7 +33,7 @@ def bulk_id_validator(value) -> ValidationIssues:
 TData = TypeVar("TData", bound=Union[SCIMDataContainer, dict])
 
 
-class BaseSchema(abc.ABC):
+class BaseSchema:
     def __init__(
         self,
         schema: str,
@@ -174,6 +173,8 @@ class BaseSchema(abc.ABC):
             if value is Missing:
                 continue
             issues_ = attr.validate(value)
+            if not issues_.can_proceed():
+                data.set(attr.rep, Invalid)
             location = (attr.rep.attr,)
             if attr.rep.extension:
                 location = (attr.rep.schema,) + location

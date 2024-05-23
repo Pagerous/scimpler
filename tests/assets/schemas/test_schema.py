@@ -123,6 +123,23 @@ def test_warning_is_returned_if_missing_sub_attrs_for_complex_attr():
     assert issues.to_dict() == expected_issues
 
 
+def test_validation_fails_if_missing_case_exact_for_string_attr():
+    expected_issues = {"0": {"caseExact": {"_errors": [{"code": 5}]}}}
+
+    issues = attributes.validate(
+        value=[
+            SCIMDataContainer(
+                {
+                    "name": "value",
+                    "type": "string",
+                }
+            )
+        ]
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_resource_schema_representation_can_be_generated():
     output = Schema.get_repr(User)
 
@@ -134,3 +151,11 @@ def test_schema_extension_representation_can_be_generated():
     output = Schema.get_repr(User.get_extension("EnterpriseUser"))
 
     assert output
+
+
+def test_schema_data_can_be_serialized():
+    data = Schema.get_repr(User)
+
+    serialized = Schema.serialize(data)
+
+    assert serialized == data

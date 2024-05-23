@@ -3,9 +3,9 @@ from copy import deepcopy
 from typing import Any
 
 from src.container import Missing, SCIMDataContainer
+from src.data.attributes import Complex, ExternalReference, Integer, String, Unknown
 from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import Complex, ExternalReference, Integer, String, Unknown
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 
 _RESOURCE_TYPE_REGEX = re.compile(r"/\w+")
 _RESOURCE_OBJECT_REGEX = re.compile(r"/\w+/.*")

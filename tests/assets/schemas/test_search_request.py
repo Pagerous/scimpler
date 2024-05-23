@@ -1,4 +1,8 @@
-from src.assets.schemas.search_request import SearchRequest
+from src.assets.config import create_service_provider_config
+from src.assets.schemas.search_request import (
+    SearchRequest,
+    create_search_request_schema,
+)
 from src.container import BoundedAttrRep
 
 
@@ -30,3 +34,29 @@ def test_search_request_is_deserialized():
     assert data.get("sorter").asc is False
     assert data.get("startIndex") == 1
     assert data.get("count") == 0
+
+
+def test_search_request_schema_can_exclude_filter_and_sorting():
+    schema = create_search_request_schema(
+        config=create_service_provider_config(
+            filter_={"supported": False},
+            sort={"supported": False},
+        )
+    )
+
+    assert getattr(schema.attrs, "filter", None) is None
+    assert getattr(schema.attrs, "sortBy", None) is None
+    assert getattr(schema.attrs, "sortOrder", None) is None
+
+
+def test_search_request_schema_can_include_filter_and_sorting():
+    schema = create_search_request_schema(
+        config=create_service_provider_config(
+            filter_={"supported": True, "max_results": 100},
+            sort={"supported": True},
+        )
+    )
+
+    assert getattr(schema.attrs, "filter", None) is not None
+    assert getattr(schema.attrs, "sortBy", None) is not None
+    assert getattr(schema.attrs, "sortOrder", None) is not None

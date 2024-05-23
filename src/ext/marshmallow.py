@@ -3,8 +3,7 @@ from typing import Iterable, Optional
 from marshmallow import Schema, fields, post_dump
 
 from src.assets.schemas import ListResponse
-from src.request.validator import Validator
-from src.schema.attributes import (
+from src.data.attributes import (
     Attribute,
     AttributeReturn,
     Binary,
@@ -19,6 +18,7 @@ from src.schema.attributes import (
     Unknown,
     URIReference,
 )
+from src.request.validator import Validator
 
 
 def _get_fields(

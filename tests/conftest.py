@@ -5,8 +5,7 @@ import pytest
 from src.assets.config import create_service_provider_config
 from src.assets.schemas import Group, User
 from src.assets.schemas.user import EnterpriseUserExtension
-from src.registry import register_resource_schema
-from src.schema.attributes import (
+from src.data.attributes import (
     Binary,
     Boolean,
     Complex,
@@ -18,7 +17,8 @@ from src.schema.attributes import (
     String,
     URIReference,
 )
-from src.schema.schemas import ResourceSchema
+from src.registry import register_resource_schema
+from src.schemas import ResourceSchema
 
 
 @pytest.fixture(scope="session", autouse=True)

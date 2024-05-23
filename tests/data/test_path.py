@@ -5,7 +5,7 @@ from src.container import AttrRep, BoundedAttrRep
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.path import PatchPath
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 from tests.conftest import SchemaForTests
 
 

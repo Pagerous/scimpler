@@ -3,9 +3,9 @@ import operator
 from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
 
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.registry import converters
-from src.schema.attributes import Attribute, AttributeWithCaseExact, Complex, String
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[])
 

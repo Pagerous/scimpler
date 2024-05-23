@@ -1,12 +1,12 @@
 from typing import Any, Optional
 
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
+from src.data.attributes import Complex
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, LogicalOperator
 from src.data.utils import decode_placeholders, encode_strings
 from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import Complex
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 
 
 class PatchPath:

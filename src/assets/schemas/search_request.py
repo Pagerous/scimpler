@@ -2,12 +2,12 @@ from typing import Any
 
 from src.assets.config import ServiceProviderConfig
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.data.attributes import Integer, String
 from src.data.attributes_presence import AttributePresenceChecker
 from src.data.filter import Filter
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues
-from src.schema.attributes import Integer, String
-from src.schema.schemas import BaseSchema
+from src.schemas import BaseSchema
 
 
 def validate_attr_reps(value: list[str]) -> ValidationIssues:
@@ -114,7 +114,7 @@ class SearchRequest(BaseSchema):
         return issues
 
 
-def get_search_request_schema(config: ServiceProviderConfig) -> SearchRequest:
+def create_search_request_schema(config: ServiceProviderConfig) -> SearchRequest:
     exclude = set()
     if not config.filter.supported:
         exclude.add("filter")
