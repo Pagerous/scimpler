@@ -92,6 +92,19 @@ def test_validate_patch_operations(value, expected_issues):
         ),
         (
             PatchPath(
+                attr_rep=BoundedAttrRep(attr="name"),
+                sub_attr_rep=None,
+                filter_=Filter(
+                    ComplexAttributeOperator(
+                        attr_rep=BoundedAttrRep(attr="name"),
+                        sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="whatever"),
+                    ),
+                ),
+            ),
+            {"_errors": [{"code": 28}]},
+        ),
+        (
+            PatchPath(
                 attr_rep=BoundedAttrRep(attr="emails"),
                 sub_attr_rep=AttrRep(attr="value"),
                 filter_=Filter(

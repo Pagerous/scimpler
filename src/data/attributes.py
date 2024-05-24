@@ -842,8 +842,12 @@ class BoundedAttributes:
 
     def get_by_path(self, path: "PatchPath") -> Optional[Attribute]:
         attr = self.get(path.attr_rep)
-        if attr is None or path.sub_attr_rep is None:
+        if attr is None or (path.has_filter and not attr.multi_valued):
+            return None
+
+        if path.sub_attr_rep is None:
             return attr
+
         return self.get(
             BoundedAttrRep(
                 schema=path.attr_rep.schema,
