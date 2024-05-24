@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 
 from src.assets.schemas import User, user
-from src.schemas import (
+from src.data.schemas import (
     ResourceSchema,
     SchemaExtension,
     validate_resource_type_consistency,

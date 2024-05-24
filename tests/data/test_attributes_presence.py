@@ -1,8 +1,10 @@
+import pytest
+
 from src.assets.schemas.user import User
-from src.container import BoundedAttrRep, SCIMDataContainer
-from src.data.attributes import Integer
+from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
+from src.data.attributes import AttributeReturn, Boolean, Complex, Integer, String
 from src.data.attributes_presence import AttributePresenceChecker
-from src.schemas import ResourceSchema, SchemaExtension
+from src.data.schemas import ResourceSchema, SchemaExtension
 
 
 def test_presence_checker_fails_if_returned_attribute_that_never_should_be_returned(
@@ -308,3 +310,95 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
     issues = checker(SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}), schema, "RESPONSE")
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_creating_presence_checker_with_attr_reps_and_no_inclusiveness_specified_fails():
+    with pytest.raises(ValueError, match="'include' must be specified if 'attr_reps' is specified"):
+        AttributePresenceChecker(attr_reps=[AttrRep(attr="attr")])
+
+
+def test_presence_check_fails_if_passed_schema_where_complex_is_required():
+    checker = AttributePresenceChecker(attr_reps=[AttrRep(attr="formatted")], include=True)
+
+    with pytest.raises(
+        TypeError,
+        match="provided schema, but complex attribute is required for non-bounded attributes",
+    ):
+        checker({"name": {"formatted": "John Doe"}}, User, "RESPONSE")
+
+
+def test_presence_check_fails_if_passed_complex_where_schema_is_required():
+    checker = AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True)
+
+    with pytest.raises(
+        TypeError, match="provided complex attribute, but schema is required for bounded attributes"
+    ):
+        checker({"formatted": "John Doe"}, User.attrs.name, "RESPONSE")
+
+
+def test_sub_attributes_presence_is_validated_if_multivalued_root_attribute_has_value_none():
+    my_resource = ResourceSchema(
+        schema="my:schema",
+        name="MyResource",
+        attrs=[
+            Complex(
+                name="super_complex",
+                multi_valued=True,
+                sub_attributes=[
+                    String("str_required", required=True),
+                    Integer("int_required", required=True),
+                    Boolean("bool_required", required=True),
+                ],
+            )
+        ],
+    )
+    checker = AttributePresenceChecker(
+        attr_reps=[
+            BoundedAttrRep(attr="super_complex", sub_attr="str_required"),
+            BoundedAttrRep(attr="super_complex", sub_attr="int_required"),
+            BoundedAttrRep(attr="super_complex", sub_attr="bool_required"),
+        ],
+        include=True,
+    )
+    data = SCIMDataContainer(
+        {
+            "schemas": ["my:schema"],
+            "super_complex": None,
+        }
+    )
+    expected_issues = {
+        "super_complex": {
+            "str_required": {"_errors": [{"code": 5}]},
+            "int_required": {"_errors": [{"code": 5}]},
+            "bool_required": {"_errors": [{"code": 5}]},
+        }
+    }
+
+    issues = checker(data, my_resource, "REQUEST")
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_attr_presence_can_be_checked_for_complex_attribute():
+    attr = Complex(
+        name="super_complex",
+        multi_valued=True,
+        sub_attributes=[
+            String("str"),
+            Integer("int"),
+            Boolean("bool"),
+        ],
+    )
+    checker = AttributePresenceChecker(
+        attr_reps=[AttrRep(attr="str"), AttrRep(attr="bool")],
+        include=False,
+    )
+    data = SCIMDataContainer({"str": "abc", "int": 1, "bool": True})
+    expected_issues = {
+        "str": {"_errors": [{"code": 7}]},
+        "bool": {"_errors": [{"code": 7}]},
+    }
+
+    issues = checker(data, attr, "RESPONSE")
+
+    assert issues.to_dict() == expected_issues

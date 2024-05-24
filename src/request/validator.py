@@ -11,9 +11,9 @@ from src.data.attributes import Attribute, AttributeMutability, AttributeReturn,
 from src.data.attributes_presence import AttributePresenceChecker
 from src.data.filter import Filter
 from src.data.path import PatchPath
+from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 
 
 class Validator(abc.ABC):

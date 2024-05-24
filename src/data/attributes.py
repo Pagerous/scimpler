@@ -56,6 +56,7 @@ class AttributeIssuer(Enum):
 
 _AttributeProcessor = Callable[[Any], Any]
 _AttributeValidator = Callable[[Any], ValidationIssues]
+_AttrName = Union[str, AttrRep, BoundedAttrRep]
 
 
 class Attribute(abc.ABC):
@@ -64,7 +65,7 @@ class Attribute(abc.ABC):
 
     def __init__(
         self,
-        name: Union[str, AttrRep, BoundedAttrRep],
+        name: _AttrName,
         *,
         description: str = "",
         issuer: AttributeIssuer = AttributeIssuer.NOT_SPECIFIED,
@@ -122,18 +123,6 @@ class Attribute(abc.ABC):
     @property
     def returned(self) -> AttributeReturn:
         return self._returned
-
-    @property
-    def validators(self) -> list[_AttributeValidator]:
-        return self._validators
-
-    @property
-    def deserializer(self) -> Optional[_AttributeProcessor]:
-        return self._deserializer
-
-    @property
-    def serializer(self) -> Optional[_AttributeProcessor]:
-        return self._serializer
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._rep})"
@@ -219,7 +208,7 @@ class Attribute(abc.ABC):
                         issue=ValidationWarning.should_be_one_of(self._canonical_values),
                     )
 
-        for validator in self.validators:
+        for validator in self._validators:
             if not issues.can_proceed():
                 break
             issues.merge(validator(value))
@@ -251,20 +240,26 @@ class Attribute(abc.ABC):
 
     def clone(
         self,
-        attr_rep: Optional[Union[AttrRep, BoundedAttrRep]] = None,
+        attr_rep: Optional[Union[str, AttrRep, BoundedAttrRep]] = None,
         attr_filter: Optional[Callable[["Attribute"], bool]] = None,
     ) -> "Attribute":
         if attr_filter and not attr_filter(self):
             raise ValueError("attribute does not match the filter")
         clone = copy(self)
         if attr_rep:
-            clone._rep = attr_rep
+            clone._rep = (
+                attr_rep if not isinstance(attr_rep, str) else BoundedAttrRep.deserialize(attr_rep)
+            )
         return clone
 
 
 class AttributeWithUniqueness(Attribute, abc.ABC):
     def __init__(
-        self, name: str, *, uniqueness: AttributeUniqueness = AttributeUniqueness.NONE, **kwargs
+        self,
+        name: _AttrName,
+        *,
+        uniqueness: AttributeUniqueness = AttributeUniqueness.NONE,
+        **kwargs,
     ):
         super().__init__(name=name, **kwargs)
         self._uniqueness = uniqueness
@@ -283,7 +278,7 @@ class AttributeWithUniqueness(Attribute, abc.ABC):
 
 
 class AttributeWithCaseExact(Attribute, abc.ABC):
-    def __init__(self, name: str, *, case_exact: bool = False, **kwargs):
+    def __init__(self, name: _AttrName, *, case_exact: bool = False, **kwargs):
         super().__init__(name=name, **kwargs)
         self._case_exact = case_exact
         if not self._case_exact and self._canonical_values:
@@ -342,7 +337,7 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
 
     def __init__(
         self,
-        name: str,
+        name: _AttrName,
         *,
         precis: precis_i18n.profile.Profile = get_profile("OpaqueString"),
         **kwargs,
@@ -359,7 +354,7 @@ class Binary(AttributeWithCaseExact):
     SCIM_NAME = "binary"
     BASE_TYPE = str
 
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: _AttrName, **kwargs):
         kwargs["case_exact"] = True
         super().__init__(name=name, **kwargs)
 
@@ -367,20 +362,22 @@ class Binary(AttributeWithCaseExact):
         issues = super()._validate_type(value)
         if not issues.can_proceed():
             return issues
-        self._validate_encoding(value, issues)
+        issues.merge(self._validate_encoding(value))
         if not issues.can_proceed():
             return issues
         return issues
 
     @staticmethod
-    def _validate_encoding(value: Any, issues: ValidationIssues) -> ValidationIssues:
+    def _validate_encoding(value: Any) -> ValidationIssues:
+        issues = ValidationIssues()
+        if len(value) % 4 != 0:
+            issues.add_error(
+                issue=ValidationError.bad_encoding("base64"),
+                proceed=False,
+            )
+            return issues
         try:
-            value = bytes(value, "ascii")
-            if base64.b64encode(base64.b64decode(value)) != value:
-                issues.add_error(
-                    issue=ValidationError.bad_encoding("base64"),
-                    proceed=False,
-                )
+            base64.b64decode(value, validate=True)
         except binascii.Error:
             issues.add_error(
                 issue=ValidationError.bad_encoding("base64"),
@@ -393,7 +390,7 @@ class _Reference(AttributeWithCaseExact, abc.ABC):
     SCIM_NAME = "reference"
     BASE_TYPE = str
 
-    def __init__(self, name: Union[str, AttrRep], *, reference_types: Iterable[str], **kwargs):
+    def __init__(self, name: _AttrName, *, reference_types: Iterable[str], **kwargs):
         kwargs["case_exact"] = True
         super().__init__(name=name, **kwargs)
         self._reference_types = list(reference_types)
@@ -437,23 +434,16 @@ class DateTime(Attribute):
 
 
 class ExternalReference(_Reference):
-    def __init__(self, name: Union[str, AttrRep], **kwargs):
+    def __init__(self, name: _AttrName, **kwargs):
         kwargs["reference_types"] = ["external"]
         super().__init__(name=name, **kwargs)
 
     def _validate_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_type(value)
         if issues.can_proceed():
-            try:
-                result = urlparse(value)
-                is_valid = all([result.scheme, result.netloc])
-                if not is_valid:
-                    issues.add_error(
-                        issue=ValidationError.bad_value_syntax(),
-                        proceed=False,
-                    )
-                    return issues
-            except ValueError:
+            result = urlparse(value)
+            is_valid = all([result.scheme, result.netloc])
+            if not is_valid:
                 issues.add_error(
                     issue=ValidationError.bad_value_syntax(),
                     proceed=False,
@@ -462,13 +452,13 @@ class ExternalReference(_Reference):
 
 
 class URIReference(_Reference):
-    def __init__(self, name: Union[str, AttrRep], **kwargs):
+    def __init__(self, name: _AttrName, **kwargs):
         kwargs["reference_types"] = ["uri"]
         super().__init__(name=name, **kwargs)
 
 
 class SCIMReference(_Reference):
-    def __init__(self, name: Union[str, AttrRep], *, reference_types: Iterable[str], **kwargs):
+    def __init__(self, name: _AttrName, *, reference_types: Iterable[str], **kwargs):
         super().__init__(name=name, reference_types=reference_types, **kwargs)
 
     def _validate_type(self, value: Any) -> ValidationIssues:
@@ -508,7 +498,7 @@ class Complex(Attribute):
 
     def __init__(
         self,
-        name: Union[str, AttrRep],
+        name: _AttrName,
         *,
         sub_attributes: Optional[Collection[Attribute]] = None,
         **kwargs,

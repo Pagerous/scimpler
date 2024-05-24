@@ -3,8 +3,8 @@ from typing import Any, Optional, Union
 from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeMutability, Complex, String, Unknown
 from src.data.path import PatchPath
+from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema, ResourceSchema
 
 
 def _validate_operations(value: list[SCIMDataContainer]) -> ValidationIssues:

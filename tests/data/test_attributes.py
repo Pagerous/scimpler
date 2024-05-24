@@ -5,6 +5,7 @@ import pytest
 from src.assets.schemas import User  # noqa; schema must be registered
 from src.container import BoundedAttrRep, SCIMDataContainer
 from src.data.attributes import (
+    AttributeUniqueness,
     Binary,
     Boolean,
     Complex,
@@ -16,6 +17,7 @@ from src.data.attributes import (
     String,
     URIReference,
 )
+from src.error import ValidationError, ValidationIssues
 
 
 def test_validation_is_skipped_if_value_not_provided():
@@ -376,7 +378,12 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 ]
             },
         ),
-        ("bad", Binary("binary"), {"_errors": [{"code": 3, "context": {"expected": "base64"}}]}),
+        (
+            "abcd=abc",
+            Binary("binary"),
+            {"_errors": [{"code": 3, "context": {"expected": "base64"}}]},
+        ),
+        ("abc", Binary("binary"), {"_errors": [{"code": 3, "context": {"expected": "base64"}}]}),
         (
             123,
             DateTime("datetime"),
@@ -509,3 +516,89 @@ def test_invalid_items_dont_count_in_type_value_pairs():
     )
 
     assert issues.to_dict() == expected_issues
+
+
+def test_attribute_repr():
+    attr = String(BoundedAttrRep(schema="my:custom:schema", attr="attr", sub_attr="sub_attr"))
+
+    assert repr(attr) == "String(my:custom:schema:attr.sub_attr)"
+
+
+def test_string_attributes_can_be_compared():
+    str_1 = String(
+        name="str1",
+        required=True,
+        canonical_values=["a", "b", "c"],
+        multi_valued=False,
+        uniqueness=AttributeUniqueness.SERVER,
+        case_exact=True,
+    )
+
+    assert str_1 == str_1.clone()
+    assert str_1 != str_1.clone("str2")
+    assert str_1 != "str1"
+
+
+def test_reference_attributes_can_be_compared():
+    str_1 = SCIMReference(
+        name="ref",
+        required=True,
+        canonical_values=["a", "b", "c"],
+        multi_valued=False,
+        case_exact=True,
+        reference_types=["User"],
+    )
+
+    assert str_1 == str_1.clone()
+    assert str_1 != str_1.clone("ref2")
+    assert str_1 != "ref"
+
+
+def test_attribute_cloning_fails_if_filter_is_not_matched():
+    attr = String(name="attr", required=False)
+
+    with pytest.raises(ValueError, match="attribute does not match the filter"):
+        attr.clone("other_attr", attr_filter=lambda a: a.required)
+
+
+def test_validators_are_not_run_further_if_one_of_them_forces_proceeding_to_stop():
+    def validator_1(value: str) -> ValidationIssues():
+        issues = ValidationIssues()
+        if value != "abc":
+            issues.add_error(issue=ValidationError.bad_value_syntax(), proceed=False)
+        return issues
+
+    def validator_2(value: str) -> ValidationIssues():
+        issues = ValidationIssues()
+        if value != "cba":
+            issues.add_error(issue=ValidationError.bad_value_content(), proceed=False)
+        return issues
+
+    attr = String(name="attr", required=False, validators=[validator_1, validator_2])
+
+    assert attr.validate("cba").to_dict() == {"_errors": [{"code": 1}]}
+    assert attr.validate("abc").to_dict() == {"_errors": [{"code": 4}]}
+
+
+def test_complex_sub_attributes_data_can_be_filtered():
+    data = [{"value": "10", "displayName": "John Doe"}, {"value": "20", "displayName": "Karen"}]
+    expected = [{"displayName": "John Doe"}, {"displayName": "Karen"}]
+
+    actual = User.attrs.manager.filter(data, lambda a: a.mutability == "readOnly")
+
+    assert actual == expected
+
+
+def test_type_error_is_raised_if_accessing_sub_attr_of_non_complex_attr():
+    with pytest.raises(TypeError, match="'userName' is not complex"):
+        print(User.attrs.username__formatted)
+
+
+def test_type_error_is_raised_if_retrieving_sub_attr_of_non_complex_attr():
+    with pytest.raises(TypeError, match="'userName' is not complex"):
+        User.attrs.get(BoundedAttrRep(attr="userName", sub_attr="formatted"))
+
+
+def test_attribute_error_is_raised_if_accessing_non_existent_sub_attr_of_complex_attr():
+    with pytest.raises(AttributeError, match="'name' has no 'official' attribute"):
+        print(User.attrs.name__official)

@@ -1,6 +1,6 @@
 from src.data.attributes import AttributeReturn, String
+from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema
 
 
 def validate_error_status(value: str) -> ValidationIssues:

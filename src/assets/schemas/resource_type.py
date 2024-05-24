@@ -8,7 +8,7 @@ from src.data.attributes import (
     String,
     URIReference,
 )
-from src.schemas import BaseResourceSchema, ResourceSchema
+from src.data.schemas import BaseResourceSchema, ResourceSchema
 
 
 class _ResourceType(BaseResourceSchema):

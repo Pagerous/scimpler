@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
-    from src.schemas import ResourceSchema
+    from src.data.schemas import ResourceSchema
 
 
 resource_schemas: dict[str, "ResourceSchema"] = {}

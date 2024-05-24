@@ -5,9 +5,9 @@ from src.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes import Integer, String
 from src.data.attributes_presence import AttributePresenceChecker
 from src.data.filter import Filter
+from src.data.schemas import BaseSchema
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema
 
 
 def validate_attr_reps(value: list[str]) -> ValidationIssues:

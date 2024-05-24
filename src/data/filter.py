@@ -5,6 +5,7 @@ from typing import Any, Generic, TypeAlias, TypeVar, Union
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.data import operator as op
 from src.data.attributes import Complex
+from src.data.schemas import BaseSchema
 from src.data.utils import (
     OP_REGEX,
     decode_placeholders,
@@ -20,7 +21,6 @@ from src.registry import (
     register_unary_operator,
     unary_operators,
 )
-from src.schemas import BaseSchema
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)

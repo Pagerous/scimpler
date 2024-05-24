@@ -1,15 +1,41 @@
-from typing import Any, Collection, Generic, Optional, TypeVar, Union
+from typing import Any, Collection, Generic, Optional, TypeVar, Union, overload
 
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeIssuer, AttributeReturn, Complex
+from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
-from src.schemas import BaseSchema
 
 TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
-TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[BaseSchema, Complex])
 
 
 class AttributePresenceChecker(Generic[TAttrRep]):
+    @overload
+    def __init__(
+        self,
+        attr_reps: Collection[TAttrRep],
+        include: bool,
+        ignore_issuer: Optional[Collection[TAttrRep]] = None,
+    ):
+        """
+        Checks attributes presence according to the data flow direction,
+        attribute properties, and specified inclusion / exclusion.
+
+        :param attr_reps: specifies which attributes should be included or excluded from the data.
+        :param include: if set to True, it means the attributes should be included.
+            Excluded otherwise.
+        :param ignore_issuer: specifies for which attributes the attribute issuer configuration
+            should be ignored when making presence checks.
+        """
+
+    @overload
+    def __init__(self, ignore_issuer: Optional[Collection[TAttrRep]] = None):
+        """
+        Checks attributes presence according to the data flow direction and attribute properties.
+
+        :param ignore_issuer: specifies for which attributes the attribute issuer configuration
+            should be ignored when making presence checks.
+        """
+
     def __init__(
         self,
         attr_reps: Optional[Collection[TAttrRep]] = None,
@@ -32,17 +58,17 @@ class AttributePresenceChecker(Generic[TAttrRep]):
     def include(self) -> Optional[bool]:
         return self._include
 
-    def _ensure_valid_obj(self, schema: TSchemaOrComplex):
+    def _ensure_valid_obj(self, schema_or_complex: Union[BaseSchema, Complex]):
         attr_rep_ = next(iter(self._attr_reps), None)
         ignore = next(iter(self._ignore_issuer), None)
 
-        if isinstance(schema, Complex) and (
+        if isinstance(schema_or_complex, Complex) and (
             isinstance(attr_rep_, BoundedAttrRep) or isinstance(ignore, BoundedAttrRep)
         ):
             raise TypeError(
                 "provided complex attribute, but schema is required for bounded attributes"
             )
-        elif isinstance(schema, BaseSchema) and (
+        elif isinstance(schema_or_complex, BaseSchema) and (
             isinstance(attr_rep_, AttrRep) or isinstance(ignore, AttrRep)
         ):
             raise TypeError(
@@ -52,7 +78,7 @@ class AttributePresenceChecker(Generic[TAttrRep]):
     def __call__(
         self,
         data: Union[dict[str, Any], SCIMDataContainer],
-        schema_or_complex: TSchemaOrComplex,
+        schema_or_complex: Union[BaseSchema, Complex],
         direction: str,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -78,7 +104,7 @@ class AttributePresenceChecker(Generic[TAttrRep]):
                 if not attr.multi_valued:
                     issues.merge(
                         issues=self._check_presence(
-                            value=attr_value.get(sub_attr.rep),
+                            value=attr_value.get(sub_attr.rep) if attr_value else None,
                             direction=direction,
                             attr=attr,
                             attr_rep=sub_attr_rep,
@@ -87,7 +113,7 @@ class AttributePresenceChecker(Generic[TAttrRep]):
                     )
                     continue
 
-                if attr_value is None:
+                if not attr_value:
                     issues.merge(
                         issues=self._check_presence(
                             value=None,

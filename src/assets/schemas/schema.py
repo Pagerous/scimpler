@@ -9,8 +9,8 @@ from src.data.attributes import (
     String,
     Unknown,
 )
+from src.data.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 
 
 def validate_attributes(value: list[SCIMDataContainer]) -> ValidationIssues:

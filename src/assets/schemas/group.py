@@ -1,5 +1,5 @@
 from src.data.attributes import AttributeMutability, Complex, SCIMReference, String
-from src.schemas import ResourceSchema
+from src.data.schemas import ResourceSchema
 
 Group = ResourceSchema(
     schema="urn:ietf:params:scim:schemas:core:2.0:Group",

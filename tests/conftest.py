@@ -17,8 +17,8 @@ from src.data.attributes import (
     String,
     URIReference,
 )
+from src.data.schemas import ResourceSchema
 from src.registry import register_resource_schema
-from src.schemas import ResourceSchema
 
 
 @pytest.fixture(scope="session", autouse=True)
