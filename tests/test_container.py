@@ -1,6 +1,13 @@
 import pytest
 
-from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import (
+    AttrRep,
+    BoundedAttrRep,
+    Invalid,
+    Missing,
+    SchemaURI,
+    SCIMDataContainer,
+)
 
 
 @pytest.mark.parametrize(
@@ -70,7 +77,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
 
 
 @pytest.mark.parametrize(
-    ("attr_rep", "value", "expand", "expected"),
+    ("key", "value", "expand", "expected"),
     (
         (
             AttrRep(attr="id"),
@@ -155,14 +162,28 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
                 }
             },
         ),
+        (
+            SchemaURI("my:schema:extension"),
+            {
+                "a": 1,
+                "b": {"c": 3},
+            },
+            False,
+            {
+                "my:schema:extension": {
+                    "a": 1,
+                    "b": {"c": 3},
+                }
+            },
+        ),
     ),
 )
-def test_value_can_be_inserted_to_scim_data_container(attr_rep, value, expand, expected):
+def test_value_can_be_inserted_to_scim_data_container(key, value, expand, expected):
     container = SCIMDataContainer()
 
-    container.set(attr_rep, value, expand)
+    container.set(key, value, expand)
 
-    assert container.to_dict() == expected
+    assert container == expected
 
 
 def test_attr_value_in_container_can_be_reassigned():
@@ -200,6 +221,14 @@ def test_sub_attr_bigger_list_value_in_container_can_be_reassigned():
 
     assert container.get("key.subkey") == [4, 5, 6]
     assert container.to_dict() == {"key": [{"SUBKEY": 4}, {"SUBKEY": 5}, {"SUBKEY": 6}]}
+
+
+def test_can_not_reassign_simple_value_to_sub_attr_when_expanding():
+    container = SCIMDataContainer()
+    container.set("key.subkey", [1, 2], expand=True)
+
+    with pytest.raises(KeyError, match=r"can not assign"):
+        container.set("KEY.SUBKEY", 1, expand=True)
 
 
 def test_sub_attr_smaller_list_value_in_container_can_be_reassigned():
@@ -276,3 +305,215 @@ def test_creating_container_removes_duplicates():
     container = SCIMDataContainer({"a": 1, "A": 2})
 
     assert container.to_dict() == {"A": 2}
+
+
+def test_attr_rep_can_be_compared():
+    assert AttrRep(attr="Attr") == AttrRep(attr="attR")
+    assert AttrRep(attr="A") != AttrRep(attr="B")
+    assert AttrRep(attr="attr") != "Attr"
+
+
+def test_bounded_attr_creation_fails_if_bad_attr_name():
+    with pytest.raises(ValueError, match="is not valid attr name"):
+        BoundedAttrRep(attr="bad^attr")
+
+
+def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
+    with pytest.raises(ValueError, match="is not valid attr / sub-attr name"):
+        BoundedAttrRep(attr="attr", sub_attr="bad^sub^attr")
+
+
+def test_bounded_attr_creation_fails_if_no_schema_for_extension():
+    with pytest.raises(ValueError, match="schema required for attribute from extension"):
+        BoundedAttrRep(attr="attr", sub_attr="sub_attr", extension=True)
+
+
+@pytest.mark.parametrize(
+    ("attr_1", "attr_2", "expected"),
+    (
+        (BoundedAttrRep(attr="attr"), BoundedAttrRep(attr="ATTR"), True),
+        (BoundedAttrRep(attr="abc"), BoundedAttrRep(attr="cba"), False),
+        (BoundedAttrRep(schema="my:schema", attr="attr"), BoundedAttrRep(attr="Attr"), True),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr"),
+            True,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr"),
+            BoundedAttrRep(schema="MY:OTHER:SCHEMA", attr="Attr"),
+            False,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="SUB_ATTR"),
+            True,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="OTHER_SUB_ATTR"),
+            False,
+        ),
+        (BoundedAttrRep(attr="attr"), AttrRep(attr="attr"), False),
+    ),
+)
+def test_bounded_attr_can_be_compared(attr_1, attr_2, expected):
+    assert (attr_1 == attr_2) is expected
+
+
+@pytest.mark.parametrize(
+    ("attr_1", "attr_2", "expected"),
+    (
+        (BoundedAttrRep(attr="attr"), BoundedAttrRep(attr="ATTR"), True),
+        (BoundedAttrRep(attr="abc"), BoundedAttrRep(attr="cba"), False),
+        (BoundedAttrRep(schema="my:schema", attr="attr"), BoundedAttrRep(attr="Attr"), True),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr"),
+            True,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr"),
+            BoundedAttrRep(schema="MY:OTHER:SCHEMA", attr="Attr"),
+            False,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="SUB_ATTR"),
+            True,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="OTHER_SUB_ATTR"),
+            True,
+        ),
+    ),
+)
+def test_bounded_attr_parent_equals(attr_1, attr_2, expected):
+    assert attr_1.parent_equals(attr_2) is expected
+
+
+def test_invalid_type_repr():
+    assert repr(Invalid) == "Invalid"
+
+
+def test_missing_type_repr():
+    assert repr(Missing) == "Missing"
+
+
+def test_non_string_keys_are_excluded_from_container():
+    data = {"a": "b", 1: 2, True: False}
+    container = SCIMDataContainer(data)
+
+    assert container.to_dict() == {"a": "b"}
+
+
+def test_container_repr():
+    container = SCIMDataContainer({"a": "b", "c": "d", "e": "f"})
+
+    assert repr(container) == "SCIMDataContainer({'a': 'b', 'c': 'd', 'e': 'f'})"
+
+
+@pytest.mark.parametrize(
+    ("data", "attr_rep", "expected", "remaining"),
+    (
+        (
+            {"a": 1, "b": 2, "c": 3},
+            BoundedAttrRep(attr="a"),
+            1,
+            Missing,
+        ),
+        (
+            {"a": 1, "my:schema:extension": {"b": 2}, "c": 3},
+            BoundedAttrRep(schema="my:schema:extension", attr="b"),
+            2,
+            Missing,
+        ),
+        (
+            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
+            BoundedAttrRep(schema="my:schema:extension", attr="b", sub_attr="d"),
+            4,
+            Missing,
+        ),
+        (
+            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
+            BoundedAttrRep(schema="my:schema:extension", attr="b"),
+            {"d": 4},
+            Missing,
+        ),
+        (
+            {"a": 1, "b": [{"d": 4, "e": 5}, {"d": 6, "e": 7}], "c": 3},
+            BoundedAttrRep(attr="b", sub_attr="d"),
+            [4, 6],
+            [Missing, Missing],
+        ),
+        (
+            {"a": 1, "b": [1, 2, 3], "c": 3},
+            BoundedAttrRep(attr="b", sub_attr="d"),
+            [Missing, Missing, Missing],
+            [Missing, Missing, Missing],
+        ),
+        (
+            {"a": 1},
+            BoundedAttrRep(attr="a", sub_attr="b"),
+            Missing,
+            Missing,
+        ),
+        (
+            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
+            SchemaURI("my:schema:extension"),
+            {"b": {"d": 4}},
+            Missing,
+        ),
+        (
+            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
+            SchemaURI("non:existing:extension"),
+            Missing,
+            Missing,
+        ),
+    ),
+)
+def test_entry_can_be_popped_from_container(data, attr_rep, expected, remaining):
+    container = SCIMDataContainer(data)
+
+    actual = container.pop(attr_rep)
+
+    assert actual == expected
+    assert container.get(attr_rep) == remaining
+
+
+def test_schema_uri_creation_fails_if_bad_uri():
+    with pytest.raises(ValueError, match="not a valid schema URI"):
+        SchemaURI("bad^uri")
+
+
+@pytest.mark.parametrize(
+    ("container_1", "container_2", "expected"),
+    (
+        (
+            SCIMDataContainer(),
+            SCIMDataContainer(),
+            True,
+        ),
+        (
+            SCIMDataContainer(
+                {"a": 1, "b": {"c": 3}, "my:schema:extension": {"d": 4, "e": {"f": 6}}}
+            ),
+            SCIMDataContainer(
+                {"A": 1, "B": {"C": 3}, "my:SCHEMA:extension": {"D": 4, "E": {"F": 6}}}
+            ),
+            True,
+        ),
+        (
+            SCIMDataContainer(
+                {"a": 1, "b": {"c": 3}, "my:schema:extension": {"d": 4, "e": {"f": 6}}}
+            ),
+            SCIMDataContainer(
+                {"AA": 1, "B": {"C": 3}, "my:SCHEMA:extension": {"D": 4, "E": {"F": 6}}}
+            ),
+            False,
+        ),
+    ),
+)
+def test_containers_can_be_compared(container_1, container_2, expected):
+    assert (container_1 == container_2) is expected
