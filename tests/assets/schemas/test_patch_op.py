@@ -738,6 +738,11 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
                 "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
                 "value": {"displayName": "John Doe"},
             },
+            {
+                "op": "add",
+                "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
+                "value": {"value": "10"},
+            },
         ],
     }
     expected_issues = {

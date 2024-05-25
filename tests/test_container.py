@@ -273,6 +273,15 @@ def test_reassigning_simple_multivalued_with_expanded_value_fails():
         container.set("KEY.SUBKEY", [4, 5, 6], expand=True)
 
 
+def test_extension_can_be_reassigned():
+    container = SCIMDataContainer()
+    container.set(SchemaURI("my:schema:extension"), {"a": "b"})
+
+    container.set(SchemaURI("MY:schema:EXTENSION"), {"a": "C"})
+
+    assert container.get(SchemaURI("my:SCHEMA:extension")) == {"a": "C"}
+
+
 def test_can_reassign_primitive_value_to_simple_multivalued_attr():
     container = SCIMDataContainer()
     container.set("key.subkey", [1, 2, 3])

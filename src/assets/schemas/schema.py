@@ -17,18 +17,18 @@ def validate_attributes(value: list[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         attr_type = item.get("type")
-        sub_attributes = item.get("subAttributes")
-        if sub_attributes not in [Missing, None]:
-            if attr_type == "complex":
+        if attr_type == "complex":
+            sub_attributes = item.get("subAttributes")
+            if sub_attributes in [Missing, None]:
+                issues.add_warning(
+                    issue=ValidationWarning.missing(),
+                    location=(i, "subAttributes"),
+                )
+            else:
                 issues.merge(
                     attributes.validate(sub_attributes),
                     location=(i, "subAttributes"),
                 )
-        elif attr_type == "complex":
-            issues.add_warning(
-                issue=ValidationWarning.missing(),
-                location=(i, "subAttributes"),
-            )
 
         if attr_type == "string" and item.get("caseExact") in [None, Missing]:
             issues.add_error(

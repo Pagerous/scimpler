@@ -192,6 +192,7 @@ def list_user_data(user_data_server):
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 2,
         "startIndex": 1,
+        "itemsPerPage": 2,
         "Resources": resources,
     }
 

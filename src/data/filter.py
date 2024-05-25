@@ -236,8 +236,6 @@ class Filter(Generic[TOperator]):
             placeholders=placeholders,
         )
         issues.merge(issues=issues_)
-        if not or_operands:
-            return issues
         for or_operand in or_operands:
             issues.merge(Filter._validate_op_and_exp(or_operand, placeholders))
         return issues
@@ -252,8 +250,6 @@ class Filter(Generic[TOperator]):
             placeholders=placeholders,
         )
         issues.merge(issues=issues_)
-        if not and_operands:
-            return issues
 
         for and_operand in and_operands:
             match = NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
@@ -292,9 +288,7 @@ class Filter(Generic[TOperator]):
                 right_operand = exp[match.end() : matches[i + 1].start()]
 
             invalid_exp = None
-            if left_operand == right_operand == "":
-                invalid_exp = match.group(0).strip()
-            elif left_operand == "":
+            if left_operand == "":
                 deserialized_op = placeholders.get(deserialize_placeholder(right_operand))
                 if deserialized_op is not None:
                     right_expression = deserialized_op.expression

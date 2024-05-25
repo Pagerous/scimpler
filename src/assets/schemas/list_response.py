@@ -63,11 +63,12 @@ class ListResponse(BaseSchema):
                     proceed=False,
                     location=(self.attrs.resources.rep.attr, i),
                 )
-            elif resource is not Invalid:
-                issues.merge(
-                    issues=schema.validate(resource),
-                    location=(self.attrs.resources.rep.attr, i),
-                )
+                continue
+
+            issues.merge(
+                issues=schema.validate(resource),
+                location=(self.attrs.resources.rep.attr, i),
+            )
         return issues
 
     def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
@@ -92,6 +93,8 @@ class ListResponse(BaseSchema):
         schemas = []
         n_schemas = len(self._contained_schemas)
         for resource in resources:
+            if isinstance(resource, dict):
+                resource = SCIMDataContainer(resource)
             if not isinstance(resource, SCIMDataContainer):
                 schemas.append(None)
             elif n_schemas == 1:

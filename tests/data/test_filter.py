@@ -2471,6 +2471,12 @@ def test_attr_reps_do_not_contain_duplicates():
     ]
 
 
+def test_attr_reps_are_not_returned_for_filters_with_bad_attributes():
+    filter_ = Filter("whatever")  # noqa
+
+    assert filter_.attr_reps == []
+
+
 def test_filter_can_be_applied_on_multivalued_complex_attribute_if_no_sub_attr_specified():
     filter_ = Filter.deserialize("emails co 'example.com'")
 
@@ -2490,3 +2496,45 @@ def test_filter_can_be_applied_on_multivalued_complex_attribute_if_other_sub_att
 
     assert filter_({"emails": [{"display": "a@bad.com"}, {"display": "a@example.com"}]}, User)
     assert not filter_({"emails": [{"display": "a@bad.com"}]}, User)
+
+
+def test_unknown_expression_error_is_returned_if_any_component_is_not_recognized():
+    expected = {"_errors": [{"code": 106}]}
+
+    actual = Filter.validate("a b c d")
+
+    assert actual.to_dict() == expected
+
+
+def test_type_error_is_raised_if_serializing_filter_with_unknown_operator():
+    filter_ = Filter("whatever")  # noqa
+
+    with pytest.raises(TypeError, match="unsupported filter type"):
+        filter_.serialize()
+
+
+def test_type_error_is_raised_if_converting_to_dict_filter_with_unknown_operator():
+    filter_ = Filter("whatever")  # noqa
+
+    with pytest.raises(TypeError, match="unsupported filter type"):
+        filter_.to_dict()
+
+
+def test_comparing_filter_to_anything_else_returns_false():
+    assert Filter.deserialize("userName eq 'test'") != "userName eq 'test'"
+
+
+def test_simple_filter_can_be_serialized():
+    filter_ = Filter.deserialize("userName eq 'test'")
+
+    serialized = filter_.serialize()
+
+    assert serialized == "userName eq 'test'"
+
+
+def test_filter_with_logical_operator_can_be_applied():
+    filter_ = Filter.deserialize("userName ew 'ek' and emails co 'example.com'")
+
+    assert filter_(
+        {"userName": "Arek", "emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, User
+    )

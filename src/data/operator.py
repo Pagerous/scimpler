@@ -19,7 +19,7 @@ class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
         value: Optional[SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        ...
+        """Docs placeholder."""
 
 
 class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
@@ -126,7 +126,7 @@ class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
         value: Any,
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        ...
+        """Docs placeholder."""
 
 
 class UnaryAttributeOperator(AttributeOperator, abc.ABC):
@@ -389,7 +389,9 @@ class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
 
     def match(
         self,
-        value: Optional[Union[list[SCIMDataContainer], SCIMDataContainer]],
+        value: Optional[
+            Union[list[Union[SCIMDataContainer, dict[str, Any]]], SCIMDataContainer, dict[str, Any]]
+        ],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         _ensure_correct_obj(schema_or_complex, self._attr_rep)
@@ -430,6 +432,6 @@ class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
 
 def _ensure_correct_obj(schema_or_complex: TSchemaOrComplex, attr_rep: TAttrRep):
     if isinstance(schema_or_complex, BaseSchema) and not isinstance(attr_rep, BoundedAttrRep):
-        raise TypeError(f"bounded attr can be handled by BaseSchema only")
+        raise TypeError(f"BoundedAttrRep can be handled by BaseSchema only")
     elif isinstance(schema_or_complex, Complex) and not isinstance(attr_rep, AttrRep):
-        raise TypeError(f"attr can be handled by Complex only")
+        raise TypeError(f"AttrRep can be handled by Complex attribute only")

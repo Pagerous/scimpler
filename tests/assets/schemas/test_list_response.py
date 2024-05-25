@@ -1,6 +1,6 @@
 import pytest
 
-from src.assets.schemas import list_response, user
+from src.assets.schemas import group, list_response, user
 from src.container import SCIMDataContainer
 
 
@@ -56,15 +56,17 @@ def test_resources_validation_succeeds_for_correct_data(list_user_data):
     assert issues.to_dict(msg=True) == {}
 
 
-def test_resources_validation_fails_if_bad_resource_type(list_user_data):
+def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(list_user_data):
     schema = list_response.ListResponse([user.User])
     list_user_data["Resources"][0] = []
     list_user_data["Resources"][1]["userName"] = 123
+    list_user_data["itemsPerPage"] = "incorrect"
     expected = {
+        "itemsPerPage": {"_errors": [{"code": 2}]},
         "Resources": {
             "0": {"_errors": [{"code": 2}, {"code": 14}]},
             "1": {"userName": {"_errors": [{"code": 2}]}},
-        }
+        },
     }
 
     issues = schema.validate(list_user_data)
@@ -251,3 +253,23 @@ def test_bad_resources_type_is_validated(user_data_client):
     issues = schema.validate(data)
 
     assert issues.to_dict() == expected_issues
+
+
+def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schemas():
+    schema = list_response.ListResponse(schemas=[user.User, group.Group])
+
+    schemas = schema.get_schemas_for_resources([{"userName": "some_user"}])
+
+    assert len(schemas) == 1
+    assert schemas[0] is None
+
+
+def test_no_schema_is_inferred_for_resource_with_unknown_schemas_and_many_schemas():
+    schema = list_response.ListResponse(schemas=[user.User, group.Group])
+
+    schemas = schema.get_schemas_for_resources(
+        [{"schemas": ["unknown:schema"], "userName": "some_user"}]
+    )
+
+    assert len(schemas) == 1
+    assert schemas[0] is None

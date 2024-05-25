@@ -2,7 +2,9 @@ from datetime import datetime
 
 import pytest
 
+from src.assets.schemas import User
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
+from src.data.attributes import Attribute, Complex, String
 from src.data.operator import (
     And,
     ComplexAttributeOperator,
@@ -915,3 +917,97 @@ def test_value_is_not_matched_if_bad_operator_value_type():
     match = operator.match("abc", SchemaForTests)
 
     assert not match
+
+
+def test_matching_unary_operator_fails_if_missing_attr():
+    op = Present(attr_rep=AttrRep("attr"))
+    complex_attr = Complex("complex")
+
+    assert op.match({"attr": "I'm here!"}, complex_attr) is False
+
+
+def test_matching_unary_operator_fails_if_attr_scim_type_is_not_supported():
+    class CustomAttribute(Attribute):
+        SCIM_NAME = "dontYouEverDoThat"
+
+    op = Present(attr_rep=AttrRep("attr"))
+
+    complex_attr = Complex("complex", sub_attributes=[CustomAttribute("attr")])
+
+    assert op.match({"attr": "I'm here!"}, complex_attr) is False
+
+
+def test_matching_unary_operator_fails_if_attr_multivalued_but_value_is_not_list():
+    op = Present(attr_rep=AttrRep("attr"))
+
+    complex_attr = Complex("complex", sub_attributes=[String("attr", multi_valued=True)])
+
+    assert op.match({"attr": "I'm here!"}, complex_attr) is False
+
+
+def test_binary_operator_does_not_match_complex_attr_if_no_value_sub_attr():
+    op = Equal(attr_rep=BoundedAttrRep(attr="c2"), value="test")
+
+    # c2 has no 'value' sub-attr in 'SchemaForTests'
+    match = op.match({"c2": [{"value": "test"}]}, SchemaForTests)
+
+    assert match is False
+
+
+def test_binary_operator_does_not_match_complex_attr_if_not_multivalued():
+    op = Equal(attr_rep=BoundedAttrRep(attr="c"), value="test")
+
+    # c is not multivalued in 'SchemaForTests'
+    match = op.match({"c": {"value": "test"}}, SchemaForTests)
+
+    assert match is False
+
+
+def test_complex_operator_does_not_match_if_no_attr_in_schema():
+    op = ComplexAttributeOperator(
+        attr_rep=BoundedAttrRep(attr="non_existing"),
+        sub_operator=Equal(attr_rep=AttrRep(attr="sub_attr"), value="test"),
+    )
+
+    assert op.match({"sub_attr": "test"}, User) is False
+
+
+def test_complex_operator_does_not_match_if_attr_is_not_complex():
+    op = ComplexAttributeOperator(
+        attr_rep=BoundedAttrRep(attr="userName"),
+        sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="test"),
+    )
+
+    assert op.match({"formatted": "test"}, User) is False
+
+
+def test_complex_operator_does_not_match_if_provided_list_for_single_valued_attr():
+    op = ComplexAttributeOperator(
+        attr_rep=BoundedAttrRep(attr="name"),
+        sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="test"),
+    )
+
+    assert op.match([{"formatted": "test"}], User) is False
+
+
+def test_complex_operator_does_not_match_if_provided_mapping_for_multi_valued_attr():
+    op = ComplexAttributeOperator(
+        attr_rep=BoundedAttrRep(attr="emails"),
+        sub_operator=Equal(attr_rep=AttrRep(attr="value"), value="test@example.com"),
+    )
+
+    assert op.match({"value": "test@example.com"}, User) is False
+
+
+def test_type_error_is_raised_when_complex_is_passed_for_op_with_bounded_attr_rep():
+    op = Equal(attr_rep=BoundedAttrRep(attr="c", sub_attr="value"), value="test")
+
+    with pytest.raises(TypeError, match="AttrRep can be handled by Complex attribute only"):
+        op.match("test", SchemaForTests.attrs.c)
+
+
+def test_type_error_is_raised_when_schema_is_passed_for_op_with_attr_rep():
+    op = Equal(attr_rep=AttrRep(attr="int"), value=42)
+
+    with pytest.raises(TypeError, match="BoundedAttrRep can be handled by BaseSchema only"):
+        op.match(42, SchemaForTests)
