@@ -25,7 +25,7 @@ from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.registry import resource_schemas
 
 if TYPE_CHECKING:
-    from src.data.path import PatchPath
+    from src.data.patch_path import PatchPath
 
 
 class AttributeMutability(str, Enum):

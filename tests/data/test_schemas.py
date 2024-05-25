@@ -3,11 +3,16 @@ from copy import deepcopy
 import pytest
 
 from src.assets.schemas import User, user
+from src.assets.schemas.user import EnterpriseUserExtension
+from src.container import SCIMDataContainer
+from src.data.attributes import Integer, String
 from src.data.schemas import (
+    BaseResourceSchema,
     ResourceSchema,
     SchemaExtension,
     validate_resource_type_consistency,
 )
+from src.warning import ScimpleUserWarning
 
 
 def test_correct_user_data_can_be_deserialized(user_data_client):
@@ -138,7 +143,8 @@ def test_schema_can_be_cloned_with_attr_filter_specified():
     assert len(list(schema.attrs)) == 2
 
 
-def test_data_can_be_filtered_according_to_attr_filter(user_data_client):
+@pytest.mark.parametrize("use_container", (True, False))
+def test_data_can_be_filtered_according_to_attr_filter(user_data_client, use_container):
     expected = {
         "schemas": [
             "urn:ietf:params:scim:schemas:core:2.0:User",
@@ -167,7 +173,49 @@ def test_data_can_be_filtered_according_to_attr_filter(user_data_client):
             },
         },
     }
+    if use_container:
+        user_data_client = SCIMDataContainer(user_data_client)
 
     actual = User.filter(user_data_client, lambda attr: attr.mutability == "readOnly")
 
     assert actual == expected
+
+
+def test_schemas_is_not_validated_further_if_bad_type(user_data_client):
+    user_data_client["schemas"] = 123
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == {"schemas": {"_errors": [{"code": 2}]}}
+
+
+def test_endpoint_can_be_changed_for_base_resource_schema():
+    schema = BaseResourceSchema(
+        schema="base:resource:schema", name="BaseResource", endpoint="/BaseResource"
+    )
+
+    schema.endpoint = "/BaseResourceDifferentEndpoint"
+
+    assert schema.endpoint == "/BaseResourceDifferentEndpoint"
+
+
+def test_value_error_is_raised_if_retrieving_non_existent_extension():
+    with pytest.raises(ValueError, match="'User' has no 'NonExistentExtension' extension"):
+        User.get_extension("NonExistentExtension")
+
+
+def test_same_extension_can_not_be_registered_twice():
+    with pytest.raises(RuntimeError, match="extension 'EnterpriseUser' already in resource"):
+        User.extend(EnterpriseUserExtension)
+
+
+def test_warning_is_raised_if_adding_extension_with_the_same_attr_name():
+    resource_schema = ResourceSchema(
+        schema="my:schema", name="MyResource", attrs=[String(name="attr")]
+    )
+    extension = SchemaExtension(
+        schema="my:schema:extension", name="MyExtension", attrs=[Integer(name="attr")]
+    )
+
+    with pytest.warns(ScimpleUserWarning):
+        resource_schema.extend(extension)

@@ -34,8 +34,7 @@ def decode_placeholders(exp: str, placeholders: dict[str, Any]) -> str:
     encoded = exp
     for match in PLACEHOLDER_REGEX.finditer(exp):
         id_ = match.group(1)
-        if id_ in placeholders:
-            encoded = encoded.replace(match.group(0), str(placeholders[id_]))
+        encoded = encoded.replace(match.group(0), str(placeholders[id_]))
     return encoded
 
 

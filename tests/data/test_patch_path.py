@@ -4,7 +4,7 @@ from src.assets.schemas import User
 from src.container import AttrRep, BoundedAttrRep
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
-from src.data.path import PatchPath
+from src.data.patch_path import PatchPath
 from src.data.schemas import BaseSchema
 from tests.conftest import SchemaForTests
 
@@ -33,6 +33,14 @@ from tests.conftest import SchemaForTests
         (
             "attr[value eq 1].sub_attr.sub_sub_attr",
             {"_errors": [{"code": 17, "context": {"attribute": "sub_attr.sub_sub_attr"}}]},
+        ),
+        (
+            "attr[value eq 1]sub_attr.sub_sub_attr",
+            {
+                "_errors": [
+                    {"code": 17, "context": {"attribute": "sub_attr.sub_sub_attr"}},
+                ]
+            },
         ),
         (
             "attr[value eq]",
@@ -240,3 +248,21 @@ def test_check_if_data_matches_path(path, data, schema: BaseSchema, expected):
     actual = path(data, schema)
 
     assert actual is expected
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    (
+        (PatchPath.deserialize("my:schema:name.formatted"), "PatchPath(my:schema:name.formatted)"),
+        (PatchPath.deserialize("emails[type eq 'work']"), "PatchPath(emails[type eq 'work'])"),
+    ),
+)
+def test_patch_path_repr(path, expected):
+    assert repr(path) == expected
+
+
+def test_calling_path_for_non_existing_attr_fails():
+    path = PatchPath.deserialize("non_existing.attr")
+
+    with pytest.raises(ValueError, match="path does not indicate any attribute"):
+        path("whatever", User)

@@ -17,7 +17,7 @@ from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes_presence import AttributePresenceChecker
 from src.data.filter import Filter
 from src.data.operator import Present
-from src.data.path import PatchPath
+from src.data.patch_path import PatchPath
 from src.data.sorter import Sorter
 from src.request.validator import (
     BulkOperations,

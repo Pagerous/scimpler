@@ -5,7 +5,7 @@ from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataCon
 from src.data.attributes import AttributeMutability, String
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
-from src.data.path import PatchPath
+from src.data.patch_path import PatchPath
 from src.data.schemas import ResourceSchema, SchemaExtension
 from tests.conftest import SchemaForTests
 

@@ -230,11 +230,9 @@ class ValidationError:
     def code(self) -> int:
         return self._code
 
-    def __repr__(self) -> str:
-        return str(self._message)
-
-    def __eq__(self, o):
-        return o == self._message
+    @property
+    def message(self) -> str:
+        return self._message
 
 
 class ValidationWarning:
@@ -283,11 +281,9 @@ class ValidationWarning:
     def code(self) -> int:
         return self._code
 
-    def __repr__(self) -> str:
-        return str(self._message)
-
-    def __eq__(self, o):
-        return o == self._message
+    @property
+    def message(self) -> str:
+        return self._message
 
 
 class ValidationIssues:
@@ -344,7 +340,7 @@ class ValidationIssues:
         for location_, errors in self._errors.items():
             if location_[: len(location)] != location:
                 continue
-            errors = [error for error in errors if not error_codes or error.code in error_codes]
+            errors = [error for error in errors if error_codes is None or error.code in error_codes]
             if errors:
                 errors_copy[location_[len(location) :]] = errors
         copy._errors = errors_copy
@@ -356,7 +352,7 @@ class ValidationIssues:
             warnings = [
                 warning
                 for warning in warnings
-                if not warning_codes or warning.code in warning_codes
+                if warning_codes is None or warning.code in warning_codes
             ]
             if warnings:
                 warnings_copy[location_[len(location) :]] = warnings
@@ -381,7 +377,7 @@ class ValidationIssues:
         if location not in self._errors:
             return ValidationIssues()
 
-        popped = self.get(error_codes=codes, location=location)
+        popped = self.get(error_codes=codes, warning_codes=[], location=location)
 
         for issue in self._errors[location]:
             if issue.code in codes:
@@ -401,6 +397,7 @@ class ValidationIssues:
         if not locations:
             locations = [tuple()]
         for location in locations:
+            location = tuple(location)
             for i in range(len(location) + 1):
                 if location[:i] in self._stop_proceeding:
                     return False
@@ -431,23 +428,16 @@ class ValidationIssues:
                 for i, part in enumerate(location):
                     part = str(part)
                     if part not in current_level:
-                        current_level[part] = {}  # noqa
+                        current_level[part] = {}
                     if i == len(location) - 1:
-                        if key not in current_level[part]:
-                            current_level[part][key] = []  # noqa
+                        current_level[part][key] = []
                         for error in errors:
-                            item = {"code": error.code}
-                            if msg:
-                                item["error"] = str(error)
-                            if ctx:
-                                item["context"] = error.context
                             current_level[part][key].append(
                                 ValidationIssues._issue_to_dict(error, msg=msg, ctx=ctx)
                             )
                     current_level = current_level[part]
             else:
-                if key not in output:
-                    output[key] = []
+                output[key] = []
                 for error in errors:
                     output[key].append(ValidationIssues._issue_to_dict(error, msg=msg, ctx=ctx))
 
@@ -482,7 +472,7 @@ class ValidationIssues:
     ):
         output = {"code": issue.code}
         if msg:
-            output["error"] = str(issue)
+            output["error"] = issue.message
         if ctx:
             output["context"] = issue.context
         return output

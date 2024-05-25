@@ -10,6 +10,15 @@ def test_bad_preferred_langauge_is_validated(user_data_client):
     assert issues.to_dict() == expected_issues
 
 
+def test_bulk_id_existence_in_id_is_validated(user_data_client):
+    user_data_client["id"] = "something-bulkId-whatever"
+    expected_issues = {"id": {"_errors": [{"code": 4}]}}
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_correct_preferred_langauge_is_validated(user_data_client):
     user_data_client["preferredLanguage"] = "en-US"
 
@@ -70,12 +79,20 @@ def test_correct_email_is_validated(user_data_client):
 
 
 def test_bad_phone_number_is_validated(user_data_client):
-    user_data_client["phoneNumbers"][0]["value"] = "bad-email"
-    expected_issues = {"phoneNumbers": {"0": {"value": {"_warnings": [{"code": 3}]}}}}
+    user_data_client["phoneNumbers"][0]["value"] = "bad-phone-number"
+    expected_issues = {
+        "phoneNumbers": {
+            "0": {
+                "value": {
+                    "_warnings": [{"code": 3, "context": {"reason": "not a valid phone number"}}]
+                }
+            }
+        }
+    }
 
     issues = User.validate(user_data_client)
 
-    assert issues.to_dict() == expected_issues
+    assert issues.to_dict(ctx=True) == expected_issues
 
 
 def test_correct_phone_number_is_validated(user_data_client):

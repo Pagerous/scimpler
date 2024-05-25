@@ -119,8 +119,7 @@ class BaseSchema:
                 self._validate_schemas_field(data),
                 location=("schemas",),
             )
-        if issues.can_proceed():
-            issues.merge(self._validate(data))
+        issues.merge(self._validate(data))
         return issues
 
     def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BaseSchema":
@@ -299,10 +298,6 @@ class ResourceSchema(BaseResourceSchema):
     def endpoint(self) -> str:
         return self._endpoint
 
-    @endpoint.setter
-    def endpoint(self, value: str):
-        self._endpoint = value
-
     @property
     def name(self) -> str:
         return self._name
@@ -326,16 +321,16 @@ class ResourceSchema(BaseResourceSchema):
         return {item["extension"]: item["required"] for item in self._schema_extensions.values()}
 
     def get_extension(self, name: str) -> "SchemaExtension":
-        name = name.lower()
-        if name not in self._schema_extensions:
+        name_lower = name.lower()
+        if name_lower not in self._schema_extensions:
             raise ValueError(f"{self.name!r} has no {name!r} extension")
-        return self._schema_extensions[name]["extension"]
+        return self._schema_extensions[name_lower]["extension"]
 
     def extend(self, extension: "SchemaExtension", required: bool = False) -> None:
         if extension.schema in map(lambda x: x.lower(), self.schemas):
             raise ValueError(f"schema {extension.schema!r} already in {self.name!r} resource")
         if extension.name.lower() in self._schema_extensions:
-            raise ValueError(f"extension {extension.name!r} already in resource")
+            raise RuntimeError(f"extension {extension.name!r} already in resource")
         self._schema_extensions[extension.name.lower()] = {
             "extension": extension,
             "required": required,
@@ -373,9 +368,6 @@ class ResourceSchema(BaseResourceSchema):
             return ValidationIssues()
 
         issues = super()._validate_schemas_field(data)
-        if not issues.can_proceed():
-            return issues
-
         known_schemas = [item.lower() for item in self.schemas]
         provided_schemas = [item.lower() for item in provided_schemas]
         reported_missing = set()

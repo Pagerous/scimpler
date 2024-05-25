@@ -10,7 +10,7 @@ from src.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
 from src.data.attributes_presence import AttributePresenceChecker
 from src.data.filter import Filter
-from src.data.path import PatchPath
+from src.data.patch_path import PatchPath
 from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues, ValidationWarning
@@ -18,11 +18,7 @@ from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 class Validator(abc.ABC):
     def __init__(self, config: ServiceProviderConfig):
-        self._config = config
-
-    @property
-    def config(self) -> ServiceProviderConfig:
-        return self._config
+        self.config = config
 
     @property
     def request_schema(self) -> BaseSchema:

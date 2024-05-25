@@ -2,7 +2,8 @@ import pytest
 
 from src.assets.schemas.user import User
 from src.container import BoundedAttrRep, SCIMDataContainer
-from src.data.sorter import Sorter
+from src.data.attributes import SCIMReference, String
+from src.data.sorter import AlwaysLastKey, Sorter, StringKey
 from tests.conftest import SchemaForTests
 
 
@@ -119,7 +120,7 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
     c_1 = SCIMDataContainer(
         {
             "id": "1",
-            "emails": [{"primary": True, "value": "z@example.com"}, {"value": "b@example.com"}],
+            "emails": [{"value": "b@example.com"}, {"primary": True, "value": "z@example.com"}],
         }
     )
     c_2 = SCIMDataContainer(
@@ -226,3 +227,72 @@ def test_fails_if_different_value_types():
 
     with pytest.raises(TypeError):
         sorter(values, schemas)
+
+
+def test_comparing_string_key_to_always_last_key_returns_true():
+    key = StringKey("test", String(name="attr"))
+    always_last = AlwaysLastKey()
+
+    assert key < always_last
+
+
+def test_comparing_string_key_to_string_raises_type_error():
+    key = StringKey("test", String(name="attr"))
+
+    with pytest.raises(TypeError, match="'<' not supported"):
+        print(key < "key")
+
+
+def test_string_keys_with_non_string_underlying_attributes_can_be_compared():
+    key_1 = StringKey("/Users/1", SCIMReference(name="attr", reference_types=["User"]))
+    key_2 = StringKey("/Users/2", SCIMReference(name="attr", reference_types=["User"]))
+
+    assert key_1 < key_2
+
+
+def test_empty_collection_can_be_passed_to_sorter():
+    sorter = Sorter(attr_rep=BoundedAttrRep(attr="userName"), asc=False)
+
+    assert sorter([], User) == []
+
+
+def test_sorter_preserves_input_data_type__container():
+    sorter = Sorter(attr_rep=BoundedAttrRep(attr="userName"), asc=True)
+    data = [SCIMDataContainer({"userName": "B"}), SCIMDataContainer({"userName": "A"})]
+    expected = [SCIMDataContainer({"userName": "A"}), SCIMDataContainer({"userName": "B"})]
+
+    actual = sorter(data, User)
+
+    assert actual == expected
+    assert isinstance(actual[0], SCIMDataContainer)
+
+
+def test_sorter_preserves_input_data_type__dict():
+    sorter = Sorter(attr_rep=BoundedAttrRep(attr="userName"), asc=True)
+    data = [{"userName": "B"}, {"userName": "A"}]
+    expected = [{"userName": "A"}, {"userName": "B"}]
+
+    actual = sorter(data, User)
+
+    assert actual == expected
+    assert isinstance(actual[0], dict)
+
+
+def test_data_item_with_string_value_but_for_non_string_attr_is_ordered_last_if_ascending():
+    sorter = Sorter(attr_rep=BoundedAttrRep(attr="int"), asc=True)
+    data = [{"int": "ABC"}, {"int": 10}]
+    expected = [{"int": 10}, {"int": "ABC"}]
+
+    actual = sorter(data, SchemaForTests)
+
+    assert actual == expected
+
+
+def test_data_item_is_ordered_last_if_ascending_if_attr_does_not_exist():
+    sorter = Sorter(attr_rep=BoundedAttrRep(attr="int"), asc=True)
+    data = [{"int": 2}, {"int": 1}]
+    expected = [{"int": 2}, {"int": 1}]
+
+    actual = sorter(data, [SchemaForTests, User])
+
+    assert actual == expected

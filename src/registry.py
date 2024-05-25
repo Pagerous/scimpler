@@ -26,7 +26,7 @@ def register_converter(scim_type: str, converter: TypeConverter) -> None:
         "dateTime",
         "reference",
     ]:
-        raise ValueError(f"can not register converter for {scim_type!r}")
+        raise RuntimeError(f"can not register converter for {scim_type!r}")
 
     if scim_type in converters:
         raise RuntimeError(f"converter for {scim_type!r} already registered")

@@ -9,15 +9,11 @@ from src.container import Missing, SCIMDataContainer
 
 class QueryStringDeserializer(abc.ABC):
     def __init__(self, config: ServiceProviderConfig):
-        self._config = config
-
-    @property
-    def config(self) -> ServiceProviderConfig:
-        return self._config
+        self.config = config
 
     @abc.abstractmethod
     def deserialize(self, query_string: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-        ...
+        """Docs placeholder."""
 
 
 class _AttributesDeserializer(QueryStringDeserializer, abc.ABC):

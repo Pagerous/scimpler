@@ -30,9 +30,6 @@ class StringKey:
         value = self._value
         other_value = other._value
 
-        if not isinstance(value, str) or not isinstance(other_value, str):
-            return value < other_value
-
         if isinstance(self._attr, String):
             value = self._attr.precis.enforce(value)
         if isinstance(other._attr, String):
@@ -113,21 +110,22 @@ class Sorter:
 
     def _attr_key(self, item: SCIMDataContainer, schema: BaseSchema):
         attr = schema.attrs.get(self._attr_rep)
+        if attr is None:
+            return self._get_key(None, None)
+
         value = None
-        if attr is not None:
-            item_value = item.get(self._attr_rep)
-            if item_value is not Missing and attr.multi_valued:
-                if isinstance(attr, Complex):
-                    attr = getattr(attr.attrs, "value", None)
-                    value = None
-                    for i, v in enumerate(item_value):
-                        if i == 0:
-                            value = v.get("value")
-                        elif v.get("primary") is True:
-                            value = v.get("value")
-                            break
-                else:
-                    value = item_value[0]
+        item_value = item.get(self._attr_rep)
+        if item_value is not Missing and attr.multi_valued:
+            if isinstance(attr, Complex):
+                attr = getattr(attr.attrs, "value", None)
+                for i, v in enumerate(item_value):
+                    if i == 0:
+                        value = v.get("value")
+                    elif v.get("primary") is True:
+                        value = v.get("value")
+                        break
             else:
-                value = item_value
+                value = item_value[0]
+        else:
+            value = item_value
         return self._get_key(value, attr)
