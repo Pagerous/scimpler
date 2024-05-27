@@ -14,7 +14,7 @@ from src.assets.schemas import (
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
-from src.data.attributes_presence import AttributePresenceChecker
+from src.data.attributes_presence import AttributePresenceValidator
 from src.data.filter import Filter
 from src.data.operator import Present
 from src.data.patch_path import PatchPath
@@ -381,7 +381,7 @@ def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
 def test_validate_resources_attribute_presence__fails_if_requested_attribute_not_excluded(
     list_user_data,
 ):
-    checker = AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False)
+    validator = AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False)
     expected = {
         "0": {
             "name": {
@@ -404,7 +404,7 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
     }
 
     issues = validate_resources_attributes_presence(
-        presence_checker=checker,
+        presence_validator=validator,
         resources=[SCIMDataContainer(r) for r in list_user_data["Resources"]],
         resource_schemas=[user.User, user.User],
     )
@@ -439,7 +439,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
             "Location": user_data_server["meta"]["location"],
             "ETag": user_data_server["meta"]["version"],
         },
-        presence_checker=AttributePresenceChecker(
+        presence_validator=AttributePresenceValidator(
             attr_reps=[BoundedAttrRep(attr="name")], include=False
         ),
     )
@@ -663,7 +663,7 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
         count=2,
         filter_=Filter(Present(AttrRep(attr="username"))),
         sorter=Sorter(BoundedAttrRep(attr="userName"), True),
-        presence_checker=AttributePresenceChecker(
+        presence_validator=AttributePresenceValidator(
             attr_reps=[BoundedAttrRep(attr="name")], include=False
         ),
     )
@@ -923,7 +923,7 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
     issues = validator.validate_response(
         status_code=204,
         body=None,
-        presence_checker=AttributePresenceChecker(
+        presence_validator=AttributePresenceValidator(
             attr_reps=[AttrRep(attr="userName")], include=True
         ),
     )
@@ -937,7 +937,7 @@ def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attrib
     issues = validator.validate_response(
         status_code=204,
         body=None,
-        presence_checker=None,
+        presence_validator=None,
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -949,7 +949,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data
     issues = validator.validate_response(
         status_code=200,
         body=user_data_server,
-        presence_checker=None,
+        presence_validator=None,
         headers={"ETag": user_data_server["meta"]["version"]},
     )
 
@@ -971,7 +971,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
             "id": "1",
             "userName": "bjensen",
         },
-        presence_checker=AttributePresenceChecker(
+        presence_validator=AttributePresenceValidator(
             attr_reps=[BoundedAttrRep(attr="userName")], include=True
         ),
         headers={"ETag": 'W/"3694e05e9dff591"'},
@@ -1523,17 +1523,17 @@ def test_resource_types_response_can_be_validated():
     (
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
             True,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
             False,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceChecker(
+            AttributePresenceValidator(
                 attr_reps=[BoundedAttrRep(attr="userName"), BoundedAttrRep(attr="name")],
                 include=True,
             ),
@@ -1541,34 +1541,34 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
             True,
         ),
         (
             Filter.deserialize("name pr"),
-            AttributePresenceChecker(
+            AttributePresenceValidator(
                 attr_reps=[BoundedAttrRep(attr="name", sub_attr="display")], include=True
             ),
             True,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
             False,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
             True,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceChecker(
+            AttributePresenceValidator(
                 attr_reps=[BoundedAttrRep(attr="userName"), BoundedAttrRep(attr="name")],
                 include=False,
             ),
@@ -1576,17 +1576,17 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
             False,
         ),
         (
             Filter.deserialize("name pr"),
-            AttributePresenceChecker(
+            AttributePresenceValidator(
                 attr_reps=[BoundedAttrRep(attr="name", sub_attr="display")], include=False
             ),
             True,
@@ -1602,44 +1602,44 @@ def test_can_validate_filtering(filter_, checker, expected):
     (
         (
             Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
             True,
         ),
         (
             Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
             False,
         ),
         (
             Sorter(attr_rep=BoundedAttrRep(attr="name", sub_attr="formatted")),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
             True,
         ),
         (
             Sorter(attr_rep=BoundedAttrRep(attr="name")),
-            AttributePresenceChecker(
+            AttributePresenceValidator(
                 attr_reps=[BoundedAttrRep(attr="name", sub_attr="formatted")], include=True
             ),
             False,
         ),
         (
             Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
             False,
         ),
         (
             Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
             True,
         ),
         (
             Sorter(attr_rep=BoundedAttrRep(attr="name", sub_attr="formatted")),
-            AttributePresenceChecker(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
             False,
         ),
         (
             Sorter(attr_rep=BoundedAttrRep(attr="name")),
-            AttributePresenceChecker(
+            AttributePresenceValidator(
                 attr_reps=[BoundedAttrRep(attr="name", sub_attr="formatted")], include=False
             ),
             True,

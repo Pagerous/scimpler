@@ -8,7 +8,7 @@ from src.error import ValidationError, ValidationIssues
 TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
 
 
-class AttributePresenceChecker(Generic[TAttrRep]):
+class AttributePresenceValidator(Generic[TAttrRep]):
     @overload
     def __init__(
         self,

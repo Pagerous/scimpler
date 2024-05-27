@@ -8,7 +8,7 @@ from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import create_search_request_schema
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
-from src.data.attributes_presence import AttributePresenceChecker
+from src.data.attributes_presence import AttributePresenceValidator
 from src.data.filter import Filter
 from src.data.patch_path import PatchPath
 from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
@@ -85,7 +85,7 @@ class Error(Validator):
             return issues
 
         issues.merge(
-            issues=AttributePresenceChecker()(body, self._schema, "RESPONSE"),
+            issues=AttributePresenceValidator()(body, self._schema, "RESPONSE"),
             location=body_location,
         )
         status_attr_rep = self._schema.attrs.status.rep
@@ -181,7 +181,7 @@ def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> Val
     issues = schema.validate(body)
     if issues.can_proceed():
         issues.merge(
-            issues=AttributePresenceChecker(**kwargs)(body, schema, "REQUEST"),
+            issues=AttributePresenceValidator(**kwargs)(body, schema, "REQUEST"),
         )
     return issues
 
@@ -194,7 +194,7 @@ def _validate_resource_output_body(
     status_code: int,
     body: SCIMDataContainer,
     headers: dict[str, Any],
-    presence_checker: Optional[AttributePresenceChecker],
+    presence_validator: Optional[AttributePresenceValidator],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
@@ -209,7 +209,7 @@ def _validate_resource_output_body(
         location=("status",),
     )
     issues.merge(
-        issues=(presence_checker or AttributePresenceChecker())(
+        issues=(presence_validator or AttributePresenceValidator())(
             data=body,
             schema_or_complex=schema,
             direction="RESPONSE",
@@ -308,7 +308,7 @@ class ResourceObjectGET(Validator):
             status_code=status_code,
             body=SCIMDataContainer(body or {}),
             headers=headers or {},
-            presence_checker=kwargs.get("presence_checker"),
+            presence_validator=kwargs.get("presence_validator"),
         )
 
 
@@ -386,7 +386,7 @@ class ResourceObjectPUT(Validator):
             status_code=status_code,
             body=SCIMDataContainer(body or {}),
             headers=headers or {},
-            presence_checker=kwargs.get("presence_checker"),
+            presence_validator=kwargs.get("presence_validator"),
         )
 
 
@@ -455,7 +455,7 @@ class ResourcesPOST(Validator):
             status_code=status_code,
             body=body,
             headers=headers or {},
-            presence_checker=kwargs.get("presence_checker"),
+            presence_validator=kwargs.get("presence_validator"),
         )
         if body.get(self.response_schema.attrs.meta__created.rep) != body.get(
             self.response_schema.attrs.meta__lastModified.rep
@@ -483,14 +483,14 @@ def validate_resources_sorted(
 
 
 def validate_resources_attributes_presence(
-    presence_checker: AttributePresenceChecker,
+    presence_validator: AttributePresenceValidator,
     resources: list[SCIMDataContainer],
     resource_schemas: Sequence[ResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
         issues.merge(
-            issues=presence_checker(resource, schema, "RESPONSE"),
+            issues=presence_validator(resource, schema, "RESPONSE"),
             location=(i,),
         )
     return issues
@@ -587,7 +587,7 @@ def _validate_resources_get_response(
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
-    resource_presence_checker: Optional[AttributePresenceChecker] = None,
+    resource_presence_validator: Optional[AttributePresenceValidator] = None,
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
@@ -599,7 +599,7 @@ def _validate_resources_get_response(
     issues_ = schema.validate(body)
     issues.merge(issues_, location=body_location)
     issues.merge(
-        issues=AttributePresenceChecker()(body, schema, "RESPONSE"),
+        issues=AttributePresenceValidator()(body, schema, "RESPONSE"),
         location=body_location,
     )
     issues.merge(
@@ -656,20 +656,20 @@ def _validate_resources_get_response(
         return issues
 
     resource_schemas = schema.get_schemas_for_resources(resources)
-    if resource_presence_checker is None:
-        resource_presence_checker = AttributePresenceChecker()
+    if resource_presence_validator is None:
+        resource_presence_validator = AttributePresenceValidator()
     issues.merge(
         issues=validate_resources_attributes_presence(
-            resource_presence_checker, resources, resource_schemas
+            resource_presence_validator, resources, resource_schemas
         ),
         location=resources_location,
     )
-    if filter_ is not None and can_validate_filtering(filter_, resource_presence_checker):
+    if filter_ is not None and can_validate_filtering(filter_, resource_presence_validator):
         issues.merge(
             issues=validate_resources_filtered(filter_, resources, resource_schemas),
             location=resources_location,
         )
-    if sorter is not None and can_validate_sorting(sorter, resource_presence_checker):
+    if sorter is not None and can_validate_sorting(sorter, resource_presence_validator):
         issues.merge(
             issues=validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
@@ -695,7 +695,7 @@ def _is_child_contained(attr_rep, attr_reps) -> bool:
     return False
 
 
-def can_validate_filtering(filter_: Filter, checker: AttributePresenceChecker) -> bool:
+def can_validate_filtering(filter_: Filter, checker: AttributePresenceValidator) -> bool:
     filter_attr_reps = filter_.attr_reps
     if not checker.attr_reps:
         return True
@@ -718,7 +718,7 @@ def can_validate_filtering(filter_: Filter, checker: AttributePresenceChecker) -
     return True
 
 
-def can_validate_sorting(sorter: Sorter, checker: AttributePresenceChecker) -> bool:
+def can_validate_sorting(sorter: Sorter, checker: AttributePresenceValidator) -> bool:
     if not checker.attr_reps:
         return True
 
@@ -779,7 +779,7 @@ class ServerRootResourcesGET(Validator):
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
             sorter=kwargs.get("sorter"),
-            resource_presence_checker=kwargs.get("presence_checker"),
+            resource_presence_validator=kwargs.get("presence_validator"),
         )
 
 
@@ -840,7 +840,7 @@ class SearchRequestPOST(Validator):
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
             sorter=kwargs.get("sorter"),
-            resource_presence_checker=kwargs.get("presence_checker"),
+            resource_presence_validator=kwargs.get("presence_validator"),
         )
 
 
@@ -931,12 +931,12 @@ class ResourceObjectPATCH(Validator):
         ):
             return
 
-        presence_checker = AttributePresenceChecker()
+        presence_validator = AttributePresenceValidator()
         for j, item in enumerate(value):
             item_location = value_location + (j,)
             if not issues.has_errors(item_location):
                 issues.merge(
-                    issues=presence_checker(
+                    issues=presence_validator(
                         data=item,
                         direction="REQUEST",
                         schema_or_complex=attr,
@@ -953,9 +953,9 @@ class ResourceObjectPATCH(Validator):
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        presence_checker = kwargs.get("presence_checker")
+        presence_validator = kwargs.get("presence_validator")
         if status_code == 204:
-            if presence_checker is not None and presence_checker.attr_reps:
+            if presence_validator is not None and presence_validator.attr_reps:
                 issues.add_error(
                     issue=ValidationError.bad_status_code(200),
                     proceed=True,
@@ -971,7 +971,7 @@ class ResourceObjectPATCH(Validator):
             status_code=status_code,
             body=body,
             headers=headers or {},
-            presence_checker=presence_checker,
+            presence_validator=presence_validator,
         )
         meta_location = self.response_schema.attrs.meta__version.rep
         if body.get(meta_location) is Missing:
@@ -1063,7 +1063,7 @@ class BulkOperations(Validator):
         issues_ = self._request_schema.validate(body)
         issues.merge(issues_, location=body_location)
         issues.merge(
-            issues=AttributePresenceChecker()(body, self._request_schema, "RESPONSE"),
+            issues=AttributePresenceValidator()(body, self._request_schema, "RESPONSE"),
             location=body_location,
         )
         if not issues_.can_proceed(
@@ -1128,7 +1128,7 @@ class BulkOperations(Validator):
         issues_ = self._response_schema.validate(body)
         issues.merge(issues_, location=body_location)
         issues.merge(
-            issues=AttributePresenceChecker()(body, self._response_schema, "RESPONSE"),
+            issues=AttributePresenceValidator()(body, self._response_schema, "RESPONSE"),
             location=body_location,
         )
         issues.merge(

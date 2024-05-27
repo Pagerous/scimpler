@@ -11,11 +11,11 @@ def test_search_request_attrs_are_deserialized():
 
     data = schema.deserialize({"attributes": ["userName", "name"]})
 
-    assert data.get("presence_checker").attr_reps == [
+    assert data.get("presence_validator").attr_reps == [
         BoundedAttrRep(attr="userName"),
         BoundedAttrRep(attr="name"),
     ]
-    assert data.get("presence_checker").include is True
+    assert data.get("presence_validator").include is True
 
 
 def test_search_request_sorting_deserialized():
@@ -41,11 +41,11 @@ def test_full_search_request_is_deserialized():
         }
     )
 
-    assert data.get("presence_checker").attr_reps == [
+    assert data.get("presence_validator").attr_reps == [
         BoundedAttrRep(attr="userName"),
         BoundedAttrRep(attr="name"),
     ]
-    assert data.get("presence_checker").include is True
+    assert data.get("presence_validator").include is True
     assert data.get("filter").to_dict() == {
         "op": "eq",
         "attr_rep": "userName",

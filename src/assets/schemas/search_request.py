@@ -3,7 +3,7 @@ from typing import Any
 from src.assets.config import ServiceProviderConfig
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes import Integer, String
-from src.data.attributes_presence import AttributePresenceChecker
+from src.data.attributes_presence import AttributePresenceValidator
 from src.data.filter import Filter
 from src.data.schemas import BaseSchema
 from src.data.sorter import Sorter
@@ -79,8 +79,8 @@ class SearchRequest(BaseSchema):
         to_exclude = data.pop(self.attrs.excludeattributes.rep)
         if to_include or to_exclude:
             data.set(
-                "presence_checker",
-                AttributePresenceChecker(
+                "presence_validator",
+                AttributePresenceValidator(
                     attr_reps=to_include or to_exclude, include=bool(to_include)
                 ),
             )
