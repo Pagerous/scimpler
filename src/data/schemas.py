@@ -77,7 +77,7 @@ class BaseSchema:
                 deserialized.set(attr.rep, attr.deserialize(value))
         return deserialized
 
-    def serialize(self, data: Any) -> dict[str, Any]:
+    def serialize(self, data: TData) -> dict[str, Any]:
         data = SCIMDataContainer(data)
         serialized = SCIMDataContainer()
         for attr in self.attrs:
@@ -134,7 +134,7 @@ class BaseSchema:
             return issues
 
         main_schema = self.schema.lower()
-        provided_schemas = [item.lower() for item in provided_schemas]
+        provided_schemas = [item.lower() for item in provided_schemas if item is not Invalid]
         if len(provided_schemas) > len(set(provided_schemas)):
             issues.add_error(
                 issue=ValidationError.duplicated_values(),
@@ -369,7 +369,7 @@ class ResourceSchema(BaseResourceSchema):
 
         issues = super()._validate_schemas_field(data)
         known_schemas = [item.lower() for item in self.schemas]
-        provided_schemas = [item.lower() for item in provided_schemas]
+        provided_schemas = [item.lower() for item in provided_schemas if item is not Invalid]
         reported_missing = set()
         for k, v in data.to_dict().items():
             k_lower = k.lower()

@@ -1,8 +1,9 @@
 import base64
+from datetime import datetime
 
 import pytest
 
-from src.assets.schemas import User  # noqa; schema must be registered
+from src.assets.schemas import User
 from src.container import BoundedAttrRep, SCIMDataContainer
 from src.data.attributes import (
     AttributeUniqueness,
@@ -18,6 +19,7 @@ from src.data.attributes import (
     URIReference,
 )
 from src.error import ValidationError, ValidationIssues
+from src.registry import register_deserializer, register_serializer
 
 
 def test_validation_is_skipped_if_value_not_provided():
@@ -510,7 +512,7 @@ def test_invalid_items_dont_count_in_type_value_pairs():
 
     issues = attr.validate(
         [
-            {"value": 1, "type": "work"},
+            2,
             SCIMDataContainer({"value": 1, "type": "work"}),
         ]
     )
@@ -602,3 +604,69 @@ def test_type_error_is_raised_if_retrieving_sub_attr_of_non_complex_attr():
 def test_attribute_error_is_raised_if_accessing_non_existent_sub_attr_of_complex_attr():
     with pytest.raises(AttributeError, match="'name' has no 'official' attribute"):
         print(User.attrs.name__official)
+
+
+def test_attribute_global_deserializer_can_be_registered_and_used():
+    register_deserializer("dateTime", datetime.fromisoformat)
+    attr = Complex(
+        "complex",
+        multi_valued=True,
+        sub_attributes=[DateTime("timestamps", multi_valued=True)],
+    )
+    value = datetime.now()
+
+    deserialized = attr.deserialize([{"timestamps": [value.isoformat()]}])
+
+    assert isinstance(deserialized[0].get("timestamps")[0], datetime)
+    assert deserialized[0].get("timestamps")[0] == value
+
+
+def test_attribute_global_deserializer_is_not_used_if_attr_deserializer_changed_type():
+    register_deserializer("dateTime", datetime.fromisoformat)
+    attr = Complex(
+        "complex",
+        multi_valued=True,
+        sub_attributes=[
+            DateTime(
+                "timestamps",
+                multi_valued=True,
+                deserializer=lambda val: sum([hash(item) for item in val]),
+            )
+        ],
+    )
+
+    deserialized = attr.deserialize([{"timestamps": [datetime.now().isoformat()]}])
+
+    assert isinstance(deserialized[0].get("timestamps"), int)
+
+
+def test_attribute_global_serializer_can_be_registered_and_used():
+    register_serializer("integer", str)
+    attr = Complex(
+        "complex",
+        multi_valued=True,
+        sub_attributes=[Integer("values", multi_valued=True)],
+    )
+
+    deserialized = attr.serialize([{"values": [1, 2, 3]}])
+
+    assert deserialized[0]["values"] == ["1", "2", "3"]
+
+
+def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type():
+    register_serializer("integer", str)
+    attr = Complex(
+        "complex",
+        multi_valued=True,
+        sub_attributes=[
+            Integer(
+                "values",
+                multi_valued=True,
+                serializer=lambda val: "".join(str(item) for item in val),
+            )
+        ],
+    )
+
+    deserialized = attr.serialize([{"values": [1, 2, 3]}])
+
+    assert deserialized[0]["values"] == "123"

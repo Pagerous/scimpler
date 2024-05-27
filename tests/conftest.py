@@ -18,7 +18,7 @@ from src.data.attributes import (
     URIReference,
 )
 from src.data.schemas import ResourceSchema
-from src.registry import converters, register_resource_schema
+from src.registry import deserializers, register_resource_schema, serializers
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -32,7 +32,8 @@ def register_schemas():
 @pytest.fixture(scope="function", autouse=True)
 def clear_global_state():
     yield
-    converters.clear()
+    serializers.clear()
+    deserializers.clear()
 
 
 @pytest.fixture

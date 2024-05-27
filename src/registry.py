@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, Union
+
+from src.constants import SCIMType
 
 if TYPE_CHECKING:
     from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
@@ -14,24 +16,29 @@ def register_resource_schema(resource_schema: "ResourceSchema"):
     resource_schemas[resource_schema.name] = resource_schema
 
 
-TypeConverter = Callable[[Any], Any]
+Converter = Callable[[Any], Any]
 
 
-converters: dict[str, TypeConverter] = {}
+serializers: dict[str, Converter] = {}
+deserializers: dict[str, Converter] = {}
 
 
-def register_converter(scim_type: str, converter: TypeConverter) -> None:
-    if scim_type not in [
-        "binary",
-        "dateTime",
-        "reference",
-    ]:
-        raise RuntimeError(f"can not register converter for {scim_type!r}")
+def register_serializer(scim_type: Union[SCIMType, str], converter: Converter) -> None:
+    scim_type = SCIMType(scim_type)
 
-    if scim_type in converters:
-        raise RuntimeError(f"converter for {scim_type!r} already registered")
+    if scim_type in serializers:
+        raise RuntimeError(f"serializer for {scim_type!r} already registered")
 
-    converters[scim_type] = converter
+    serializers[scim_type] = converter
+
+
+def register_deserializer(scim_type: Union[SCIMType, str], converter: Converter) -> None:
+    scim_type = SCIMType(scim_type)
+
+    if scim_type in deserializers:
+        raise RuntimeError(f"deserializer for {scim_type!r} already registered")
+
+    deserializers[scim_type] = converter
 
 
 unary_operators = {}

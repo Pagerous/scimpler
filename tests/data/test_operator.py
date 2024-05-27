@@ -21,7 +21,7 @@ from src.data.operator import (
     Present,
     StartsWith,
 )
-from src.registry import register_converter
+from src.registry import register_serializer
 from tests.conftest import SchemaForTests
 
 
@@ -892,7 +892,7 @@ def test_multivalued_complex_op_can_be_used_with_logical_op():
 
 
 def test_operator_values_are_converted_if_converter_registered():
-    register_converter("dateTime", datetime.fromisoformat)
+    register_serializer("dateTime", datetime.fromisoformat)
 
     operator = GreaterThan(
         attr_rep=BoundedAttrRep(attr="datetime"), value="2024-04-29T18:14:15.189594"
@@ -928,7 +928,7 @@ def test_matching_unary_operator_fails_if_missing_attr():
 
 def test_matching_unary_operator_fails_if_attr_scim_type_is_not_supported():
     class CustomAttribute(Attribute):
-        SCIM_NAME = "dontYouEverDoThat"
+        SCIM_TYPE = "dontYouEverDoThat"
 
     op = Present(attr_rep=AttrRep("attr"))
 

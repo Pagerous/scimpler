@@ -96,7 +96,7 @@ class Sorter:
         if not isinstance(value, str):
             return value
 
-        if attr.BASE_TYPE != str:
+        if str not in attr.BASE_TYPES:
             return self._default_value
 
         return StringKey(value, attr)

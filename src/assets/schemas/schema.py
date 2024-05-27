@@ -48,7 +48,7 @@ def serialize_attributes(value: list[SCIMDataContainer]) -> list[SCIMDataContain
                 item.pop("subAttributes")
             else:
                 item.set("subAttributes", attributes.serialize(sub_attributes))
-        if attr_type != "string":
+        if attr_type not in ["string", "reference", "binary"]:
             item.pop("caseExact")
     return value
 

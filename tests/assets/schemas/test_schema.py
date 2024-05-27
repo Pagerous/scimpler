@@ -85,7 +85,7 @@ def test_case_exact_is_removed_from_non_string_attrs_while_serializing_attribute
         ]
     )
 
-    assert "caseExact" not in serialized[0].to_dict()
+    assert "caseExact" not in serialized[0]
 
 
 def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializing_attributes():
@@ -103,7 +103,7 @@ def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializing_att
         ]
     )
 
-    assert "subAttributes" not in serialized[0].to_dict()
+    assert "subAttributes" not in serialized[0]
 
 
 def test_warning_is_returned_if_missing_sub_attrs_for_complex_attr():

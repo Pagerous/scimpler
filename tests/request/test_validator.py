@@ -420,6 +420,36 @@ def test_correct_error_response_passes_validation(error_data):
     assert issues.to_dict(msg=True) == {}
 
 
+def test_error_status_consistency_is_not_validated_if_bad_status(error_data):
+    validator = Error(CONFIG)
+    error_data["status"] = "abc"
+    expected_issues = {"body": {"status": {"_errors": [{"code": 1}]}}}
+
+    issues = validator.validate_response(status_code=400, body=error_data)
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_request_schema_in_error_validator_is_not_implemented():
+    validator = Error(CONFIG)
+
+    with pytest.raises(NotImplementedError):
+        print(validator.request_schema)
+
+
+def test_request_validation_in_error_validator_is_not_implemented():
+    validator = Error(CONFIG)
+
+    with pytest.raises(NotImplementedError):
+        validator.validate_request()
+
+
+def test_error_data_can_be_serialized(error_data):
+    validator = Error(CONFIG)
+
+    assert validator.response_schema.serialize(error_data) == error_data
+
+
 def test_correct_resource_object_get_request_passes_validation():
     validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
 
@@ -534,6 +564,13 @@ def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server
     )
 
     assert issues.to_dict() == expected_issues
+
+
+def test_request_schema_in_resource_object_get_request_data_is_not_supported():
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
+
+    with pytest.raises(NotImplementedError):
+        print(validator.request_schema)
 
 
 def test_validation_warning_for_missing_response_body_for_resources_post():

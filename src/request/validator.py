@@ -36,7 +36,7 @@ class Validator(abc.ABC):
         query_string: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
-        ...
+        """Docs placeholder."""
 
     @abc.abstractmethod
     def validate_response(
@@ -47,7 +47,7 @@ class Validator(abc.ABC):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
-        ...
+        """Docs placeholder."""
 
 
 class Error(Validator):
@@ -79,16 +79,13 @@ class Error(Validator):
         body_location = ("body",)
         issues = ValidationIssues()
         body = SCIMDataContainer(body or {})
-        issues_ = self._schema.validate(body)
+        issues_ = self.response_schema.validate(body)
         issues.merge(issues_, location=body_location)
-        if not issues.can_proceed(body_location):
-            return issues
-
         issues.merge(
-            issues=AttributePresenceValidator()(body, self._schema, "RESPONSE"),
+            issues=AttributePresenceValidator()(body, self.response_schema, "RESPONSE"),
             location=body_location,
         )
-        status_attr_rep = self._schema.attrs.status.rep
+        status_attr_rep = self.response_schema.attrs.status.rep
         if issues.can_proceed(body_location + _location(status_attr_rep)):
             issues.merge(
                 validate_error_status_code_consistency(
@@ -179,10 +176,9 @@ def validate_status_code(expected: int, actual: int) -> ValidationIssues:
 
 def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> ValidationIssues:
     issues = schema.validate(body)
-    if issues.can_proceed():
-        issues.merge(
-            issues=AttributePresenceValidator(**kwargs)(body, schema, "REQUEST"),
-        )
+    issues.merge(
+        issues=AttributePresenceValidator(**kwargs)(body, schema, "REQUEST"),
+    )
     return issues
 
 

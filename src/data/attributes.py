@@ -20,9 +20,10 @@ from urllib.parse import urlparse
 import precis_i18n.profile
 from precis_i18n import get_profile
 
+from src.constants import SCIMType
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src.registry import resource_schemas
+from src.registry import deserializers, resource_schemas, serializers
 
 if TYPE_CHECKING:
     from src.data.patch_path import PatchPath
@@ -60,8 +61,8 @@ _AttrName = Union[str, AttrRep, BoundedAttrRep]
 
 
 class Attribute(abc.ABC):
-    SCIM_NAME: str
-    BASE_TYPE: type
+    SCIM_TYPE: str
+    BASE_TYPES: tuple
 
     def __init__(
         self,
@@ -151,11 +152,32 @@ class Attribute(abc.ABC):
             return True
         return value in self._canonical_values
 
+    def validate_type(self, value: Any) -> ValidationIssues:
+        issues = ValidationIssues()
+        if self.multi_valued:
+            if not isinstance(value, list):
+                issues.add_error(
+                    issue=ValidationError.bad_type("list"),
+                    proceed=False,
+                )
+                return issues
+            for i, item in enumerate(value):
+                issues_ = self._validate_type(item)
+                issues.merge(
+                    issues=issues_,
+                    location=[i],
+                )
+                if not issues_.can_proceed():
+                    value[i] = Invalid
+            return issues
+        issues.merge(self._validate_type(value))
+        return issues
+
     def _validate_type(self, value: Any) -> ValidationIssues:
         issues = ValidationIssues()
-        if not isinstance(value, self.BASE_TYPE):
+        if not isinstance(value, self.BASE_TYPES):
             issues.add_error(
-                issue=ValidationError.bad_type(self.SCIM_NAME),
+                issue=ValidationError.bad_type(self.SCIM_TYPE),
                 proceed=False,
             )
         return issues
@@ -165,69 +187,70 @@ class Attribute(abc.ABC):
         if value is None:
             return issues
 
-        if self._multi_valued:
-            if not isinstance(value, list):
-                issues.add_error(
-                    issue=ValidationError.bad_type("list"),
-                    proceed=False,
-                )
-                return issues
+        issues.merge(self.validate_type(value))
+        if not issues.can_proceed():
+            return issues
 
+        if self._multi_valued:
             for i, item in enumerate(value):
-                issues_ = self._validate_type(item)
-                issues.merge(location=(i,), issues=issues_)
+                if item is Invalid:
+                    continue
+                issues_ = self._validate(item)
+                issues.merge(issues=issues_, location=[i])
                 if not issues_.can_proceed():
                     value[i] = Invalid
-                    continue
-                if not self._is_canonical(item):
-                    if self._validate_canonical_values:
-                        issues.add_error(
-                            issue=ValidationError.must_be_one_of(self._canonical_values),
-                            proceed=False,
-                            location=(i,),
-                        )
-                    else:
-                        issues.add_warning(
-                            issue=ValidationWarning.should_be_one_of(self._canonical_values),
-                            location=(i,),
-                        )
         else:
-            issues_ = self._validate_type(value)
-            issues.merge(issues=issues_)
-            if not issues_.can_proceed():
-                return issues
-
-            elif not self._is_canonical(value):
-                if self._validate_canonical_values:
-                    issues.add_error(
-                        issue=ValidationError.must_be_one_of(self._canonical_values),
-                        proceed=False,
-                    )
-                else:
-                    issues.add_warning(
-                        issue=ValidationWarning.should_be_one_of(self._canonical_values),
-                    )
-
+            issues.merge(self._validate(value))
         for validator in self._validators:
             if not issues.can_proceed():
                 break
             issues.merge(validator(value))
         return issues
 
+    def _validate(self, value: Any) -> ValidationIssues:
+        issues = ValidationIssues()
+        if not self._is_canonical(value):
+            if self._validate_canonical_values:
+                issues.add_error(
+                    issue=ValidationError.must_be_one_of(self._canonical_values),
+                    proceed=False,
+                )
+            else:
+                issues.add_warning(
+                    issue=ValidationWarning.should_be_one_of(self._canonical_values),
+                )
+        return issues
+
     def serialize(self, value: Any) -> Any:
         if self._serializer is not None:
-            return self._serializer(value)
+            value = self._serializer(value)
+        if self.multi_valued and isinstance(value, list):
+            return [self._serialize(item) for item in value]
+        return self._serialize(value)
+
+    def _serialize(self, value: Any) -> Any:
+        if (serializer := serializers.get(self.SCIM_TYPE)) and isinstance(value, self.BASE_TYPES):
+            value = serializer(value)
         return value
 
     def deserialize(self, value: Any) -> Any:
         if self._deserializer is not None:
-            return self._deserializer(value)
+            value = self._deserializer(value)
+        if self.multi_valued and isinstance(value, list):
+            return [self._deserialize(item) for item in value]
+        return self._deserialize(value)
+
+    def _deserialize(self, value: Any) -> Any:
+        if (deserializer := deserializers.get(self.SCIM_TYPE)) and isinstance(
+            value, self.BASE_TYPES
+        ):
+            value = deserializer(value)
         return value
 
     def to_dict(self) -> dict:
         output = {
             "name": self.rep.attr,
-            "type": self.SCIM_NAME,
+            "type": str(self.SCIM_TYPE),
             "multiValued": self._multi_valued,
             "description": self.description,
             "required": self.required,
@@ -306,34 +329,31 @@ class Unknown(Attribute):
     def _validate_type(self, value: Any) -> ValidationIssues:
         return ValidationIssues()
 
+    def _serialize(self, value: Any) -> Any:
+        return value
+
+    def _deserialize(self, value: Any) -> Any:
+        return value
+
 
 class Boolean(Attribute):
-    SCIM_NAME = "boolean"
-    BASE_TYPE = bool
+    SCIM_TYPE = SCIMType.BOOLEAN
+    BASE_TYPES = (bool,)
 
 
 class Decimal(AttributeWithUniqueness):
-    SCIM_NAME = "decimal"
-    BASE_TYPE = float
-
-    def _validate_type(self, value: Any) -> ValidationIssues:
-        issues = ValidationIssues()
-        if not isinstance(value, (self.BASE_TYPE, int)):
-            issues.add_error(
-                issue=ValidationError.bad_type(self.SCIM_NAME),
-                proceed=False,
-            )
-        return issues
+    SCIM_TYPE = SCIMType.DECIMAL
+    BASE_TYPES = (float, int)
 
 
 class Integer(AttributeWithUniqueness):
-    SCIM_NAME = "integer"
-    BASE_TYPE = int
+    SCIM_TYPE = SCIMType.INTEGER
+    BASE_TYPES = (int,)
 
 
 class String(AttributeWithCaseExact, AttributeWithUniqueness):
-    SCIM_NAME = "string"
-    BASE_TYPE = str
+    SCIM_TYPE = "string"
+    BASE_TYPES = (str,)
 
     def __init__(
         self,
@@ -351,8 +371,8 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
 
 
 class Binary(AttributeWithCaseExact):
-    SCIM_NAME = "binary"
-    BASE_TYPE = str
+    SCIM_TYPE = SCIMType.BINARY
+    BASE_TYPES = (str,)
 
     def __init__(self, name: _AttrName, **kwargs):
         kwargs["case_exact"] = True
@@ -363,8 +383,6 @@ class Binary(AttributeWithCaseExact):
         if not issues.can_proceed():
             return issues
         issues.merge(self._validate_encoding(value))
-        if not issues.can_proceed():
-            return issues
         return issues
 
     @staticmethod
@@ -387,8 +405,8 @@ class Binary(AttributeWithCaseExact):
 
 
 class _Reference(AttributeWithCaseExact, abc.ABC):
-    SCIM_NAME = "reference"
-    BASE_TYPE = str
+    SCIM_TYPE = SCIMType.REFERENCE
+    BASE_TYPES = (str,)
 
     def __init__(self, name: _AttrName, *, reference_types: Iterable[str], **kwargs):
         kwargs["case_exact"] = True
@@ -409,8 +427,8 @@ class _Reference(AttributeWithCaseExact, abc.ABC):
 
 
 class DateTime(Attribute):
-    SCIM_NAME = "dateTime"
-    BASE_TYPE = str
+    SCIM_TYPE = SCIMType.DATETIME
+    BASE_TYPES = (str,)
 
     def _validate_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_type(value)
@@ -489,12 +507,13 @@ _default_sub_attrs = [
 ]
 
 
-TData = TypeVar("TData", bound=[SCIMDataContainer, dict])
+TMapping = TypeVar("TMapping", bound=[SCIMDataContainer, dict])
+TData = TypeVar("TData", bound=[TMapping, list[TMapping]])
 
 
 class Complex(Attribute):
-    SCIM_NAME = "complex"
-    BASE_TYPE = SCIMDataContainer
+    SCIM_TYPE = "complex"
+    BASE_TYPES = (SCIMDataContainer, dict)
 
     def __init__(
         self,
@@ -534,15 +553,13 @@ class Complex(Attribute):
                 and validate_type_value_pairs not in validators
             ):
                 validators.append(validate_type_value_pairs)
-        self._complex_validators = validators
+        self._validators = validators
 
     @property
     def attrs(self) -> "Attributes":
         return self._sub_attributes
 
-    def filter(
-        self, data: Union[TData, list[TData]], attr_filter: Callable[[Attribute], bool]
-    ) -> TData:
+    def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
         if isinstance(data, list):
             return [self.filter(item, attr_filter) for item in data]
 
@@ -567,84 +584,41 @@ class Complex(Attribute):
             cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
         return cloned
 
-    def validate(self, value: Any) -> ValidationIssues:
-        issues = super().validate(value)
-        if not issues.can_proceed() or value is None:
-            return issues
-        if self.multi_valued:
-            for i, item in enumerate(value):
-                item = SCIMDataContainer(item)
-                for sub_attr in self._sub_attributes:
-                    sub_attr_value = item.get(sub_attr.rep)
-                    if sub_attr_value is Missing:
-                        continue
-                    issues_ = sub_attr.validate(sub_attr_value)
-                    if not issues_.can_proceed():
-                        item.set(sub_attr.rep, Invalid)
-                    issues.merge(location=(i, sub_attr.rep.attr), issues=issues_)
-        else:
-            value = SCIMDataContainer(value)
-            for sub_attr in self._sub_attributes:
-                sub_attr_value = value.get(sub_attr.rep)
-                if sub_attr_value is Missing:
-                    continue
-                issues_ = sub_attr.validate(sub_attr_value)
-                if not issues_.can_proceed():
-                    value.set(sub_attr.rep, Invalid)
-                issues.merge(
-                    location=(sub_attr.rep.attr,),
-                    issues=issues_,
-                )
-
-        for validator in self._complex_validators:
-            if not issues.can_proceed():
-                break
-            issues.merge(validator(value))
+    def _validate(self, value: Union[SCIMDataContainer, dict[str, Any]]) -> ValidationIssues:
+        issues = ValidationIssues()
+        value = SCIMDataContainer(value)
+        for sub_attr in self._sub_attributes:
+            sub_attr_value = value.get(sub_attr.rep)
+            if sub_attr_value is Missing:
+                continue
+            issues_ = sub_attr.validate(sub_attr_value)
+            if not issues_.can_proceed():
+                value.set(sub_attr.rep, Invalid)
+            issues.merge(
+                location=(sub_attr.rep.attr,),
+                issues=issues_,
+            )
         return issues
 
-    def deserialize(self, value: Any) -> Any:
-        if self.multi_valued:
-            deserialized = []
-            for i, item in enumerate(value):
-                item = SCIMDataContainer(item)
-                deserialized_item = SCIMDataContainer()
-                for sub_attr in self._sub_attributes:
-                    sub_attr_value = item.get(sub_attr.rep)
-                    if sub_attr_value is Missing:
-                        continue
-                    deserialized_item.set(sub_attr.rep, sub_attr.deserialize(sub_attr_value))
-                deserialized.append(deserialized_item)
-        else:
-            value = SCIMDataContainer(value)
-            deserialized = SCIMDataContainer()
-            for sub_attr in self._sub_attributes:
-                sub_attr_value = value.get(sub_attr.rep)
-                if sub_attr_value is Missing:
-                    continue
-                deserialized.set(sub_attr.rep, sub_attr.deserialize(sub_attr_value))
-        return super().deserialize(deserialized)
+    def _deserialize(self, value: Union[dict, SCIMDataContainer]) -> SCIMDataContainer:
+        value = SCIMDataContainer(value)
+        deserialized = SCIMDataContainer()
+        for sub_attr in self._sub_attributes:
+            sub_attr_value = value.get(sub_attr.rep)
+            if sub_attr_value is Missing:
+                continue
+            deserialized.set(sub_attr.rep, sub_attr.deserialize(sub_attr_value))
+        return deserialized
 
-    def serialize(self, value: Any) -> Any:
-        if self.multi_valued:
-            serialized = []
-            for i, item in enumerate(value):
-                item = SCIMDataContainer(item)
-                deserialized_item = SCIMDataContainer()
-                for sub_attr in self._sub_attributes:
-                    sub_attr_value = item.get(sub_attr.rep)
-                    if sub_attr_value is Missing:
-                        continue
-                    deserialized_item.set(sub_attr.rep, sub_attr.serialize(sub_attr_value))
-                serialized.append(deserialized_item)
-        else:
-            value = SCIMDataContainer(value)
-            serialized = SCIMDataContainer()
-            for sub_attr in self._sub_attributes:
-                sub_attr_value = value.get(sub_attr.rep)
-                if sub_attr_value is Missing:
-                    continue
-                serialized.set(sub_attr.rep, sub_attr.serialize(sub_attr_value))
-        return super().serialize(serialized)
+    def _serialize(self, value: Union[dict, SCIMDataContainer]) -> dict[str, Any]:
+        value = SCIMDataContainer(value)
+        serialized = SCIMDataContainer()
+        for sub_attr in self._sub_attributes:
+            sub_attr_value = value.get(sub_attr.rep)
+            if sub_attr_value is Missing:
+                continue
+            serialized.set(sub_attr.rep, sub_attr.serialize(sub_attr_value))
+        return serialized.to_dict()
 
     def to_dict(self) -> dict[str, Any]:
         output = super().to_dict()

@@ -5,7 +5,7 @@ from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
-from src.registry import converters
+from src.registry import serializers
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[])
 
@@ -144,7 +144,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr is None:
             return False
 
-        if attr.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
+        if attr.SCIM_TYPE not in self.SUPPORTED_SCIM_TYPES:
             return False
 
         if attr.multi_valued:
@@ -207,11 +207,11 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     def _get_values_for_comparison(
         self, value: Any, attr: Attribute
     ) -> Optional[list[tuple[Any, Any]]]:
-        if attr.SCIM_NAME not in self.SUPPORTED_SCIM_TYPES:
+        if attr.SCIM_TYPE not in self.SUPPORTED_SCIM_TYPES:
             return None
 
         op_value = self.value
-        convert = converters.get(attr.SCIM_NAME, lambda _: _)
+        convert = serializers.get(attr.SCIM_TYPE, lambda _: _)
 
         if isinstance(attr, Complex):
             value_sub_attr = getattr(attr.attrs, "value", None)

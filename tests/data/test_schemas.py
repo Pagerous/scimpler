@@ -189,6 +189,15 @@ def test_schemas_is_not_validated_further_if_bad_type(user_data_client):
     assert issues.to_dict() == {"schemas": {"_errors": [{"code": 2}]}}
 
 
+def test_invalid_schemas_items_are_detected(user_data_client):
+    user_data_client["schemas"] = [User.schema, 123]
+    expected_issues = {"schemas": {"_errors": [{"code": 13}], "1": {"_errors": [{"code": 2}]}}}
+
+    issues = User.validate(user_data_client)
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_endpoint_can_be_changed_for_base_resource_schema():
     schema = BaseResourceSchema(
         schema="base:resource:schema", name="BaseResource", endpoint="/BaseResource"
