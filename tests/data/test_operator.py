@@ -4,7 +4,7 @@ import pytest
 
 from src.assets.schemas import User
 from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
-from src.data.attributes import Attribute, Complex, String
+from src.data.attributes import Attribute, Complex, DateTime, String
 from src.data.operator import (
     And,
     ComplexAttributeOperator,
@@ -21,7 +21,6 @@ from src.data.operator import (
     Present,
     StartsWith,
 )
-from src.registry import register_serializer
 from tests.conftest import SchemaForTests
 
 
@@ -891,8 +890,8 @@ def test_multivalued_complex_op_can_be_used_with_logical_op():
     assert match
 
 
-def test_operator_values_are_converted_if_converter_registered():
-    register_serializer("dateTime", datetime.fromisoformat)
+def test_operator_values_are_converted_if_deserializer_registered():
+    DateTime.set_deserializer(datetime.fromisoformat)
 
     operator = GreaterThan(
         attr_rep=BoundedAttrRep(attr="datetime"), value="2024-04-29T18:14:15.189594"
@@ -901,6 +900,8 @@ def test_operator_values_are_converted_if_converter_registered():
     match = operator.match(datetime.now(), SchemaForTests)
 
     assert match
+
+    DateTime.set_deserializer(str)
 
 
 def test_value_is_not_matched_if_bad_input_value_type():

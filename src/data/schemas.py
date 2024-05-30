@@ -84,7 +84,7 @@ class BaseSchema:
             value = data.get(attr.rep)
             if value is not Missing:
                 serialized.set(attr.rep, attr.serialize(value))
-        return self._serialize(data).to_dict()
+        return self._serialize(serialized).to_dict()
 
     def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
         is_dict = isinstance(data, dict)

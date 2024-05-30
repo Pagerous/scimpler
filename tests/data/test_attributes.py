@@ -19,7 +19,6 @@ from src.data.attributes import (
     URIReference,
 )
 from src.error import ValidationError, ValidationIssues
-from src.registry import register_deserializer, register_serializer
 
 
 def test_validation_is_skipped_if_value_not_provided():
@@ -607,7 +606,7 @@ def test_attribute_error_is_raised_if_accessing_non_existent_sub_attr_of_complex
 
 
 def test_attribute_global_deserializer_can_be_registered_and_used():
-    register_deserializer("dateTime", datetime.fromisoformat)
+    DateTime.set_deserializer(datetime.fromisoformat)
     attr = Complex(
         "complex",
         multi_valued=True,
@@ -620,9 +619,11 @@ def test_attribute_global_deserializer_can_be_registered_and_used():
     assert isinstance(deserialized[0].get("timestamps")[0], datetime)
     assert deserialized[0].get("timestamps")[0] == value
 
+    DateTime.set_deserializer(str)
 
-def test_attribute_global_deserializer_is_not_used_if_attr_deserializer_changed_type():
-    register_deserializer("dateTime", datetime.fromisoformat)
+
+def test_attribute_global_deserializer_is_not_used_if_attr_deserializer_defined():
+    DateTime.set_deserializer(datetime.fromisoformat)
     attr = Complex(
         "complex",
         multi_valued=True,
@@ -639,9 +640,11 @@ def test_attribute_global_deserializer_is_not_used_if_attr_deserializer_changed_
 
     assert isinstance(deserialized[0].get("timestamps"), int)
 
+    DateTime.set_deserializer(str)
+
 
 def test_attribute_global_serializer_can_be_registered_and_used():
-    register_serializer("integer", str)
+    Integer.set_serializer(str)
     attr = Complex(
         "complex",
         multi_valued=True,
@@ -652,9 +655,11 @@ def test_attribute_global_serializer_can_be_registered_and_used():
 
     assert deserialized[0]["values"] == ["1", "2", "3"]
 
+    Integer.set_serializer(int)
+
 
 def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type():
-    register_serializer("integer", str)
+    Integer.set_serializer(str)
     attr = Complex(
         "complex",
         multi_valued=True,
@@ -670,3 +675,5 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
     deserialized = attr.serialize([{"values": [1, 2, 3]}])
 
     assert deserialized[0]["values"] == "123"
+
+    Integer.set_serializer(int)

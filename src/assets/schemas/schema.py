@@ -39,7 +39,8 @@ def validate_attributes(value: list[SCIMDataContainer]) -> ValidationIssues:
     return issues
 
 
-def serialize_attributes(value: list[SCIMDataContainer]) -> list[SCIMDataContainer]:
+def serialize_attributes(value: list[SCIMDataContainer]) -> list[dict]:
+    serialized = []
     for i, item in enumerate(value):
         attr_type = item.get("type")
         sub_attributes = item.get("subAttributes")
@@ -50,7 +51,8 @@ def serialize_attributes(value: list[SCIMDataContainer]) -> list[SCIMDataContain
                 item.set("subAttributes", attributes.serialize(sub_attributes))
         if attr_type not in ["string", "reference", "binary"]:
             item.pop("caseExact")
-    return value
+        serialized.append(item.to_dict())
+    return serialized
 
 
 attributes = Complex(

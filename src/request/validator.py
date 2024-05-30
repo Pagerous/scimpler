@@ -7,7 +7,13 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import create_search_request_schema
 from src.container import BoundedAttrRep, Missing, SCIMDataContainer
-from src.data.attributes import Attribute, AttributeMutability, AttributeReturn, Complex
+from src.data.attributes import (
+    Attribute,
+    AttributeIssuer,
+    AttributeMutability,
+    AttributeReturn,
+    Complex,
+)
 from src.data.attributes_presence import AttributePresenceValidator
 from src.data.filter import Filter
 from src.data.patch_path import PatchPath
@@ -391,7 +397,10 @@ class ResourcesPOST(Validator):
         super().__init__(config)
         self._schema = resource_schema
         self._request_schema = resource_schema.clone(
-            lambda attr: attr.mutability != AttributeMutability.READ_ONLY
+            lambda attr: (
+                attr.mutability != AttributeMutability.READ_ONLY
+                and attr.issuer != AttributeIssuer.SERVER
+            )
         )
         self._response_schema = resource_schema.clone(
             lambda attr: attr.returned != AttributeReturn.NEVER

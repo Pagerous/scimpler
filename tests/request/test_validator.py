@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import datetime
 
 import pytest
 
@@ -14,6 +15,7 @@ from src.assets.schemas import (
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.data.attributes import DateTime
 from src.data.attributes_presence import AttributePresenceValidator
 from src.data.filter import Filter
 from src.data.operator import Present
@@ -32,6 +34,7 @@ from src.request.validator import (
     SchemasGET,
     SearchRequestPOST,
     ServerRootResourcesGET,
+    ServiceResourceObjectGET,
     can_validate_filtering,
     can_validate_sorting,
     validate_error_status_code,
@@ -573,6 +576,23 @@ def test_request_schema_in_resource_object_get_request_data_is_not_supported():
         print(validator.request_schema)
 
 
+def test_data_for_resource_object_get_response_can_be_serialized(user_data_server):
+    user_data_server["password"] = "1234"
+    validator = ResourceObjectGET(CONFIG, resource_schema=user.User)
+
+    data = validator.response_schema.serialize(user_data_server)
+
+    assert "password" not in data  # password has "return" attribute set to "NEVER"
+
+
+def test_service_object_resource_get_request_is_not_validated():
+    validator = ServiceResourceObjectGET(CONFIG, resource_schema=ResourceType)
+
+    issues = validator.validate_request(body={"some": "weird_stuff"})
+
+    assert issues.to_dict(msg=True) == {}
+
+
 def test_validation_warning_for_missing_response_body_for_resources_post():
     validator = ResourcesPOST(CONFIG, resource_schema=user.User)
     expected_issues = {"body": {"_warnings": [{"code": 4}]}}
@@ -666,6 +686,24 @@ def test_correct_resource_object_put_response_passes_validation(user_data_server
     assert issues.to_dict(msg=True) == {}
 
 
+def test_data_for_resource_object_put_request_can_be_deserialized(user_data_client):
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user.User)
+
+    data = validator.request_schema.deserialize(user_data_client)
+
+    assert data.get("password") is not Missing
+    assert data.get("groups") is Missing  # 'groups' are read-only, so ignored
+
+
+def test_data_for_resource_object_put_response_can_be_serialized(user_data_server):
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user.User)
+
+    data = validator.response_schema.serialize(user_data_server)
+
+    assert "password" not in data
+    assert "groups" in data
+
+
 def test_correct_resource_type_post_response_passes_validation(user_data_server):
     validator = ResourcesPOST(CONFIG, resource_schema=user.User)
 
@@ -679,6 +717,38 @@ def test_correct_resource_type_post_response_passes_validation(user_data_server)
     )
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_resource_type_post_request_data_can_be_deserialized(user_data_client):
+    user_data_client["id"] = "1234"
+    validator = ResourcesPOST(CONFIG, resource_schema=user.User)
+
+    data = validator.request_schema.deserialize(user_data_client)
+
+    assert data.get("id") is Missing  # id is issued by the server
+    assert data.get("groups") is Missing  # groups are read-only
+
+
+def test_resource_type_post_response_data_can_be_serialized(user_data_server):
+    DateTime.set_serializer(datetime.isoformat)
+
+    user_data_server["meta"]["created"] = datetime.fromisoformat(
+        user_data_server["meta"]["created"]
+    )
+    user_data_server["meta"]["lastModified"] = datetime.fromisoformat(
+        user_data_server["meta"]["lastModified"]
+    )
+    validator = ResourcesPOST(CONFIG, resource_schema=user.User)
+
+    data = validator.response_schema.serialize(user_data_server)
+
+    assert "id" in data
+    assert "groups" in data
+    assert "password" not in data
+    assert data["meta"]["created"] == user_data_server["meta"]["created"].isoformat()
+    assert data["meta"]["lastModified"] == user_data_server["meta"]["lastModified"].isoformat()
+
+    DateTime.set_serializer(str)
 
 
 @pytest.mark.parametrize(

@@ -23,7 +23,7 @@ from precis_i18n import get_profile
 from src.constants import SCIMType
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src.registry import deserializers, resource_schemas, serializers
+from src.registry import resource_schemas
 
 if TYPE_CHECKING:
     from src.data.patch_path import PatchPath
@@ -63,6 +63,8 @@ _AttrName = Union[str, AttrRep, BoundedAttrRep]
 class Attribute(abc.ABC):
     SCIM_TYPE: str
     BASE_TYPES: tuple
+    _global_serializer: Callable[[Any], Any]
+    _global_deserializer: Callable[[Any], Any]
 
     def __init__(
         self,
@@ -92,6 +94,14 @@ class Attribute(abc.ABC):
         self._validators = validators or []
         self._deserializer = deserializer
         self._serializer = serializer
+
+    @classmethod
+    def set_serializer(cls, serializer: Callable[[Any], Any]):
+        cls._global_serializer = staticmethod(serializer)
+
+    @classmethod
+    def set_deserializer(cls, deserializer: Callable[[Any], Any]):
+        cls._global_deserializer = staticmethod(deserializer)
 
     @property
     def rep(self) -> Union[AttrRep, BoundedAttrRep]:
@@ -223,29 +233,25 @@ class Attribute(abc.ABC):
 
     def serialize(self, value: Any) -> Any:
         if self._serializer is not None:
-            value = self._serializer(value)
+            return self._serializer(value)
+
         if self.multi_valued and isinstance(value, list):
             return [self._serialize(item) for item in value]
         return self._serialize(value)
 
     def _serialize(self, value: Any) -> Any:
-        if (serializer := serializers.get(self.SCIM_TYPE)) and isinstance(value, self.BASE_TYPES):
-            value = serializer(value)
-        return value
+        return self._global_serializer(value)
 
     def deserialize(self, value: Any) -> Any:
         if self._deserializer is not None:
-            value = self._deserializer(value)
+            return self._deserializer(value)
+
         if self.multi_valued and isinstance(value, list):
             return [self._deserialize(item) for item in value]
         return self._deserialize(value)
 
     def _deserialize(self, value: Any) -> Any:
-        if (deserializer := deserializers.get(self.SCIM_TYPE)) and isinstance(
-            value, self.BASE_TYPES
-        ):
-            value = deserializer(value)
-        return value
+        return self._global_deserializer(value)
 
     def to_dict(self) -> dict:
         output = {
@@ -339,21 +345,29 @@ class Unknown(Attribute):
 class Boolean(Attribute):
     SCIM_TYPE = SCIMType.BOOLEAN
     BASE_TYPES = (bool,)
+    _global_deserializer = bool
+    _global_serializer = bool
 
 
 class Decimal(AttributeWithUniqueness):
     SCIM_TYPE = SCIMType.DECIMAL
     BASE_TYPES = (float, int)
+    _global_deserializer = float
+    _global_serializer = float
 
 
 class Integer(AttributeWithUniqueness):
     SCIM_TYPE = SCIMType.INTEGER
     BASE_TYPES = (int,)
+    _global_deserializer = int
+    _global_serializer = int
 
 
 class String(AttributeWithCaseExact, AttributeWithUniqueness):
     SCIM_TYPE = "string"
     BASE_TYPES = (str,)
+    _global_deserializer = str
+    _global_serializer = str
 
     def __init__(
         self,
@@ -373,6 +387,8 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
 class Binary(AttributeWithCaseExact):
     SCIM_TYPE = SCIMType.BINARY
     BASE_TYPES = (str,)
+    _global_deserializer = str
+    _global_serializer = str
 
     def __init__(self, name: _AttrName, **kwargs):
         kwargs["case_exact"] = True
@@ -407,6 +423,8 @@ class Binary(AttributeWithCaseExact):
 class _Reference(AttributeWithCaseExact, abc.ABC):
     SCIM_TYPE = SCIMType.REFERENCE
     BASE_TYPES = (str,)
+    _global_deserializer = str
+    _global_serializer = str
 
     def __init__(self, name: _AttrName, *, reference_types: Iterable[str], **kwargs):
         kwargs["case_exact"] = True
@@ -429,6 +447,8 @@ class _Reference(AttributeWithCaseExact, abc.ABC):
 class DateTime(Attribute):
     SCIM_TYPE = SCIMType.DATETIME
     BASE_TYPES = (str,)
+    _global_deserializer = str
+    _global_serializer = str
 
     def _validate_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_type(value)
@@ -514,6 +534,8 @@ TData = TypeVar("TData", bound=[TMapping, list[TMapping]])
 class Complex(Attribute):
     SCIM_TYPE = "complex"
     BASE_TYPES = (SCIMDataContainer, dict)
+    _global_deserializer = SCIMDataContainer
+    _global_serializer = SCIMDataContainer
 
     def __init__(
         self,

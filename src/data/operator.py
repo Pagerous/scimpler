@@ -5,7 +5,6 @@ from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
 from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
-from src.registry import serializers
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[])
 
@@ -211,8 +210,6 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             return None
 
         op_value = self.value
-        convert = serializers.get(attr.SCIM_TYPE, lambda _: _)
-
         if isinstance(attr, Complex):
             value_sub_attr = getattr(attr.attrs, "value", None)
             if value_sub_attr is None:
@@ -226,6 +223,9 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         elif not isinstance(value, list):
             value = [value]
+
+        if isinstance(op_value, attr.BASE_TYPES):
+            op_value = attr.deserialize(op_value)
 
         if isinstance(attr, AttributeWithCaseExact):
             if isinstance(attr, String):
@@ -244,8 +244,6 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
             if isinstance(op_value, str):
                 op_value = op_value.lower()
             return [(item.lower() if isinstance(item, str) else item, op_value) for item in value]
-
-        op_value = convert(op_value)
         return [(item, op_value) for item in value]
 
     def match(

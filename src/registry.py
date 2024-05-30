@@ -19,28 +19,6 @@ def register_resource_schema(resource_schema: "ResourceSchema"):
 Converter = Callable[[Any], Any]
 
 
-serializers: dict[str, Converter] = {}
-deserializers: dict[str, Converter] = {}
-
-
-def register_serializer(scim_type: Union[SCIMType, str], converter: Converter) -> None:
-    scim_type = SCIMType(scim_type)
-
-    if scim_type in serializers:
-        raise RuntimeError(f"serializer for {scim_type!r} already registered")
-
-    serializers[scim_type] = converter
-
-
-def register_deserializer(scim_type: Union[SCIMType, str], converter: Converter) -> None:
-    scim_type = SCIMType(scim_type)
-
-    if scim_type in deserializers:
-        raise RuntimeError(f"deserializer for {scim_type!r} already registered")
-
-    deserializers[scim_type] = converter
-
-
 unary_operators = {}
 binary_operators = {}
 
