@@ -15,7 +15,7 @@ def _validate_resources_type(value) -> ValidationIssues:
                 proceed=True,
                 location=(i,),
             )
-            value[0] = Invalid
+            value[i] = Invalid
     return issues
 
 
@@ -57,6 +57,9 @@ class ListResponse(BaseSchema):
 
         schemas = self.get_schemas_for_resources(resources)
         for i, (resource, schema) in enumerate(zip(resources, schemas)):
+            if resource is Invalid:
+                continue
+
             if schema is None:
                 issues.add_error(
                     issue=ValidationError.unknown_schema(),

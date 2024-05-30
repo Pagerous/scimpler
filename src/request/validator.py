@@ -6,7 +6,7 @@ from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import create_search_request_schema
-from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attributes import (
     Attribute,
     AttributeIssuer,
@@ -266,9 +266,7 @@ class ResourceObjectGET(Validator):
     def __init__(self, config: ServiceProviderConfig, *, resource_schema: BaseResourceSchema):
         super().__init__(config)
         self._schema = resource_schema
-        self._response_schema = resource_schema.clone(
-            lambda attr: attr.returned != AttributeReturn.NEVER
-        )
+        self._response_schema = resource_schema.clone(_resource_output_filter)
 
     @property
     def response_schema(self) -> BaseResourceSchema:
@@ -331,9 +329,7 @@ class ResourceObjectPUT(Validator):
         self._request_schema = resource_schema.clone(
             lambda attr: attr.mutability != AttributeMutability.READ_ONLY or attr.required
         )
-        self._response_schema = resource_schema.clone(
-            lambda attr: attr.returned != AttributeReturn.NEVER
-        )
+        self._response_schema = resource_schema.clone(_resource_output_filter)
         self._schema = resource_schema
 
     @property
@@ -402,9 +398,7 @@ class ResourcesPOST(Validator):
                 and attr.issuer != AttributeIssuer.SERVER
             )
         )
-        self._response_schema = resource_schema.clone(
-            lambda attr: attr.returned != AttributeReturn.NEVER
-        )
+        self._response_schema = resource_schema.clone(_resource_output_filter)
 
     @property
     def request_schema(self) -> ResourceSchema:
@@ -462,8 +456,8 @@ class ResourcesPOST(Validator):
             headers=headers or {},
             presence_validator=kwargs.get("presence_validator"),
         )
-        if body.get(self.response_schema.attrs.meta__created.rep) != body.get(
-            self.response_schema.attrs.meta__lastModified.rep
+        if body.get(self._schema.attrs.meta__created.rep) != body.get(
+            self._schema.attrs.meta__lastModified.rep
         ):
             issues.add_error(
                 issue=ValidationError.must_be_equal_to("'meta.created'"),
@@ -473,7 +467,7 @@ class ResourcesPOST(Validator):
         return issues
 
 
-def validate_resources_sorted(
+def _validate_resources_sorted(
     sorter: Sorter,
     resources: list[SCIMDataContainer],
     resource_schemas: Sequence[ResourceSchema],
@@ -570,7 +564,7 @@ def validate_start_index_consistency(
     return issues
 
 
-def validate_resources_filtered(
+def _validate_resources_filtered(
     filter_: Filter, resources: list[Any], resource_schemas: Sequence[ResourceSchema]
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -671,12 +665,12 @@ def _validate_resources_get_response(
     )
     if filter_ is not None and can_validate_filtering(filter_, resource_presence_validator):
         issues.merge(
-            issues=validate_resources_filtered(filter_, resources, resource_schemas),
+            issues=_validate_resources_filtered(filter_, resources, resource_schemas),
             location=resources_location,
         )
     if sorter is not None and can_validate_sorting(sorter, resource_presence_validator):
         issues.merge(
-            issues=validate_resources_sorted(sorter, resources, resource_schemas),
+            issues=_validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
         )
     return issues
@@ -743,10 +737,7 @@ class ServerRootResourcesGET(Validator):
         self._request_query_validation_schema = create_search_request_schema(config)
         self._response_validation_schema = list_response.ListResponse(resource_schemas)
         self._response_schema = list_response.ListResponse(
-            [
-                resource_schema.clone(lambda attr: attr.returned != AttributeReturn.NEVER)
-                for resource_schema in resource_schemas
-            ]
+            [resource_schema.clone(_resource_output_filter) for resource_schema in resource_schemas]
         )
 
     @property
@@ -801,10 +792,7 @@ class SearchRequestPOST(Validator):
         self._request_validation_schema = create_search_request_schema(config)
         self._response_validation_schema = list_response.ListResponse(resource_schemas)
         self._response_schema = list_response.ListResponse(
-            [
-                resource_schema.clone(lambda attr: attr.returned != AttributeReturn.NEVER)
-                for resource_schema in resource_schemas
-            ]
+            [resource_schema.clone(_resource_output_filter) for resource_schema in resource_schemas]
         )
 
     @property
@@ -856,15 +844,19 @@ class ResourceObjectPATCH(Validator):
 
         super().__init__(config)
         self._schema = patch_op.PatchOp(resource_schema)
+        self._request_schema = patch_op.PatchOp(
+            resource_schema.clone(lambda attr: attr.mutability != AttributeMutability.READ_ONLY)
+        )
         self._resource_schema = resource_schema
+        self._response_schema = resource_schema.clone(_resource_output_filter)
 
     @property
     def request_schema(self) -> patch_op.PatchOp:
-        return self._schema
+        return self._request_schema
 
     @property
     def response_schema(self) -> ResourceSchema:
-        return self._resource_schema
+        return self._response_schema
 
     def validate_request(
         self,
@@ -912,7 +904,7 @@ class ResourceObjectPATCH(Validator):
                         value_location=value_location + _location(attr.rep),
                     )
 
-            else:
+            elif path is not Invalid:
                 attr = self._resource_schema.attrs.get_by_path(PatchPath.deserialize(path))
                 self._check_complex_sub_attrs_presence(
                     issues=issues,
@@ -1071,7 +1063,7 @@ class BulkOperations(Validator):
             issues=AttributePresenceValidator()(body, self._request_schema, "RESPONSE"),
             location=body_location,
         )
-        if not issues_.can_proceed(
+        if not issues.can_proceed(
             body_location + _location(self._request_schema.attrs.operations.rep)
         ):
             return issues
@@ -1085,11 +1077,8 @@ class BulkOperations(Validator):
         for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
             path_location = body_location + (path_rep.attr, i, path_rep.sub_attr)
             data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)
-            if issues.can_proceed(
-                path_location,
-                data_item_location,
-                (method_rep.attr, i, method_rep.sub_attr),
-            ):
+            method_location = body_location + (method_rep.attr, i, method_rep.sub_attr)
+            if issues.can_proceed(path_location, method_location):
                 if method == "DELETE":
                     continue
 
@@ -1170,9 +1159,9 @@ class BulkOperations(Validator):
 
             resource_validator = None
             if location:
-                for resource_plural_name, resource_validator in self._validators[method].items():
+                for resource_plural_name, validator in self._validators[method].items():
                     if f"/{resource_plural_name}/" in location:
-                        resource_validator = resource_validator
+                        resource_validator = validator
                         break
                 else:
                     issues.add_error(
@@ -1199,7 +1188,7 @@ class BulkOperations(Validator):
                     issues=issues_.get(location=("status",)),
                     location=status_location,
                 )
-            elif all([location, method, resource_validator]):
+            elif all([location, resource_validator]):
                 issues_ = resource_validator.validate_response(
                     body=response,
                     status_code=status,
@@ -1220,19 +1209,18 @@ class BulkOperations(Validator):
                         location=location_location,
                     )
 
-                if response:
-                    resource_version = response.get("meta.version")
-                    if version and resource_version and version != resource_version:
-                        issues.add_error(
-                            issue=ValidationError.must_be_equal_to("operation's version"),
-                            proceed=True,
-                            location=response_location + ("meta", "version"),
-                        )
-                        issues.add_error(
-                            issue=ValidationError.must_be_equal_to("'response.meta.version'"),
-                            proceed=True,
-                            location=version_location,
-                        )
+                resource_version = response.get("meta.version")
+                if version and resource_version and version != resource_version:
+                    issues.add_error(
+                        issue=ValidationError.must_be_equal_to("operation's version"),
+                        proceed=True,
+                        location=response_location + ("meta", "version"),
+                    )
+                    issues.add_error(
+                        issue=ValidationError.must_be_equal_to("'response.meta.version'"),
+                        proceed=True,
+                        location=version_location,
+                    )
 
         fail_on_errors = kwargs.get("fail_on_errors")
         if fail_on_errors is not None and n_errors > fail_on_errors:
@@ -1282,3 +1270,9 @@ def _location(attr_rep: BoundedAttrRep) -> Union[tuple[str], tuple[str, str]]:
     if attr_rep.sub_attr:
         return attr_rep.attr, attr_rep.sub_attr
     return (attr_rep.attr,)
+
+
+def _resource_output_filter(attr: Attribute) -> bool:
+    return bool(
+        attr.returned != AttributeReturn.NEVER and attr.mutability != AttributeMutability.WRITE_ONLY
+    )

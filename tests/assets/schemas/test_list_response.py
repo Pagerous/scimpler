@@ -64,8 +64,22 @@ def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(list
     expected = {
         "itemsPerPage": {"_errors": [{"code": 2}]},
         "Resources": {
-            "0": {"_errors": [{"code": 2}, {"code": 14}]},
+            "0": {"_errors": [{"code": 2}]},
             "1": {"userName": {"_errors": [{"code": 2}]}},
+        },
+    }
+
+    issues = schema.validate(list_user_data)
+
+    assert issues.to_dict() == expected
+
+
+def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data):
+    schema = list_response.ListResponse([user.User, group.Group])
+    list_user_data["Resources"][0]["schemas"] = ["totally:unknown:schema"]
+    expected = {
+        "Resources": {
+            "0": {"_errors": [{"code": 14}]},
         },
     }
 
