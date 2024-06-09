@@ -45,7 +45,7 @@ def test_full_search_request_is_deserialized():
     assert data.get("presence_config").include is True
     assert data.get("filter").to_dict() == {
         "op": "eq",
-        "attr_rep": "userName",
+        "attr": "userName",
         "value": "bjensen",
     }
     assert data.get("sorter").attr_rep == AttrRep(attr="name", sub_attr="familyName")

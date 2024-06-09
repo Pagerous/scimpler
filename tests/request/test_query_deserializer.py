@@ -48,7 +48,7 @@ def test_server_root_resources_get_query_string_is_deserialized():
     assert data["presence_config"].include is True
     assert data["filter"].to_dict() == {
         "op": "eq",
-        "attr_rep": "userName",
+        "attr": "userName",
         "value": "bjensen",
     }
     assert data["sorter"].attr_rep == AttrRep(attr="name", sub_attr="familyName")

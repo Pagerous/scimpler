@@ -602,7 +602,7 @@ class Filter(Generic[TOperator]):
         if isinstance(operator, op.AttributeOperator):
             filter_dict = {
                 "op": operator.SCIM_OP,
-                "attr_rep": str(operator.attr_rep),
+                "attr": str(operator.attr_rep),
             }
             if isinstance(operator, op.BinaryAttributeOperator):
                 filter_dict["value"] = operator.value
@@ -611,7 +611,7 @@ class Filter(Generic[TOperator]):
         if isinstance(operator, op.ComplexAttributeOperator):
             return {
                 "op": "complex",
-                "attr_rep": str(operator.attr_rep),
+                "attr": str(operator.attr_rep),
                 "sub_op": Filter._to_dict(operator.sub_operator),
             }
 
