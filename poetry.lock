@@ -375,4 +375,4 @@ marshmallow = ["marshmallow"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "a1a5ed61a9953626ca7ffec93295ce39ec6872c5dc00053dfc32c1c7e81ba707"
+content-hash = "0ec37a522ef7bcbd6a90d6ebf3321ad2696f4173faf7f688ffef4e60db6319f3"

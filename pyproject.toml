@@ -11,6 +11,7 @@ marshmallow = {version = "^3.21.1", optional = true}
 precis-i18n = "^1.1.0"
 phonenumbers = "^8.13.35"
 iso3166 = "^2.1.1"
+typing-extensions = "^4.12.2"
 
 [tool.poetry.extras]
 marshmallow = ["marshmallow"]
