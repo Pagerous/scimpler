@@ -698,24 +698,36 @@ class BoundedAttributes:
         self,
         schema: str,
         attrs: Optional[Iterable[Attribute]] = None,
-        extension: bool = False,
-        extension_required: Optional[bool] = None,
         common_attrs: Optional[Iterable[str]] = None,
     ):
-        self._raw_attrs = list(attrs or [])
         self._schema = schema
         self._core_attrs: dict[BoundedAttrRep, Attribute] = {}
-        self._common_attrs = {item.lower() for item in common_attrs or set()}
+        self._common_attrs = {AttrName(item) for item in (common_attrs or set())}
         self._extensions: dict[SchemaURI, BoundedAttributes] = {}
+
         self._attrs: dict[BoundedAttrRep, Attribute] = {}
         self._bounded_complex_sub_attrs: dict[
             BoundedAttrRep, dict[BoundedAttrRep, Attribute]
         ] = defaultdict(dict)
 
-        self._extension = extension
-        self._extension_required = extension_required
+        for attr in attrs or []:
+            attr_rep = BoundedAttrRep(
+                schema=self._schema,
+                attr=attr.name,
+            )
+            self._attrs[attr_rep] = attr
+            if attr.name not in self._common_attrs:
+                self._core_attrs[attr_rep] = attr
 
-        self._refresh_attrs()
+            if isinstance(attr, Complex):
+                self._bounded_complex_sub_attrs[attr_rep] = {
+                    BoundedAttrRep(
+                        schema=attr_rep.schema,
+                        attr=attr_rep.attr,
+                        sub_attr=sub_attr_rep.attr,
+                    ): sub_attr
+                    for sub_attr_rep, sub_attr in attr.attrs
+                }
 
     def __getattr__(self, name: str) -> BoundedAttrRep:
         parts = name.split("__", 1)
@@ -755,35 +767,6 @@ class BoundedAttributes:
     def __iter__(self) -> Iterator[tuple[BoundedAttrRep, Attribute]]:
         return iter(self._attrs.items())
 
-    def _refresh_attrs(self) -> None:
-        self._attrs.clear()
-        self._core_attrs.clear()
-        self._bounded_complex_sub_attrs.clear()
-
-        for attr in self._raw_attrs:
-            attr_rep = BoundedAttrRep(
-                schema=self._schema,
-                attr=attr.name,
-            )
-            self._attrs[attr_rep] = attr
-            if attr.name.lower() not in self._common_attrs:
-                self._core_attrs[attr_rep] = attr
-
-            if isinstance(attr, Complex):
-                self._bounded_complex_sub_attrs[attr_rep] = {
-                    BoundedAttrRep(
-                        schema=attr_rep.schema,
-                        attr=attr_rep.attr,
-                        sub_attr=sub_attr_rep.attr,
-                    ): sub_attr
-                    for sub_attr_rep, sub_attr in attr.attrs
-                }
-
-        for attrs in self._extensions.values():
-            for attr_rep, attr in attrs:
-                self._attrs[attr_rep] = attr
-            self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
-
     @property
     def core_attrs(self) -> Iterator[tuple[BoundedAttrRep, Attribute]]:
         return iter(self._core_attrs.items())
@@ -792,24 +775,28 @@ class BoundedAttributes:
     def extensions(self) -> dict[str, "BoundedAttributes"]:
         return self._extensions
 
-    def extend(self, schema: SchemaURI, attrs: Attributes, required: bool) -> None:
-        self._extensions[schema] = BoundedAttributes(
-            schema, (item[1] for item in attrs), extension=True, extension_required=required
-        )
-        self._refresh_attrs()
+    def extend(self, schema: SchemaURI, attrs: "BoundedAttributes") -> None:
+        self._extensions[schema] = attrs
+        for attr_rep, attr in attrs:
+            self._attrs[attr_rep] = attr
+        self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
 
     def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BoundedAttributes":
-        cloned = BoundedAttributes(schema=self._schema)
-        cloned._raw_attrs = [
+        attrs = (
             attr.clone(attr_filter=attr_filter) if isinstance(attr, Complex) else attr
-            for attr in self._raw_attrs
-            if attr_filter(attr)
-        ]
-        cloned._extensions = {
-            schema: bounded_attrs.clone(attr_filter)
-            for schema, bounded_attrs in self._extensions.items()
-        }
-        cloned._refresh_attrs()
+            for attr_rep, attr in self._attrs.items()
+            if not attr_rep.extension and attr_filter(attr)
+        )
+        cloned = BoundedAttributes(
+            schema=self._schema,
+            attrs=attrs,
+            common_attrs=self._common_attrs,
+        )
+        for schema, attrs in self._extensions.items():
+            cloned.extend(
+                schema=schema,
+                attrs=attrs.clone(attr_filter),
+            )
         return cloned
 
     def get(self, attr_rep: Union[str, AttrRep]) -> Optional[Attribute]:

@@ -8,7 +8,6 @@ from src.data.attributes import (
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
-    Attributes,
     AttributeUniqueness,
     BoundedAttributes,
     Complex,
@@ -544,11 +543,9 @@ class ResourceSchema(BaseResourceSchema):
                     ),
                     category=ScimpleUserWarning,
                 )
-
         self._attrs.extend(
             schema=extension.schema,
             attrs=extension.attrs,
-            required=required,
         )
 
     def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
@@ -605,7 +602,7 @@ class SchemaExtension:
     ):
         self._schema = SchemaURI(schema)
         register_schema(self._schema, True)
-        self._attrs = Attributes(attrs)
+        self._attrs = BoundedAttributes(self._schema, attrs)
         self._name = name
         self._description = description
 
@@ -622,5 +619,5 @@ class SchemaExtension:
         return self._schema
 
     @property
-    def attrs(self) -> Attributes:
+    def attrs(self) -> BoundedAttributes:
         return self._attrs
