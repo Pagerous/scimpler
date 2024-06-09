@@ -2,7 +2,7 @@ import pytest
 
 from src.assets.schemas.user import User
 from src.container import AttrRep, SCIMDataContainer
-from src.data.attributes import SCIMReference, String
+from src.data.attrs import SCIMReference, String
 from src.data.sorter import AlwaysLastKey, Sorter, StringKey
 from tests.conftest import SchemaForTests
 

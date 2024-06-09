@@ -8,8 +8,8 @@ from src.container import (
     Missing,
     SCIMDataContainer,
 )
-from src.data.attributes import Integer, String
-from src.data.attributes_presence import AttributePresenceConfig
+from src.data.attr_presence import AttrPresenceConfig
+from src.data.attrs import Integer, String
 from src.data.filter import Filter
 from src.data.schemas import BaseSchema
 from src.data.sorter import Sorter
@@ -86,7 +86,7 @@ class SearchRequest(BaseSchema):
         if to_include or to_exclude:
             data.set(
                 "presence_config",
-                AttributePresenceConfig(
+                AttrPresenceConfig(
                     "RESPONSE", attr_reps=to_include or to_exclude, include=bool(to_include)
                 ),
             )

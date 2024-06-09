@@ -2,7 +2,7 @@ import functools
 from typing import Any, Optional, Sequence, TypeVar, Union
 
 from src.container import AttrRep, Missing, SCIMDataContainer
-from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
+from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
 

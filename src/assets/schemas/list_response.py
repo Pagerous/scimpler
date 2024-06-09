@@ -1,8 +1,8 @@
 from typing import Any, Optional, Sequence
 
 from src.container import Invalid, Missing, SCIMDataContainer
-from src.data.attributes import Integer, Unknown
-from src.data.attributes_presence import AttributePresenceConfig
+from src.data.attr_presence import AttrPresenceConfig
+from src.data.attrs import Integer, Unknown
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
@@ -59,7 +59,7 @@ class ListResponse(BaseSchema):
 
         resource_presence_config = kwargs.get("resource_presence_config")
         if resource_presence_config is None:
-            resource_presence_config = AttributePresenceConfig("RESPONSE")
+            resource_presence_config = AttrPresenceConfig("RESPONSE")
 
         schemas = self.get_schemas_for_resources(resources)
         for i, (resource, schema) in enumerate(zip(resources, schemas)):

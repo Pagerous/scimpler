@@ -4,7 +4,7 @@ from typing import Any, Generic, TypeAlias, TypeVar, Union
 
 from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMDataContainer
 from src.data import operator as op
-from src.data.attributes import Complex
+from src.data.attrs import Complex
 from src.data.schemas import BaseSchema
 from src.data.utils import (
     OP_REGEX,

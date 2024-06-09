@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Collection, Literal, Optional, Union, overload
 
 from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, Missing
-from src.data.attributes import Attribute, AttributeIssuer, AttributeReturn
+from src.data.attrs import Attribute, AttributeIssuer, AttributeReturn
 from src.error import ValidationError, ValidationIssues
 
 
@@ -21,7 +21,7 @@ _DataDirectionLiteral = Literal["REQUEST", "RESPONSE"]
 _DataInclusivityLiteral = Literal["INCLUDE", "EXCLUDE"]
 
 
-class AttributePresenceConfig:
+class AttrPresenceConfig:
     @overload
     def __init__(
         self,

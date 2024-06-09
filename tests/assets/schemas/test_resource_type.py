@@ -1,6 +1,6 @@
 from src.assets.schemas import User
 from src.assets.schemas.resource_type import ResourceType
-from src.data.attributes_presence import AttributePresenceConfig
+from src.data.attr_presence import AttrPresenceConfig
 
 
 def test_resource_type_schema_is_validated():
@@ -24,7 +24,7 @@ def test_resource_type_schema_is_validated():
         },
     }
 
-    assert schema.validate(input_, AttributePresenceConfig("RESPONSE")).to_dict(msg=True) == {}
+    assert schema.validate(input_, AttrPresenceConfig("RESPONSE")).to_dict(msg=True) == {}
 
 
 def test_resource_type_representation_can_be_generated():

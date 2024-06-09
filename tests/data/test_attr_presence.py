@@ -2,8 +2,8 @@ import pytest
 
 from src.assets.schemas.user import User
 from src.container import AttrRep
-from src.data.attributes_presence import (
-    AttributePresenceConfig,
+from src.data.attr_presence import (
+    AttrPresenceConfig,
     DataInclusivity,
     validate_presence,
 )
@@ -93,4 +93,4 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
 
 def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_fails():
     with pytest.raises(ValueError, match="'include' must be specified if 'attr_reps' is specified"):
-        AttributePresenceConfig(direction="RESPONSE", attr_reps=[AttrRep(attr="attr")])
+        AttrPresenceConfig(direction="RESPONSE", attr_reps=[AttrRep(attr="attr")])

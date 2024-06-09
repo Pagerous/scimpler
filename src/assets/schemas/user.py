@@ -6,7 +6,7 @@ import phonenumbers
 import precis_i18n
 
 from src.container import SCIMDataContainer
-from src.data.attributes import (
+from src.data.attrs import (
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,

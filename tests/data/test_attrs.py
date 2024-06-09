@@ -11,7 +11,7 @@ from src.container import (
     BoundedAttrRep,
     SCIMDataContainer,
 )
-from src.data.attributes import (
+from src.data.attrs import (
     AttributeUniqueness,
     Binary,
     Boolean,

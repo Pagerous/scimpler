@@ -7,13 +7,13 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import create_search_request_schema
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
-from src.data.attributes import (
+from src.data.attr_presence import AttrPresenceConfig
+from src.data.attrs import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
 )
-from src.data.attributes_presence import AttributePresenceConfig
 from src.data.filter import Filter
 from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.data.sorter import Sorter
@@ -84,7 +84,7 @@ class Error(Validator):
         issues = ValidationIssues()
         body = SCIMDataContainer(body or {})
         issues.merge(
-            self.response_schema.validate(body, AttributePresenceConfig("RESPONSE")),
+            self.response_schema.validate(body, AttrPresenceConfig("RESPONSE")),
             location=body_location,
         )
         status_attr_rep = self.response_schema.attrs.status
@@ -162,14 +162,14 @@ def _validate_resource_output_body(
     status_code: int,
     body: SCIMDataContainer,
     headers: dict[str, Any],
-    presence_config: Optional[AttributePresenceConfig],
+    presence_config: Optional[AttrPresenceConfig],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
     issues.merge(
         schema.validate(
             data=body,
-            presence_config=presence_config or AttributePresenceConfig("RESPONSE"),
+            presence_config=presence_config or AttrPresenceConfig("RESPONSE"),
         ),
         location=body_location,
     )
@@ -325,7 +325,7 @@ class ResourceObjectPUT(Validator):
         issues.merge(
             issues=self._schema.validate(
                 data=body or {},
-                presence_config=AttributePresenceConfig(
+                presence_config=AttrPresenceConfig(
                     "REQUEST",
                     ignore_issuer=[
                         attr_rep for attr_rep, attr in self._schema.attrs if attr.required
@@ -395,7 +395,7 @@ class ResourcesPOST(Validator):
             location=("query_string",),
         )
         issues.merge(
-            issues=self._schema.validate(body, AttributePresenceConfig("REQUEST")),
+            issues=self._schema.validate(body, AttrPresenceConfig("REQUEST")),
             location=("body",),
         )
         return issues
@@ -540,7 +540,7 @@ def _validate_resources_get_response(
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
-    resource_presence_config: Optional[AttributePresenceConfig] = None,
+    resource_presence_config: Optional[AttrPresenceConfig] = None,
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
@@ -549,10 +549,10 @@ def _validate_resources_get_response(
     start_index_rep = schema.attrs.startindex
     start_index_location = body_location + start_index_rep.location
 
-    resource_presence_config = resource_presence_config or AttributePresenceConfig("RESPONSE")
+    resource_presence_config = resource_presence_config or AttrPresenceConfig("RESPONSE")
     issues_ = schema.validate(
         data=body,
-        presence_config=AttributePresenceConfig("RESPONSE"),
+        presence_config=AttrPresenceConfig("RESPONSE"),
         resource_presence_config=resource_presence_config,
     )
     issues.merge(issues_, location=body_location)
@@ -655,7 +655,7 @@ def _is_child_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
     return False
 
 
-def can_validate_filtering(filter_: Filter, presence_config: AttributePresenceConfig) -> bool:
+def can_validate_filtering(filter_: Filter, presence_config: AttrPresenceConfig) -> bool:
     if presence_config.include is None:
         return True
 
@@ -678,7 +678,7 @@ def can_validate_filtering(filter_: Filter, presence_config: AttributePresenceCo
     return True
 
 
-def can_validate_sorting(sorter: Sorter, presence_config: AttributePresenceConfig) -> bool:
+def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) -> bool:
     if not presence_config.attr_reps:
         return True
 
@@ -838,7 +838,7 @@ class ResourceObjectPATCH(Validator):
             location=("query_string",),
         )
         issues.merge(
-            self._schema.validate(body, AttributePresenceConfig("REQUEST")),
+            self._schema.validate(body, AttrPresenceConfig("REQUEST")),
             location=["body"],
         )
         return issues
@@ -960,7 +960,7 @@ class BulkOperations(Validator):
         body_location = ("body",)
         body = SCIMDataContainer(body or {})
         issues.merge(
-            self._request_schema.validate(body, AttributePresenceConfig("REQUEST")),
+            self._request_schema.validate(body, AttrPresenceConfig("REQUEST")),
             location=body_location,
         )
         if not issues.can_proceed(body_location + self._request_schema.attrs.operations.location):
@@ -1015,7 +1015,7 @@ class BulkOperations(Validator):
         body = SCIMDataContainer(body or {})
         body_location = ("body",)
         issues.merge(
-            self._response_schema.validate(body, AttributePresenceConfig("RESPONSE")),
+            self._response_schema.validate(body, AttrPresenceConfig("RESPONSE")),
             location=body_location,
         )
         issues.merge(

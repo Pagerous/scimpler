@@ -1,4 +1,4 @@
-from src.data.attributes import (
+from src.data.attrs import (
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,

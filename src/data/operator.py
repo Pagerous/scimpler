@@ -3,7 +3,7 @@ import operator
 from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
 
 from src.container import AttrRep, Invalid, Missing, SCIMDataContainer
-from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
+from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[BaseSchema, Complex])

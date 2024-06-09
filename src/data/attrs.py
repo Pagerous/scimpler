@@ -556,7 +556,7 @@ class Complex(Attribute):
             if self._multi_valued
             else []
         )
-        self._sub_attributes = Attributes(sub_attributes or default_sub_attrs)
+        self._sub_attributes = Attrs(sub_attributes or default_sub_attrs)
 
         validators = list(validators or [])
         if self._multi_valued:
@@ -570,7 +570,7 @@ class Complex(Attribute):
         self._validators = validators
 
     @property
-    def attrs(self) -> "Attributes":
+    def attrs(self) -> "Attrs":
         return self._sub_attributes
 
     def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
@@ -665,7 +665,7 @@ def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> Validatio
     return issues
 
 
-class Attributes:
+class Attrs:
     def __init__(self, attrs: Optional[Iterable[Attribute]] = None):
         self._attrs = {attr.name: attr for attr in (attrs or [])}
 
@@ -677,13 +677,13 @@ class Attributes:
             attr_name = attr_name.attr
         return self._attrs.get(AttrName(attr_name))
 
-    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "Attributes":
-        cloned = Attributes()
+    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "Attrs":
+        cloned = Attrs()
         cloned._attrs = {key: attr for key, attr in self._attrs.items() if attr_filter(attr)}
         return cloned
 
 
-class BoundedAttributes:
+class BoundedAttrs:
     def __init__(
         self,
         schema: str,
@@ -693,7 +693,7 @@ class BoundedAttributes:
         self._schema = schema
         self._core_attrs: dict[BoundedAttrRep, Attribute] = {}
         self._common_attrs = {AttrName(item) for item in (common_attrs or set())}
-        self._extensions: dict[SchemaURI, BoundedAttributes] = {}
+        self._extensions: dict[SchemaURI, BoundedAttrs] = {}
 
         self._attrs: dict[BoundedAttrRep, Attribute] = {}
         self._bounded_complex_sub_attrs: dict[
@@ -762,22 +762,22 @@ class BoundedAttributes:
         return iter(self._core_attrs.items())
 
     @property
-    def extensions(self) -> dict[str, "BoundedAttributes"]:
+    def extensions(self) -> dict[str, "BoundedAttrs"]:
         return self._extensions
 
-    def extend(self, schema: SchemaURI, attrs: "BoundedAttributes") -> None:
+    def extend(self, schema: SchemaURI, attrs: "BoundedAttrs") -> None:
         self._extensions[schema] = attrs
         for attr_rep, attr in attrs:
             self._attrs[attr_rep] = attr
         self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
 
-    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BoundedAttributes":
+    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BoundedAttrs":
         attrs = (
             attr.clone(attr_filter=attr_filter) if isinstance(attr, Complex) else attr
             for attr_rep, attr in self._attrs.items()
             if not attr_rep.extension and attr_filter(attr)
         )
-        cloned = BoundedAttributes(
+        cloned = BoundedAttrs(
             schema=self._schema,
             attrs=attrs,
             common_attrs=self._common_attrs,

@@ -3,22 +3,22 @@ import warnings
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
 from src.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMDataContainer
-from src.data.attributes import (
+from src.data.attr_presence import (
+    AttrPresenceConfig,
+    DataInclusivity,
+    validate_presence,
+)
+from src.data.attrs import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
     AttributeUniqueness,
-    BoundedAttributes,
+    BoundedAttrs,
     Complex,
     DateTime,
     String,
     URIReference,
-)
-from src.data.attributes_presence import (
-    AttributePresenceConfig,
-    DataInclusivity,
-    validate_presence,
 )
 from src.error import ValidationError, ValidationIssues
 from src.registry import register_schema
@@ -47,7 +47,7 @@ class BaseSchema:
     ):
         schema = SchemaURI(schema)
         register_schema(schema)
-        self._attrs = BoundedAttributes(
+        self._attrs = BoundedAttrs(
             schema=schema,
             attrs=[
                 URIReference(
@@ -64,7 +64,7 @@ class BaseSchema:
         self._schema = schema
 
     @property
-    def attrs(self) -> BoundedAttributes:
+    def attrs(self) -> BoundedAttrs:
         return self._attrs
 
     @property
@@ -119,7 +119,7 @@ class BaseSchema:
     def validate(
         self,
         data: Union[SCIMDataContainer, dict[str, Any]],
-        presence_config: Optional[AttributePresenceConfig] = None,
+        presence_config: Optional[AttrPresenceConfig] = None,
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -180,7 +180,7 @@ class BaseSchema:
     def _validate_data(
         self,
         data: SCIMDataContainer,
-        presence_config: Optional[AttributePresenceConfig] = None,
+        presence_config: Optional[AttrPresenceConfig] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         for attr_rep, attr in self.attrs:
@@ -213,7 +213,7 @@ class BaseSchema:
         attr: Attribute,
         attr_rep: BoundedAttrRep,
         value: Any,
-        presence_config: AttributePresenceConfig,
+        presence_config: AttrPresenceConfig,
         required_by_schema: bool,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -292,7 +292,7 @@ class BaseSchema:
         attr: Attribute,
         attr_rep: BoundedAttrRep,
         value: Any,
-        presence_config: AttributePresenceConfig,
+        presence_config: AttrPresenceConfig,
         required_by_schema: bool,
     ):
         return validate_presence(
@@ -308,7 +308,7 @@ class BaseSchema:
     def _get_inclusivity(
         attr: Attribute,
         attr_rep: BoundedAttrRep,
-        presence_config: AttributePresenceConfig,
+        presence_config: AttrPresenceConfig,
     ) -> Optional[DataInclusivity]:
         if presence_config.include is None:
             # for example "userName" attribute, but not "manager.value"
@@ -602,7 +602,7 @@ class SchemaExtension:
     ):
         self._schema = SchemaURI(schema)
         register_schema(self._schema, True)
-        self._attrs = BoundedAttributes(self._schema, attrs)
+        self._attrs = BoundedAttrs(self._schema, attrs)
         self._name = name
         self._description = description
 
@@ -619,5 +619,5 @@ class SchemaExtension:
         return self._schema
 
     @property
-    def attrs(self) -> BoundedAttributes:
+    def attrs(self) -> BoundedAttrs:
         return self._attrs

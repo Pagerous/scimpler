@@ -15,8 +15,8 @@ from src.assets.schemas import (
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
-from src.data.attributes import DateTime
-from src.data.attributes_presence import AttributePresenceConfig
+from src.data.attr_presence import AttrPresenceConfig
+from src.data.attrs import DateTime
 from src.data.filter import Filter
 from src.data.operator import Present
 from src.data.patch_path import PatchPath
@@ -444,7 +444,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
             "Location": user_data_server["meta"]["location"],
             "ETag": user_data_server["meta"]["version"],
         },
-        presence_config=AttributePresenceConfig(
+        presence_config=AttrPresenceConfig(
             direction="RESPONSE",
             attr_reps=[AttrRep(attr="name")],
             include=False,
@@ -744,7 +744,7 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
         count=2,
         filter_=Filter(Present(AttrRep(attr="username"))),
         sorter=Sorter(AttrRep(attr="userName"), True),
-        presence_config=AttributePresenceConfig(
+        presence_config=AttrPresenceConfig(
             direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
         ),
     )
@@ -954,7 +954,7 @@ def test_search_request_post_request_data_can_be_deserialized():
 
     assert isinstance(data.get("filter"), Filter)
     assert isinstance(data.get("sorter"), Sorter)
-    assert isinstance(data.get("presence_config"), AttributePresenceConfig)
+    assert isinstance(data.get("presence_config"), AttrPresenceConfig)
     assert data.get("count") == 10
     assert data.get("startIndex") == 2
 
@@ -1139,7 +1139,7 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
     issues = validator.validate_response(
         status_code=204,
         body=None,
-        presence_config=AttributePresenceConfig(
+        presence_config=AttrPresenceConfig(
             direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
         ),
     )
@@ -1187,7 +1187,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
             "id": "1",
             "userName": "bjensen",
         },
-        presence_config=AttributePresenceConfig(
+        presence_config=AttrPresenceConfig(
             direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
         ),
         headers={"ETag": 'W/"3694e05e9dff591"'},
@@ -1899,21 +1899,21 @@ def test_resource_types_response_can_be_validated():
     (
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
             ),
             True,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="userName"), AttrRep(attr="name")],
                 include=True,
@@ -1922,21 +1922,21 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             True,
         ),
         (
             Filter.deserialize("name pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="display")],
                 include=True,
@@ -1945,21 +1945,21 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
             ),
             False,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             True,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="userName"), AttrRep(attr="name")],
                 include=False,
@@ -1968,21 +1968,21 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             False,
         ),
         (
             Filter.deserialize("name pr"),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="display")],
                 include=False,
@@ -1998,7 +1998,7 @@ def test_can_validate_filtering(filter_, checker, expected):
 def test_can_validate_filtering_with_bounded_attributes():
     assert can_validate_filtering(
         filter_=Filter.deserialize("urn:ietf:params:scim:schemas:core:2.0:User:name pr"),
-        presence_config=AttributePresenceConfig(
+        presence_config=AttrPresenceConfig(
             direction="RESPONSE",
             attr_reps=[
                 BoundedAttrRep(
@@ -2015,7 +2015,7 @@ def test_can_validate_filtering_with_bounded_attributes():
         filter_=Filter.deserialize(
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:nonExisting pr"
         ),
-        presence_config=AttributePresenceConfig(
+        presence_config=AttrPresenceConfig(
             direction="RESPONSE",
             attr_reps=[
                 BoundedAttrRep(
@@ -2034,28 +2034,28 @@ def test_can_validate_filtering_with_bounded_attributes():
     (
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
             ),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name", sub_attr="formatted")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
                 include=True,
@@ -2064,28 +2064,28 @@ def test_can_validate_filtering_with_bounded_attributes():
         ),
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
             ),
             False,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name", sub_attr="formatted")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             False,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name")),
-            AttributePresenceConfig(
+            AttrPresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
                 include=False,

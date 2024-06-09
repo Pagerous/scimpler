@@ -1,8 +1,8 @@
 from typing import Any, Optional, Union
 
 from src.container import Invalid, Missing, SCIMDataContainer
-from src.data.attributes import AttributeMutability, Complex, String, Unknown
-from src.data.attributes_presence import validate_presence
+from src.data.attr_presence import validate_presence
+from src.data.attrs import AttributeMutability, Complex, String, Unknown
 from src.data.patch_path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues

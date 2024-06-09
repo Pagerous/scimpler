@@ -4,7 +4,7 @@ import pytest
 
 from src.assets.schemas import User
 from src.container import AttrRep, SCIMDataContainer
-from src.data.attributes import Attribute, Complex, DateTime, String
+from src.data.attrs import Attribute, Complex, DateTime, String
 from src.data.operator import (
     And,
     ComplexAttributeOperator,

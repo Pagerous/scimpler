@@ -3,7 +3,7 @@ from copy import deepcopy
 from typing import Any
 
 from src.container import Missing, SCIMDataContainer
-from src.data.attributes import Complex, ExternalReference, Integer, String, Unknown
+from src.data.attrs import Complex, ExternalReference, Integer, String, Unknown
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
 

@@ -3,8 +3,8 @@ from typing import Iterable, Optional
 from marshmallow import Schema, fields, post_dump
 
 from src.assets.schemas import ListResponse
-from src.container import AttrName, AttrRep, BoundedAttrRep
-from src.data.attributes import (
+from src.container import AttrName, BoundedAttrRep
+from src.data.attrs import (
     Attribute,
     AttributeReturn,
     Binary,

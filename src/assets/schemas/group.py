@@ -1,4 +1,4 @@
-from src.data.attributes import AttributeMutability, Complex, SCIMReference, String
+from src.data.attrs import AttributeMutability, Complex, SCIMReference, String
 from src.data.schemas import ResourceSchema
 
 Group = ResourceSchema(

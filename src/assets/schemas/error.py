@@ -1,8 +1,6 @@
-from src.container import SchemaURI
-from src.data.attributes import AttributeReturn, String
+from src.data.attrs import AttributeReturn, String
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
-from src.registry import register_schema
 
 
 def validate_error_status(value: str) -> ValidationIssues:

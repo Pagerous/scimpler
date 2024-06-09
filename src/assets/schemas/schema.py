@@ -1,7 +1,7 @@
 from typing import Any, Optional, Union
 
 from src.container import Missing, SCIMDataContainer
-from src.data.attributes import (
+from src.data.attrs import (
     AttributeIssuer,
     AttributeMutability,
     Boolean,

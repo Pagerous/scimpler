@@ -8,7 +8,7 @@ from src.container import (
     BoundedAttrRep,
     SCIMDataContainer,
 )
-from src.data.attributes import Complex
+from src.data.attrs import Complex
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, LogicalOperator
 from src.data.schemas import BaseSchema
