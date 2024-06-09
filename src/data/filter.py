@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Generic, TypeAlias, TypeVar, Union
 
-from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
+from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMDataContainer
 from src.data import operator as op
 from src.data.attributes import Complex
 from src.data.schemas import BaseSchema
@@ -64,6 +64,9 @@ class Filter(Generic[TOperator]):
     def _get_attr_reps(operator):
         reps = []
 
+        def get_sub_attr_name(sub_rep_):
+            return sub_rep_.sub_attr or sub_rep_.attr
+
         def extend_reps(reps_):
             for rep_ in reps_:
                 if rep_ not in reps:
@@ -73,14 +76,26 @@ class Filter(Generic[TOperator]):
             reps.append(operator.attr_rep)
         elif isinstance(operator, op.ComplexAttributeOperator):
             rep = operator.attr_rep
-            sub_reps = [
-                BoundedAttrRep(
-                    schema=rep.schema if isinstance(rep, BoundedAttrRep) else "",
-                    attr=rep.attr,
-                    sub_attr=sub_rep.attr,
-                )
-                for sub_rep in Filter._get_attr_reps(operator.sub_operator)
-            ]
+            if isinstance(rep, BoundedAttrRep):
+                sub_reps = [
+                    BoundedAttrRep(
+                        schema=rep.schema,
+                        extension=rep.extension,
+                        attr=rep.attr,
+                        sub_attr=get_sub_attr_name(sub_rep),
+                    )
+                    for sub_rep in Filter._get_attr_reps(operator.sub_operator)
+                ]
+            elif isinstance(rep, AttrRep):
+                sub_reps = [
+                    AttrRep(attr=rep.attr, sub_attr=get_sub_attr_name(sub_rep))
+                    for sub_rep in Filter._get_attr_reps(operator.sub_operator)
+                ]
+            else:
+                sub_reps = [
+                    AttrRep(attr=rep, sub_attr=get_sub_attr_name(sub_rep))
+                    for sub_rep in Filter._get_attr_reps(operator.sub_operator)
+                ]
             extend_reps(sub_reps)
 
         elif isinstance(operator, op.Not):
@@ -133,8 +148,8 @@ class Filter(Generic[TOperator]):
                             proceed=False,
                         )
                     try:
-                        attr_rep = BoundedAttrRep.deserialize(complex_attr_rep)
-                        if attr_rep.sub_attr:
+                        attr_rep = AttrRepFactory.deserialize(complex_attr_rep)
+                        if isinstance(attr_rep, AttrRep) and attr_rep.sub_attr:
                             issues_.add_error(
                                 issue=ValidationError.complex_sub_attribute(
                                     attr=attr_rep.attr, sub_attr=attr_rep.sub_attr
@@ -353,7 +368,7 @@ class Filter(Generic[TOperator]):
                         proceed=False,
                     )
             attr_rep = decode_placeholders(components[0], placeholders)
-            issues.merge(BoundedAttrRep.validate(attr_rep))
+            issues.merge(AttrRepFactory.validate(attr_rep))
             return issues
 
         elif len(components) == 3:
@@ -367,7 +382,7 @@ class Filter(Generic[TOperator]):
                     proceed=False,
                 )
             attr_rep = decode_placeholders(components[0], placeholders)
-            issues.merge(BoundedAttrRep.validate(attr_rep))
+            issues.merge(AttrRepFactory.validate(attr_rep))
             value = decode_placeholders(components[2], placeholders)
             try:
                 value = deserialize_comparison_value(value)
@@ -415,9 +430,7 @@ class Filter(Generic[TOperator]):
             return output
 
         if isinstance(operator, op.ComplexAttributeOperator):
-            return (
-                f"{operator.attr_rep.attr_with_schema}[{Filter._serialize(operator.sub_operator)}]"
-            )
+            return f"{operator.attr_rep}[{Filter._serialize(operator.sub_operator)}]"
 
         if isinstance(operator, op.Not):
             return f"{operator.SCIM_OP} {Filter._serialize(operator.sub_operator)}"
@@ -434,16 +447,16 @@ class Filter(Generic[TOperator]):
     def deserialize(cls, filter_exp: str) -> "Filter":
         try:
             return cls._deserialize(filter_exp)
-        except Exception:
-            raise ValueError("invalid filter expression")
+        except Exception as e:
+            raise ValueError("invalid filter expression", e)
 
     @classmethod
     def _deserialize(cls, filter_exp: str) -> "Filter":
         filter_exp, placeholders = encode_strings(filter_exp)
         for match in COMPLEX_OPERATOR_REGEX.finditer(filter_exp):
             complex_attr_rep = match.group(1)
-            attr_rep = BoundedAttrRep.deserialize(complex_attr_rep)
-            if attr_rep.sub_attr:
+            attr_rep = AttrRepFactory.deserialize(complex_attr_rep)
+            if isinstance(attr_rep, AttrRep) and attr_rep.sub_attr:
                 raise
             sub_op_exp = match.group(2)
             deserialized_sub_op = Filter._deserialize_operator(
@@ -558,20 +571,16 @@ class Filter(Generic[TOperator]):
         if len(components) == 2:
             op_exp = components[1].lower()
             op_ = unary_operators[op_exp]
-            attr_rep = BoundedAttrRep.deserialize(components[0])
-            if in_complex_group:
-                attr_rep = AttrRep(attr_rep.sub_attr or attr_rep.attr)
-            elif attr_rep.sub_attr:
-                return op_(attr_rep)
+            attr_rep = AttrRepFactory.deserialize(components[0])
+            if in_complex_group and isinstance(attr_rep, AttrRep):
+                attr_rep = AttrRep(attr=attr_rep.sub_attr or attr_rep.attr)
             return op_(attr_rep)
         op_ = binary_operators.get(components[1].lower())
         value = deserialize_comparison_value(decode_placeholders(components[2], placeholders))
 
-        attr_rep = BoundedAttrRep.deserialize(components[0])
-        if in_complex_group:
-            attr_rep = AttrRep(attr_rep.sub_attr or attr_rep.attr)
-        elif attr_rep.sub_attr:
-            return op_(attr_rep, value)
+        attr_rep = AttrRepFactory.deserialize(components[0])
+        if in_complex_group and isinstance(attr_rep, AttrRep):
+            attr_rep = AttrRep(attr=attr_rep.sub_attr or attr_rep.attr)
         return op_(attr_rep, value)
 
     def __call__(
@@ -608,7 +617,7 @@ class Filter(Generic[TOperator]):
         if isinstance(operator, op.ComplexAttributeOperator):
             return {
                 "op": "complex",
-                "attr_rep": operator.attr_rep.attr_with_schema,
+                "attr_rep": str(operator.attr_rep),
                 "sub_op": Filter._to_dict(operator.sub_operator),
             }
 

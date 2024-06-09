@@ -1,7 +1,8 @@
 import pytest
 
 from src.assets.schemas import group, list_response, user
-from src.container import SCIMDataContainer
+from src.container import AttrRep, SCIMDataContainer
+from src.data.attributes_presence import AttributePresenceConfig
 
 
 def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):
@@ -39,7 +40,7 @@ def test_resources_validation_fails_if_bad_type(list_user_data):
         }
     }
 
-    issues = schema.validate(list_user_data)
+    issues = schema.validate(list_user_data, AttributePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected_issues
 
@@ -51,7 +52,7 @@ def test_resources_validation_succeeds_for_correct_data(list_user_data):
     list_user_data["Resources"][0]["unexpected"] = 123
     list_user_data["Resources"][1]["name"]["unexpected"] = 123
 
-    issues = schema.validate(list_user_data)
+    issues = schema.validate(list_user_data, AttributePresenceConfig("RESPONSE"))
 
     assert issues.to_dict(msg=True) == {}
 
@@ -69,7 +70,7 @@ def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(list
         },
     }
 
-    issues = schema.validate(list_user_data)
+    issues = schema.validate(list_user_data, AttributePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected
 
@@ -83,7 +84,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data
         },
     }
 
-    issues = schema.validate(list_user_data)
+    issues = schema.validate(list_user_data, AttributePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected
 
@@ -264,7 +265,7 @@ def test_bad_resources_type_is_validated(user_data_client):
     }
     expected_issues = {"Resources": {"_errors": [{"code": 2}]}}
 
-    issues = schema.validate(data)
+    issues = schema.validate(data, AttributePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected_issues
 
@@ -287,3 +288,41 @@ def test_no_schema_is_inferred_for_resource_with_unknown_schemas_and_many_schema
 
     assert len(schemas) == 1
     assert schemas[0] is None
+
+
+def test_validate_resources_attribute_presence__fails_if_requested_attribute_not_excluded(
+    list_user_data,
+):
+    expected = {
+        "Resources": {
+            "0": {
+                "name": {
+                    "_errors": [
+                        {
+                            "code": 7,
+                        }
+                    ]
+                }
+            },
+            "1": {
+                "name": {
+                    "_errors": [
+                        {
+                            "code": 7,
+                        }
+                    ]
+                }
+            },
+        }
+    }
+
+    issues = list_response.ListResponse([user.User]).validate(
+        list_user_data,
+        resource_presence_config=AttributePresenceConfig(
+            direction="RESPONSE",
+            attr_reps=[AttrRep(attr="name")],
+            include=False,
+        ),
+    )
+
+    assert issues.to_dict() == expected

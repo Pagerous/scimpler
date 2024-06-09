@@ -1,6 +1,7 @@
 import pytest
 
 from src.assets.schemas import Error
+from src.data.attributes_presence import AttributePresenceConfig
 
 
 @pytest.mark.parametrize(
@@ -13,6 +14,6 @@ from src.assets.schemas import Error
     ),
 )
 def test_error_status_is_validated(value, expected_issues):
-    issues = Error.validate({"status": value})
+    issues = Error.validate({"status": value}, AttributePresenceConfig("RESPONSE"))
 
     assert issues.get(location=["status"]).to_dict() == expected_issues

@@ -2,11 +2,11 @@ import abc
 import operator
 from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
 
-from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
-TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[])
+TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[BaseSchema, Complex])
 
 
 class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
@@ -106,17 +106,14 @@ class Not(LogicalOperator):
         return not match
 
 
-TAttrRep = TypeVar("TAttrRep", bound=Union[AttrRep, BoundedAttrRep])
-
-
 class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
     SCIM_OP = None
 
-    def __init__(self, attr_rep: TAttrRep):
+    def __init__(self, attr_rep: AttrRep):
         self._attr_rep = attr_rep
 
     @property
-    def attr_rep(self) -> TAttrRep:
+    def attr_rep(self) -> AttrRep:
         return self._attr_rep
 
     @abc.abstractmethod
@@ -138,7 +135,6 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         value: Any,
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        _ensure_correct_obj(schema_or_complex, self._attr_rep)
         attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None:
             return False
@@ -191,7 +187,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     SUPPORTED_TYPES: set[type]
     OPERATOR: Callable[[Any, Any], bool]
 
-    def __init__(self, attr_rep: TAttrRep, value: T2):
+    def __init__(self, attr_rep: AttrRep, value: T2):
         super().__init__(attr_rep=attr_rep)
         if type(value) not in self.SUPPORTED_TYPES:
             raise TypeError(
@@ -251,7 +247,6 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         value: Any,
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        _ensure_correct_obj(schema_or_complex, self._attr_rep)
         attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None:
             return False
@@ -368,17 +363,17 @@ TComplexAttributeSubOperator = TypeVar(
 )
 
 
-class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
+class ComplexAttributeOperator:
     def __init__(
         self,
-        attr_rep: TAttrRep,
+        attr_rep: AttrRep,
         sub_operator: TComplexAttributeSubOperator,
     ):
         self._attr_rep = attr_rep
         self._sub_operator = sub_operator
 
     @property
-    def attr_rep(self) -> TAttrRep:
+    def attr_rep(self) -> AttrRep:
         return self._attr_rep
 
     @property
@@ -392,7 +387,6 @@ class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
         ],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        _ensure_correct_obj(schema_or_complex, self._attr_rep)
         attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None or not isinstance(attr, Complex):
             return False
@@ -426,10 +420,3 @@ class ComplexAttributeOperator(Generic[TSchemaOrComplex]):
             if match:
                 return True
         return False
-
-
-def _ensure_correct_obj(schema_or_complex: TSchemaOrComplex, attr_rep: TAttrRep):
-    if isinstance(schema_or_complex, BaseSchema) and not isinstance(attr_rep, BoundedAttrRep):
-        raise TypeError(f"BoundedAttrRep can be handled by BaseSchema only")
-    elif isinstance(schema_or_complex, Complex) and not isinstance(attr_rep, AttrRep):
-        raise TypeError(f"AttrRep can be handled by Complex attribute only")

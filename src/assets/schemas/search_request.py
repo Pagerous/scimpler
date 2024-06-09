@@ -1,9 +1,15 @@
 from typing import Any
 
 from src.assets.config import ServiceProviderConfig
-from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import (
+    AttrName,
+    AttrRepFactory,
+    BoundedAttrRep,
+    Missing,
+    SCIMDataContainer,
+)
 from src.data.attributes import Integer, String
-from src.data.attributes_presence import AttributePresenceValidator
+from src.data.attributes_presence import AttributePresenceConfig
 from src.data.filter import Filter
 from src.data.schemas import BaseSchema
 from src.data.sorter import Sorter
@@ -13,12 +19,12 @@ from src.error import ValidationError, ValidationIssues
 def validate_attr_reps(value: list[str]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        issues.merge(issues=BoundedAttrRep.validate(item), location=(i,))
+        issues.merge(issues=AttrRepFactory.validate(item), location=(i,))
     return issues
 
 
 def deserialize_attr_reps(value: list[str]) -> list[BoundedAttrRep]:
-    return [BoundedAttrRep.deserialize(item) for item in value]
+    return [AttrRepFactory.deserialize(item) for item in value]
 
 
 def _process_start_index(value: int) -> int:
@@ -57,8 +63,8 @@ class SearchRequest(BaseSchema):
                 ),
                 String(
                     name="sortBy",
-                    validators=[BoundedAttrRep.validate],
-                    deserializer=BoundedAttrRep.deserialize,
+                    validators=[AttrRepFactory.validate],
+                    deserializer=AttrRepFactory.deserialize,
                 ),
                 String(
                     name="sortOrder",
@@ -75,41 +81,39 @@ class SearchRequest(BaseSchema):
 
     def deserialize(self, data: Any) -> SCIMDataContainer:
         data = super().deserialize(data)
-        to_include = data.pop(self.attrs.attributes.rep)
-        to_exclude = data.pop(self.attrs.excludeattributes.rep)
+        to_include = data.pop(self.attrs.attributes)
+        to_exclude = data.pop(self.attrs.excludeattributes)
         if to_include or to_exclude:
             data.set(
-                "presence_validator",
-                AttributePresenceValidator(
-                    attr_reps=to_include or to_exclude, include=bool(to_include)
+                "presence_config",
+                AttributePresenceConfig(
+                    "RESPONSE", attr_reps=to_include or to_exclude, include=bool(to_include)
                 ),
             )
-        if sort_by_ := data.pop(self.attrs.sortby.rep):
+        if sort_by_ := data.pop(self.attrs.sortby):
             data.set(
                 "sorter",
                 Sorter(
                     attr_rep=sort_by_,
-                    asc=data.pop(self.attrs.sortorder.rep) == "ascending",
+                    asc=data.pop(self.attrs.sortorder) == "ascending",
                 ),
             )
         return data
 
-    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
-        to_include = data.get(self.attrs.attributes.rep)
-        to_exclude = data.get(self.attrs.excludeattributes.rep)
+        to_include = data.get(self.attrs.attributes)
+        to_exclude = data.get(self.attrs.excludeattributes)
         if to_include not in [None, Missing] and to_exclude not in [None, Missing]:
             issues.add_error(
-                issue=ValidationError.can_not_be_used_together(
-                    self.attrs.excludeattributes.rep.attr
-                ),
+                issue=ValidationError.can_not_be_used_together("attributes"),
                 proceed=False,
-                location=(self.attrs.attributes.rep.attr,),
+                location=["attributes"],
             )
             issues.add_error(
-                issue=ValidationError.can_not_be_used_together(self.attrs.attributes.rep.attr),
+                issue=ValidationError.can_not_be_used_together("excludeAttributes"),
                 proceed=False,
-                location=(self.attrs.excludeattributes.rep.attr,),
+                location=["excludeAttributes"],
             )
         return issues
 
@@ -117,8 +121,8 @@ class SearchRequest(BaseSchema):
 def create_search_request_schema(config: ServiceProviderConfig) -> SearchRequest:
     exclude = set()
     if not config.filter.supported:
-        exclude.add("filter")
+        exclude.add(AttrName("filter"))
     if not config.sort.supported:
-        exclude.add("sortBy")
-        exclude.add("sortOrder")
-    return SearchRequest().clone(lambda attr: attr.rep.attr not in exclude)
+        exclude.add(AttrName("sortBy"))
+        exclude.add(AttrName("sortOrder"))
+    return SearchRequest().clone(lambda attr: attr.name not in exclude)

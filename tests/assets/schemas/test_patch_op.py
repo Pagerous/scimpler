@@ -1,8 +1,9 @@
 import pytest
 
 from src.assets.schemas import User, patch_op, user
-from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.container import AttrName, AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attributes import AttributeMutability, String
+from src.data.attributes_presence import AttributePresenceConfig
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.patch_path import PatchPath
@@ -37,7 +38,7 @@ from tests.conftest import SchemaForTests
     ),
 )
 def test_validate_patch_operations(value, expected_issues):
-    issues = patch_op.PatchOp(User).attrs.operations.validate(value)
+    issues = patch_op.PatchOp(User).attrs.get("operations").validate(value)
 
     assert issues.to_dict() == expected_issues
 
@@ -47,27 +48,27 @@ def test_validate_patch_operations(value, expected_issues):
     (
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="nonexisting"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="nonexisting"),
+                sub_attr_name=None,
                 filter_=None,
             ),
             {"_errors": [{"code": 28}]},
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="non"),
-                sub_attr_rep=AttrRep(attr="existing"),
+                attr_rep=AttrRep(attr="non"),
+                sub_attr_name=AttrName("existing"),
                 filter_=None,
             ),
             {"_errors": [{"code": 28}]},
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="emails"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="emails"),
+                sub_attr_name=None,
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="emails"),
+                        attr_rep=AttrRep(attr="emails"),
                         sub_operator=Equal(
                             attr_rep=AttrRep(attr="nonexisting"),
                             value="whatever",
@@ -79,11 +80,11 @@ def test_validate_patch_operations(value, expected_issues):
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="emails"),
-                sub_attr_rep=AttrRep(attr="nonexisting"),
+                attr_rep=AttrRep(attr="emails"),
+                sub_attr_name=AttrName("nonexisting"),
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="emails"),
+                        attr_rep=AttrRep(attr="emails"),
                         sub_operator=Equal(attr_rep=AttrRep(attr="type"), value="whatever"),
                     ),
                 ),
@@ -92,11 +93,11 @@ def test_validate_patch_operations(value, expected_issues):
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="name"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="name"),
+                sub_attr_name=None,
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="name"),
+                        attr_rep=AttrRep(attr="name"),
                         sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="whatever"),
                     ),
                 ),
@@ -105,11 +106,11 @@ def test_validate_patch_operations(value, expected_issues):
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="emails"),
-                sub_attr_rep=AttrRep(attr="value"),
+                attr_rep=AttrRep(attr="emails"),
+                sub_attr_name=AttrName("value"),
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="emails"),
+                        attr_rep=AttrRep(attr="emails"),
                         sub_operator=Equal(
                             attr_rep=AttrRep(attr="type"),
                             value="work",
@@ -121,11 +122,11 @@ def test_validate_patch_operations(value, expected_issues):
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="emails"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="emails"),
+                sub_attr_name=None,
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="emails"),
+                        attr_rep=AttrRep(attr="emails"),
                         sub_operator=Equal(attr_rep=AttrRep(attr="type"), value="work"),
                     )
                 ),
@@ -134,16 +135,16 @@ def test_validate_patch_operations(value, expected_issues):
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="name"),
-                sub_attr_rep=AttrRep(attr="familyName"),
+                attr_rep=AttrRep(attr="name"),
+                sub_attr_name=AttrName("familyName"),
                 filter_=None,
             ),
             {},
         ),
         (
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="name"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="name"),
+                sub_attr_name=None,
                 filter_=None,
             ),
             {},
@@ -206,7 +207,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
         ],
     }
 
-    issues = schema.validate(input_data)
+    issues = schema.validate(input_data, AttributePresenceConfig("REQUEST"))
     assert issues.to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
@@ -253,7 +254,7 @@ def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_da
         }
     }
 
-    issues = schema.validate(input_data)
+    issues = schema.validate(input_data, AttributePresenceConfig("REQUEST"))
     assert issues.to_dict() == expected_issues
 
 
@@ -270,19 +271,10 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
         ],
     }
     expected_issues = {
-        "Operations": {
-            "0": {
-                "value": {
-                    "meta": {
-                        "_errors": [{"code": 29}],
-                        "resourceType": {"_errors": [{"code": 8}, {"code": 29}]},
-                    },
-                }
-            }
-        }
+        "Operations": {"0": {"value": {"meta": {"resourceType": {"_errors": [{"code": 29}]}}}}}
     }
 
-    issues = schema.validate(input_data)
+    issues = schema.validate(input_data, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -357,7 +349,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
     }
     expected_issues = {"Operations": {"0": {"value": expected_value_issues}}}
 
-    issues = schema.validate(input_data)
+    issues = schema.validate(input_data, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -369,8 +361,8 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
         (
             "userName",
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="userName"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="userName"),
+                sub_attr_name=None,
                 filter_=None,
             ),
             "bjensen",
@@ -379,8 +371,8 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
         (
             "name.formatted",
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="name"),
-                sub_attr_rep=AttrRep(attr="formatted"),
+                attr_rep=AttrRep(attr="name"),
+                sub_attr_name=AttrName("formatted"),
                 filter_=None,
             ),
             "Jan Kowalski",
@@ -389,8 +381,8 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
         (
             "name",
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="name"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="name"),
+                sub_attr_name=None,
                 filter_=None,
             ),
             {"formatted": "Jan Kowalski", "familyName": "Kowalski"},
@@ -399,8 +391,8 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
         (
             "emails",
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="emails"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="emails"),
+                sub_attr_name=None,
                 filter_=None,
             ),
             [{"type": "work", "value": "work@example.com"}],
@@ -409,11 +401,11 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
         (
             'emails[type eq "work"].value',
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="emails"),
-                sub_attr_rep=AttrRep(attr="value"),
+                attr_rep=AttrRep(attr="emails"),
+                sub_attr_name=AttrName("value"),
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="emails"),
+                        attr_rep=AttrRep(attr="emails"),
                         sub_operator=Equal(
                             attr_rep=AttrRep(attr="type"),
                             value="work",
@@ -427,11 +419,11 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
         (
             'emails[type eq "work"]',
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="emails"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="emails"),
+                sub_attr_name=None,
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="emails"),
+                        attr_rep=AttrRep(attr="emails"),
                         sub_operator=Equal(
                             attr_rep=AttrRep(attr="type"),
                             value="work",
@@ -459,7 +451,7 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
         ],
     }
 
-    issues = schema.validate(input_data)
+    issues = schema.validate(input_data, AttributePresenceConfig("REQUEST"))
     assert issues.to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
@@ -495,7 +487,7 @@ def test_add_operation__fails_if_attribute_is_readonly(op, path, value):
     }
     expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 29}]}}}}
 
-    issues = schema.validate(input_data)
+    issues = schema.validate(input_data, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -526,7 +518,7 @@ def test_remove_operation__succeeds_if_correct_path(path):
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
-    assert schema.validate(input_data).to_dict(msg=True) == {}
+    assert schema.validate(input_data, AttributePresenceConfig("REQUEST")).to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
@@ -549,7 +541,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
-    assert schema.validate(input_data).to_dict(msg=True) == {}
+    assert schema.validate(input_data, AttributePresenceConfig("REQUEST")).to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
@@ -590,16 +582,22 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
     }
     expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
 
-    assert schema.validate(input_data).to_dict() == expected_issues
+    assert (
+        schema.validate(input_data, AttributePresenceConfig("REQUEST")).to_dict() == expected_issues
+    )
     assert schema.deserialize(input_data).to_dict() == expected_data
 
 
 def test_validate_empty_body():
     schema = patch_op.PatchOp(resource_schema=user.User)
+    expected_issues = {
+        "schemas": {"_errors": [{"code": 5}]},
+        "Operations": {"_errors": [{"code": 5}]},
+    }
 
-    issues = schema.validate({})
+    issues = schema.validate({}, AttributePresenceConfig("REQUEST"))
 
-    assert issues.to_dict() == {}
+    assert issues.to_dict() == expected_issues
 
 
 def test_value_is_removed_if_remove_operation_during_deserialization():
@@ -656,7 +654,7 @@ def test_operation_value_is_not_validated_if_bad_path():
         }
     }
 
-    issues = schema.validate(data)
+    issues = schema.validate(data, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -688,7 +686,7 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
         }
     }
 
-    issues = schema.validate(data)
+    issues = schema.validate(data, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -723,7 +721,7 @@ def test_operation_value_is_validated_against_mutability_for_attribute_in_extens
         }
     }
 
-    issues = schema.validate(data)
+    issues = schema.validate(data, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -749,6 +747,6 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
         "Operations": {"0": {"value": {"displayName": {"_errors": [{"code": 29}]}}}},
     }
 
-    issues = schema.validate(data)
+    issues = schema.validate(data, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues

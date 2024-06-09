@@ -15,7 +15,9 @@ from src.container import (
     (
         (AttrRep(attr="id"), "2819c223-7f76-453a-919d-413861904646"),
         (
-            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User", extension=True, attr="userName"
+            ),
             "bjensen@example.com",
         ),
         (
@@ -23,16 +25,17 @@ from src.container import (
             "bjensen@example.com",
         ),
         (
-            BoundedAttrRep(attr="meta", sub_attr="resourceType"),
+            AttrRep(attr="meta", sub_attr="resourceType"),
             "User",
         ),
         (
-            BoundedAttrRep(attr="name", sub_attr="givenName"),
+            AttrRep(attr="name", sub_attr="givenName"),
             "Barbara",
         ),
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=True,
                 attr="name",
                 sub_attr="familyName",
             ),
@@ -41,13 +44,14 @@ from src.container import (
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=True,
                 attr="name",
                 sub_attr="familyName",
             ),
             "Jensen",
         ),
         (
-            BoundedAttrRep(
+            AttrRep(
                 attr="emails",
                 sub_attr="type",
             ),
@@ -56,6 +60,7 @@ from src.container import (
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                extension=True,
                 attr="employeeNumber",
             ),
             "1",
@@ -63,6 +68,7 @@ from src.container import (
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                extension=True,
                 attr="manager",
                 sub_attr="displayName",
             ),
@@ -86,7 +92,11 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             {"id": "2819c223-7f76-453a-919d-413861904646"},
         ),
         (
-            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=False,
+                attr="userName",
+            ),
             "bjensen@example.com",
             False,
             {"userName": "bjensen@example.com"},
@@ -98,7 +108,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             {"userName": "bjensen@example.com"},
         ),
         (
-            BoundedAttrRep(attr="meta", sub_attr="resourceType"),
+            AttrRep(attr="meta", sub_attr="resourceType"),
             "User",
             False,
             {"meta": {"resourceType": "User"}},
@@ -106,6 +116,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=False,
                 attr="meta",
                 sub_attr="resourceType",
             ),
@@ -116,6 +127,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=False,
                 attr="emails",
                 sub_attr="type",
             ),
@@ -126,6 +138,7 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=False,
                 attr="emails",
                 sub_attr="type",
             ),
@@ -324,82 +337,64 @@ def test_attr_rep_can_be_compared():
 
 def test_bounded_attr_creation_fails_if_bad_attr_name():
     with pytest.raises(ValueError, match="is not valid attr name"):
-        BoundedAttrRep(attr="bad^attr")
+        BoundedAttrRep(
+            schema="urn:ietf:params:scim:schemas:core:2.0:User",
+            extension=False,
+            attr="bad^attr",
+        )
 
 
 def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
-    with pytest.raises(ValueError, match="is not valid attr / sub-attr name"):
-        BoundedAttrRep(attr="attr", sub_attr="bad^sub^attr")
-
-
-def test_bounded_attr_creation_fails_if_no_schema_for_extension():
-    with pytest.raises(ValueError, match="schema required for attribute from extension"):
-        BoundedAttrRep(attr="attr", sub_attr="sub_attr", extension=True)
+    with pytest.raises(ValueError, match="'.*' is not valid attr name"):
+        BoundedAttrRep(
+            schema="urn:ietf:params:scim:schemas:core:2.0:User",
+            extension=False,
+            attr="attr",
+            sub_attr="bad^sub^attr",
+        )
 
 
 @pytest.mark.parametrize(
     ("attr_1", "attr_2", "expected"),
     (
-        (BoundedAttrRep(attr="attr"), BoundedAttrRep(attr="ATTR"), True),
-        (BoundedAttrRep(attr="abc"), BoundedAttrRep(attr="cba"), False),
-        (BoundedAttrRep(schema="my:schema", attr="attr"), BoundedAttrRep(attr="Attr"), True),
+        (AttrRep(attr="attr"), AttrRep(attr="ATTR"), True),
+        (AttrRep(attr="abc"), AttrRep(attr="cba"), False),
         (
-            BoundedAttrRep(schema="my:schema", attr="attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr"),
+            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
+            AttrRep(attr="Attr"),
             True,
         ),
         (
-            BoundedAttrRep(schema="my:schema", attr="attr"),
-            BoundedAttrRep(schema="MY:OTHER:SCHEMA", attr="Attr"),
-            False,
-        ),
-        (
-            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="SUB_ATTR"),
+            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", extension=False, attr="Attr"),
             True,
         ),
         (
-            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="OTHER_SUB_ATTR"),
+            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
+            BoundedAttrRep(schema="MY:OTHER:SCHEMA", extension=False, attr="Attr"),
             False,
         ),
-        (BoundedAttrRep(attr="attr"), AttrRep(attr="attr"), False),
+        (
+            BoundedAttrRep(schema="my:schema", extension=False, attr="attr", sub_attr="sub_attr"),
+            BoundedAttrRep(schema="MY:SCHEMA", extension=False, attr="Attr", sub_attr="SUB_ATTR"),
+            True,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", extension=False, attr="attr", sub_attr="sub_attr"),
+            BoundedAttrRep(
+                schema="MY:SCHEMA", extension=False, attr="Attr", sub_attr="OTHER_SUB_ATTR"
+            ),
+            False,
+        ),
+        (
+            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
+            AttrRep(attr="attr"),
+            True,
+        ),
     ),
 )
 def test_bounded_attr_can_be_compared(attr_1, attr_2, expected):
     assert (attr_1 == attr_2) is expected
-
-
-@pytest.mark.parametrize(
-    ("attr_1", "attr_2", "expected"),
-    (
-        (BoundedAttrRep(attr="attr"), BoundedAttrRep(attr="ATTR"), True),
-        (BoundedAttrRep(attr="abc"), BoundedAttrRep(attr="cba"), False),
-        (BoundedAttrRep(schema="my:schema", attr="attr"), BoundedAttrRep(attr="Attr"), True),
-        (
-            BoundedAttrRep(schema="my:schema", attr="attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr"),
-            True,
-        ),
-        (
-            BoundedAttrRep(schema="my:schema", attr="attr"),
-            BoundedAttrRep(schema="MY:OTHER:SCHEMA", attr="Attr"),
-            False,
-        ),
-        (
-            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="SUB_ATTR"),
-            True,
-        ),
-        (
-            BoundedAttrRep(schema="my:schema", attr="attr", sub_attr="sub_attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", attr="Attr", sub_attr="OTHER_SUB_ATTR"),
-            True,
-        ),
-    ),
-)
-def test_bounded_attr_parent_equals(attr_1, attr_2, expected):
-    assert attr_1.parent_equals(attr_2) is expected
 
 
 def test_invalid_type_repr():
@@ -428,43 +423,43 @@ def test_container_repr():
     (
         (
             {"a": 1, "b": 2, "c": 3},
-            BoundedAttrRep(attr="a"),
+            AttrRep(attr="a"),
             1,
             Missing,
         ),
         (
             {"a": 1, "my:schema:extension": {"b": 2}, "c": 3},
-            BoundedAttrRep(schema="my:schema:extension", attr="b"),
+            BoundedAttrRep(schema="my:schema:extension", extension=True, attr="b"),
             2,
             Missing,
         ),
         (
             {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
-            BoundedAttrRep(schema="my:schema:extension", attr="b", sub_attr="d"),
+            BoundedAttrRep(schema="my:schema:extension", extension=True, attr="b", sub_attr="d"),
             4,
             Missing,
         ),
         (
             {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
-            BoundedAttrRep(schema="my:schema:extension", attr="b"),
+            BoundedAttrRep(schema="my:schema:extension", extension=True, attr="b"),
             {"d": 4},
             Missing,
         ),
         (
             {"a": 1, "b": [{"d": 4, "e": 5}, {"d": 6, "e": 7}], "c": 3},
-            BoundedAttrRep(attr="b", sub_attr="d"),
+            AttrRep(attr="b", sub_attr="d"),
             [4, 6],
             [Missing, Missing],
         ),
         (
             {"a": 1, "b": [1, 2, 3], "c": 3},
-            BoundedAttrRep(attr="b", sub_attr="d"),
+            AttrRep(attr="b", sub_attr="d"),
             [Missing, Missing, Missing],
             [Missing, Missing, Missing],
         ),
         (
             {"a": 1},
-            BoundedAttrRep(attr="a", sub_attr="b"),
+            AttrRep(attr="a", sub_attr="b"),
             Missing,
             Missing,
         ),

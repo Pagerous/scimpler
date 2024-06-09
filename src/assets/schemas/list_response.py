@@ -2,6 +2,7 @@ from typing import Any, Optional, Sequence
 
 from src.container import Invalid, Missing, SCIMDataContainer
 from src.data.attributes import Integer, Unknown
+from src.data.attributes_presence import AttributePresenceConfig
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
@@ -13,7 +14,7 @@ def _validate_resources_type(value) -> ValidationIssues:
             issues.add_error(
                 issue=ValidationError.bad_type("complex"),
                 proceed=True,
-                location=(i,),
+                location=[i],
             )
             value[i] = Invalid
     return issues
@@ -40,14 +41,15 @@ class ListResponse(BaseSchema):
     def contained_schemas(self) -> list[BaseSchema]:
         return self._contained_schemas
 
-    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
 
-        resources = data.get(self.attrs.resources.rep)
+        resources_rep = self.attrs.resources
+        resources = data.get(resources_rep)
         if resources in [Missing, Invalid]:
             return issues
 
-        if (items_per_page_ := data.get(self.attrs.itemsperpage.rep)) is not Invalid:
+        if (items_per_page_ := data.get(self.attrs.itemsperpage)) is not Invalid:
             issues.merge(
                 validate_items_per_page_consistency(
                     resources_=resources,
@@ -55,27 +57,32 @@ class ListResponse(BaseSchema):
                 )
             )
 
+        resource_presence_config = kwargs.get("resource_presence_config")
+        if resource_presence_config is None:
+            resource_presence_config = AttributePresenceConfig("RESPONSE")
+
         schemas = self.get_schemas_for_resources(resources)
         for i, (resource, schema) in enumerate(zip(resources, schemas)):
             if resource is Invalid:
                 continue
 
+            resource_location = (*resources_rep.location, i)
             if schema is None:
                 issues.add_error(
                     issue=ValidationError.unknown_schema(),
                     proceed=False,
-                    location=(self.attrs.resources.rep.attr, i),
+                    location=resource_location,
                 )
                 continue
 
             issues.merge(
-                issues=schema.validate(resource),
-                location=(self.attrs.resources.rep.attr, i),
+                issues=schema.validate(resource, resource_presence_config),
+                location=resource_location,
             )
         return issues
 
     def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
-        resources = data.get(self.attrs.resources.rep)
+        resources = data.get(self.attrs.resources)
         if resources is Missing or not isinstance(resources, list):
             return data
 
@@ -86,7 +93,7 @@ class ListResponse(BaseSchema):
                 serialized_resources.append({})
             else:
                 serialized_resources.append(schema.serialize(resource))
-        data.set(self.attrs.resources.rep, serialized_resources)
+        data.set(self.attrs.resources, serialized_resources)
         return data
 
     def get_schemas_for_resources(
@@ -107,7 +114,7 @@ class ListResponse(BaseSchema):
         return schemas
 
     def _infer_schema_from_data(self, data: SCIMDataContainer) -> Optional[BaseSchema]:
-        schemas_value = data.get(self.attrs.schemas.rep)
+        schemas_value = data.get(self.attrs.schemas)
         if isinstance(schemas_value, list) and len(schemas_value) > 0:
             schemas_value = {
                 item.lower() if isinstance(item, str) else item for item in schemas_value
@@ -129,12 +136,12 @@ def validate_items_per_page_consistency(
     if items_per_page_ != n_resources:
         issues.add_error(
             issue=ValidationError.must_be_equal_to(value="number of resources"),
-            location=("itemsPerPage",),
+            location=["itemsPerPage"],
             proceed=True,
         )
         issues.add_error(
             issue=ValidationError.must_be_equal_to("itemsPerPage"),
-            location=("Resources",),
+            location=["Resources"],
             proceed=True,
         )
     return issues

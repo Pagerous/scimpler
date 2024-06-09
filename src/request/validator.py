@@ -6,17 +6,15 @@ from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import create_search_request_schema
-from src.container import BoundedAttrRep, Invalid, Missing, SCIMDataContainer
+from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
-    Complex,
 )
-from src.data.attributes_presence import AttributePresenceValidator
+from src.data.attributes_presence import AttributePresenceConfig
 from src.data.filter import Filter
-from src.data.patch_path import PatchPath
 from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues, ValidationWarning
@@ -85,54 +83,30 @@ class Error(Validator):
         body_location = ("body",)
         issues = ValidationIssues()
         body = SCIMDataContainer(body or {})
-        issues_ = self.response_schema.validate(body)
-        issues.merge(issues_, location=body_location)
         issues.merge(
-            issues=AttributePresenceValidator()(body, self.response_schema, "RESPONSE"),
+            self.response_schema.validate(body, AttributePresenceConfig("RESPONSE")),
             location=body_location,
         )
-        status_attr_rep = self.response_schema.attrs.status.rep
-        if issues.can_proceed(body_location + _location(status_attr_rep)):
-            issues.merge(
-                validate_error_status_code_consistency(
-                    status_code_attr_name=status_attr_rep.attr,
-                    status_code_body=body.get(status_attr_rep),
-                    status_code=status_code,
-                )
+        status_attr_rep = self.response_schema.attrs.status
+        status_location = body_location + status_attr_rep.location
+        if (status_in_body := body.get(status_attr_rep)) and str(status_code) != status_in_body:
+            issues.add_error(
+                issue=ValidationError.must_be_equal_to("response status code"),
+                location=status_location,
+                proceed=True,
             )
-        issues.merge(validate_error_status_code(status_code))
+            issues.add_error(
+                issue=ValidationError.must_be_equal_to(f"'status' attribute"),
+                location=["status"],
+                proceed=True,
+            )
+        if not 200 <= status_code < 600:
+            issues.add_error(
+                issue=ValidationError.bad_value_syntax(),
+                location=["status"],
+                proceed=True,
+            )
         return issues
-
-
-def validate_error_status_code_consistency(
-    status_code_attr_name: str,
-    status_code_body: str,
-    status_code: int,
-) -> ValidationIssues:
-    issues = ValidationIssues()
-    if str(status_code) != status_code_body:
-        issues.add_error(
-            issue=ValidationError.must_be_equal_to("response status code"),
-            location=("body", status_code_attr_name),
-            proceed=True,
-        )
-        issues.add_error(
-            issue=ValidationError.must_be_equal_to(f"{status_code_attr_name!r} attribute"),
-            location=("status",),
-            proceed=True,
-        )
-    return issues
-
-
-def validate_error_status_code(status_code: int) -> ValidationIssues:
-    issues = ValidationIssues()
-    if not 200 <= status_code < 600:
-        issues.add_error(
-            issue=ValidationError.bad_value_syntax(),
-            location=("status",),
-            proceed=True,
-        )
-    return issues
 
 
 def validate_resource_location_in_header(
@@ -170,7 +144,7 @@ def validate_resource_location_consistency(
     return issues
 
 
-def validate_status_code(expected: int, actual: int) -> ValidationIssues:
+def _validate_status_code(expected: int, actual: int) -> ValidationIssues:
     issues = ValidationIssues()
     if expected != actual:
         issues.add_error(
@@ -181,11 +155,7 @@ def validate_status_code(expected: int, actual: int) -> ValidationIssues:
 
 
 def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> ValidationIssues:
-    issues = schema.validate(body)
-    issues.merge(
-        issues=AttributePresenceValidator(**kwargs)(body, schema, "REQUEST"),
-    )
-    return issues
+    return schema.validate(body, AttributePresenceConfig(**kwargs))
 
 
 def _validate_resource_output_body(
@@ -196,49 +166,47 @@ def _validate_resource_output_body(
     status_code: int,
     body: SCIMDataContainer,
     headers: dict[str, Any],
-    presence_validator: Optional[AttributePresenceValidator],
+    presence_config: Optional[AttributePresenceConfig],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
-    issues.merge(schema.validate(body), location=body_location)
-
     issues.merge(
-        issues=validate_resource_location_in_header(headers, location_header_required),
-        location=("headers",),
-    )
-    issues.merge(
-        issues=validate_status_code(expected_status_code, status_code),
-        location=("status",),
-    )
-    issues.merge(
-        issues=(presence_validator or AttributePresenceValidator())(
+        schema.validate(
             data=body,
-            schema_or_complex=schema,
-            direction="RESPONSE",
+            presence_config=presence_config or AttributePresenceConfig("RESPONSE"),
         ),
         location=body_location,
     )
-    meta_location = schema.attrs.meta__location.rep
+
+    issues.merge(
+        issues=validate_resource_location_in_header(headers, location_header_required),
+        location=["headers"],
+    )
+    issues.merge(
+        issues=_validate_status_code(expected_status_code, status_code),
+        location=["status"],
+    )
+    meta_rep = schema.attrs.meta__location
     location_header = headers.get("Location")
     if (
-        issues.can_proceed(body_location + _location(meta_location), ("headers", "Location"))
+        issues.can_proceed(body_location + meta_rep.location, ("headers", "Location"))
         and location_header is not None
     ):
         issues.merge(
             issues=validate_resource_location_consistency(
-                meta_location=body.get(meta_location),
+                meta_location=body.get(meta_rep),
                 headers_location=location_header,
             ),
         )
 
     etag = headers.get("ETag")
-    version_rep = schema.attrs.meta__version.rep
+    version_rep = schema.attrs.meta__version
     version = body.get(version_rep)
     if all([etag, version]) and etag != version:
         issues.add_error(
             issue=ValidationError.must_be_equal_to("'ETag' header"),
             proceed=True,
-            location=body_location + _location(version_rep),
+            location=body_location + version_rep.location,
         )
         issues.add_error(
             issue=ValidationError.must_be_equal_to("'meta.version'"),
@@ -257,7 +225,7 @@ def _validate_resource_output_body(
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=body_location + _location(version_rep),
+                location=body_location + version_rep.location,
             )
     return issues
 
@@ -308,7 +276,7 @@ class ResourceObjectGET(Validator):
             status_code=status_code,
             body=SCIMDataContainer(body or {}),
             headers=headers or {},
-            presence_validator=kwargs.get("presence_validator"),
+            presence_config=kwargs.get("presence_config"),
         )
 
 
@@ -356,15 +324,19 @@ class ResourceObjectPUT(Validator):
                     "excludeAttributes": query_string.get("excludeAttributes"),
                 }
             ),
-            location=("query_string",),
+            location=["query_string"],
         )
         issues.merge(
-            issues=_validate_body(
-                schema=self._schema,
-                body=SCIMDataContainer(body or {}),
-                ignore_issuer=[self._schema.attrs.id],
+            issues=self._schema.validate(
+                data=body or {},
+                presence_config=AttributePresenceConfig(
+                    "REQUEST",
+                    ignore_issuer=[
+                        attr_rep for attr_rep, attr in self._schema.attrs if attr.required
+                    ],
+                ),
             ),
-            location=("body",),
+            location=["body"],
         )
         return issues
 
@@ -384,7 +356,7 @@ class ResourceObjectPUT(Validator):
             status_code=status_code,
             body=SCIMDataContainer(body or {}),
             headers=headers or {},
-            presence_validator=kwargs.get("presence_validator"),
+            presence_config=kwargs.get("presence_config"),
         )
 
 
@@ -427,7 +399,7 @@ class ResourcesPOST(Validator):
             location=("query_string",),
         )
         issues.merge(
-            issues=_validate_body(self._schema, body),
+            issues=self._schema.validate(body, AttributePresenceConfig("REQUEST")),
             location=("body",),
         )
         return issues
@@ -454,15 +426,15 @@ class ResourcesPOST(Validator):
             status_code=status_code,
             body=body,
             headers=headers or {},
-            presence_validator=kwargs.get("presence_validator"),
+            presence_config=kwargs.get("presence_config"),
         )
-        if body.get(self._schema.attrs.meta__created.rep) != body.get(
-            self._schema.attrs.meta__lastModified.rep
+        if body.get(self._schema.attrs.meta__created) != body.get(
+            self._schema.attrs.meta__lastModified
         ):
             issues.add_error(
                 issue=ValidationError.must_be_equal_to("'meta.created'"),
                 proceed=True,
-                location=("body", *_location(self._schema.attrs.meta__lastModified.rep)),
+                location=("body", *self._schema.attrs.meta__lastModified.location),
             )
         return issues
 
@@ -477,20 +449,6 @@ def _validate_resources_sorted(
         issues.add_error(
             issue=ValidationError.resources_not_sorted(),
             proceed=True,
-        )
-    return issues
-
-
-def validate_resources_attributes_presence(
-    presence_validator: AttributePresenceValidator,
-    resources: list[SCIMDataContainer],
-    resource_schemas: Sequence[ResourceSchema],
-) -> ValidationIssues:
-    issues = ValidationIssues()
-    for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
-        issues.merge(
-            issues=presence_validator(resource, schema, "RESPONSE"),
-            location=(i,),
         )
     return issues
 
@@ -539,13 +497,13 @@ def validate_pagination_info(
         if start_index in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
-                location=_location(schema.attrs.startindex.rep),
+                location=schema.attrs.startindex.location,
                 proceed=False,
             )
         if items_per_page in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
-                location=_location(schema.attrs.itemsperpage.rep),
+                location=schema.attrs.itemsperpage.location,
                 proceed=False,
             )
     return issues
@@ -586,23 +544,24 @@ def _validate_resources_get_response(
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
-    resource_presence_validator: Optional[AttributePresenceValidator] = None,
+    resource_presence_config: Optional[AttributePresenceConfig] = None,
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
-    resources_location = body_location + _location(schema.attrs.resources.rep)
+    resources_location = body_location + schema.attrs.resources.location
 
-    start_index_rep = schema.attrs.startindex.rep
-    start_index_location = body_location + _location(start_index_rep)
+    start_index_rep = schema.attrs.startindex
+    start_index_location = body_location + start_index_rep.location
 
-    issues_ = schema.validate(body)
+    resource_presence_config = resource_presence_config or AttributePresenceConfig("RESPONSE")
+    issues_ = schema.validate(
+        data=body,
+        presence_config=AttributePresenceConfig("RESPONSE"),
+        resource_presence_config=resource_presence_config,
+    )
     issues.merge(issues_, location=body_location)
     issues.merge(
-        issues=AttributePresenceValidator()(body, schema, "RESPONSE"),
-        location=body_location,
-    )
-    issues.merge(
-        issues=validate_status_code(200, status_code),
+        issues=_validate_status_code(200, status_code),
         location=("status",),
     )
     if issues.can_proceed(start_index_location):
@@ -616,13 +575,13 @@ def _validate_resources_get_response(
     if not issues.can_proceed(resources_location):
         return issues
 
-    total_results_rep = schema.attrs.totalresults.rep
-    total_results_location = body_location + _location(total_results_rep)
+    total_results_rep = schema.attrs.totalresults
+    total_results_location = body_location + total_results_rep.location
 
-    items_per_page_rep = schema.attrs.itemsperpage.rep
-    items_per_page_location = body_location + _location(items_per_page_rep)
+    items_per_page_rep = schema.attrs.itemsperpage
+    items_per_page_location = body_location + items_per_page_rep.location
 
-    resources = body.get(schema.attrs.resources.rep)
+    resources = body.get(schema.attrs.resources)
     if resources is Missing:
         resources = []
 
@@ -655,20 +614,12 @@ def _validate_resources_get_response(
         return issues
 
     resource_schemas = schema.get_schemas_for_resources(resources)
-    if resource_presence_validator is None:
-        resource_presence_validator = AttributePresenceValidator()
-    issues.merge(
-        issues=validate_resources_attributes_presence(
-            resource_presence_validator, resources, resource_schemas
-        ),
-        location=resources_location,
-    )
-    if filter_ is not None and can_validate_filtering(filter_, resource_presence_validator):
+    if filter_ is not None and can_validate_filtering(filter_, resource_presence_config):
         issues.merge(
             issues=_validate_resources_filtered(filter_, resources, resource_schemas),
             location=resources_location,
         )
-    if sorter is not None and can_validate_sorting(sorter, resource_presence_validator):
+    if sorter is not None and can_validate_sorting(sorter, resource_presence_config):
         issues.merge(
             issues=_validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
@@ -676,40 +627,61 @@ def _validate_resources_get_response(
     return issues
 
 
-def _is_contained(attr_rep, attr_reps) -> bool:
+def _is_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
     return attr_rep in attr_reps
 
 
 def _is_parent_contained(attr_rep, attr_reps) -> bool:
     return bool(
         attr_rep.sub_attr
-        and BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr) in attr_reps
+        and (
+            (
+                BoundedAttrRep(
+                    schema=attr_rep.schema, extension=attr_rep.extension, attr=attr_rep.attr
+                )
+                if isinstance(attr_rep, BoundedAttrRep)
+                else AttrRep(attr=attr_rep.attr)
+            )
+            in attr_reps
+        )
     )
 
 
-def _is_child_contained(attr_rep, attr_reps) -> bool:
-    for attr_rep_ in attr_reps:
-        if attr_rep_.sub_attr and attr_rep_.parent_equals(attr_rep):
+def _is_child_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
+    for rep in attr_reps:
+        if not rep.sub_attr:
+            continue
+
+        if (
+            isinstance(attr_rep, BoundedAttrRep)
+            and isinstance(rep, BoundedAttrRep)
+            and attr_rep.schema == rep.schema
+            and attr_rep.attr == rep.attr
+        ):
             return True
+
+        elif attr_rep.attr == rep.attr:
+            return True
+
     return False
 
 
-def can_validate_filtering(filter_: Filter, checker: AttributePresenceValidator) -> bool:
-    filter_attr_reps = filter_.attr_reps
-    if not checker.attr_reps:
+def can_validate_filtering(filter_: Filter, presence_config: AttributePresenceConfig) -> bool:
+    if presence_config.include is None:
         return True
 
-    if checker.include:
+    filter_attr_reps = filter_.attr_reps
+    if presence_config.include:
         for attr_rep in filter_attr_reps:
             if not (
-                _is_contained(attr_rep, checker.attr_reps)
-                or _is_parent_contained(attr_rep, checker.attr_reps)
-                or _is_child_contained(attr_rep, checker.attr_reps)
+                _is_contained(attr_rep, presence_config.attr_reps)
+                or _is_parent_contained(attr_rep, presence_config.attr_reps)
+                or _is_child_contained(attr_rep, presence_config.attr_reps)
             ):
                 return False
         return True
 
-    for attr_rep in checker.attr_reps:
+    for attr_rep in presence_config.attr_reps:
         if _is_contained(attr_rep, filter_attr_reps) or _is_child_contained(
             attr_rep, filter_attr_reps
         ):
@@ -717,14 +689,14 @@ def can_validate_filtering(filter_: Filter, checker: AttributePresenceValidator)
     return True
 
 
-def can_validate_sorting(sorter: Sorter, checker: AttributePresenceValidator) -> bool:
-    if not checker.attr_reps:
+def can_validate_sorting(sorter: Sorter, presence_config: AttributePresenceConfig) -> bool:
+    if not presence_config.attr_reps:
         return True
 
-    is_contained = _is_contained(sorter.attr_rep, checker.attr_reps) or _is_parent_contained(
-        sorter.attr_rep, checker.attr_reps
-    )
-    if checker.include and not is_contained or not checker.include and is_contained:
+    is_contained = _is_contained(
+        sorter.attr_rep, presence_config.attr_reps
+    ) or _is_parent_contained(sorter.attr_rep, presence_config.attr_reps)
+    if presence_config.include and not is_contained or not presence_config.include and is_contained:
         return False
     return True
 
@@ -775,7 +747,7 @@ class ServerRootResourcesGET(Validator):
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
             sorter=kwargs.get("sorter"),
-            resource_presence_validator=kwargs.get("presence_validator"),
+            resource_presence_config=kwargs.get("presence_config"),
         )
 
 
@@ -833,7 +805,7 @@ class SearchRequestPOST(Validator):
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
             sorter=kwargs.get("sorter"),
-            resource_presence_validator=kwargs.get("presence_validator"),
+            resource_presence_config=kwargs.get("presence_config"),
         )
 
 
@@ -876,70 +848,11 @@ class ResourceObjectPATCH(Validator):
             ),
             location=("query_string",),
         )
-
-        issues.merge(_validate_body(self._schema, body), location=("body",))
-        operations_location = ("body", *_location(self._schema.attrs.operations.rep))
-
-        if not issues.can_proceed(operations_location):
-            return issues
-
-        values = body.get(self._schema.attrs.operations__value.rep)
-        paths = body.get(self._schema.attrs.operations__path.rep)
-        ops = body.get(self._schema.attrs.operations__op.rep)
-
-        for i, (op, value, path) in enumerate(zip(ops, values, paths)):
-            if op == "remove":
-                continue
-
-            value_location = operations_location + (
-                i,
-                self._schema.attrs.operations__value.rep.sub_attr,
-            )
-            if path in [None, Missing]:
-                for attr in self._resource_schema.attrs:
-                    self._check_complex_sub_attrs_presence(
-                        issues=issues,
-                        attr=attr,
-                        value=value.get(attr.rep),
-                        value_location=value_location + _location(attr.rep),
-                    )
-
-            elif path is not Invalid:
-                attr = self._resource_schema.attrs.get_by_path(PatchPath.deserialize(path))
-                self._check_complex_sub_attrs_presence(
-                    issues=issues,
-                    attr=attr,
-                    value=value,
-                    value_location=value_location,
-                )
+        issues.merge(
+            self._schema.validate(body, AttributePresenceConfig("REQUEST")),
+            location=["body"],
+        )
         return issues
-
-    @staticmethod
-    def _check_complex_sub_attrs_presence(
-        issues: ValidationIssues,
-        attr: Attribute,
-        value: Any,
-        value_location,
-    ) -> None:
-        if (
-            not (isinstance(attr, Complex) and attr.multi_valued)
-            or value is Missing
-            or not isinstance(value, list)
-        ):
-            return
-
-        presence_validator = AttributePresenceValidator()
-        for j, item in enumerate(value):
-            item_location = value_location + (j,)
-            if not issues.has_errors(item_location):
-                issues.merge(
-                    issues=presence_validator(
-                        data=item,
-                        direction="REQUEST",
-                        schema_or_complex=attr,
-                    ),
-                    location=item_location,
-                )
 
     def validate_response(
         self,
@@ -950,9 +863,9 @@ class ResourceObjectPATCH(Validator):
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        presence_validator = kwargs.get("presence_validator")
+        presence_config = kwargs.get("presence_config")
         if status_code == 204:
-            if presence_validator is not None and presence_validator.attr_reps:
+            if presence_config is not None and presence_config.attr_reps:
                 issues.add_error(
                     issue=ValidationError.bad_status_code(200),
                     proceed=True,
@@ -968,11 +881,11 @@ class ResourceObjectPATCH(Validator):
             status_code=status_code,
             body=body,
             headers=headers or {},
-            presence_validator=presence_validator,
+            presence_config=presence_config,
         )
-        meta_location = self.response_schema.attrs.meta__version.rep
-        if body.get(meta_location) is Missing:
-            issues.pop_errors([5, 8], ("body", *_location(meta_location)))
+        meta_version_rep = self.response_schema.attrs.meta__version
+        if body.get(meta_version_rep) is Missing:
+            issues.pop_errors([5, 8], ("body", *meta_version_rep.location))
             issues.pop_errors([8], ("headers", "ETag"))
         return issues
 
@@ -1057,20 +970,16 @@ class BulkOperations(Validator):
         issues = ValidationIssues()
         body_location = ("body",)
         body = SCIMDataContainer(body or {})
-        issues_ = self._request_schema.validate(body)
-        issues.merge(issues_, location=body_location)
         issues.merge(
-            issues=AttributePresenceValidator()(body, self._request_schema, "RESPONSE"),
+            self._request_schema.validate(body, AttributePresenceConfig("REQUEST")),
             location=body_location,
         )
-        if not issues.can_proceed(
-            body_location + _location(self._request_schema.attrs.operations.rep)
-        ):
+        if not issues.can_proceed(body_location + self._request_schema.attrs.operations.location):
             return issues
 
-        path_rep = self._request_schema.attrs.operations__path.rep
-        data_rep = self._request_schema.attrs.operations__data.rep
-        method_rep = self._request_schema.attrs.operations__method.rep
+        path_rep = self._request_schema.attrs.operations__path
+        data_rep = self._request_schema.attrs.operations__data
+        method_rep = self._request_schema.attrs.operations__method
         paths = body.get(path_rep)
         data = body.get(data_rep)
         methods = body.get(method_rep)
@@ -1095,15 +1004,12 @@ class BulkOperations(Validator):
                     )
                     continue
                 issues_ = validator.validate_request(body=data_item)
-                issues.merge(issues_.get(location=("body",)), location=data_item_location)
-        if (
-            len(body.get(self._request_schema.attrs.operations.rep))
-            > self.config.bulk.max_operations
-        ):
+                issues.merge(issues_.get(location=["body"]), location=data_item_location)
+        if len(body.get(self._request_schema.attrs.operations)) > self.config.bulk.max_operations:
             issues.add_error(
                 issue=ValidationError.too_many_bulk_operations(self.config.bulk.max_operations),
                 proceed=True,
-                location=body_location + _location(self._response_schema.attrs.operations.rep),
+                location=body_location + self._response_schema.attrs.operations.location,
             )
 
         return issues
@@ -1119,27 +1025,23 @@ class BulkOperations(Validator):
         issues = ValidationIssues()
         body = SCIMDataContainer(body or {})
         body_location = ("body",)
-        issues_ = self._response_schema.validate(body)
-        issues.merge(issues_, location=body_location)
         issues.merge(
-            issues=AttributePresenceValidator()(body, self._response_schema, "RESPONSE"),
+            self._response_schema.validate(body, AttributePresenceConfig("RESPONSE")),
             location=body_location,
         )
         issues.merge(
-            issues=validate_status_code(200, status_code),
+            issues=_validate_status_code(200, status_code),
             location=("status",),
         )
-        if not issues.can_proceed(
-            body_location + _location(self._response_schema.attrs.operations.rep)
-        ):
+        operations_location = body_location + self._response_schema.attrs.operations.location
+        if not issues.can_proceed(operations_location):
             return issues
 
-        operations_location = body_location + _location(self._response_schema.attrs.operations.rep)
-        status_rep = self._response_schema.attrs.operations__status.rep
-        response_rep = self._response_schema.attrs.operations__response.rep
-        location_rep = self._response_schema.attrs.operations__location.rep
-        method_rep = self._request_schema.attrs.operations__method.rep
-        version_rep = self._response_schema.attrs.operations__version.rep
+        status_rep = self._response_schema.attrs.operations__status
+        response_rep = self._response_schema.attrs.operations__response
+        location_rep = self._response_schema.attrs.operations__location
+        method_rep = self._request_schema.attrs.operations__method
+        version_rep = self._response_schema.attrs.operations__version
         statuses = body.get(status_rep)
         responses = body.get(response_rep)
         locations = body.get(location_rep)
@@ -1227,7 +1129,7 @@ class BulkOperations(Validator):
             issues.add_error(
                 issue=ValidationError.too_many_errors_in_bulk(fail_on_errors),
                 proceed=True,
-                location=body_location + _location(self._response_schema.attrs.operations.rep),
+                location=operations_location,
             )
         return issues
 
@@ -1264,12 +1166,6 @@ class SchemasGET(_ServiceProviderConfig):
 class ResourceTypesGET(_ServiceProviderConfig):
     def __init__(self, config: ServiceProviderConfig):
         super().__init__(config, resource_schema=ResourceType)
-
-
-def _location(attr_rep: BoundedAttrRep) -> Union[tuple[str], tuple[str, str]]:
-    if attr_rep.sub_attr:
-        return attr_rep.attr, attr_rep.sub_attr
-    return (attr_rep.attr,)
 
 
 def _resource_output_filter(attr: Attribute) -> bool:

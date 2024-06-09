@@ -225,7 +225,7 @@ class _Schema(BaseResourceSchema):
             "schemas": self.schemas,
             "name": schema.name,
             "description": schema.description,
-            "attributes": [attr.to_dict() for attr in attrs],
+            "attributes": [attr.to_dict() for _, attr in attrs],
             "meta": {
                 "resourceType": "Schema",
                 "location": f"{self.endpoint}/{schema.schema}",

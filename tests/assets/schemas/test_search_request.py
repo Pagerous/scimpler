@@ -3,7 +3,7 @@ from src.assets.schemas.search_request import (
     SearchRequest,
     create_search_request_schema,
 )
-from src.container import BoundedAttrRep
+from src.container import AttrRep
 
 
 def test_search_request_attrs_are_deserialized():
@@ -11,11 +11,8 @@ def test_search_request_attrs_are_deserialized():
 
     data = schema.deserialize({"attributes": ["userName", "name"]})
 
-    assert data.get("presence_validator").attr_reps == [
-        BoundedAttrRep(attr="userName"),
-        BoundedAttrRep(attr="name"),
-    ]
-    assert data.get("presence_validator").include is True
+    assert data.get("presence_config").attr_reps == [AttrRep(attr="userName"), AttrRep(attr="name")]
+    assert data.get("presence_config").include is True
 
 
 def test_search_request_sorting_deserialized():
@@ -23,7 +20,7 @@ def test_search_request_sorting_deserialized():
 
     data = schema.deserialize({"sortBy": "name.familyName", "sortOrder": "descending"})
 
-    assert data.get("sorter").attr_rep == BoundedAttrRep(attr="name", sub_attr="familyName")
+    assert data.get("sorter").attr_rep == AttrRep(attr="name", sub_attr="familyName")
     assert data.get("sorter").asc is False
 
 
@@ -41,17 +38,17 @@ def test_full_search_request_is_deserialized():
         }
     )
 
-    assert data.get("presence_validator").attr_reps == [
-        BoundedAttrRep(attr="userName"),
-        BoundedAttrRep(attr="name"),
+    assert data.get("presence_config").attr_reps == [
+        AttrRep(attr="userName"),
+        AttrRep(attr="name"),
     ]
-    assert data.get("presence_validator").include is True
+    assert data.get("presence_config").include is True
     assert data.get("filter").to_dict() == {
         "op": "eq",
         "attr_rep": "userName",
         "value": "bjensen",
     }
-    assert data.get("sorter").attr_rep == BoundedAttrRep(attr="name", sub_attr="familyName")
+    assert data.get("sorter").attr_rep == AttrRep(attr="name", sub_attr="familyName")
     assert data.get("sorter").asc is False
     assert data.get("startIndex") == 1
     assert data.get("count") == 0

@@ -4,8 +4,9 @@ import pytest
 
 from src.assets.schemas import User, user
 from src.assets.schemas.user import EnterpriseUserExtension
-from src.container import SCIMDataContainer
-from src.data.attributes import Integer, String
+from src.container import AttrRep, SCIMDataContainer
+from src.data.attributes import Boolean, Complex, Integer, String
+from src.data.attributes_presence import AttributePresenceConfig
 from src.data.schemas import (
     BaseResourceSchema,
     ResourceSchema,
@@ -47,7 +48,7 @@ def test_validation_fails_if_bad_types(user_data_client):
         },
     }
 
-    issues = user.User.validate(user_data_client)
+    issues = user.User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -56,7 +57,7 @@ def test_validate_schemas_field__unknown_additional_field_is_validated(user_data
     user_data_client["schemas"].append("bad:user:schema")
     expected_issues = {"schemas": {"_errors": [{"code": 14}]}}
 
-    issues = user.User.validate(user_data_client)
+    issues = user.User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -65,7 +66,7 @@ def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data_clien
     user_data_client["schemas"] = ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
     expected_issues = {"schemas": {"_errors": [{"code": 12}]}}
 
-    issues = user.User.validate(user_data_client)
+    issues = user.User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -74,7 +75,7 @@ def test_validate_schemas_field__fails_if_extension_schema_is_missing(user_data_
     user_data_client["schemas"] = ["urn:ietf:params:scim:schemas:core:2.0:User"]
     expected_issues = {"schemas": {"_errors": [{"code": 13}]}}
 
-    issues = user.User.validate(user_data_client)
+    issues = user.User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -87,7 +88,7 @@ def test_validate_schemas_field__fails_if_duplicated_values(user_data_client):
     ]
     expected_issues = {"schemas": {"_errors": [{"code": 10}]}}
 
-    issues = user.User.validate(user_data_client)
+    issues = user.User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -96,7 +97,7 @@ def test_validate_schemas_field__multiple_errors(user_data_client):
     user_data_client["schemas"] = ["bad:user:schema"]
     expected_issues = {"schemas": {"_errors": [{"code": 14}, {"code": 12}, {"code": 13}]}}
 
-    issues = user.User.validate(user_data_client)
+    issues = user.User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -138,7 +139,7 @@ def test_adding_same_schema_extension_to_resource_fails():
 
 
 def test_schema_can_be_cloned_with_attr_filter_specified():
-    schema = User.clone(attr_filter=lambda attr: attr.rep.attr in ["id", "userName"])
+    schema = User.clone(attr_filter=lambda attr: attr.name in ["id", "userName"])
 
     assert len(list(schema.attrs)) == 2
 
@@ -184,7 +185,7 @@ def test_data_can_be_filtered_according_to_attr_filter(user_data_client, use_con
 def test_schemas_is_not_validated_further_if_bad_type(user_data_client):
     user_data_client["schemas"] = 123
 
-    issues = User.validate(user_data_client)
+    issues = User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == {"schemas": {"_errors": [{"code": 2}]}}
 
@@ -193,7 +194,7 @@ def test_invalid_schemas_items_are_detected(user_data_client):
     user_data_client["schemas"] = [User.schema, 123]
     expected_issues = {"schemas": {"_errors": [{"code": 13}], "1": {"_errors": [{"code": 2}]}}}
 
-    issues = User.validate(user_data_client)
+    issues = User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -214,7 +215,7 @@ def test_value_error_is_raised_if_retrieving_non_existent_extension():
 
 
 def test_same_extension_can_not_be_registered_twice():
-    with pytest.raises(RuntimeError, match="extension 'EnterpriseUser' already in resource"):
+    with pytest.raises(ValueError, match="already in 'User' resource"):
         User.extend(EnterpriseUserExtension)
 
 
@@ -228,3 +229,347 @@ def test_warning_is_raised_if_adding_extension_with_the_same_attr_name():
 
     with pytest.warns(ScimpleUserWarning):
         resource_schema.extend(extension)
+
+
+def test_presence_validation_fails_if_returned_attribute_that_never_should_be_returned(
+    user_data_server,
+):
+    user_data_server["password"] = "1234"
+    expected = {
+        "password": {
+            "_errors": [
+                {
+                    "code": 7,
+                }
+            ]
+        }
+    }
+
+    issues = User.validate(user_data_server, AttributePresenceConfig("RESPONSE"))
+
+    assert issues.to_dict() == expected
+
+
+def test_restricted_attributes_can_be_sent_with_request(user_data_client):
+    user_data_client["password"] = "1234"
+
+    issues = User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_presence_validation_fails_on_attr_not_requested_by_exclusion():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "userName": "Pagerous",
+            "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+        }
+    )
+
+    expected = {"name": {"_errors": [{"code": 7}]}}
+
+    issues = User.validate(
+        data, AttributePresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="name")], include=False)
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_fails_on_attr_not_requested_by_inclusion():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+            "meta": {
+                "resourceType": "User",
+                "created": "2011-05-13T04:42:34Z",
+                "lastModified": "2011-05-13T04:42:34Z",
+                "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+                "version": r"W\/\"f250dd84f0671c3\"",
+            },
+        }
+    )
+    expected = {"meta": {"_errors": [{"code": 7}]}}
+
+    issues = User.validate(
+        data, AttributePresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="name")], include=True)
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_fails_on_sub_attr_not_requested_by_exclusion():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "userName": "Pagerous",
+            "name": {"givenName": "Arkadiusz", "familyName": "Pajor"},
+        }
+    )
+    expected = {
+        "name": {
+            "familyName": {
+                "_errors": [
+                    {
+                        "code": 7,
+                    }
+                ]
+            }
+        }
+    }
+
+    issues = User.validate(
+        data,
+        AttributePresenceConfig(
+            "RESPONSE", attr_reps=[AttrRep(attr="name", sub_attr="familyName")], include=False
+        ),
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_fails_on_sub_attr_not_requested_by_inclusion():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "name": {"familyName": "Pajor", "givenName": "Arkadiusz"},
+        }
+    )
+    expected = {
+        "name": {
+            "givenName": {
+                "_errors": [
+                    {
+                        "code": 7,
+                    }
+                ]
+            }
+        }
+    }
+
+    issues = User.validate(
+        data,
+        AttributePresenceConfig(
+            "RESPONSE", attr_reps=[AttrRep(attr="name", sub_attr="familyName")], include=True
+        ),
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_fails_if_not_provided_attribute_that_always_should_be_returned():
+    expected = {
+        "id": {
+            "_errors": [
+                {
+                    "code": 5,
+                }
+            ]
+        },
+        "schemas": {
+            "_errors": [
+                {
+                    "code": 5,
+                }
+            ]
+        },
+        "userName": {
+            "_errors": [
+                {
+                    "code": 5,
+                }
+            ]
+        },
+    }
+
+    issues = User.validate({}, AttributePresenceConfig("RESPONSE"))
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_fails_if_not_provided_requested_required_attribute():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        }
+    )
+    expected = {
+        "userName": {
+            "_errors": [
+                {
+                    "code": 5,
+                }
+            ]
+        },
+    }
+
+    issues = User.validate(
+        data,
+        AttributePresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="username")], include=True),
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_passes_if_not_provided_requested_optional_attribute():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+        }
+    )
+
+    issues = User.validate(
+        data,
+        AttributePresenceConfig(
+            "RESPONSE", attr_reps=[AttrRep(attr="name", sub_attr="familyname")], include=True
+        ),
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_exclusion():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "userName": "Pagerous",
+            "emails": [
+                {"type": "work", "primary": True, "display": "example@example.com"},
+                {"type": "home", "primary": False},
+                {"type": "other", "primary": False, "display": "example@example.com"},
+            ],
+        }
+    )
+    expected = {
+        "emails": {
+            "0": {"display": {"_errors": [{"code": 7}]}},
+            "2": {"display": {"_errors": [{"code": 7}]}},
+        }
+    }
+
+    issues = User.validate(
+        data,
+        AttributePresenceConfig(
+            "RESPONSE", attr_reps=[AttrRep(attr="emails", sub_attr="display")], include=False
+        ),
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_inclusion():
+    data = SCIMDataContainer(
+        {
+            "id": "1",
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "emails": [
+                {"type": "work", "primary": True, "display": "example@example.com"},
+                {"display": "example@example.com"},
+                {"type": "other", "primary": False, "display": "example@example.com"},
+            ],
+        }
+    )
+    expected = {
+        "emails": {
+            "0": {"type": {"_errors": [{"code": 7}]}, "primary": {"_errors": [{"code": 7}]}},
+            "2": {"type": {"_errors": [{"code": 7}]}, "primary": {"_errors": [{"code": 7}]}},
+        }
+    }
+
+    issues = User.validate(
+        data,
+        AttributePresenceConfig(
+            "RESPONSE", attr_reps=[AttrRep(attr="emails", sub_attr="display")], include=True
+        ),
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_specifying_attribute_issued_by_service_provider_causes_validation_failure(
+    user_data_client,
+):
+    user_data_client["id"] = "should-not-be-provided"
+    expected_issues = {"id": {"_errors": [{"code": 6}]}}
+
+    issues = User.validate(user_data_client, AttributePresenceConfig("REQUEST"))
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_presence_validation_fails_if_missing_required_field_from_required_extension():
+    schema = ResourceSchema(schema="my:schema", name="MyResource")
+    extension = SchemaExtension(
+        schema="my:schema:extension", name="MyExtension", attrs=[Integer("age", required=True)]
+    )
+    schema.extend(extension, required=True)
+    expected_issues = {"age": {"_errors": [{"code": 5}]}}
+
+    issues = schema.validate(
+        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}),
+        AttributePresenceConfig("RESPONSE"),
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_presence_validation_succeeds_if_missing_required_field_from_non_required_extension():
+    schema = ResourceSchema(schema="my:schema", name="MyResource")
+    extension = SchemaExtension(
+        schema="my:schema:extension", name="MyExtension", attrs=[Integer("age", required=True)]
+    )
+    schema.extend(extension, required=False)
+
+    issues = schema.validate(
+        SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}),
+        AttributePresenceConfig("RESPONSE"),
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_has_value_none():
+    my_resource = ResourceSchema(
+        schema="my:schema",
+        name="MyResource",
+        attrs=[
+            Complex(
+                name="super_complex",
+                multi_valued=True,
+                sub_attributes=[
+                    String("str_required", required=True),
+                    Integer("int_required", required=True),
+                    Boolean("bool_required", required=True),
+                ],
+            )
+        ],
+    )
+    data = SCIMDataContainer(
+        {
+            "schemas": ["my:schema"],
+            "super_complex": None,
+        }
+    )
+
+    issues = my_resource.validate(
+        data,
+        AttributePresenceConfig(
+            "REQUEST",
+            attr_reps=[
+                AttrRep(attr="super_complex", sub_attr="str_required"),
+                AttrRep(attr="super_complex", sub_attr="int_required"),
+                AttrRep(attr="super_complex", sub_attr="bool_required"),
+            ],
+            include=True,
+        ),
+    )
+
+    assert issues.to_dict(msg=True) == {}

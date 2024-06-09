@@ -61,8 +61,8 @@ class ServerRootResourcesGET(QueryStringDeserializer):
         additional_params = SCIMDataContainer(query_string)
 
         input_ = SCIMDataContainer(query_string)
-        for attr in self._schema.attrs:
-            additional_params.pop(attr.rep)
+        for attr_rep, attr in self._schema.attrs:
+            additional_params.pop(attr_rep)
 
         deserialized = self._schema.deserialize(input_).to_dict()
         deserialized.update(additional_params.to_dict())

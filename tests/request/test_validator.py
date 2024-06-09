@@ -16,7 +16,7 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes import DateTime
-from src.data.attributes_presence import AttributePresenceValidator
+from src.data.attributes_presence import AttributePresenceConfig
 from src.data.filter import Filter
 from src.data.operator import Present
 from src.data.patch_path import PatchPath
@@ -37,31 +37,13 @@ from src.request.validator import (
     ServiceResourceObjectGET,
     can_validate_filtering,
     can_validate_sorting,
-    validate_error_status_code,
-    validate_error_status_code_consistency,
     validate_number_of_resources,
     validate_pagination_info,
     validate_resource_location_consistency,
     validate_resource_location_in_header,
-    validate_resources_attributes_presence,
     validate_start_index_consistency,
-    validate_status_code,
 )
 from tests.conftest import CONFIG, SchemaForTests
-
-
-@pytest.mark.parametrize(
-    ("status_code", "expected"),
-    (
-        (199, {"status": {"_errors": [{"code": 1}]}}),
-        (600, {"status": {"_errors": [{"code": 1}]}}),
-        (404, {}),
-    ),
-)
-def test_validate_error_status_code(status_code, expected):
-    issues = validate_error_status_code(status_code)
-
-    assert issues.to_dict() == expected
 
 
 @pytest.mark.parametrize(
@@ -78,7 +60,12 @@ def test_validate_error_status_code(status_code, expected):
     ),
 )
 def test_validate_error_status_code_consistency(status_code, expected):
-    issues = validate_error_status_code_consistency("status", "400", status_code)
+    validator = Error(CONFIG)
+
+    issues = validator.validate_response(
+        status_code=status_code,
+        body={"schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"], "status": "400"},
+    )
 
     assert issues.to_dict() == expected
 
@@ -143,16 +130,6 @@ def test_validate_resource_location_consistency__succeeds_if_consistency(user_da
     )
 
     assert issues.to_dict(msg=True) == {}
-
-
-@pytest.mark.parametrize(
-    ("status_code", "expected"),
-    ((200, {"_errors": [{"code": 19}]}), (201, {})),
-)
-def test_validate_status_code(status_code, expected):
-    issues = validate_status_code(201, status_code)
-
-    assert issues.to_dict() == expected
 
 
 def test_validate_number_of_resources__fails_if_more_resources_than_total_results(list_user_data):
@@ -371,10 +348,11 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
 @pytest.mark.parametrize(
     "sorter",
     (
-        Sorter(BoundedAttrRep(attr="name", sub_attr="familyName"), asc=False),
+        Sorter(AttrRep(attr="name", sub_attr="familyName"), asc=False),
         Sorter(
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                extension=True,
                 attr="manager",
                 sub_attr="displayName",
             ),
@@ -390,40 +368,6 @@ def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
         status_code=200,
         sorter=sorter,
         body=list_user_data,
-    )
-
-    assert issues.to_dict() == expected
-
-
-def test_validate_resources_attribute_presence__fails_if_requested_attribute_not_excluded(
-    list_user_data,
-):
-    validator = AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False)
-    expected = {
-        "0": {
-            "name": {
-                "_errors": [
-                    {
-                        "code": 7,
-                    }
-                ]
-            }
-        },
-        "1": {
-            "name": {
-                "_errors": [
-                    {
-                        "code": 7,
-                    }
-                ]
-            }
-        },
-    }
-
-    issues = validate_resources_attributes_presence(
-        presence_validator=validator,
-        resources=[SCIMDataContainer(r) for r in list_user_data["Resources"]],
-        resource_schemas=[user.User, user.User],
     )
 
     assert issues.to_dict() == expected
@@ -486,8 +430,10 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
             "Location": user_data_server["meta"]["location"],
             "ETag": user_data_server["meta"]["version"],
         },
-        presence_validator=AttributePresenceValidator(
-            attr_reps=[BoundedAttrRep(attr="name")], include=False
+        presence_config=AttributePresenceConfig(
+            direction="RESPONSE",
+            attr_reps=[AttrRep(attr="name")],
+            include=False,
         ),
     )
 
@@ -783,9 +729,9 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
         start_index=1,
         count=2,
         filter_=Filter(Present(AttrRep(attr="username"))),
-        sorter=Sorter(BoundedAttrRep(attr="userName"), True),
-        presence_validator=AttributePresenceValidator(
-            attr_reps=[BoundedAttrRep(attr="name")], include=False
+        sorter=Sorter(AttrRep(attr="userName"), True),
+        presence_config=AttributePresenceConfig(
+            direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
         ),
     )
 
@@ -930,7 +876,7 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
         status_code=200,
         body=list_user_data,
         filter=Filter.deserialize("id eq 'a'"),
-        sorter=Sorter(attr_rep=BoundedAttrRep(attr="id"), asc=True),
+        sorter=Sorter(attr_rep=AttrRep(attr="id"), asc=True),
     )
 
     assert issues.to_dict() == expected_issues
@@ -994,7 +940,7 @@ def test_search_request_post_request_data_can_be_deserialized():
 
     assert isinstance(data.get("filter"), Filter)
     assert isinstance(data.get("sorter"), Sorter)
-    assert isinstance(data.get("presence_validator"), AttributePresenceValidator)
+    assert isinstance(data.get("presence_config"), AttributePresenceConfig)
     assert data.get("count") == 10
     assert data.get("startIndex") == 2
 
@@ -1254,8 +1200,8 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
     issues = validator.validate_response(
         status_code=204,
         body=None,
-        presence_validator=AttributePresenceValidator(
-            attr_reps=[AttrRep(attr="userName")], include=True
+        presence_config=AttributePresenceConfig(
+            direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
         ),
     )
 
@@ -1268,7 +1214,7 @@ def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attrib
     issues = validator.validate_response(
         status_code=204,
         body=None,
-        presence_validator=None,
+        presence_config=None,
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -1280,7 +1226,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data
     issues = validator.validate_response(
         status_code=200,
         body=user_data_server,
-        presence_validator=None,
+        presence_config=None,
         headers={"ETag": user_data_server["meta"]["version"]},
     )
 
@@ -1302,8 +1248,8 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
             "id": "1",
             "userName": "bjensen",
         },
-        presence_validator=AttributePresenceValidator(
-            attr_reps=[BoundedAttrRep(attr="userName")], include=True
+        presence_config=AttributePresenceConfig(
+            direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
         ),
         headers={"ETag": 'W/"3694e05e9dff591"'},
     )
@@ -1481,10 +1427,10 @@ def test_bulk_operations_request_is_valid_if_correct_data():
     expected_body: dict = deepcopy(data)
     expected_body["Operations"][1]["data"] = {"userName": "Bob"}
     expected_body["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath(
-        attr_rep=BoundedAttrRep(attr="nickName"), filter_=None, sub_attr_rep=None
+        attr_rep=AttrRep(attr="nickName"), filter_=None, sub_attr_name=None
     )
     expected_body["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath(
-        attr_rep=BoundedAttrRep(attr="userName"), filter_=None, sub_attr_rep=None
+        attr_rep=AttrRep(attr="userName"), filter_=None, sub_attr_name=None
     )
 
     issues = validator.validate_request(body=data)
@@ -2014,71 +1960,93 @@ def test_resource_types_response_can_be_validated():
     (
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
+            ),
             True,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
+            ),
             False,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceValidator(
-                attr_reps=[BoundedAttrRep(attr="userName"), BoundedAttrRep(attr="name")],
+            AttributePresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="userName"), AttrRep(attr="name")],
                 include=True,
             ),
             True,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
+            ),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
+            ),
             True,
         ),
         (
             Filter.deserialize("name pr"),
-            AttributePresenceValidator(
-                attr_reps=[BoundedAttrRep(attr="name", sub_attr="display")], include=True
+            AttributePresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="display")],
+                include=True,
             ),
             True,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
+            ),
             False,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
+            ),
             True,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceValidator(
-                attr_reps=[BoundedAttrRep(attr="userName"), BoundedAttrRep(attr="name")],
+            AttributePresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="userName"), AttrRep(attr="name")],
                 include=False,
             ),
             False,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
+            ),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
+            ),
             False,
         ),
         (
             Filter.deserialize("name pr"),
-            AttributePresenceValidator(
-                attr_reps=[BoundedAttrRep(attr="name", sub_attr="display")], include=False
+            AttributePresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="display")],
+                include=False,
             ),
             True,
         ),
@@ -2092,46 +2060,62 @@ def test_can_validate_filtering(filter_, checker, expected):
     ("sorter", "checker", "expected"),
     (
         (
-            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=True),
+            Sorter(attr_rep=AttrRep(attr="userName")),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
+            ),
             True,
         ),
         (
-            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
-            False,
-        ),
-        (
-            Sorter(attr_rep=BoundedAttrRep(attr="name", sub_attr="formatted")),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=True),
-            True,
-        ),
-        (
-            Sorter(attr_rep=BoundedAttrRep(attr="name")),
-            AttributePresenceValidator(
-                attr_reps=[BoundedAttrRep(attr="name", sub_attr="formatted")], include=True
+            Sorter(attr_rep=AttrRep(attr="userName")),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
-            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="userName")], include=False),
-            False,
-        ),
-        (
-            Sorter(attr_rep=BoundedAttrRep(attr="userName")),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            Sorter(attr_rep=AttrRep(attr="name", sub_attr="formatted")),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
+            ),
             True,
         ),
         (
-            Sorter(attr_rep=BoundedAttrRep(attr="name", sub_attr="formatted")),
-            AttributePresenceValidator(attr_reps=[BoundedAttrRep(attr="name")], include=False),
+            Sorter(attr_rep=AttrRep(attr="name")),
+            AttributePresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
+                include=True,
+            ),
             False,
         ),
         (
-            Sorter(attr_rep=BoundedAttrRep(attr="name")),
-            AttributePresenceValidator(
-                attr_reps=[BoundedAttrRep(attr="name", sub_attr="formatted")], include=False
+            Sorter(attr_rep=AttrRep(attr="userName")),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
+            ),
+            False,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="userName")),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
+            ),
+            True,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="name", sub_attr="formatted")),
+            AttributePresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
+            ),
+            False,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="name")),
+            AttributePresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
+                include=False,
             ),
             True,
         ),

@@ -106,10 +106,10 @@ class _ResourceType(BaseResourceSchema):
             "schema": schema.schema,
             "schemaExtensions": [
                 {
-                    "schema": extension.schema,
+                    "schema": schema,
                     "required": required,
                 }
-                for extension, required in schema.extensions.items()
+                for schema, required in schema.extensions.items()
             ],
             "meta": {
                 "location": f"{self.endpoint}/{schema.name}",

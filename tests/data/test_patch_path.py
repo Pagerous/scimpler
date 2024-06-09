@@ -1,7 +1,7 @@
 import pytest
 
 from src.assets.schemas import User
-from src.container import AttrRep, BoundedAttrRep
+from src.container import AttrName, AttrRep
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.patch_path import PatchPath
@@ -85,27 +85,27 @@ def test_patch_path_parsing_failure(path, expected_issues):
         (
             "members",
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="members"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="members"),
+                sub_attr_name=None,
                 filter_=None,
             ),
         ),
         (
             "name.familyName",
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="name"),
-                sub_attr_rep=AttrRep(attr="familyName"),
+                attr_rep=AttrRep(attr="name"),
+                sub_attr_name=AttrName("familyName"),
                 filter_=None,
             ),
         ),
         (
             'addresses[type eq "work"]',
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="addresses"),
-                sub_attr_rep=None,
+                attr_rep=AttrRep(attr="addresses"),
+                sub_attr_name=None,
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="addresses"),
+                        attr_rep=AttrRep(attr="addresses"),
                         sub_operator=Equal(AttrRep(attr="type"), "work"),
                     )
                 ),
@@ -114,11 +114,11 @@ def test_patch_path_parsing_failure(path, expected_issues):
         (
             'members[value eq "2819c223-7f76-453a-919d-413861904646"].displayName',
             PatchPath(
-                attr_rep=BoundedAttrRep(attr="members"),
-                sub_attr_rep=AttrRep(attr="displayName"),
+                attr_rep=AttrRep(attr="members"),
+                sub_attr_name=AttrName("displayName"),
                 filter_=Filter(
                     ComplexAttributeOperator(
-                        attr_rep=BoundedAttrRep(attr="members"),
+                        attr_rep=AttrRep(attr="members"),
                         sub_operator=Equal(
                             AttrRep(attr="value"),
                             "2819c223-7f76-453a-919d-413861904646",
@@ -141,21 +141,21 @@ def test_patch_path_deserialization_success(path, expected):
     "kwargs",
     (
         {
-            "attr_rep": BoundedAttrRep(attr="attr", sub_attr="sub_attr"),
-            "sub_attr_rep": None,
+            "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
+            "sub_attr_name": None,
             "filter_": Filter(
                 ComplexAttributeOperator(
-                    attr_rep=BoundedAttrRep(attr="attr"),
+                    attr_rep=AttrRep(attr="attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
         },
         {
-            "attr_rep": BoundedAttrRep(attr="attr"),
-            "sub_attr_rep": AttrRep(attr="other_attr"),
+            "attr_rep": AttrRep(attr="attr"),
+            "sub_attr_name": AttrRep(attr="other_attr"),
             "filter_": Filter(
                 ComplexAttributeOperator(
-                    attr_rep=BoundedAttrRep(attr="different_attr"),
+                    attr_rep=AttrRep(attr="different_attr"),
                     sub_operator=Equal(AttrRep(attr="sub_attr"), "whatever"),
                 )
             ),
@@ -250,15 +250,14 @@ def test_check_if_data_matches_path(path, data, schema: BaseSchema, expected):
     assert actual is expected
 
 
-@pytest.mark.parametrize(
-    ("path", "expected"),
-    (
-        (PatchPath.deserialize("my:schema:name.formatted"), "PatchPath(my:schema:name.formatted)"),
-        (PatchPath.deserialize("emails[type eq 'work']"), "PatchPath(emails[type eq 'work'])"),
-    ),
-)
-def test_patch_path_repr(path, expected):
-    assert repr(path) == expected
+def test_patch_path_repr():
+    assert (
+        repr(PatchPath.deserialize("urn:ietf:params:scim:schemas:core:2.0:User:name.formatted"))
+        == "PatchPath(urn:ietf:params:scim:schemas:core:2.0:User:name.formatted)"
+    )
+    assert (
+        repr(PatchPath.deserialize("emails[type eq 'work']")) == "PatchPath(emails[type eq 'work'])"
+    )
 
 
 def test_calling_path_for_non_existing_attr_fails():

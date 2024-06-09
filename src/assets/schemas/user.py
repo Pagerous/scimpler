@@ -608,7 +608,7 @@ class _User(ResourceSchema):
             ],
         )
 
-    def _validate(self, data: SCIMDataContainer) -> ValidationIssues:
+    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
         issues = super()._validate(data)
         username = data.get("userName")
         nickname = data.get("nickName")

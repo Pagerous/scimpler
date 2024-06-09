@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Optional, Sequence, TypeVar, Union
 
-from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
@@ -47,16 +47,17 @@ class StringKey:
 
 
 TSorterData = TypeVar("TSorterData", bound=Union[list[SCIMDataContainer], list[dict[str, Any]]])
+TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
 
 
 class Sorter:
-    def __init__(self, attr_rep: BoundedAttrRep, asc: bool = True):
+    def __init__(self, attr_rep: TAttrRep, asc: bool = True):
         self._attr_rep = attr_rep
         self._asc = asc
         self._default_value = AlwaysLastKey()
 
     @property
-    def attr_rep(self) -> BoundedAttrRep:
+    def attr_rep(self) -> TAttrRep:
         return self._attr_rep
 
     @property

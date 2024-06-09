@@ -1,6 +1,6 @@
 import pytest
 
-from src.container import BoundedAttrRep
+from src.container import AttrRep
 from src.request.query_deserializer import (
     ResourceObjectGET,
     ResourceObjectPATCH,
@@ -20,13 +20,13 @@ from tests.conftest import CONFIG
         ResourceObjectPATCH(CONFIG),
     ),
 )
-def test_presence_validator_is_deserialized_from_query_string(deserializer):
+def test_presence_config_is_deserialized_from_query_string(deserializer):
     deserialized = deserializer.deserialize(query_string={"attributes": ["name.familyName"]})
 
-    assert deserialized["presence_validator"].attr_reps == [
-        BoundedAttrRep(attr="name", sub_attr="familyName")
+    assert deserialized["presence_config"].attr_reps == [
+        AttrRep(attr="name", sub_attr="familyName")
     ]
-    assert deserialized["presence_validator"].include is True
+    assert deserialized["presence_config"].include is True
 
 
 def test_server_root_resources_get_query_string_is_deserialized():
@@ -41,17 +41,17 @@ def test_server_root_resources_get_query_string_is_deserialized():
         }
     )
 
-    assert data["presence_validator"].attr_reps == [
-        BoundedAttrRep(attr="userName"),
-        BoundedAttrRep(attr="name"),
+    assert data["presence_config"].attr_reps == [
+        AttrRep(attr="userName"),
+        AttrRep(attr="name"),
     ]
-    assert data["presence_validator"].include is True
+    assert data["presence_config"].include is True
     assert data["filter"].to_dict() == {
         "op": "eq",
         "attr_rep": "userName",
         "value": "bjensen",
     }
-    assert data["sorter"].attr_rep == BoundedAttrRep(attr="name", sub_attr="familyName")
+    assert data["sorter"].attr_rep == AttrRep(attr="name", sub_attr="familyName")
     assert data["sorter"].asc is False
     assert data["startIndex"] == 2
     assert data["count"] == 10

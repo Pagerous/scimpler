@@ -1,6 +1,13 @@
-from typing import Any, Optional
+from copy import copy
+from typing import Any, Optional, TypeVar
 
-from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
+from src.container import (
+    AttrName,
+    AttrRep,
+    AttrRepFactory,
+    BoundedAttrRep,
+    SCIMDataContainer,
+)
 from src.data.attributes import Complex
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, LogicalOperator
@@ -8,12 +15,14 @@ from src.data.schemas import BaseSchema
 from src.data.utils import decode_placeholders, encode_strings
 from src.error import ValidationError, ValidationIssues
 
+TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
+
 
 class PatchPath:
     def __init__(
         self,
-        attr_rep: BoundedAttrRep,
-        sub_attr_rep: Optional[AttrRep],
+        attr_rep: TAttrRep,
+        sub_attr_name: Optional[str],
         filter_: Optional[Filter[ComplexAttributeOperator]] = None,
     ):
         if attr_rep.sub_attr:
@@ -26,16 +35,19 @@ class PatchPath:
             )
 
         self._attr_rep = attr_rep
-        self._sub_attr_rep = sub_attr_rep
+
+        if sub_attr_name and not isinstance(sub_attr_name, AttrName):
+            sub_attr_name = AttrName(sub_attr_name)
+        self._sub_attr_name = sub_attr_name
         self._filter = filter_
 
     @property
-    def attr_rep(self) -> BoundedAttrRep:
+    def attr_rep(self) -> TAttrRep:
         return self._attr_rep
 
     @property
-    def sub_attr_rep(self) -> Optional[AttrRep]:
-        return self._sub_attr_rep
+    def sub_attr_name(self) -> Optional[AttrName]:
+        return self._sub_attr_name
 
     @property
     def has_filter(self) -> bool:
@@ -59,7 +71,7 @@ class PatchPath:
             return cls._validate_complex_multivalued_path(path, placeholders)
 
         path = decode_placeholders(path, placeholders)
-        issues.merge(BoundedAttrRep.validate(path))
+        issues.merge(AttrRepFactory.validate(path))
         return issues
 
     @classmethod
@@ -74,15 +86,21 @@ class PatchPath:
         if value_sub_attr_rep_exp:
             if value_sub_attr_rep_exp.startswith("."):
                 value_sub_attr_rep_exp = value_sub_attr_rep_exp[1:]
-            issues.merge(AttrRep.validate(value_sub_attr_rep_exp))
+            try:
+                AttrName(value_sub_attr_rep_exp)
+            except ValueError:
+                issues.add_error(
+                    issue=ValidationError.bad_attribute_name(attribute=value_sub_attr_rep_exp),
+                    proceed=False,
+                )
         return issues
 
     @classmethod
     def deserialize(cls, path: str) -> "PatchPath":
         try:
             return cls._deserialize(path)
-        except Exception:
-            raise ValueError("invalid path expression")
+        except Exception as e:
+            raise ValueError("invalid path expression", e)
 
     @classmethod
     def _deserialize(cls, path: str) -> "PatchPath":
@@ -93,16 +111,23 @@ class PatchPath:
         if "[" in path or "]" in path:
             raise ValueError("invalid path expression")
 
-        attr_rep = BoundedAttrRep.deserialize(decode_placeholders(path, placeholders))
+        attr_rep = AttrRepFactory.deserialize(decode_placeholders(path, placeholders))
         if attr_rep.sub_attr:
-            sub_attr_rep = AttrRep(attr=attr_rep.sub_attr)
-            attr_rep = BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
+            sub_attr_name = attr_rep.sub_attr
+            if isinstance(attr_rep, BoundedAttrRep):
+                attr_rep = BoundedAttrRep(
+                    schema=attr_rep.schema,
+                    extension=attr_rep.extension,
+                    attr=attr_rep.attr,
+                )
+            else:
+                attr_rep = AttrRep(attr=attr_rep.attr)
         else:
-            sub_attr_rep = None
+            sub_attr_name = None
 
         return PatchPath(
             attr_rep=attr_rep,
-            sub_attr_rep=sub_attr_rep,
+            sub_attr_name=sub_attr_name,
             filter_=None,
         )
 
@@ -112,29 +137,37 @@ class PatchPath:
     ) -> "PatchPath":
         filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
         filter_ = Filter.deserialize(filter_exp)
-        sub_attr_rep = None
+        sub_attr_name = None
         sub_attr_exp = path[path.index("]") + 1 :]
         if sub_attr_exp:
             if sub_attr_exp.startswith("."):
                 sub_attr_exp = sub_attr_exp[1:]
             sub_attr_exp = decode_placeholders(sub_attr_exp, placeholders)
-            sub_attr_rep = AttrRep(sub_attr_exp)
+            sub_attr_name = AttrName(sub_attr_exp)
 
         return cls(
             attr_rep=filter_.operator.attr_rep,
-            sub_attr_rep=sub_attr_rep,
+            sub_attr_name=sub_attr_name,
             filter_=filter_,
         )
 
     def __repr__(self):
         if self._filter:
             repr_ = self._filter.serialize()
-        else:
+        elif isinstance(self._attr_rep, BoundedAttrRep):
             repr_ = str(
                 BoundedAttrRep(
                     schema=self._attr_rep.schema,
+                    extension=self._attr_rep.extension,
                     attr=self._attr_rep.attr,
-                    sub_attr=self._sub_attr_rep.attr if self._sub_attr_rep else None,
+                    sub_attr=self._sub_attr_name,
+                )
+            )
+        else:
+            repr_ = str(
+                AttrRep(
+                    attr=self._attr_rep.attr,
+                    sub_attr=self._sub_attr_name,
                 )
             )
         return f"PatchPath({repr_})"
@@ -146,7 +179,7 @@ class PatchPath:
         return bool(
             self.attr_rep == other.attr_rep
             and self._filter == other._filter
-            and self.sub_attr_rep == other.sub_attr_rep
+            and self._sub_attr_name == other._sub_attr_name
         )
 
     def __call__(self, value: Any, schema: BaseSchema) -> bool:
@@ -165,7 +198,7 @@ class PatchPath:
 
         if isinstance(attr, Complex):
             data = SCIMDataContainer()
-            data.set(attr.rep, value)
+            data.set(self._attr_rep, value)
             return self._filter(data, schema)
 
         operator = self._filter.operator.sub_operator
@@ -174,9 +207,13 @@ class PatchPath:
             data.set("value", value)
         else:
             data = value
+
+        value_attr = copy(attr)
+        value_attr._name = AttrName("value")
         return self._filter.operator.sub_operator.match(
             value=data,
             schema_or_complex=Complex(
-                name=attr.rep.attr, sub_attributes=[attr.clone(attr_rep=AttrRep("value"))]
+                name=self._attr_rep.attr,
+                sub_attributes=[value_attr],
             ),
         )

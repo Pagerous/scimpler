@@ -1,7 +1,9 @@
 import re
+from dataclasses import dataclass
 from typing import Any, Optional, Union
 
 from src.error import ValidationError, ValidationIssues
+from src.registry import schemas
 
 _ATTR_NAME = re.compile(r"([a-zA-Z][\w$-]*|\$ref)")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")
@@ -10,154 +12,155 @@ _ATTR_REP = re.compile(
 )
 
 
+class AttrName(str):
+    def __new__(cls, value: str) -> "AttrName":
+        if not isinstance(value, AttrName) and not _ATTR_NAME.fullmatch(value):
+            raise ValueError(f"{value!r} is not valid attr name")
+        return str.__new__(cls, value)  # type: ignore
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, str):
+            other = other.lower()
+        return self.lower() == other
+
+    def __hash__(self):
+        return hash(self.lower())
+
+
+class SchemaURI(str):
+    def __new__(cls, value: str) -> "SchemaURI":
+        if not isinstance(value, SchemaURI) and not _URI_PREFIX.fullmatch(value + ":"):
+            raise ValueError(f"{value!r} is not a valid schema URI")
+        return str.__new__(cls, value)  # type: ignore
+
+    def __eq__(self, other: Any) -> bool:
+        if isinstance(other, str):
+            other = other.lower()
+        return self.lower() == other
+
+    def __hash__(self):
+        return hash(self.lower())
+
+
 class AttrRep:
-    def __init__(self, attr: str):
-        if not _ATTR_NAME.fullmatch(attr):
-            raise ValueError(f"{attr!r} is not valid attr name")
+    def __init__(self, attr: str, sub_attr: str = ""):
+        attr = AttrName(attr)
+        attr_ = attr
+        if sub_attr:
+            sub_attr = AttrName(sub_attr)
+            attr_ += "." + sub_attr
 
         self._attr = attr
-        self._repr = attr
+        self._sub_attr = sub_attr
+        self._repr = attr_
 
     def __repr__(self) -> str:
         return self._repr
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         if not isinstance(other, AttrRep):
             return False
 
-        return self.attr.lower() == other.attr.lower()
+        return bool(self._attr == other._attr and self._sub_attr == other._sub_attr)
 
-    @classmethod
-    def validate(cls, attr_rep: str) -> ValidationIssues:
-        issues = ValidationIssues()
-        match = _ATTR_NAME.fullmatch(attr_rep)
-        if not match:
-            issues.add_error(
-                issue=ValidationError.bad_attribute_name(attr_rep),
-                proceed=False,
-            )
-        return issues
+    def __hash__(self):
+        return hash((self._attr, self._sub_attr))
 
     @property
     def attr(self) -> str:
         return self._attr
 
+    @property
+    def sub_attr(self) -> str:
+        return self._sub_attr
 
-class BoundedAttrRep:
+    @property
+    def location(self) -> tuple[str, ...]:
+        if self._sub_attr:
+            return self._attr, self._sub_attr
+        return (self._attr,)
+
+
+class BoundedAttrRep(AttrRep):
     def __init__(
         self,
-        schema: str = "",
-        attr: str = "",
-        sub_attr: str = "",
-        extension: bool = False,
-        extension_required: Optional[bool] = None,
+        schema: str,
+        extension: bool,
+        attr: str | AttrName,
+        sub_attr: str | AttrName = "",
     ):
-        if not _ATTR_NAME.fullmatch(attr):
-            raise ValueError(f"{attr!r} is not valid attr name")
+        super().__init__(attr, sub_attr)
+        schema = SchemaURI(schema)
 
-        attr_ = attr
-        if schema:
-            attr_ = f"{schema}:{attr_}"
-        if sub_attr:
-            attr_ += "." + sub_attr
-
-        if not _ATTR_REP.fullmatch(attr_):
-            raise ValueError(f"{attr_!r} is not valid attr / sub-attr name")
-
-        if extension and not schema:
-            raise ValueError("schema required for attribute from extension")
-
+        self._repr = f"{schema}:{self._repr}"
         self._schema = schema
-        self._attr = attr
-        self._sub_attr = sub_attr
-        self._repr = attr_
         self._extension = extension
-        self._extension_required = extension_required
 
-    def __repr__(self) -> str:
-        return self._repr
-
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
+        parent_equals = super().__eq__(other)
         if not isinstance(other, BoundedAttrRep):
-            return False
+            return parent_equals
 
-        if self.attr.lower() != other.attr.lower():
-            return False
+        return parent_equals and self._schema == other._schema
 
-        if all([self.schema, other.schema]) and self.schema.lower() != other.schema.lower():
-            return False
+    def __hash__(self):
+        return hash((self._attr, self._schema, self._sub_attr))
 
-        if self.sub_attr.lower() != other.sub_attr.lower():
-            return False
-
-        return True
-
-    @classmethod
-    def validate(cls, attr_rep: str) -> ValidationIssues:
-        issues = ValidationIssues()
-        match = _ATTR_REP.fullmatch(attr_rep)
-        if not match:
-            issues.add_error(
-                issue=ValidationError.bad_attribute_name(attr_rep),
-                proceed=False,
-            )
-        return issues
-
-    @classmethod
-    def deserialize(cls, attr_rep: str) -> "BoundedAttrRep":
-        try:
-            return cls._deserialize(attr_rep)
-        except Exception:
-            raise ValueError(f"{attr_rep!r} is not valid attribute representation")
-
-    @classmethod
-    def _deserialize(cls, attr_rep: str) -> "BoundedAttrRep":
-        match = _ATTR_REP.fullmatch(attr_rep)
-        schema, attr = match.group(1), match.group(2)
-        schema = schema[:-1] if schema else ""
-        if "." in attr:
-            attr, sub_attr = attr.split(".")
-        else:
-            attr, sub_attr = attr, ""
-        return BoundedAttrRep(schema=schema, attr=attr, sub_attr=sub_attr)
+    @property
+    def schema(self) -> SchemaURI:
+        return self._schema
 
     @property
     def extension(self) -> bool:
         return self._extension
 
     @property
-    def extension_required(self) -> Optional[bool]:
-        return self._extension_required
-
-    @property
-    def schema(self) -> str:
-        return self._schema
-
-    @property
-    def attr(self) -> str:
-        return self._attr
-
-    @property
-    def attr_with_schema(self) -> str:
-        if self.schema:
-            return f"{self.schema}:{self.attr}"
-        return self.attr
-
-    @property
-    def sub_attr(self) -> str:
-        return self._sub_attr
-
-    def parent_equals(self, other: "BoundedAttrRep") -> bool:
-        if all([self.schema, other.schema]):
-            return self.attr_with_schema.lower() == other.attr_with_schema.lower()
-        return self.attr.lower() == other.attr.lower()
+    def location(self) -> tuple[str, ...]:
+        return ((self._schema,) if self.extension else tuple()) + super().location
 
 
-class SchemaURI(str):
-    def __new__(cls, value: str):
-        if not _URI_PREFIX.fullmatch(value + ":"):
-            raise ValueError(f"{value!r} is not a valid schema URI")
-        return str.__new__(cls, value)
+class AttrRepFactory:
+    @classmethod
+    def validate(cls, value: str) -> ValidationIssues:
+        issues = ValidationIssues()
+        match = _ATTR_REP.fullmatch(value)
+        if match is not None:
+            schema = match.group(1)
+            schema = schema[:-1] if schema else ""
+            if not schema or SchemaURI(schema) in schemas:
+                return issues
+        issues.add_error(
+            issue=ValidationError.bad_attribute_name(value),
+            proceed=False,
+        )
+        return issues
+
+    @classmethod
+    def deserialize(cls, value: str) -> Union[AttrRep, BoundedAttrRep]:
+        try:
+            return cls._deserialize(value)
+        except Exception as e:
+            raise ValueError(f"{value!r} is not valid attribute representation") from e
+
+    @classmethod
+    def _deserialize(cls, value: str) -> Union[AttrRep, BoundedAttrRep]:
+        match = _ATTR_REP.fullmatch(value)
+        schema, attr = match.group(1), match.group(2)
+        schema = schema[:-1] if schema else ""
+        if "." in attr:
+            attr, sub_attr = attr.split(".")
+        else:
+            attr, sub_attr = attr, ""
+        if schema:
+            schema = SchemaURI(schema)
+            if schema in schemas:
+                return BoundedAttrRep(
+                    schema=schema,
+                    extension=schemas[schema],
+                    attr=attr,
+                    sub_attr=sub_attr,
+                )
+        return AttrRep(attr=attr, sub_attr=sub_attr)
 
 
 class InvalidType:
@@ -180,6 +183,14 @@ class MissingType:
 
 
 Missing = MissingType()
+
+
+@dataclass
+class _ContainerKey:
+    schema: Optional[str] = None
+    extension: bool = False
+    attr: Optional[str] = None
+    sub_attr: Optional[str] = None
 
 
 class SCIMDataContainer:
@@ -212,19 +223,20 @@ class SCIMDataContainer:
 
     def set(
         self,
-        key: Union[SchemaURI, AttrRep, BoundedAttrRep, str],
+        key: Union[str, SchemaURI, AttrName, AttrRep, BoundedAttrRep, _ContainerKey],
         value: Any,
         expand: bool = False,
     ) -> None:
-        if isinstance(key, SchemaURI):
-            extension = self._lower_case_to_original.get(key.lower())
+        key = self._normalize(key)
+
+        if key.schema and not key.attr:
+            extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
-                extension = key
-                self._lower_case_to_original[key.lower()] = key
+                extension = key.schema
+                self._lower_case_to_original[key.schema.lower()] = key.schema
             self._data[extension] = value
             return
 
-        key = self._normalize(key)
         if key.extension:
             extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
@@ -232,7 +244,13 @@ class SCIMDataContainer:
                 self._lower_case_to_original[key.schema.lower()] = extension
                 self._data[extension] = SCIMDataContainer()
             self._data[extension].set(
-                BoundedAttrRep(attr=key.attr, sub_attr=key.sub_attr), value, expand
+                _ContainerKey(
+                    schema=key.schema,
+                    attr=key.attr,
+                    sub_attr=key.sub_attr,
+                ),
+                value,
+                expand,
             )
             return
 
@@ -256,7 +274,7 @@ class SCIMDataContainer:
             raise KeyError(f"can not assign ({key.sub_attr}, {value}) to '{key.attr}'")
 
         if not isinstance(value, list):
-            self._data[parent_attr_key].set(BoundedAttrRep(attr=key.sub_attr), value)
+            self._data[parent_attr_key].set(_ContainerKey(attr=key.sub_attr), value)
             return
 
         if expand:
@@ -265,19 +283,20 @@ class SCIMDataContainer:
                 self._data[parent_attr_key].extend([SCIMDataContainer() for _ in range(to_create)])
             for item, container in zip(value, self._data[parent_attr_key]):
                 if item is not Missing:
-                    container.set(BoundedAttrRep(attr=key.sub_attr), item)
+                    container.set(_ContainerKey(attr=key.sub_attr), item)
             return
-        self._data[parent_attr_key].set(BoundedAttrRep(attr=key.sub_attr), value)
+        self._data[parent_attr_key].set(_ContainerKey(attr=key.sub_attr), value)
 
-    def get(self, key: Union[SchemaURI, AttrRep, BoundedAttrRep, str]):
-        if isinstance(key, SchemaURI):
-            extension = self._lower_case_to_original.get(key.lower())
+    def get(self, key: Union[str, SchemaURI, AttrName, AttrRep, BoundedAttrRep, _ContainerKey]):
+        key = self._normalize(key)
+
+        if key.schema and not key.attr:
+            extension = self._lower_case_to_original.get(key.schema.lower())
             return self._data.get(extension, Missing)
 
-        key = self._normalize(key)
-        extension = self._lower_case_to_original.get(key.schema.lower())
+        extension = self._lower_case_to_original.get(key.schema.lower()) if key.schema else None
         if extension is not None:
-            return self._data[extension].get(BoundedAttrRep(attr=key.attr, sub_attr=key.sub_attr))
+            return self._data[extension].get(_ContainerKey(attr=key.attr, sub_attr=key.sub_attr))
 
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
@@ -286,10 +305,10 @@ class SCIMDataContainer:
         if key.sub_attr:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMDataContainer):
-                return attr_value.get(BoundedAttrRep(attr=key.sub_attr))
+                return attr_value.get(_ContainerKey(attr=key.sub_attr))
             if isinstance(attr_value, list):
                 return [
-                    item.get(BoundedAttrRep(attr=key.sub_attr))
+                    item.get(_ContainerKey(attr=key.sub_attr))
                     if isinstance(item, SCIMDataContainer)
                     else Missing
                     for item in attr_value
@@ -297,15 +316,16 @@ class SCIMDataContainer:
             return Missing
         return self._data[attr]
 
-    def pop(self, key: Union[SchemaURI, AttrRep, BoundedAttrRep, str]):
-        if isinstance(key, SchemaURI):
-            extension = self._lower_case_to_original.get(key.lower())
+    def pop(self, key: Union[str, SchemaURI, AttrName, AttrRep, BoundedAttrRep, _ContainerKey]):
+        key = self._normalize(key)
+
+        if key.schema and not key.attr:
+            extension = self._lower_case_to_original.get(key.schema.lower())
             return self._data.pop(extension, Missing)
 
-        key = self._normalize(key)
-        extension = self._lower_case_to_original.get(key.schema.lower())
+        extension = self._lower_case_to_original.get(key.schema.lower()) if key.schema else None
         if extension is not None:
-            return self._data[extension].pop(BoundedAttrRep(attr=key.attr, sub_attr=key.sub_attr))
+            return self._data[extension].pop(_ContainerKey(attr=key.attr, sub_attr=key.sub_attr))
 
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
@@ -326,12 +346,41 @@ class SCIMDataContainer:
         return self._data.pop(attr)
 
     @staticmethod
-    def _normalize(attr_rep) -> BoundedAttrRep:
-        if isinstance(attr_rep, str):
-            return BoundedAttrRep.deserialize(attr_rep)
-        if isinstance(attr_rep, AttrRep):
-            return BoundedAttrRep(attr=attr_rep.attr)
-        return attr_rep
+    def _normalize(value) -> _ContainerKey:
+        if isinstance(value, _ContainerKey):
+            return value
+
+        if isinstance(value, SchemaURI):
+            return _ContainerKey(schema=str(value))
+
+        if isinstance(value, str):
+            try:
+                value = SchemaURI(value)
+                if value in schemas:
+                    return _ContainerKey(schema=str(value))
+            except ValueError:
+                pass
+
+            value = AttrRepFactory.deserialize(value)
+
+        if isinstance(value, AttrName):
+            return _ContainerKey(
+                schema=None,
+                attr=str(value),
+                sub_attr=None,
+                extension=False,
+            )
+        elif isinstance(value, BoundedAttrRep):
+            return _ContainerKey(
+                schema=str(value.schema),
+                attr=str(value.attr),
+                sub_attr=str(value.sub_attr),
+                extension=value.extension,
+            )
+        return _ContainerKey(
+            attr=str(value.attr),
+            sub_attr=str(value.sub_attr) if value.sub_attr else None,
+        )
 
     @staticmethod
     def _is_child_value_compatible(

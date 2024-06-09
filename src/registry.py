@@ -1,19 +1,26 @@
-from typing import TYPE_CHECKING, Any, Callable, Union
-
-from src.constants import SCIMType
+from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
     from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
     from src.data.schemas import ResourceSchema
 
 
-resource_schemas: dict[str, "ResourceSchema"] = {}
+resources: dict[str, "ResourceSchema"] = {}
+schemas: dict[str, bool] = {}
 
 
 def register_resource_schema(resource_schema: "ResourceSchema"):
-    if resource_schema.name in resource_schemas:
+    if resource_schema.name in resources:
+        raise RuntimeError(f"schema {resource_schema.name!r} already registered")
+    resources[resource_schema.name] = resource_schema
+
+    if resource_schema.schema in schemas:
         raise RuntimeError(f"schema {resource_schema.schema!r} already registered")
-    resource_schemas[resource_schema.name] = resource_schema
+
+    schemas[resource_schema.schema] = False
+    for schema in resource_schema.extensions:
+        if schema not in schemas:
+            schemas[schema] = True
 
 
 Converter = Callable[[Any], Any]
