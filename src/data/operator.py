@@ -207,7 +207,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         op_value = self.value
         if isinstance(attr, Complex):
-            value_sub_attr = getattr(attr.attrs, "value", None)
+            value_sub_attr = attr.attrs.get("value")
             if value_sub_attr is None:
                 return None
 

@@ -560,13 +560,10 @@ class Complex(Attribute):
 
         validators = list(validators or [])
         if self._multi_valued:
-            if (
-                getattr(self.attrs, "primary", None)
-                and validate_single_primary_value not in validators
-            ):
+            if self.attrs.get("primary") and validate_single_primary_value not in validators:
                 validators.append(validate_single_primary_value)
             if (
-                all([getattr(self.attrs, "type", None), getattr(self.attrs, "value", None)])
+                all([self.attrs.get("type"), self.attrs.get("value")])
                 and validate_type_value_pairs not in validators
             ):
                 validators.append(validate_type_value_pairs)
@@ -599,15 +596,15 @@ class Complex(Attribute):
     def _validate(self, value: Union[SCIMDataContainer, dict[str, Any]]) -> ValidationIssues:
         issues = ValidationIssues()
         value = SCIMDataContainer(value)
-        for attr_rep, sub_attr in self._sub_attributes:
-            sub_attr_value = value.get(attr_rep.attr)
+        for name, sub_attr in self._sub_attributes:
+            sub_attr_value = value.get(name)
             if sub_attr_value is Missing:
                 continue
             issues_ = sub_attr.validate(sub_attr_value)
             if not issues_.can_proceed():
-                value.set(attr_rep.attr, Invalid)
+                value.set(name, Invalid)
             issues.merge(
-                location=(attr_rep.attr,),
+                location=[name],
                 issues=issues_,
             )
         return issues
@@ -670,22 +667,15 @@ def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> Validatio
 
 class Attributes:
     def __init__(self, attrs: Optional[Iterable[Attribute]] = None):
-        self._attrs = {AttrRep(attr=attr.name): attr for attr in attrs or []}
+        self._attrs = {attr.name: attr for attr in (attrs or [])}
 
-    def __getattr__(self, name: str) -> Attribute:
-        if (attr := self._attrs.get(AttrRep(attr=name))) is not None:
-            return attr
-        raise AttributeError(f"no {name!r} attribute")
-
-    def __iter__(self) -> Iterator[tuple[AttrRep, Attribute]]:
+    def __iter__(self) -> Iterator[tuple[AttrName, Attribute]]:
         return iter(self._attrs.items())
 
-    def get(self, attr_rep: Union[str, AttrRep]) -> Optional[Attribute]:
-        if isinstance(attr_rep, str):
-            attr_rep = AttrRep(attr=attr_rep)
-        elif isinstance(attr_rep, BoundedAttrRep):
-            attr_rep = AttrRep(attr=attr_rep.attr)
-        return self._attrs.get(attr_rep)
+    def get(self, attr_name: Union[str, AttrRep]) -> Optional[Attribute]:
+        if isinstance(attr_name, AttrRep):
+            attr_name = attr_name.attr
+        return self._attrs.get(AttrName(attr_name))
 
     def clone(self, attr_filter: Callable[[Attribute], bool]) -> "Attributes":
         cloned = Attributes()
@@ -724,9 +714,9 @@ class BoundedAttributes:
                     BoundedAttrRep(
                         schema=attr_rep.schema,
                         attr=attr_rep.attr,
-                        sub_attr=sub_attr_rep.attr,
+                        sub_attr=sub_attr_name,
                     ): sub_attr
-                    for sub_attr_rep, sub_attr in attr.attrs
+                    for sub_attr_name, sub_attr in attr.attrs
                 }
 
     def __getattr__(self, name: str) -> BoundedAttrRep:

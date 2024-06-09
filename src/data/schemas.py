@@ -229,11 +229,11 @@ class BaseSchema:
             if issues_.has_errors():
                 return issues
 
-            for sub_attr_rep, sub_attr in attr.attrs:
+            for sub_attr_name, sub_attr in attr.attrs:
                 bounded_sub_attr_rep = BoundedAttrRep(
                     schema=attr_rep.schema,
                     attr=attr_rep.attr,
-                    sub_attr=sub_attr_rep.attr,
+                    sub_attr=sub_attr_name,
                 )
                 if attr.multi_valued:
                     if not value:
@@ -244,7 +244,7 @@ class BaseSchema:
                             self._validate_attr_presence(
                                 attr=sub_attr,
                                 attr_rep=bounded_sub_attr_rep,
-                                value=item.get(sub_attr_rep),
+                                value=item.get(sub_attr_name),
                                 presence_config=presence_config,
                                 required_by_schema=required_by_schema,
                             ),
@@ -255,7 +255,7 @@ class BaseSchema:
                         self._validate_attr_presence(
                             attr=sub_attr,
                             attr_rep=bounded_sub_attr_rep,
-                            value=value.get(sub_attr_rep) if value else Missing,
+                            value=value.get(sub_attr_name) if value else Missing,
                             presence_config=presence_config,
                             required_by_schema=required_by_schema,
                         ),

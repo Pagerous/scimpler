@@ -166,16 +166,16 @@ class PatchOp(BaseSchema):
 
                 sub_attr_err = False
                 attr_location = attr_rep.location
-                for sub_attr_rep, sub_attr in attr.attrs:
+                for sub_attr_name, sub_attr in attr.attrs:
                     if (
                         sub_attr.mutability == AttributeMutability.READ_ONLY
                         and attr_value is not Invalid
-                        and attr_value.get(sub_attr_rep) is not Missing
+                        and attr_value.get(sub_attr_name) is not Missing
                     ):
                         issues.add_error(
                             issue=ValidationError.attribute_can_not_be_modified(),
                             proceed=False,
-                            location=attr_location + sub_attr_rep.location,
+                            location=(*attr_location, sub_attr_name),
                         )
                         sub_attr_err = True
 
@@ -213,15 +213,15 @@ class PatchOp(BaseSchema):
 
         can_validate_presence = True
         if updating_multivalued_items or not attr.multi_valued:
-            for sub_attr_rep, sub_attr in attr.attrs:
+            for sub_attr_name, sub_attr in attr.attrs:
                 if sub_attr.mutability != AttributeMutability.READ_ONLY:
                     # non-read-only attributes can be updated
                     continue
-                if attr_value.get(sub_attr_rep) is not Missing:
+                if attr_value.get(sub_attr_name) is not Missing:
                     issues.add_error(
                         issue=ValidationError.attribute_can_not_be_modified(),
                         proceed=False,
-                        location=sub_attr_rep.location,
+                        location=[sub_attr_name],
                     )
                     can_validate_presence = False
 
@@ -234,27 +234,27 @@ class PatchOp(BaseSchema):
     @staticmethod
     def _validate_complex_sub_attrs_presence(attr: Complex, value: Any) -> ValidationIssues:
         issues = ValidationIssues()
-        for sub_attr_rep, sub_attr in attr.attrs:
+        for sub_attr_name, sub_attr in attr.attrs:
             if attr.multi_valued:
                 for i, item in enumerate(value):
                     issues.merge(
                         validate_presence(
                             attr=sub_attr,
-                            value=item.get(sub_attr_rep),
+                            value=item.get(sub_attr_name),
                             direction="REQUEST",
                             inclusivity="INCLUDE",
                         ),
-                        location=(i, *sub_attr_rep.location),
+                        location=(i, sub_attr_name),
                     )
                 continue
             issues.merge(
                 validate_presence(
                     attr=sub_attr,
-                    value=value.get(sub_attr_rep),
+                    value=value.get(sub_attr_name),
                     direction="REQUEST",
                     inclusivity="INCLUDE",
                 ),
-                location=sub_attr_rep.location,
+                location=[sub_attr_name],
             )
         return issues
 

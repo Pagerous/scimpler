@@ -3,7 +3,7 @@ from typing import Iterable, Optional
 from marshmallow import Schema, fields, post_dump
 
 from src.assets.schemas import ListResponse
-from src.container import AttrRep
+from src.container import AttrName, AttrRep, BoundedAttrRep
 from src.data.attributes import (
     Attribute,
     AttributeReturn,
@@ -23,7 +23,7 @@ from src.request.validator import Validator
 
 
 def _get_fields(
-    attrs: Iterable[tuple[AttrRep, Attribute]],
+    attrs: Iterable[tuple[BoundedAttrRep, Attribute]],
     field_by_attr_name: Optional[dict[str, fields.Field]] = None,
 ) -> dict[str, fields.Field]:
     field_by_attr_name = field_by_attr_name or {}
@@ -38,6 +38,25 @@ def _get_fields(
             else:
                 field = _get_field(attr, **kwargs)
         fields_[attr_rep.attr] = field
+    return fields_
+
+
+def _get_complex_sub_fields(
+    attrs: Iterable[tuple[AttrName, Attribute]],
+    field_by_attr_name: Optional[dict[str, fields.Field]] = None,
+) -> dict[str, fields.Field]:
+    field_by_attr_name = field_by_attr_name or {}
+    fields_ = {}
+    for name, attr in attrs:
+        if name in field_by_attr_name:
+            field = field_by_attr_name[name]
+        else:
+            kwargs = _get_kwargs(attr)
+            if attr.multi_valued:
+                field = fields.List(_get_field(attr), **kwargs)
+            else:
+                field = _get_field(attr, **kwargs)
+        fields_[name] = field
     return fields_
 
 
@@ -63,7 +82,7 @@ def _get_field(attr, **kwargs):
     elif isinstance(attr, String):
         field = fields.String(**kwargs)
     elif isinstance(attr, Complex):
-        field = fields.Nested(_get_fields(attr.attrs))
+        field = fields.Nested(_get_complex_sub_fields(attr.attrs))
     else:
         raise RuntimeError(f"unknown attr type {attr.type}")
     return field

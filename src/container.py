@@ -67,11 +67,11 @@ class AttrRep:
         return hash((self._attr, self._sub_attr))
 
     @property
-    def attr(self) -> str:
+    def attr(self) -> AttrName:
         return self._attr
 
     @property
-    def sub_attr(self) -> str:
+    def sub_attr(self) -> AttrName:
         return self._sub_attr
 
     @property
@@ -362,7 +362,6 @@ class SCIMDataContainer:
                     return _ContainerKey(schema=str(value))
             except ValueError:
                 pass
-
             value = AttrRepFactory.deserialize(value)
 
         if isinstance(value, BoundedAttrRep):

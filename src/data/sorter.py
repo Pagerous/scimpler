@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Optional, Sequence, TypeVar, Union
 
-from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import AttrRep, Missing, SCIMDataContainer
 from src.data.attributes import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
@@ -118,7 +118,7 @@ class Sorter:
         item_value = item.get(self._attr_rep)
         if item_value is not Missing and attr.multi_valued:
             if isinstance(attr, Complex):
-                attr = getattr(attr.attrs, "value", None)
+                attr = attr.attrs.get("value")
                 for i, v in enumerate(item_value):
                     if i == 0:
                         value = v.get("value")

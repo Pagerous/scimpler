@@ -789,3 +789,20 @@ def test_attr_can_be_retrieved_from_bounded_attr_reps(input_):
 )
 def test_attr_is_not_retrieved_if_bad_input(input_):
     assert User.attrs.get(input_) is None
+
+
+def test_attr_rep_is_hashable():
+    assert hash(AttrRep(attr="attr", sub_attr="sub_attr")) is not None
+
+
+def test_bounded_attr_rep_is_hashable():
+    assert (
+        hash(
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="name",
+                sub_attr="formatted",
+            )
+        )
+        is not None
+    )
