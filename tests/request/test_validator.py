@@ -367,7 +367,6 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
         Sorter(
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                extension=True,
                 attr="manager",
                 sub_attr="displayName",
             ),
@@ -2004,7 +2003,6 @@ def test_can_validate_filtering_with_bounded_attributes():
             attr_reps=[
                 BoundedAttrRep(
                     schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                    extension=False,
                     attr="name",
                     sub_attr="formatted",
                 )
@@ -2022,7 +2020,6 @@ def test_can_validate_filtering_with_bounded_attributes():
             attr_reps=[
                 BoundedAttrRep(
                     schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                    extension=False,
                     attr="nonExisting",
                     sub_attr="formatted",
                 )

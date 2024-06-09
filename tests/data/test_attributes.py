@@ -714,7 +714,6 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
             "id",
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=False,
                 attr="id",
             ),
         ),
@@ -722,7 +721,6 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
             "name__formatted",
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=False,
                 attr="name",
                 sub_attr="formatted",
             ),
@@ -731,7 +729,6 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
             "emails__type",
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=False,
                 attr="emails",
                 sub_attr="type",
             ),
@@ -740,7 +737,6 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
             "manager",
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                extension=True,
                 attr="manager",
             ),
         ),
@@ -748,7 +744,6 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
             "manager__displayName",
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                extension=True,
                 attr="manager",
                 sub_attr="displayName",
             ),

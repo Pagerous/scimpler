@@ -721,11 +721,10 @@ class BoundedAttributes:
         parts = name.split("__", 1)
         n_parts = len(parts)
         attr_name = parts[0].lower()
-        attr_rep = BoundedAttrRep(schema=self._schema, extension=self._extension, attr=attr_name)
+        attr_rep = BoundedAttrRep(schema=self._schema, attr=attr_name)
         if attr := self._attrs.get(attr_rep):
             attr_rep = BoundedAttrRep(
                 schema=self._schema,
-                extension=self._extension,
                 attr=attr.name,
             )
             if n_parts == 1:
@@ -735,12 +734,10 @@ class BoundedAttributes:
                 schema=attr_rep.schema,
                 attr=attr_rep.attr,
                 sub_attr=parts[1],
-                extension=attr_rep.extension,
             )
             if sub_attr := self._bounded_complex_sub_attrs[attr_rep].get(sub_attr_rep):
                 return BoundedAttrRep(
                     schema=attr_rep.schema,
-                    extension=attr_rep.extension,
                     attr=attr_rep.attr,
                     sub_attr=sub_attr.name,
                 )
@@ -767,7 +764,6 @@ class BoundedAttributes:
             attr_rep = BoundedAttrRep(
                 schema=self._schema,
                 attr=attr.name,
-                extension=self._extension,
             )
             self._attrs[attr_rep] = attr
             if attr.name.lower() not in self._common_attrs:
@@ -779,7 +775,6 @@ class BoundedAttributes:
                         schema=attr_rep.schema,
                         attr=attr_rep.attr,
                         sub_attr=sub_attr_rep.attr,
-                        extension=attr_rep.extension,
                     ): sub_attr
                     for sub_attr_rep, sub_attr in attr.attrs
                 }
@@ -824,7 +819,6 @@ class BoundedAttributes:
         if isinstance(attr_rep, BoundedAttrRep):
             top_level_rep = BoundedAttrRep(
                 schema=attr_rep.schema,
-                extension=attr_rep.extension,
                 attr=attr_rep.attr,
             )
             attr = self._attrs.get(top_level_rep)
@@ -834,7 +828,6 @@ class BoundedAttributes:
 
         top_level_rep = BoundedAttrRep(
             schema=self._schema,
-            extension=self._extension,
             attr=attr_rep.attr,
         )
         if attr := self._attrs.get(top_level_rep):
@@ -844,7 +837,6 @@ class BoundedAttributes:
             return self._bounded_complex_sub_attrs[top_level_rep].get(
                 BoundedAttrRep(
                     schema=self._schema,
-                    extension=self._extension,
                     attr=attr_rep.attr,
                     sub_attr=attr_rep.sub_attr,
                 )
@@ -868,7 +860,6 @@ class BoundedAttributes:
             return self.get(
                 BoundedAttrRep(
                     schema=path.attr_rep.schema,
-                    extension=path.attr_rep.extension,
                     attr=path.attr_rep.attr,
                     sub_attr=path.sub_attr_name,
                 )

@@ -3,7 +3,7 @@ from copy import deepcopy
 import pytest
 
 from src.assets.config import create_service_provider_config
-from src.assets.schemas import Group, User
+from src.assets.schemas import Error, Group, User
 from src.assets.schemas.user import EnterpriseUserExtension
 from src.data.attributes import (
     Binary,

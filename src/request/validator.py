@@ -632,9 +632,7 @@ def _is_parent_contained(attr_rep, attr_reps) -> bool:
         attr_rep.sub_attr
         and (
             (
-                BoundedAttrRep(
-                    schema=attr_rep.schema, extension=attr_rep.extension, attr=attr_rep.attr
-                )
+                BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
                 if isinstance(attr_rep, BoundedAttrRep)
                 else AttrRep(attr=attr_rep.attr)
             )

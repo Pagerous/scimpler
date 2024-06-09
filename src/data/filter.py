@@ -80,7 +80,6 @@ class Filter(Generic[TOperator]):
                 sub_reps = [
                     BoundedAttrRep(
                         schema=rep.schema,
-                        extension=rep.extension,
                         attr=rep.attr,
                         sub_attr=get_sub_attr_name(sub_rep),
                     )

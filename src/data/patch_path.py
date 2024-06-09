@@ -117,7 +117,6 @@ class PatchPath:
             if isinstance(attr_rep, BoundedAttrRep):
                 attr_rep = BoundedAttrRep(
                     schema=attr_rep.schema,
-                    extension=attr_rep.extension,
                     attr=attr_rep.attr,
                 )
             else:
@@ -158,7 +157,6 @@ class PatchPath:
             repr_ = str(
                 BoundedAttrRep(
                     schema=self._attr_rep.schema,
-                    extension=self._attr_rep.extension,
                     attr=self._attr_rep.attr,
                     sub_attr=self._sub_attr_name,
                 )

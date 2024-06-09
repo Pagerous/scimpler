@@ -212,7 +212,6 @@ def test_basic_filters_can_be_combined_with_or_operator():
         AttrRep(attr="name", sub_attr="formatted"),
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="nickName",
         ),
     ]
@@ -278,7 +277,6 @@ def test_precedence_of_logical_operators_is_preserved():
         AttrRep(attr="name", sub_attr="formatted"),
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="nickName",
         ),
     ]
@@ -325,7 +323,6 @@ def test_whitespaces_between_tokens_with_logical_operators_has_no_influence_on_f
         AttrRep(attr="name", sub_attr="formatted"),
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="nickName",
         ),
     ]
@@ -382,7 +379,6 @@ def test_filter_groups_are_deserialized():
         AttrRep(attr="name", sub_attr="formatted"),
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="nickName",
         ),
         AttrRep("id"),
@@ -443,7 +439,6 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
         AttrRep(attr="name", sub_attr="formatted"),
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="nickName",
         ),
         AttrRep(attr="id"),
@@ -560,7 +555,6 @@ def test_complex_attribute_filter_with_logical_operators_and_groups_is_deseriali
     assert filter_.attr_reps == [
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="emails",
             sub_attr=sub_attr,
         )
@@ -627,7 +621,6 @@ def test_any_sequence_of_whitespace_characters_has_no_influence_on_complex_attri
     assert filter_.attr_reps == [
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="emails",
             sub_attr=sub_attr,
         )
@@ -777,14 +770,11 @@ def test_gargantuan_filter():
     assert filter_.attr_reps == [
         AttrRep(attr="userName"),
         AttrRep(attr="name", sub_attr="formatted"),
-        BoundedAttrRep(
-            schema="urn:ietf:params:scim:schemas:core:2.0:User", extension=False, attr="nickName"
-        ),
+        BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nickName"),
         AttrRep(attr="id"),
     ] + [
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="emails",
             sub_attr=sub_attr,
         )

@@ -358,7 +358,6 @@ def test_presence_validation_fails_on_sub_attr_not_requested_by_exclusion():
             attr_reps=[
                 BoundedAttrRep(
                     schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                    extension=False,
                     attr="name",
                     sub_attr="familyName",
                 )
@@ -397,7 +396,6 @@ def test_presence_validation_fails_on_sub_attr_not_requested_by_inclusion():
             attr_reps=[
                 BoundedAttrRep(
                     schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                    extension=False,
                     attr="name",
                     sub_attr="familyName",
                 )
@@ -650,7 +648,6 @@ def test_presence_validation_fails_if_provided_same_attr_from_different_schema(
             attr_reps=[
                 BoundedAttrRep(
                     schema="my:schema:other_extension",
-                    extension=True,
                     attr="complex",
                     sub_attr="value",
                 )

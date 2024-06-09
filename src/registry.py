@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
+    from src.container import SchemaURI
     from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
     from src.data.schemas import ResourceSchema
 
@@ -14,12 +15,9 @@ def register_resource_schema(resource_schema: "ResourceSchema"):
         raise RuntimeError(f"resource {resource_schema.name!r} already registered")
     resources[resource_schema.name] = resource_schema
 
-    if resource_schema.schema in schemas:
-        raise RuntimeError(f"schema {resource_schema.schema!r} already registered")
 
-    schemas[resource_schema.schema] = False
-    for schema in resource_schema.extensions:
-        schemas[schema] = True
+def register_schema(schema: "SchemaURI", extension: bool = False):
+    schemas[schema] = extension
 
 
 Converter = Callable[[Any], Any]

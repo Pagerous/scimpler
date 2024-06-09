@@ -22,6 +22,7 @@ from src.data.attributes_presence import (
     validate_presence,
 )
 from src.error import ValidationError, ValidationIssues
+from src.registry import register_schema
 from src.warning import ScimpleUserWarning
 
 
@@ -41,11 +42,12 @@ TData = TypeVar("TData", bound=Union[SCIMDataContainer, dict])
 class BaseSchema:
     def __init__(
         self,
-        schema: str | SchemaURI,
+        schema: str,
         attrs: Iterable[Attribute],
         common_attrs: Optional[Iterable[str]] = None,
     ):
         schema = SchemaURI(schema)
+        register_schema(schema)
         self._attrs = BoundedAttributes(
             schema=schema,
             attrs=[
@@ -231,7 +233,6 @@ class BaseSchema:
             for sub_attr_rep, sub_attr in attr.attrs:
                 bounded_sub_attr_rep = BoundedAttrRep(
                     schema=attr_rep.schema,
-                    extension=attr_rep.extension,
                     attr=attr_rep.attr,
                     sub_attr=sub_attr_rep.attr,
                 )
@@ -330,9 +331,7 @@ class BaseSchema:
                     continue
 
                 if isinstance(rep, BoundedAttrRep):
-                    if attr_rep == (
-                        BoundedAttrRep(schema=rep.schema, extension=rep.extension, attr=rep.attr)
-                    ):
+                    if attr_rep == (BoundedAttrRep(schema=rep.schema, attr=rep.attr)):
                         return None
                 else:
                     return None
@@ -344,9 +343,7 @@ class BaseSchema:
         if not attr_rep.sub_attr:
             return None
 
-        parent_attr_rep = BoundedAttrRep(
-            schema=attr_rep.schema, extension=attr_rep.extension, attr=attr_rep.attr
-        )
+        parent_attr_rep = BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
         if parent_attr_rep in presence_config.attr_reps:
             # it means the parent is specified in attr_reps
             # and potential errors should be delegated to it
@@ -537,10 +534,7 @@ class ResourceSchema(BaseResourceSchema):
         }
         for attr_rep, attr in extension.attrs:
             if (
-                self.attrs.get(
-                    BoundedAttrRep(schema=self.schema, extension=False, attr=attr_rep.attr)
-                )
-                is not None
+                self.attrs.get(BoundedAttrRep(schema=self.schema, attr=attr_rep.attr)) is not None
                 or attr_rep.attr in self._common_attrs
             ):
                 warnings.warn(
@@ -604,12 +598,13 @@ class ResourceSchema(BaseResourceSchema):
 class SchemaExtension:
     def __init__(
         self,
-        schema: str | SchemaURI,
+        schema: str,
         name: str,
         attrs: Optional[Iterable[Attribute]] = None,
         description: str = "",
     ):
         self._schema = SchemaURI(schema)
+        register_schema(self._schema, True)
         self._attrs = Attributes(attrs)
         self._name = name
         self._description = description

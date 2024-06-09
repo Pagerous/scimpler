@@ -15,9 +15,7 @@ from src.container import (
     (
         (AttrRep(attr="id"), "2819c223-7f76-453a-919d-413861904646"),
         (
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User", extension=True, attr="userName"
-            ),
+            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
             "bjensen@example.com",
         ),
         (
@@ -35,7 +33,6 @@ from src.container import (
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=True,
                 attr="name",
                 sub_attr="familyName",
             ),
@@ -44,7 +41,6 @@ from src.container import (
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=True,
                 attr="name",
                 sub_attr="familyName",
             ),
@@ -60,7 +56,6 @@ from src.container import (
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                extension=True,
                 attr="employeeNumber",
             ),
             "1",
@@ -68,7 +63,6 @@ from src.container import (
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                extension=True,
                 attr="manager",
                 sub_attr="displayName",
             ),
@@ -94,7 +88,6 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=False,
                 attr="userName",
             ),
             "bjensen@example.com",
@@ -116,7 +109,6 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=False,
                 attr="meta",
                 sub_attr="resourceType",
             ),
@@ -127,7 +119,6 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=False,
                 attr="emails",
                 sub_attr="type",
             ),
@@ -138,7 +129,6 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         (
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                extension=False,
                 attr="emails",
                 sub_attr="type",
             ),
@@ -150,7 +140,6 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="employeeNumber",
-                extension=True,
             ),
             "701984",
             False,
@@ -165,7 +154,6 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                 attr="manager",
                 sub_attr="displayName",
-                extension=True,
             ),
             "John Smith",
             False,
@@ -336,7 +324,6 @@ def test_bounded_attr_creation_fails_if_bad_attr_name():
     with pytest.raises(ValueError, match="is not valid attr name"):
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="bad^attr",
         )
 
@@ -345,7 +332,6 @@ def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
     with pytest.raises(ValueError, match="'.*' is not valid attr name"):
         BoundedAttrRep(
             schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            extension=False,
             attr="attr",
             sub_attr="bad^sub^attr",
         )
@@ -357,40 +343,53 @@ def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
         (AttrRep(attr="attr"), AttrRep(attr="ATTR"), True),
         (AttrRep(attr="abc"), AttrRep(attr="cba"), False),
         (
-            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
-            AttrRep(attr="Attr"),
+            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
+            AttrRep(attr="UserName"),
             True,
         ),
         (
-            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", extension=False, attr="Attr"),
+            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="name"),
+            BoundedAttrRep(schema="urn:ietf:params:SCIM:schemas:core:2.0:user", attr="NAME"),
             True,
         ),
         (
-            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
-            BoundedAttrRep(schema="MY:OTHER:SCHEMA", extension=False, attr="Attr"),
-            False,
-        ),
-        (
-            BoundedAttrRep(schema="my:schema", extension=False, attr="attr", sub_attr="sub_attr"),
-            BoundedAttrRep(schema="MY:SCHEMA", extension=False, attr="Attr", sub_attr="SUB_ATTR"),
-            True,
-        ),
-        (
-            BoundedAttrRep(schema="my:schema", extension=False, attr="attr", sub_attr="sub_attr"),
+            BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="nonExisting"),
             BoundedAttrRep(
-                schema="MY:SCHEMA", extension=False, attr="Attr", sub_attr="OTHER_SUB_ATTR"
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                attr="nonExisting",
             ),
             False,
         ),
         (
-            BoundedAttrRep(schema="my:schema", extension=False, attr="attr"),
-            AttrRep(attr="attr"),
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="name",
+                sub_attr="formatted",
+            ),
+            BoundedAttrRep(
+                schema="urn:ietf:params:SCIM:schemas:core:2.0:User",
+                attr="NAME",
+                sub_attr="FORMATTED",
+            ),
             True,
         ),
+        (
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="name",
+                sub_attr="givenName",
+            ),
+            BoundedAttrRep(
+                schema="urn:ietf:params:SCIM:schemas:core:2.0:User",
+                attr="NAME",
+                sub_attr="FORMATTED",
+            ),
+            False,
+        ),
+        (AttrRep(attr="attr"), "attr", False),
     ),
 )
-def test_bounded_attr_can_be_compared(attr_1, attr_2, expected):
+def test_attr_rep_can_be_compared(attr_1, attr_2, expected):
     assert (attr_1 == attr_2) is expected
 
 
@@ -425,20 +424,40 @@ def test_container_repr():
             Missing,
         ),
         (
-            {"a": 1, "my:schema:extension": {"b": 2}, "c": 3},
-            BoundedAttrRep(schema="my:schema:extension", extension=True, attr="b"),
+            {
+                "a": 1,
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"b": 2},
+                "c": 3,
+            },
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", attr="b"
+            ),
             2,
             Missing,
         ),
         (
-            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
-            BoundedAttrRep(schema="my:schema:extension", extension=True, attr="b", sub_attr="d"),
+            {
+                "a": 1,
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"b": {"d": 4}},
+                "c": 3,
+            },
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                attr="b",
+                sub_attr="d",
+            ),
             4,
             Missing,
         ),
         (
-            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
-            BoundedAttrRep(schema="my:schema:extension", extension=True, attr="b"),
+            {
+                "a": 1,
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"b": {"d": 4}},
+                "c": 3,
+            },
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", attr="b"
+            ),
             {"d": 4},
             Missing,
         ),
@@ -461,13 +480,21 @@ def test_container_repr():
             Missing,
         ),
         (
-            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
-            SchemaURI("my:schema:extension"),
+            {
+                "a": 1,
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"b": {"d": 4}},
+                "c": 3,
+            },
+            SchemaURI("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
             {"b": {"d": 4}},
             Missing,
         ),
         (
-            {"a": 1, "my:schema:extension": {"b": {"d": 4}}, "c": 3},
+            {
+                "a": 1,
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"b": {"d": 4}},
+                "c": 3,
+            },
             SchemaURI("non:existing:extension"),
             Missing,
             Missing,
