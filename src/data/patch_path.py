@@ -36,7 +36,7 @@ class PatchPath:
 
         self._attr_rep = attr_rep
 
-        if sub_attr_name and not isinstance(sub_attr_name, AttrName):
+        if sub_attr_name:
             sub_attr_name = AttrName(sub_attr_name)
         self._sub_attr_name = sub_attr_name
         self._filter = filter_

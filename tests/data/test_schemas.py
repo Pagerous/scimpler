@@ -4,7 +4,7 @@ import pytest
 
 from src.assets.schemas import User, user
 from src.assets.schemas.user import EnterpriseUserExtension
-from src.container import AttrRep, SCIMDataContainer
+from src.container import AttrRep, BoundedAttrRep, SCIMDataContainer
 from src.data.attributes import Boolean, Complex, Integer, String
 from src.data.attributes_presence import AttributePresenceConfig
 from src.data.schemas import (
@@ -13,7 +13,36 @@ from src.data.schemas import (
     SchemaExtension,
     validate_resource_type_consistency,
 )
+from src.registry import register_resource_schema, resources, schemas
 from src.warning import ScimpleUserWarning
+
+
+@pytest.fixture
+def schema_with_extensions() -> ResourceSchema:
+    schema = ResourceSchema(
+        schema="my:schema",
+        name="MyResource",
+    )
+    extension_1 = SchemaExtension(
+        schema="my:schema:extension",
+        name="MyExtension",
+        attrs=[Complex("complex", sub_attributes=[Integer("value", required=True)])],
+    )
+    extension_2 = SchemaExtension(
+        schema="my:schema:other_extension",
+        name="MyOtherExtension",
+        attrs=[Complex("complex", sub_attributes=[Integer("value", required=True)])],
+    )
+    schema.extend(extension_1, False)
+    schema.extend(extension_2, False)
+    register_resource_schema(schema)
+
+    yield schema
+
+    resources.pop("MyResource")
+    schemas.pop("my:schema")
+    schemas.pop("my:schema:extension")
+    schemas.pop("my:schema:other_extension")
 
 
 def test_correct_user_data_can_be_deserialized(user_data_client):
@@ -325,7 +354,16 @@ def test_presence_validation_fails_on_sub_attr_not_requested_by_exclusion():
     issues = User.validate(
         data,
         AttributePresenceConfig(
-            "RESPONSE", attr_reps=[AttrRep(attr="name", sub_attr="familyName")], include=False
+            "RESPONSE",
+            attr_reps=[
+                BoundedAttrRep(
+                    schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                    extension=False,
+                    attr="name",
+                    sub_attr="familyName",
+                )
+            ],
+            include=False,
         ),
     )
 
@@ -355,7 +393,16 @@ def test_presence_validation_fails_on_sub_attr_not_requested_by_inclusion():
     issues = User.validate(
         data,
         AttributePresenceConfig(
-            "RESPONSE", attr_reps=[AttrRep(attr="name", sub_attr="familyName")], include=True
+            "RESPONSE",
+            attr_reps=[
+                BoundedAttrRep(
+                    schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                    extension=False,
+                    attr="name",
+                    sub_attr="familyName",
+                )
+            ],
+            include=True,
         ),
     )
 
@@ -511,7 +558,7 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
         schema="my:schema:extension", name="MyExtension", attrs=[Integer("age", required=True)]
     )
     schema.extend(extension, required=True)
-    expected_issues = {"age": {"_errors": [{"code": 5}]}}
+    expected_issues = {"my:schema:extension": {"age": {"_errors": [{"code": 5}]}}}
 
     issues = schema.validate(
         SCIMDataContainer({"id": "1", "schemas": ["my:schema"]}),
@@ -573,3 +620,89 @@ def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_
     )
 
     assert issues.to_dict(msg=True) == {}
+
+
+def test_presence_validation_fails_if_provided_same_attr_from_different_schema(
+    schema_with_extensions,
+):
+    data = {
+        "id": "1",
+        "schemas": ["my:schema", "my:schema:extension", "my:schema:other_extension"],
+        "my:schema:extension": {"complex": {"value": 10}},
+        "my:schema:other_extension": {"complex": {"value": 10}},
+    }
+    expected = {
+        "my:schema:extension": {
+            "complex": {
+                "_errors": [
+                    {
+                        "code": 7,
+                    }
+                ]
+            }
+        }
+    }
+
+    issues = schema_with_extensions.validate(
+        data,
+        AttributePresenceConfig(
+            "RESPONSE",
+            attr_reps=[
+                BoundedAttrRep(
+                    schema="my:schema:other_extension",
+                    extension=True,
+                    attr="complex",
+                    sub_attr="value",
+                )
+            ],
+            include=True,
+        ),
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_presence_validation_passes_if_provided_same_attr_from_different_schema_and_attr_rep(
+    schema_with_extensions,
+):
+    data = {
+        "id": "1",
+        "schemas": ["my:schema", "my:schema:extension", "my:schema:other_extension"],
+        "my:schema:extension": {"complex": {"value": 10}},
+        "my:schema:other_extension": {"complex": {"value": 10}},
+    }
+
+    issues = schema_with_extensions.validate(
+        data,
+        AttributePresenceConfig(
+            "RESPONSE",
+            attr_reps=[
+                AttrRep(
+                    attr="complex",
+                    sub_attr="value",
+                )
+            ],
+            include=True,
+        ),
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_registering_different_extensions_but_with_the_same_name_fails():
+    schema = ResourceSchema(
+        schema="my:schema",
+        name="MyResource",
+    )
+    extension_1 = SchemaExtension(
+        schema="my:schema:extension",
+        name="MyExtension",
+    )
+    extension_2 = SchemaExtension(
+        schema="my:schema:other_extension",
+        name="MyExtension",  # same name
+    )
+    schema.extend(extension_1)
+
+    with pytest.raises(RuntimeError, match="extension 'MyExtension' already in resource"):
+        schema.extend(extension_2)

@@ -11,7 +11,7 @@ schemas: dict[str, bool] = {}
 
 def register_resource_schema(resource_schema: "ResourceSchema"):
     if resource_schema.name in resources:
-        raise RuntimeError(f"schema {resource_schema.name!r} already registered")
+        raise RuntimeError(f"resource {resource_schema.name!r} already registered")
     resources[resource_schema.name] = resource_schema
 
     if resource_schema.schema in schemas:
@@ -19,8 +19,7 @@ def register_resource_schema(resource_schema: "ResourceSchema"):
 
     schemas[resource_schema.schema] = False
     for schema in resource_schema.extensions:
-        if schema not in schemas:
-            schemas[schema] = True
+        schemas[schema] = True
 
 
 Converter = Callable[[Any], Any]

@@ -70,6 +70,21 @@ def test_validate_error_status_code_consistency(status_code, expected):
     assert issues.to_dict() == expected
 
 
+def test_validate_error_status_code_value():
+    validator = Error(CONFIG)
+    expected_issues = {
+        "body": {"status": {"_errors": [{"code": 18}]}},
+        "status": {"_errors": [{"code": 18}]},
+    }
+
+    issues = validator.validate_response(
+        status_code=601,
+        body={"schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"], "status": "601"},
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
 @pytest.mark.parametrize(
     ("headers", "header_required", "expected"),
     (
@@ -975,81 +990,6 @@ def test_search_request_validation_fails_if_attributes_and_exclude_attributes_pr
         body={
             "attributes": ["userName"],
             "excludeAttributes": ["name"],
-        }
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-@pytest.mark.parametrize("op", ("add", "replace"))
-def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_items(op):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
-    expected_issues = {
-        "body": {
-            "Operations": {
-                "0": {
-                    "value": {
-                        "0": {"bool": {"_errors": [{"code": 5}]}},
-                        "2": {"bool": {"_errors": [{"code": 2}]}},
-                    }
-                }
-            }
-        }
-    }
-
-    issues = validator.validate_request(
-        body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-            "Operations": [
-                {
-                    "op": op,
-                    "path": "c2_mv",
-                    "value": [
-                        {"str": "abc", "int": 123},
-                        {"str": "def", "int": 456, "bool": True},
-                        {"str": "egh", "int": 789, "bool": "not-bool"},
-                    ],
-                }
-            ],
-        }
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-@pytest.mark.parametrize("op", ("add", "replace"))
-def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
-    expected_issues = {
-        "body": {
-            "Operations": {
-                "0": {
-                    "value": {
-                        "c2_mv": {
-                            "0": {"bool": {"_errors": [{"code": 5}]}},
-                            "2": {"bool": {"_errors": [{"code": 2}]}},
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    issues = validator.validate_request(
-        body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-            "Operations": [
-                {
-                    "op": op,
-                    "value": {
-                        "c2_mv": [
-                            {"str": "abc", "int": 123},
-                            {"str": "def", "int": 456, "bool": True},
-                            {"str": "egh", "int": 789, "bool": "not-bool"},
-                        ],
-                    },
-                }
-            ],
         }
     )
 
@@ -2053,7 +1993,43 @@ def test_resource_types_response_can_be_validated():
     ),
 )
 def test_can_validate_filtering(filter_, checker, expected):
-    assert can_validate_filtering(filter_, checker) == expected
+    assert can_validate_filtering(filter_, checker) is expected
+
+
+def test_can_validate_filtering_with_bounded_attributes():
+    assert can_validate_filtering(
+        filter_=Filter.deserialize("urn:ietf:params:scim:schemas:core:2.0:User:name pr"),
+        presence_config=AttributePresenceConfig(
+            direction="RESPONSE",
+            attr_reps=[
+                BoundedAttrRep(
+                    schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                    extension=False,
+                    attr="name",
+                    sub_attr="formatted",
+                )
+            ],
+            include=True,
+        ),
+    )
+
+    assert not can_validate_filtering(
+        filter_=Filter.deserialize(
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:nonExisting pr"
+        ),
+        presence_config=AttributePresenceConfig(
+            direction="RESPONSE",
+            attr_reps=[
+                BoundedAttrRep(
+                    schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                    extension=False,
+                    attr="nonExisting",
+                    sub_attr="formatted",
+                )
+            ],
+            include=True,
+        ),
+    )
 
 
 @pytest.mark.parametrize(

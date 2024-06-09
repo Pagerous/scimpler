@@ -86,14 +86,9 @@ class Filter(Generic[TOperator]):
                     )
                     for sub_rep in Filter._get_attr_reps(operator.sub_operator)
                 ]
-            elif isinstance(rep, AttrRep):
-                sub_reps = [
-                    AttrRep(attr=rep.attr, sub_attr=get_sub_attr_name(sub_rep))
-                    for sub_rep in Filter._get_attr_reps(operator.sub_operator)
-                ]
             else:
                 sub_reps = [
-                    AttrRep(attr=rep, sub_attr=get_sub_attr_name(sub_rep))
+                    AttrRep(attr=rep.attr, sub_attr=get_sub_attr_name(sub_rep))
                     for sub_rep in Filter._get_attr_reps(operator.sub_operator)
                 ]
             extend_reps(sub_reps)

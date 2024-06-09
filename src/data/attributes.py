@@ -593,8 +593,7 @@ class Complex(Attribute):
 
     def clone(self, attr_filter: Callable[["Attribute"], bool]) -> "Complex":
         cloned = copy(self)
-        if attr_filter:
-            cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
+        cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
         return cloned
 
     def _validate(self, value: Union[SCIMDataContainer, dict[str, Any]]) -> ValidationIssues:
@@ -684,6 +683,8 @@ class Attributes:
     def get(self, attr_rep: Union[str, AttrRep]) -> Optional[Attribute]:
         if isinstance(attr_rep, str):
             attr_rep = AttrRep(attr=attr_rep)
+        elif isinstance(attr_rep, BoundedAttrRep):
+            attr_rep = AttrRep(attr=attr_rep.attr)
         return self._attrs.get(attr_rep)
 
     def clone(self, attr_filter: Callable[[Attribute], bool]) -> "Attributes":
@@ -720,11 +721,7 @@ class BoundedAttributes:
         parts = name.split("__", 1)
         n_parts = len(parts)
         attr_name = parts[0].lower()
-
-        attr_reps = []
         attr_rep = BoundedAttrRep(schema=self._schema, extension=self._extension, attr=attr_name)
-        core_attr_rep = None
-
         if attr := self._attrs.get(attr_rep):
             attr_rep = BoundedAttrRep(
                 schema=self._schema,
@@ -733,25 +730,7 @@ class BoundedAttributes:
             )
             if n_parts == 1:
                 return attr_rep
-            core_attr_rep = attr_rep
-            attr_reps.append(core_attr_rep)
 
-        for bounded_attrs in self._extensions.values():
-            attr_rep = getattr(bounded_attrs, name, None)
-            if attr_rep is not None:
-                if n_parts == 1:
-                    return attr_rep
-                attr_reps.append(attr_rep)
-
-        if n_parts == 1:
-            if core_attr_rep is not None:
-                return core_attr_rep
-            if len(attr_reps) > 1:
-                raise RuntimeError(
-                    f"attribute {name!r} defined in multiple extensions of {self._schema!r}",
-                )
-
-        for attr_rep in attr_reps:
             sub_attr_rep = BoundedAttrRep(
                 schema=attr_rep.schema,
                 attr=attr_rep.attr,
@@ -765,6 +744,12 @@ class BoundedAttributes:
                     attr=attr_rep.attr,
                     sub_attr=sub_attr.name,
                 )
+
+        for bounded_attrs in self._extensions.values():
+            attr_rep = getattr(bounded_attrs, name, None)
+            if attr_rep is not None:
+                return attr_rep
+
         raise AttributeError(
             f"attribute {name.replace('__', '.')!r} "
             f"does not exist within {self._schema!r} and its extensions"
@@ -832,7 +817,7 @@ class BoundedAttributes:
         cloned._refresh_attrs()
         return cloned
 
-    def get(self, attr_rep: Union[str, AttrRep, BoundedAttrRep]) -> Optional[Attribute]:
+    def get(self, attr_rep: Union[str, AttrRep]) -> Optional[Attribute]:
         if isinstance(attr_rep, str):
             attr_rep = AttrRepFactory.deserialize(attr_rep)
 
@@ -845,8 +830,6 @@ class BoundedAttributes:
             attr = self._attrs.get(top_level_rep)
             if attr is None or not attr_rep.sub_attr:
                 return attr
-            if not isinstance(attr, Complex):
-                raise TypeError(f"{attr.name!r} is not complex")
             return self._bounded_complex_sub_attrs[top_level_rep].get(attr_rep)
 
         top_level_rep = BoundedAttrRep(

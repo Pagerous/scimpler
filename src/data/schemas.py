@@ -2,14 +2,7 @@ import copy
 import warnings
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union
 
-from src.container import (
-    AttrRep,
-    BoundedAttrRep,
-    Invalid,
-    Missing,
-    SchemaURI,
-    SCIMDataContainer,
-)
+from src.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMDataContainer
 from src.data.attributes import (
     Attribute,
     AttributeIssuer,
@@ -210,7 +203,7 @@ class BaseSchema:
                         presence_config=presence_config,
                         required_by_schema=self._is_attr_required_by_schema(attr_rep, data),
                     ),
-                    location=[attr_rep.attr],
+                    location=attr_rep.location,
                 )
         return issues
 
@@ -224,15 +217,17 @@ class BaseSchema:
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if isinstance(attr, Complex):
-            issues.merge(
-                self._validate_attr_presence(
-                    attr=attr,
-                    attr_rep=attr_rep,
-                    value=value,
-                    presence_config=presence_config,
-                    required_by_schema=required_by_schema,
-                )
+            issues_ = self._validate_attr_presence(
+                attr=attr,
+                attr_rep=attr_rep,
+                value=value,
+                presence_config=presence_config,
+                required_by_schema=required_by_schema,
             )
+            issues.merge(issues_)
+            if issues_.has_errors():
+                return issues
+
             for sub_attr_rep, sub_attr in attr.attrs:
                 bounded_sub_attr_rep = BoundedAttrRep(
                     schema=attr_rep.schema,
@@ -328,15 +323,18 @@ class BaseSchema:
             return DataInclusivity.EXCLUDE
 
         if isinstance(attr, Complex):
+            # handling "children", so if they exist within
+            # attr_reps, the presence check is delegated to them
             for rep in presence_config.attr_reps:
                 if attr_rep.attr != rep.attr:
                     continue
 
-                if attr_rep == (
-                    AttrRep(attr=rep.attr)
-                    if isinstance(rep, AttrRep)
-                    else BoundedAttrRep(schema=rep.schema, extension=rep.extension, attr=rep.attr)
-                ):
+                if isinstance(rep, BoundedAttrRep):
+                    if attr_rep == (
+                        BoundedAttrRep(schema=rep.schema, extension=rep.extension, attr=rep.attr)
+                    ):
+                        return None
+                else:
                     return None
 
             if presence_config.include:
@@ -346,10 +344,10 @@ class BaseSchema:
         if not attr_rep.sub_attr:
             return None
 
-        attr_rep = BoundedAttrRep(
+        parent_attr_rep = BoundedAttrRep(
             schema=attr_rep.schema, extension=attr_rep.extension, attr=attr_rep.attr
         )
-        if attr_rep in presence_config.attr_reps:
+        if parent_attr_rep in presence_config.attr_reps:
             # it means the parent is specified in attr_reps
             # and potential errors should be delegated to it
             return None

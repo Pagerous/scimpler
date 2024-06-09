@@ -191,6 +191,7 @@ def test_attribute_identifier_is_deserialized(
         'emails[type eq "work"]',
         "(attr_with_parenthesis)",
         "urn:ietf:params:scim:schemas:core:2.0:User:name.firstName.blahblah",
+        "non:existing:schema:blahblah",
     ),
 )
 def test_attribute_identifier_is_not_deserialized_when_bad_input(input_):
@@ -704,3 +705,92 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
     assert deserialized[0]["values"] == "123"
 
     Integer.set_serializer(int)
+
+
+@pytest.mark.parametrize(
+    ("input_", "expected"),
+    (
+        (
+            "id",
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=False,
+                attr="id",
+            ),
+        ),
+        (
+            "name__formatted",
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=False,
+                attr="name",
+                sub_attr="formatted",
+            ),
+        ),
+        (
+            "emails__type",
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                extension=False,
+                attr="emails",
+                sub_attr="type",
+            ),
+        ),
+        (
+            "manager",
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                extension=True,
+                attr="manager",
+            ),
+        ),
+        (
+            "manager__displayName",
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                extension=True,
+                attr="manager",
+                sub_attr="displayName",
+            ),
+        ),
+    ),
+)
+def test_attr_rep_can_be_retrieved_from_bounded_attr_reps(input_, expected):
+    assert getattr(User.attrs, input_, None) == expected
+
+
+@pytest.mark.parametrize(
+    "input_",
+    (
+        "id",
+        "urn:ietf:params:scim:schemas:core:2.0:User:id",
+        "name",
+        "urn:ietf:params:scim:schemas:core:2.0:User:name",
+        "name.formatted",
+        "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
+        "emails",
+        "urn:ietf:params:scim:schemas:core:2.0:User:emails",
+        "emails.type",
+        "urn:ietf:params:scim:schemas:core:2.0:User:emails.type",
+        "manager",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
+        "manager.displayName",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
+    ),
+)
+def test_attr_can_be_retrieved_from_bounded_attr_reps(input_):
+    assert User.attrs.get(input_) is not None
+
+
+@pytest.mark.parametrize(
+    "input_",
+    (
+        "non_existing",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:id",
+        "userName.nonExisting",
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:nonExisting",
+        "urn:ietf:params:scim:schemas:core:2.0:User:manager",
+    ),
+)
+def test_attr_is_not_retrieved_if_bad_input(input_):
+    assert User.attrs.get(input_) is None

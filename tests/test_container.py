@@ -176,16 +176,13 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
             },
         ),
         (
-            SchemaURI("my:schema:extension"),
-            {
-                "a": 1,
-                "b": {"c": 3},
-            },
+            SchemaURI("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
+            {"employeeNumber": "10", "manager": {"displayName": "John Smith"}},
             False,
             {
-                "my:schema:extension": {
-                    "a": 1,
-                    "b": {"c": 3},
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                    "employeeNumber": "10",
+                    "manager": {"displayName": "John Smith"},
                 }
             },
         ),
@@ -501,19 +498,68 @@ def test_schema_uri_creation_fails_if_bad_uri():
         ),
         (
             SCIMDataContainer(
-                {"a": 1, "b": {"c": 3}, "my:schema:extension": {"d": 4, "e": {"f": 6}}}
+                {
+                    "userName": "bjensen",
+                    "name": {"formatted": "Bjensen"},
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "employeeNumber": "10",
+                        "manager": {"displayName": "Kowalski"},
+                    },
+                }
             ),
             SCIMDataContainer(
-                {"A": 1, "B": {"C": 3}, "my:SCHEMA:extension": {"D": 4, "E": {"F": 6}}}
+                {
+                    "USERNAME": "bjensen",
+                    "NAME": {"FORMATTED": "Bjensen"},
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "EMPLOYEENUMBER": "10",
+                        "MANAGER": {"DISPLAYNAME": "Kowalski"},
+                    },
+                }
             ),
             True,
         ),
         (
             SCIMDataContainer(
-                {"a": 1, "b": {"c": 3}, "my:schema:extension": {"d": 4, "e": {"f": 6}}}
+                {
+                    "userName": "bjensen",
+                    "name": {"formatted": "Bjensen"},
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "employeeNumber": "10",
+                        "manager": {"displayName": "Kowalski"},
+                    },
+                }
             ),
             SCIMDataContainer(
-                {"AA": 1, "B": {"C": 3}, "my:SCHEMA:extension": {"D": 4, "E": {"F": 6}}}
+                {
+                    "NAME": {"FORMATTED": "Bjensen"},
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "EMPLOYEENUMBER": "10",
+                        "MANAGER": {"DISPLAYNAME": "Kowalski"},
+                    },
+                }
+            ),
+            False,
+        ),
+        (
+            SCIMDataContainer(
+                {
+                    "name": {"formatted": "Bjensen"},
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "employeeNumber": "10",
+                        "manager": {"displayName": "Kowalski"},
+                    },
+                }
+            ),
+            SCIMDataContainer(
+                {
+                    "USERNAME": "bjensen",
+                    "NAME": {"FORMATTED": "Bjensen"},
+                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                        "EMPLOYEENUMBER": "10",
+                        "MANAGER": {"DISPLAYNAME": "Kowalski"},
+                    },
+                }
             ),
             False,
         ),

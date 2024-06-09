@@ -153,13 +153,15 @@ class PatchOp(BaseSchema):
                 if attr_value is Missing:
                     continue
 
+                if attr.mutability == AttributeMutability.READ_ONLY:
+                    issues.add_error(
+                        issue=ValidationError.attribute_can_not_be_modified(),
+                        proceed=False,
+                        location=attr_rep.location,
+                    )
+                    continue
+
                 if not isinstance(attr, Complex):
-                    if attr.mutability == AttributeMutability.READ_ONLY:
-                        issues.add_error(
-                            issue=ValidationError.attribute_can_not_be_modified(),
-                            proceed=False,
-                            location=attr_rep.location,
-                        )
                     continue
 
                 sub_attr_err = False
@@ -178,17 +180,10 @@ class PatchOp(BaseSchema):
                         sub_attr_err = True
 
                 if not sub_attr_err:
-                    if attr.mutability == AttributeMutability.READ_ONLY:
-                        issues.add_error(
-                            issue=ValidationError.attribute_can_not_be_modified(),
-                            proceed=False,
-                            location=attr_location,
-                        )
-                    else:
-                        issues.merge(
-                            self._validate_complex_sub_attrs_presence(attr, attr_value),
-                            location=attr_location,
-                        )
+                    issues.merge(
+                        self._validate_complex_sub_attrs_presence(attr, attr_value),
+                        location=attr_location,
+                    )
             return issues
         return self._validate_update_attr_value(value, path)
 
@@ -255,7 +250,7 @@ class PatchOp(BaseSchema):
             issues.merge(
                 validate_presence(
                     attr=sub_attr,
-                    value=value,
+                    value=value.get(sub_attr_rep),
                     direction="REQUEST",
                     inclusivity="INCLUDE",
                 ),

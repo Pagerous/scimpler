@@ -144,6 +144,9 @@ class AttrRepFactory:
 
     @classmethod
     def _deserialize(cls, value: str) -> Union[AttrRep, BoundedAttrRep]:
+        if isinstance(value, AttrName):
+            return AttrRep(attr=value)
+
         match = _ATTR_REP.fullmatch(value)
         schema, attr = match.group(1), match.group(2)
         schema = schema[:-1] if schema else ""
@@ -153,13 +156,14 @@ class AttrRepFactory:
             attr, sub_attr = attr, ""
         if schema:
             schema = SchemaURI(schema)
-            if schema in schemas:
-                return BoundedAttrRep(
-                    schema=schema,
-                    extension=schemas[schema],
-                    attr=attr,
-                    sub_attr=sub_attr,
-                )
+            if schema not in schemas:
+                raise KeyError(f"unknown schema {schema!r}")
+            return BoundedAttrRep(
+                schema=schema,
+                extension=schemas[schema],
+                attr=attr,
+                sub_attr=sub_attr,
+            )
         return AttrRep(attr=attr, sub_attr=sub_attr)
 
 
@@ -363,14 +367,7 @@ class SCIMDataContainer:
 
             value = AttrRepFactory.deserialize(value)
 
-        if isinstance(value, AttrName):
-            return _ContainerKey(
-                schema=None,
-                attr=str(value),
-                sub_attr=None,
-                extension=False,
-            )
-        elif isinstance(value, BoundedAttrRep):
+        if isinstance(value, BoundedAttrRep):
             return _ContainerKey(
                 schema=str(value.schema),
                 attr=str(value.attr),
@@ -429,6 +426,9 @@ class SCIMDataContainer:
         if isinstance(other, dict):
             other = SCIMDataContainer(other)
         elif not isinstance(other, SCIMDataContainer):
+            return False
+
+        if len(self._data) != len(other._data):
             return False
 
         for key, value in self._data.items():

@@ -258,6 +258,7 @@ def test_patch_path_repr():
     assert (
         repr(PatchPath.deserialize("emails[type eq 'work']")) == "PatchPath(emails[type eq 'work'])"
     )
+    assert repr(PatchPath.deserialize("name.formatted")) == "PatchPath(name.formatted)"
 
 
 def test_calling_path_for_non_existing_attr_fails():

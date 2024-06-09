@@ -102,7 +102,7 @@ class Error(Validator):
             )
         if not 200 <= status_code < 600:
             issues.add_error(
-                issue=ValidationError.bad_value_syntax(),
+                issue=ValidationError.bad_error_status(),
                 location=["status"],
                 proceed=True,
             )
@@ -152,10 +152,6 @@ def _validate_status_code(expected: int, actual: int) -> ValidationIssues:
             proceed=True,
         )
     return issues
-
-
-def _validate_body(schema: BaseSchema, body: SCIMDataContainer, **kwargs) -> ValidationIssues:
-    return schema.validate(body, AttributePresenceConfig(**kwargs))
 
 
 def _validate_resource_output_body(
@@ -652,16 +648,11 @@ def _is_child_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
         if not rep.sub_attr:
             continue
 
-        if (
-            isinstance(attr_rep, BoundedAttrRep)
-            and isinstance(rep, BoundedAttrRep)
-            and attr_rep.schema == rep.schema
-            and attr_rep.attr == rep.attr
-        ):
-            return True
-
-        elif attr_rep.attr == rep.attr:
-            return True
+        if isinstance(attr_rep, BoundedAttrRep) and isinstance(rep, BoundedAttrRep):
+            if attr_rep.schema == rep.schema and attr_rep.attr == rep.attr:
+                return True
+            return False
+        return True
 
     return False
 

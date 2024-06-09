@@ -236,7 +236,7 @@ SchemaForTests = ResourceSchema(
         ),
         Complex(
             "c2",
-            sub_attributes=[String("str"), Integer("int"), Boolean("bool")],
+            sub_attributes=[String("str"), Integer("int"), Boolean("bool", required=True)],
         ),
         Complex(
             "c2_mv",

@@ -176,9 +176,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                         "ignore^me": 42,
                         "department": "Tour Operations",
-                        "manager": {
-                            "value": "Jan Kowalski",
-                        },
+                        "manager": {"value": "10", "$ref": "/Users/10"},
                     },
                 },
             }
@@ -198,9 +196,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
                     "emails": [{"value": "bjensen@example.com", "type": "work"}],
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                         "department": "Tour Operations",
-                        "manager": {
-                            "value": "Jan Kowalski",
-                        },
+                        "manager": {"value": "10", "$ref": "/Users/10"},
                     },
                 },
             }
@@ -271,7 +267,13 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
         ],
     }
     expected_issues = {
-        "Operations": {"0": {"value": {"meta": {"resourceType": {"_errors": [{"code": 29}]}}}}}
+        "Operations": {
+            "0": {
+                "value": {
+                    "meta": {"_errors": [{"code": 29}], "resourceType": {"_errors": [{"code": 8}]}}
+                }
+            }
+        }
     }
 
     issues = schema.validate(input_data, AttributePresenceConfig("REQUEST"))
@@ -734,12 +736,12 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
             {
                 "op": "add",
                 "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
-                "value": {"displayName": "John Doe"},
+                "value": {"displayName": "John Doe", "$ref": "/Users/10", "value": "10"},
             },
             {
                 "op": "add",
                 "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
-                "value": {"value": "10"},
+                "value": {"$ref": "/Users/10", "value": "10"},
             },
         ],
     }
@@ -748,5 +750,100 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
     }
 
     issues = schema.validate(data, AttributePresenceConfig("REQUEST"))
+
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_items(op):
+    schema = patch_op.PatchOp(SchemaForTests)
+    expected_issues = {
+        "Operations": {
+            "0": {
+                "value": {
+                    "0": {"bool": {"_errors": [{"code": 5}]}},
+                    "2": {"bool": {"_errors": [{"code": 2}]}},
+                }
+            }
+        }
+    }
+
+    issues = schema.validate(
+        data={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": op,
+                    "path": "c2_mv",
+                    "value": [
+                        {"str": "abc", "int": 123},
+                        {"str": "def", "int": 456, "bool": True},
+                        {"str": "egh", "int": 789, "bool": "not-bool"},
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_attr(op):
+    schema = patch_op.PatchOp(SchemaForTests)
+
+    expected_issues = {
+        "Operations": {
+            "0": {
+                "value": {
+                    "c2_mv": {
+                        "0": {"bool": {"_errors": [{"code": 5}]}},
+                        "2": {"bool": {"_errors": [{"code": 2}]}},
+                    }
+                }
+            }
+        }
+    }
+
+    issues = schema.validate(
+        data={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": op,
+                    "value": {
+                        "c2_mv": [
+                            {"str": "abc", "int": 123},
+                            {"str": "def", "int": 456, "bool": True},
+                            {"str": "egh", "int": 789, "bool": "not-bool"},
+                        ],
+                    },
+                }
+            ],
+        }
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize("op", ("add", "replace"))
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op):
+    schema = patch_op.PatchOp(SchemaForTests)
+
+    expected_issues = {"Operations": {"0": {"value": {"c2": {"bool": {"_errors": [{"code": 5}]}}}}}}
+
+    issues = schema.validate(
+        data={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": op,
+                    "value": {
+                        "c2": {"str": "abc", "int": 123},
+                    },
+                }
+            ],
+        }
+    )
 
     assert issues.to_dict() == expected_issues
