@@ -45,18 +45,16 @@ def deserialize_comparison_value(value: str) -> Any:
         or value.startswith("'")
         and value.endswith("'")
     ):
-        value = value[1:-1]
-    elif value == "false":
-        value = False
-    elif value == "true":
-        value = True
+        return value[1:-1]
+    if value == "false":
+        return False
+    if value == "true":
+        return True
     elif value == "null":
-        value = None
-    else:
-        deserialized = float(value)
-        deserialized_int = int(deserialized)
-        if deserialized == deserialized_int:
-            value = deserialized_int
-        else:
-            value = deserialized
-    return value
+        return None
+
+    deserialized = float(value)
+    deserialized_int = int(deserialized)
+    if deserialized == deserialized_int:
+        return deserialized_int
+    return deserialized

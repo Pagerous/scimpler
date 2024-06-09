@@ -23,19 +23,22 @@ def register_schema(schema: "SchemaURI", extension: bool = False):
 Converter = Callable[[Any], Any]
 
 
-unary_operators = {}
-binary_operators = {}
+unary_operators: dict[str, type["UnaryAttributeOperator"]] = {}
+binary_operators: dict[str, type["BinaryAttributeOperator"]] = {}
 
 
 def register_unary_operator(operator: type["UnaryAttributeOperator"]):
-    if operator.SCIM_OP.lower() in unary_operators:
-        raise RuntimeError(f"unary operator {operator.SCIM_OP!r} already registered")
+    op = operator.op().lower()
 
-    unary_operators[operator.SCIM_OP.lower()] = operator
+    if op in unary_operators:
+        raise RuntimeError(f"unary operator {op!r} already registered")
+
+    unary_operators[op] = operator
 
 
 def register_binary_operator(operator: type["BinaryAttributeOperator"]):
-    if operator.SCIM_OP.lower() in binary_operators:
-        raise RuntimeError(f"binary operator {operator.SCIM_OP!r} already registered")
+    op = operator.op().lower()
+    if op in binary_operators:
+        raise RuntimeError(f"binary operator {op!r} already registered")
 
-    binary_operators[operator.SCIM_OP.lower()] = operator
+    binary_operators[op] = operator

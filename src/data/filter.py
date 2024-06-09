@@ -394,7 +394,7 @@ class Filter(Generic[TOperator]):
 
             if type(value) not in op_.SUPPORTED_TYPES:
                 issues.add_error(
-                    issue=ValidationError.non_compatible_operand(value, op_.SCIM_OP),
+                    issue=ValidationError.non_compatible_operand(value, op_.op()),
                     proceed=False,
                 )
 
@@ -418,7 +418,7 @@ class Filter(Generic[TOperator]):
     @staticmethod
     def _serialize(operator) -> str:
         if isinstance(operator, op.AttributeOperator):
-            output = f"{operator.attr_rep} {operator.SCIM_OP}"
+            output = f"{operator.attr_rep} {operator.op()}"
             if isinstance(operator, op.BinaryAttributeOperator):
                 output += f" {operator.value!r}"
             return output
@@ -427,10 +427,10 @@ class Filter(Generic[TOperator]):
             return f"{operator.attr_rep}[{Filter._serialize(operator.sub_operator)}]"
 
         if isinstance(operator, op.Not):
-            return f"{operator.SCIM_OP} {Filter._serialize(operator.sub_operator)}"
+            return f"{operator.op()} {Filter._serialize(operator.sub_operator)}"
 
         if isinstance(operator, op.MultiOperandLogicalOperator):
-            output = f" {operator.SCIM_OP} ".join(
+            output = f" {operator.op()} ".join(
                 [Filter._serialize(sub_operator) for sub_operator in operator.sub_operators]
             )
             return f"({output})"
@@ -601,7 +601,7 @@ class Filter(Generic[TOperator]):
     def _to_dict(operator):
         if isinstance(operator, op.AttributeOperator):
             filter_dict = {
-                "op": operator.SCIM_OP,
+                "op": operator.op(),
                 "attr": str(operator.attr_rep),
             }
             if isinstance(operator, op.BinaryAttributeOperator):
@@ -617,13 +617,13 @@ class Filter(Generic[TOperator]):
 
         if isinstance(operator, op.Not):
             return {
-                "op": operator.SCIM_OP,
+                "op": operator.op(),
                 "sub_op": Filter._to_dict(operator.sub_operator),
             }
 
         if isinstance(operator, op.MultiOperandLogicalOperator):
             return {
-                "op": operator.SCIM_OP,
+                "op": operator.op(),
                 "sub_ops": [
                     Filter._to_dict(sub_operator) for sub_operator in operator.sub_operators
                 ],

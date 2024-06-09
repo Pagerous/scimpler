@@ -2445,10 +2445,13 @@ def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, exp
 
 def test_binary_operator_can_be_registered():
     class Regex(BinaryAttributeOperator):
-        SCIM_OP = "re"
         SUPPORTED_SCIM_TYPES = {"string"}
         SUPPORTED_TYPES = {str}
         OPERATOR = staticmethod(lambda attr_value, op_value: re.fullmatch(op_value, attr_value))
+
+        @classmethod
+        def op(cls) -> str:
+            return "re"
 
     register_binary_operator(Regex)
 
@@ -2460,10 +2463,13 @@ def test_binary_operator_can_be_registered():
 
 def test_unary_operator_can_be_registered():
     class IsNice(UnaryAttributeOperator):
-        SCIM_OP = "isNice"
         SUPPORTED_SCIM_TYPES = {"string"}
         SUPPORTED_TYPES = {str}
         OPERATOR = staticmethod(lambda attr_value: attr_value == "Nice")
+
+        @classmethod
+        def op(cls) -> str:
+            return "isNice"
 
     register_unary_operator(IsNice)
 

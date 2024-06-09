@@ -1,5 +1,7 @@
 from collections import defaultdict
-from typing import Any, Collection, Optional, Sequence, Union
+from typing import Any, Collection, Optional, Sequence, TypedDict, Union
+
+from typing_extensions import NotRequired
 
 
 class ValidationError:
@@ -286,8 +288,14 @@ class ValidationWarning:
         return self._message
 
 
+class ValidationIssueDict(TypedDict):
+    code: int
+    error: NotRequired[str]
+    context: NotRequired[dict]
+
+
 class ValidationIssues:
-    def __init__(self):
+    def __init__(self) -> None:
         self._errors: dict[tuple, list[ValidationError]] = defaultdict(list)
         self._warnings: dict[tuple, list[ValidationWarning]] = defaultdict(list)
         self._stop_proceeding: dict[tuple, set[int]] = defaultdict(set)
@@ -296,17 +304,17 @@ class ValidationIssues:
         self,
         issues: "ValidationIssues",
         location: Optional[Sequence[Union[str, int]]] = None,
-    ):
+    ) -> None:
         location = tuple(location or tuple())
-        for other_location, location_issues in issues._errors.items():
+        for other_location, errors in issues._errors.items():
             new_location = location + other_location
-            self._errors[new_location].extend(location_issues)
+            self._errors[new_location].extend(errors)
             self._stop_proceeding[new_location].update(
                 issues._stop_proceeding.get(other_location, {})
             )
-        for other_location, location_issues in issues._warnings.items():
+        for other_location, warnings in issues._warnings.items():
             new_location = location + other_location
-            self._warnings[new_location].extend(location_issues)
+            self._warnings[new_location].extend(warnings)
 
     def add_error(
         self,
@@ -362,7 +370,7 @@ class ValidationIssues:
         for location_, codes in self._stop_proceeding.items():
             if location_[: len(location)] != location:
                 continue
-            codes = [code for code in codes if not error_codes or code in error_codes]
+            codes = {code for code in codes if not error_codes or code in error_codes}
             if codes:
                 stop_proceeding_copy[location_[len(location) :]] = codes
         copy._stop_proceeding = stop_proceeding_copy
@@ -395,7 +403,7 @@ class ValidationIssues:
 
     def can_proceed(self, *locations: Collection[Union[str, int]]) -> bool:
         if not locations:
-            locations = [tuple()]
+            locations = (tuple(),)
         for location in locations:
             location = tuple(location)
             for i in range(len(location) + 1):
@@ -405,7 +413,7 @@ class ValidationIssues:
 
     def has_errors(self, *locations: Collection[Union[str, int]]) -> bool:
         if not locations:
-            locations = [tuple()]
+            locations = (tuple(),)
 
         for location in locations:
             for issue_location in self._errors:
@@ -414,14 +422,16 @@ class ValidationIssues:
 
         return False
 
-    def to_dict(self, msg: bool = False, ctx: bool = False):
-        output = {}
+    def to_dict(self, msg: bool = False, ctx: bool = False) -> dict:
+        output: dict = {}
         self._to_dict("_errors", self._errors, output, msg=msg, ctx=ctx)
         self._to_dict("_warnings", self._warnings, output, msg=msg, ctx=ctx)
         return output
 
     @staticmethod
-    def _to_dict(key: str, structure: dict, output: dict, msg: bool = False, ctx: bool = False):
+    def _to_dict(
+        key: str, structure: dict, output: dict, msg: bool = False, ctx: bool = False
+    ) -> dict:
         for location, errors in structure.items():
             if location:
                 current_level = output
@@ -469,8 +479,8 @@ class ValidationIssues:
         issue: Union[ValidationError, ValidationWarning],
         msg: bool = False,
         ctx: bool = False,
-    ):
-        output = {"code": issue.code}
+    ) -> ValidationIssueDict:
+        output: ValidationIssueDict = {"code": issue.code}
         if msg:
             output["error"] = issue.message
         if ctx:

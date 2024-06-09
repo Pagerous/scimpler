@@ -10,14 +10,17 @@ TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[BaseSchema, Complex])
 
 
 class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
-    SCIM_OP = None
-
     @abc.abstractmethod
     def match(
         self,
         value: Optional[SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
+        """Docs placeholder."""
+
+    @classmethod
+    @abc.abstractmethod
+    def op(cls) -> str:
         """Docs placeholder."""
 
 
@@ -47,8 +50,6 @@ class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
 
 
 class And(MultiOperandLogicalOperator):
-    SCIM_OP = "and"
-
     def match(
         self,
         value: Optional[SCIMDataContainer],
@@ -60,10 +61,12 @@ class And(MultiOperandLogicalOperator):
                 return False
         return True
 
+    @classmethod
+    def op(cls) -> str:
+        return "and"
+
 
 class Or(MultiOperandLogicalOperator):
-    SCIM_OP = "or"
-
     def match(
         self,
         value: Optional[SCIMDataContainer],
@@ -75,6 +78,10 @@ class Or(MultiOperandLogicalOperator):
                 return True
         return False
 
+    @classmethod
+    def op(cls) -> str:
+        return "or"
+
 
 TNotSubOperator = TypeVar(
     "TNotSubOperator", bound=Union[MultiOperandLogicalOperator, "AttributeOperator"]
@@ -82,10 +89,12 @@ TNotSubOperator = TypeVar(
 
 
 class Not(LogicalOperator):
-    SCIM_OP = "not"
-
     def __init__(self, sub_operator: TNotSubOperator):
         self._sub_operator = sub_operator
+
+    @classmethod
+    def op(cls) -> str:
+        return "not"
 
     @property
     def sub_operator(self) -> TNotSubOperator:
@@ -107,10 +116,13 @@ class Not(LogicalOperator):
 
 
 class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
-    SCIM_OP = None
-
     def __init__(self, attr_rep: AttrRep):
         self._attr_rep = attr_rep
+
+    @classmethod
+    @abc.abstractmethod
+    def op(cls) -> str:
+        """Docs placeholder."""
 
     @property
     def attr_rep(self) -> AttrRep:
@@ -164,7 +176,6 @@ def _pr_operator(value):
 
 
 class Present(UnaryAttributeOperator):
-    SCIM_OP = "pr"
     SUPPORTED_SCIM_TYPES = {
         "string",
         "decimal",
@@ -177,6 +188,10 @@ class Present(UnaryAttributeOperator):
     }
     SUPPORTED_TYPES = {str, bool, int, dict, float, type(None)}
     OPERATOR = staticmethod(_pr_operator)
+
+    @classmethod
+    def op(cls) -> str:
+        return "pr"
 
 
 T2 = TypeVar("T2")
@@ -191,7 +206,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         super().__init__(attr_rep=attr_rep)
         if type(value) not in self.SUPPORTED_TYPES:
             raise TypeError(
-                f"unsupported value type {type(value).__name__!r} for {self.SCIM_OP!r} operator"
+                f"unsupported value type {type(value).__name__!r} for {self.op!r} operator"
             )
         self._value = value
 
@@ -270,7 +285,6 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
 
 class Equal(BinaryAttributeOperator):
-    SCIM_OP = "eq"
     OPERATOR = operator.eq
     SUPPORTED_SCIM_TYPES = {
         "string",
@@ -284,9 +298,12 @@ class Equal(BinaryAttributeOperator):
     }
     SUPPORTED_TYPES = {str, bool, int, float, type(None)}
 
+    @classmethod
+    def op(cls) -> str:
+        return "eq"
+
 
 class NotEqual(BinaryAttributeOperator):
-    SCIM_OP = "ne"
     OPERATOR = operator.ne
     SUPPORTED_SCIM_TYPES = {
         "string",
@@ -300,12 +317,19 @@ class NotEqual(BinaryAttributeOperator):
     }
     SUPPORTED_TYPES = {str, bool, int, float, type(None)}
 
+    @classmethod
+    def op(cls) -> str:
+        return "ne"
+
 
 class Contains(BinaryAttributeOperator):
-    SCIM_OP = "co"
     OPERATOR = operator.contains
     SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
     SUPPORTED_TYPES = {str, float}
+
+    @classmethod
+    def op(cls) -> str:
+        return "co"
 
 
 class StartsWith(BinaryAttributeOperator):
@@ -313,10 +337,13 @@ class StartsWith(BinaryAttributeOperator):
     def _starts_with(val1: str, val2: str):
         return val1.startswith(val2)
 
-    SCIM_OP = "sw"
     OPERATOR = _starts_with
     SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
     SUPPORTED_TYPES = {str, float}
+
+    @classmethod
+    def op(cls) -> str:
+        return "sw"
 
 
 class EndsWith(BinaryAttributeOperator):
@@ -324,38 +351,53 @@ class EndsWith(BinaryAttributeOperator):
     def _ends_with(val1: str, val2: str):
         return val1.endswith(val2)
 
-    SCIM_OP = "ew"
     OPERATOR = _ends_with
     SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
     SUPPORTED_TYPES = {str, float}
 
+    @classmethod
+    def op(cls) -> str:
+        return "ew"
+
 
 class GreaterThan(BinaryAttributeOperator):
-    SCIM_OP = "gt"
     OPERATOR = operator.gt
     SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
     SUPPORTED_TYPES = {str, float, int}
 
+    @classmethod
+    def op(cls) -> str:
+        return "gt"
+
 
 class GreaterThanOrEqual(BinaryAttributeOperator):
-    SCIM_OP = "ge"
     OPERATOR = operator.ge
     SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
     SUPPORTED_TYPES = {str, float, int}
 
+    @classmethod
+    def op(cls) -> str:
+        return "ge"
+
 
 class LesserThan(BinaryAttributeOperator):
-    SCIM_OP = "lt"
     OPERATOR = operator.lt
     SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
     SUPPORTED_TYPES = {str, float, int}
 
+    @classmethod
+    def op(cls) -> str:
+        return "lt"
+
 
 class LesserThanOrEqual(BinaryAttributeOperator):
-    SCIM_OP = "le"
     OPERATOR = operator.le
     SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
     SUPPORTED_TYPES = {str, float, int}
+
+    @classmethod
+    def op(cls) -> str:
+        return "le"
 
 
 TComplexAttributeSubOperator = TypeVar(
