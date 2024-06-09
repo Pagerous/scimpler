@@ -109,23 +109,7 @@ class Error(Validator):
         return issues
 
 
-def validate_resource_location_in_header(
-    headers: Any,
-    header_required: bool,
-) -> ValidationIssues:
-    issues = ValidationIssues()
-    headers = headers or {}
-    if not isinstance(headers, dict) or "Location" not in (headers or {}):
-        if header_required:
-            issues.add_error(
-                issue=ValidationError.missing(),
-                proceed=False,
-                location=("Location",),
-            )
-    return issues
-
-
-def validate_resource_location_consistency(
+def _validate_resource_location_consistency(
     meta_location: str,
     headers_location: str,
 ) -> ValidationIssues:
@@ -174,10 +158,12 @@ def _validate_resource_output_body(
         location=body_location,
     )
 
-    issues.merge(
-        issues=validate_resource_location_in_header(headers, location_header_required),
-        location=["headers"],
-    )
+    if "Location" not in headers and location_header_required:
+        issues.add_error(
+            issue=ValidationError.missing(),
+            proceed=False,
+            location=("headers", "Location"),
+        )
     issues.merge(
         issues=_validate_status_code(expected_status_code, status_code),
         location=["status"],
@@ -189,7 +175,7 @@ def _validate_resource_output_body(
         and location_header is not None
     ):
         issues.merge(
-            issues=validate_resource_location_consistency(
+            issues=_validate_resource_location_consistency(
                 meta_location=body.get(meta_rep),
                 headers_location=location_header,
             ),
@@ -449,7 +435,7 @@ def _validate_resources_sorted(
     return issues
 
 
-def validate_number_of_resources(
+def _validate_number_of_resources(
     count: Optional[int],
     total_results: int,
     resources: list[Any],
@@ -478,7 +464,7 @@ def validate_number_of_resources(
     return issues
 
 
-def validate_pagination_info(
+def _validate_pagination_info(
     schema: list_response.ListResponse,
     count: Optional[int],
     total_results: Any,
@@ -502,19 +488,6 @@ def validate_pagination_info(
                 location=schema.attrs.itemsperpage.location,
                 proceed=False,
             )
-    return issues
-
-
-def validate_start_index_consistency(
-    start_index: int,
-    start_index_body: int,
-) -> ValidationIssues:
-    issues = ValidationIssues()
-    if start_index_body > start_index:
-        issues.add_error(
-            issue=ValidationError.bad_value_content(),
-            proceed=True,
-        )
     return issues
 
 
@@ -562,9 +535,10 @@ def _validate_resources_get_response(
     )
     if issues.can_proceed(start_index_location):
         start_index_body = body.get(start_index_rep)
-        if start_index_body:
-            issues.merge(
-                issues=validate_start_index_consistency(start_index, start_index_body),
+        if start_index_body and start_index_body > start_index:
+            issues.add_error(
+                issue=ValidationError.bad_value_content(),
+                proceed=True,
                 location=start_index_location,
             )
 
@@ -584,7 +558,7 @@ def _validate_resources_get_response(
     if issues.can_proceed(total_results_location):
         total_results = body.get(total_results_rep)
         issues.merge(
-            issues=validate_number_of_resources(
+            issues=_validate_number_of_resources(
                 count=count,
                 total_results=total_results,
                 resources=resources,
@@ -595,7 +569,7 @@ def _validate_resources_get_response(
             start_index_body = body.get(start_index_rep)
             items_per_page = body.get(items_per_page_rep)
             issues.merge(
-                issues=validate_pagination_info(
+                issues=_validate_pagination_info(
                     schema=schema,
                     count=count,
                     total_results=total_results,

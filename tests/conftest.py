@@ -156,7 +156,7 @@ def user_data_server(user_data_client):
         "resourceType": "User",
         "created": "2010-01-23T04:56:22Z",
         "lastModified": "2010-01-23T04:56:22Z",
-        "version": r'W\/"3694e05e9dff591"',
+        "version": r'W/"3694e05e9dff591"',
         "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
     }
     data.pop("password")
