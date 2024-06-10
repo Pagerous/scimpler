@@ -2,7 +2,6 @@ import pytest
 
 from src.assets.schemas import User
 from src.data.operator import Equal, Present
-from src.data.schemas import ResourceSchema
 from src.registry import (
     register_binary_operator,
     register_resource_schema,

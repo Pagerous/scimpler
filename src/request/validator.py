@@ -98,7 +98,7 @@ class Error(Validator):
                 proceed=True,
             )
             issues.add_error(
-                issue=ValidationError.must_be_equal_to(f"'status' attribute"),
+                issue=ValidationError.must_be_equal_to("'status' attribute"),
                 location=["status"],
                 proceed=True,
             )

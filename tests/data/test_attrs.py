@@ -4,13 +4,7 @@ from datetime import datetime
 import pytest
 
 from src.assets.schemas import User
-from src.container import (
-    AttrName,
-    AttrRep,
-    AttrRepFactory,
-    BoundedAttrRep,
-    SCIMDataContainer,
-)
+from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMDataContainer
 from src.data.attrs import (
     AttributeUniqueness,
     Binary,
