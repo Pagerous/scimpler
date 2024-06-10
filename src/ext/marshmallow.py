@@ -22,6 +22,20 @@ from src.data.attrs import (
 from src.request.validator import Validator
 
 
+_marshmallow_field_by_attr_type = {
+    Unknown: fields.Raw,
+    Boolean: fields.Boolean,
+    Integer: fields.Integer,
+    Decimal: fields.Float,
+    DateTime: fields.DateTime,
+    Binary: fields.String,
+    ExternalReference: fields.String,
+    URIReference: fields.String,
+    SCIMReference: fields.String,
+    String: fields.String,
+}
+
+
 def _get_fields(
     attrs: Iterable[tuple[BoundedAttrRep, Attribute]],
     field_by_attr_name: Optional[dict[str, fields.Field]] = None,
@@ -61,31 +75,9 @@ def _get_complex_sub_fields(
 
 
 def _get_field(attr, **kwargs):
-    if isinstance(attr, Unknown):
-        field = fields.Raw(**kwargs)
-    elif isinstance(attr, Boolean):
-        field = fields.Boolean(**kwargs)
-    elif isinstance(attr, Integer):
-        field = fields.Integer(**kwargs)
-    elif isinstance(attr, Decimal):
-        field = fields.Float(**kwargs)
-    elif isinstance(attr, DateTime):
-        field = fields.DateTime(**kwargs)
-    elif isinstance(attr, Binary):
-        field = fields.String(**kwargs)
-    elif isinstance(attr, ExternalReference):
-        field = fields.String(**kwargs)
-    elif isinstance(attr, URIReference):
-        field = fields.String(**kwargs)
-    elif isinstance(attr, SCIMReference):
-        field = fields.String(**kwargs)
-    elif isinstance(attr, String):
-        field = fields.String(**kwargs)
-    elif isinstance(attr, Complex):
-        field = fields.Nested(_get_complex_sub_fields(attr.attrs))
-    else:
-        raise RuntimeError(f"unknown attr type {attr.type}")
-    return field
+    if isinstance(attr, Complex):
+        return fields.Nested(_get_complex_sub_fields(attr.attrs))
+    return _marshmallow_field_by_attr_type[type(attr)](**kwargs)
 
 
 def _get_kwargs(attr: Attribute):

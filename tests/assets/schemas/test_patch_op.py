@@ -845,3 +845,15 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op
     )
 
     assert issues.to_dict() == expected_issues
+
+
+def test_patch_op_deserialization_fails_if_bad_target():
+    schema = patch_op.PatchOp(User)
+
+    with pytest.raises(ValueError, match="target indicated by path .* does not exist"):
+        schema.deserialize(
+            data={
+                "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                "Operations": [{"op": "add", "path": "name.nonExisting", "value": "whatever"}],
+            }
+        )

@@ -493,6 +493,14 @@ def test_container_repr():
             Missing,
             Missing,
         ),
+        (
+            {"a": 1, "c": 3},
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", attr="manager"
+            ),
+            Missing,
+            Missing,
+        ),
     ),
 )
 def test_entry_can_be_popped_from_container(data, attr_rep, expected, remaining):

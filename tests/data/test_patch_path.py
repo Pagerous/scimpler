@@ -261,6 +261,60 @@ def test_patch_path_repr():
     assert repr(PatchPath.deserialize("name.formatted")) == "PatchPath(name.formatted)"
 
 
+@pytest.mark.parametrize(
+    ("path_1", "path_2", "expected"),
+    (
+        (
+            PatchPath.deserialize("userName"),
+            PatchPath.deserialize("userName"),
+            True,
+        ),
+        (
+            PatchPath.deserialize("userName"),
+            PatchPath.deserialize("name"),
+            False,
+        ),
+        (
+            PatchPath.deserialize("name"),
+            PatchPath.deserialize("name.formatted"),
+            False,
+        ),
+        (
+            PatchPath.deserialize("name.formatted"),
+            PatchPath.deserialize("name.formatted"),
+            True,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work']"),
+            PatchPath.deserialize("emails[type eq 'work']"),
+            True,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work']"),
+            PatchPath.deserialize("emails[type eq 'home']"),
+            False,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work']"),
+            PatchPath.deserialize("emails[type eq 'work'].value"),
+            False,
+        ),
+        (
+            PatchPath.deserialize("emails[type eq 'work'].value"),
+            PatchPath.deserialize("emails[type eq 'work'].value"),
+            True,
+        ),
+        (
+            PatchPath.deserialize("userName"),
+            "userName",
+            False,
+        ),
+    ),
+)
+def test_patch_path_can_be_compared(path_1, path_2, expected):
+    assert (path_1 == path_2) is expected
+
+
 def test_calling_path_for_non_existing_attr_fails():
     path = PatchPath.deserialize("non_existing.attr")
 

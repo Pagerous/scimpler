@@ -500,9 +500,6 @@ def _validate_resources_filtered(
 ) -> ValidationIssues:
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
-        if schema is None:
-            continue
-
         if not filter_(resource, schema):
             issues.add_error(
                 issue=ValidationError.resources_not_filtered(),
@@ -590,19 +587,17 @@ def _validate_resources_get_response(
     if issues.has_errors(resources_location):
         return issues
 
-    resource_schemas = schema.get_schemas_for_resources(resources)
-    if not all(resource_schemas):
-        return issues
-
-    valid_resource_schemas = cast(Sequence[BaseResourceSchema], resource_schemas)
+    resource_schemas = cast(
+        Sequence[BaseResourceSchema], schema.get_schemas_for_resources(resources)
+    )
     if filter_ is not None and can_validate_filtering(filter_, resource_presence_config):
         issues.merge(
-            issues=_validate_resources_filtered(filter_, resources, valid_resource_schemas),
+            issues=_validate_resources_filtered(filter_, resources, resource_schemas),
             location=resources_location,
         )
     if sorter is not None and can_validate_sorting(sorter, resource_presence_config):
         issues.merge(
-            issues=_validate_resources_sorted(sorter, resources, valid_resource_schemas),
+            issues=_validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
         )
     return issues

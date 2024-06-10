@@ -279,6 +279,34 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
     assert issues.to_dict() == expected
 
 
+def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schema(list_user_data):
+    list_user_data["Resources"].append({"schemas": ["complete:unknown:schema"]})
+    list_user_data["totalResults"] = 3
+    list_user_data["itemsPerPage"] = 3
+    expected = {
+        "body": {
+            "Resources": {
+                "2": {
+                    "_errors": [
+                        {
+                            "code": 14,
+                        }
+                    ]
+                }
+            }
+        }
+    }
+    validator = ServerRootResourcesGET(CONFIG, resource_schemas=[User, Group])
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=list_user_data,
+        filter=Filter.deserialize('name.familyName eq "Sven"'),
+    )
+
+    assert issues.to_dict() == expected
+
+
 def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
     filter_ = Filter.deserialize('meta.resourcetype eq "user"')  # "user", not "User"
     expected = {
