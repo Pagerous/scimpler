@@ -150,6 +150,9 @@ class AttrRepFactory:
             return AttrRep(attr=value)
 
         match = _ATTR_REP.fullmatch(value)
+        if match is None:
+            raise
+
         schema, attr = match.group(1), match.group(2)
         schema = schema[:-1] if schema else ""
         if "." in attr:
@@ -188,24 +191,34 @@ Missing = MissingType()
 
 
 @dataclass
-class _ContainerKey:
-    schema: Optional[str] = None
-    extension: bool = False
-    attr: Optional[str] = None
-    sub_attr: Optional[str] = None
+class _SchemaKey:
+    schema: str
+
+
+@dataclass
+class _AttrKey:
+    attr: str
+    sub_attr: Optional[str]
+
+
+@dataclass
+class _BoundedAttrKey(_AttrKey):
+    schema: str
+    extension: bool
 
 
 class SCIMDataContainer:
-    def __init__(self, d: Optional[Union[dict, "SCIMDataContainer"]] = None):
-        self._data = {}
-        self._lower_case_to_original = {}
+    def __init__(self, d: Optional[Union[dict[str, Any], "SCIMDataContainer"]] = None):
+        self._data: dict[str, Any] = {}
+        self._lower_case_to_original: dict[str, str] = {}
 
         if isinstance(d, dict):
-            for key, value in (d or {}).items():
+            for key, value in d.items():
                 if not isinstance(key, str):
                     continue
 
-                self._data.pop(self._lower_case_to_original.get(key.lower()), None)
+                if original_key := self._lower_case_to_original.get(key.lower()):
+                    self._data.pop(original_key, None)
                 self._lower_case_to_original[key.lower()] = key
                 if isinstance(value, dict):
                     self._data[key] = SCIMDataContainer(value)
@@ -225,13 +238,14 @@ class SCIMDataContainer:
 
     def set(
         self,
-        key: Union[str, SchemaURI, AttrName, AttrRep, BoundedAttrRep, _ContainerKey],
+        key: Union[str, AttrRep, _SchemaKey, _AttrKey],
         value: Any,
         expand: bool = False,
     ) -> None:
-        key = self._normalize(key)
+        if not isinstance(key, (_SchemaKey, _AttrKey)):
+            key = self._normalize(key)
 
-        if key.schema and not key.attr:
+        if isinstance(key, _SchemaKey):
             extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
                 extension = key.schema
@@ -239,25 +253,18 @@ class SCIMDataContainer:
             self._data[extension] = value
             return
 
-        if key.extension:
+        elif isinstance(key, _BoundedAttrKey) and key.extension:
             extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
                 extension = key.schema
                 self._lower_case_to_original[key.schema.lower()] = extension
                 self._data[extension] = SCIMDataContainer()
-            self._data[extension].set(
-                _ContainerKey(
-                    schema=key.schema,
-                    attr=key.attr,
-                    sub_attr=key.sub_attr,
-                ),
-                value,
-                expand,
-            )
+            self._data[extension].set(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), value, expand)
             return
 
         if not key.sub_attr:
-            self._data.pop(self._lower_case_to_original.get(key.attr.lower()), None)
+            if original_key := self._lower_case_to_original.get(key.attr.lower()):
+                self._data.pop(original_key, None)
             self._lower_case_to_original[key.attr.lower()] = key.attr
             self._data[key.attr] = value
             return
@@ -276,7 +283,7 @@ class SCIMDataContainer:
             raise KeyError(f"can not assign ({key.sub_attr}, {value}) to '{key.attr}'")
 
         if not isinstance(value, list):
-            self._data[parent_attr_key].set(_ContainerKey(attr=key.sub_attr), value)
+            self._data[parent_attr_key].set(_AttrKey(attr=key.sub_attr, sub_attr=None), value)
             return
 
         if expand:
@@ -285,20 +292,25 @@ class SCIMDataContainer:
                 self._data[parent_attr_key].extend([SCIMDataContainer() for _ in range(to_create)])
             for item, container in zip(value, self._data[parent_attr_key]):
                 if item is not Missing:
-                    container.set(_ContainerKey(attr=key.sub_attr), item)
+                    container.set(_AttrKey(attr=key.sub_attr, sub_attr=None), item)
             return
-        self._data[parent_attr_key].set(_ContainerKey(attr=key.sub_attr), value)
+        self._data[parent_attr_key].set(_AttrKey(attr=key.sub_attr, sub_attr=None), value)
 
-    def get(self, key: Union[str, SchemaURI, AttrName, AttrRep, BoundedAttrRep, _ContainerKey]):
-        key = self._normalize(key)
+    def get(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey]):
+        if not isinstance(key, (_SchemaKey, _AttrKey)):
+            key = self._normalize(key)
 
-        if key.schema and not key.attr:
+        if isinstance(key, _SchemaKey):
             extension = self._lower_case_to_original.get(key.schema.lower())
+            if extension is None:
+                return Missing
             return self._data.get(extension, Missing)
 
-        extension = self._lower_case_to_original.get(key.schema.lower()) if key.schema else None
-        if extension is not None:
-            return self._data[extension].get(_ContainerKey(attr=key.attr, sub_attr=key.sub_attr))
+        if isinstance(key, _BoundedAttrKey) and key.extension:
+            extension = self._lower_case_to_original.get(key.schema.lower())
+            if extension is None:
+                return Missing
+            return self._data[extension].get(_AttrKey(attr=key.attr, sub_attr=key.sub_attr))
 
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
@@ -307,10 +319,10 @@ class SCIMDataContainer:
         if key.sub_attr:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMDataContainer):
-                return attr_value.get(_ContainerKey(attr=key.sub_attr))
+                return attr_value.get(_AttrKey(attr=key.sub_attr, sub_attr=None))
             if isinstance(attr_value, list):
                 return [
-                    item.get(_ContainerKey(attr=key.sub_attr))
+                    item.get(_AttrKey(attr=key.sub_attr, sub_attr=None))
                     if isinstance(item, SCIMDataContainer)
                     else Missing
                     for item in attr_value
@@ -318,16 +330,21 @@ class SCIMDataContainer:
             return Missing
         return self._data[attr]
 
-    def pop(self, key: Union[str, SchemaURI, AttrName, AttrRep, BoundedAttrRep, _ContainerKey]):
-        key = self._normalize(key)
+    def pop(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey]):
+        if not isinstance(key, (_SchemaKey, _AttrKey)):
+            key = self._normalize(key)
 
-        if key.schema and not key.attr:
+        if isinstance(key, _SchemaKey):
             extension = self._lower_case_to_original.get(key.schema.lower())
+            if extension is None:
+                return Missing
             return self._data.pop(extension, Missing)
 
-        extension = self._lower_case_to_original.get(key.schema.lower()) if key.schema else None
-        if extension is not None:
-            return self._data[extension].pop(_ContainerKey(attr=key.attr, sub_attr=key.sub_attr))
+        elif isinstance(key, _BoundedAttrKey) and key.extension:
+            extension = self._lower_case_to_original.get(key.schema.lower())
+            if extension is None:
+                return Missing
+            return self._data[extension].pop(_AttrKey(attr=key.attr, sub_attr=key.sub_attr))
 
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
@@ -348,30 +365,27 @@ class SCIMDataContainer:
         return self._data.pop(attr)
 
     @staticmethod
-    def _normalize(value) -> _ContainerKey:
-        if isinstance(value, _ContainerKey):
-            return value
-
+    def _normalize(value: Union[str, AttrRep]) -> Union[_SchemaKey, _AttrKey]:
         if isinstance(value, SchemaURI):
-            return _ContainerKey(schema=str(value))
+            return _SchemaKey(schema=str(value))
 
         if isinstance(value, str):
             try:
                 value = SchemaURI(value)
                 if value in schemas:
-                    return _ContainerKey(schema=str(value))
+                    return _SchemaKey(schema=str(value))
             except ValueError:
                 pass
             value = AttrRepFactory.deserialize(value)
 
         if isinstance(value, BoundedAttrRep):
-            return _ContainerKey(
+            return _BoundedAttrKey(
                 schema=str(value.schema),
                 attr=str(value.attr),
                 sub_attr=value.sub_attr if value.sub_attr else None,
                 extension=value.extension,
             )
-        return _ContainerKey(
+        return _AttrKey(
             attr=str(value.attr),
             sub_attr=str(value.sub_attr) if value.sub_attr else None,
         )
@@ -380,7 +394,7 @@ class SCIMDataContainer:
     def _is_child_value_compatible(
         parent_value: Any,
         child_value: Any,
-        expand: True,
+        expand: bool,
     ) -> bool:
         if isinstance(parent_value, list):
             if not isinstance(child_value, list):
@@ -396,7 +410,7 @@ class SCIMDataContainer:
         return True
 
     def to_dict(self) -> dict[str, Any]:
-        output = {}
+        output: dict[str, Any] = {}
         for key, value in self._data.items():
             if isinstance(value, SCIMDataContainer):
                 output[key] = value.to_dict()
