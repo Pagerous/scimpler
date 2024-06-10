@@ -43,16 +43,16 @@ class SchemaURI(str):
 
 
 class AttrRep:
-    def __init__(self, attr: str, sub_attr: str = ""):
+    def __init__(self, attr: str, sub_attr: Optional[str] = None):
         attr = AttrName(attr)
-        attr_ = attr
-        if sub_attr:
+        repr_: str = attr
+        if sub_attr is not None:
             sub_attr = AttrName(sub_attr)
-            attr_ += "." + sub_attr
+            repr_ += "." + sub_attr
 
         self._attr = attr
         self._sub_attr = sub_attr
-        self._repr = attr_
+        self._repr = repr_
 
     def __repr__(self) -> str:
         return self._repr
@@ -71,7 +71,7 @@ class AttrRep:
         return self._attr
 
     @property
-    def sub_attr(self) -> AttrName:
+    def sub_attr(self) -> Optional[AttrName]:
         return self._sub_attr
 
     @property
@@ -86,7 +86,7 @@ class BoundedAttrRep(AttrRep):
         self,
         schema: str,
         attr: str,
-        sub_attr: str = "",
+        sub_attr: Optional[str] = None,
     ):
         super().__init__(attr, sub_attr)
         schema = SchemaURI(schema)
@@ -155,7 +155,7 @@ class AttrRepFactory:
         if "." in attr:
             attr, sub_attr = attr.split(".")
         else:
-            attr, sub_attr = attr, ""
+            attr, sub_attr = attr, None
         if schema:
             return BoundedAttrRep(
                 schema=schema,
@@ -368,7 +368,7 @@ class SCIMDataContainer:
             return _ContainerKey(
                 schema=str(value.schema),
                 attr=str(value.attr),
-                sub_attr=str(value.sub_attr),
+                sub_attr=value.sub_attr if value.sub_attr else None,
                 extension=value.extension,
             )
         return _ContainerKey(

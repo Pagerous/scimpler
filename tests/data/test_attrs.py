@@ -145,14 +145,14 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
         "expected_sub_attr",
     ),
     (
-        ("userName", AttrRep, "", "userName", ""),
+        ("userName", AttrRep, "", "userName", None),
         ("name.firstName", AttrRep, "", "name", "firstName"),
         (
             "urn:ietf:params:scim:schemas:core:2.0:User:userName",
             BoundedAttrRep,
             "urn:ietf:params:scim:schemas:core:2.0:User",
             "userName",
-            "",
+            None,
         ),
         (
             "urn:ietf:params:scim:schemas:core:2.0:User:name.firstName",
@@ -161,7 +161,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
             "name",
             "firstName",
         ),
-        ("weirdo-$", AttrRep, "", "weirdo-$", ""),
+        ("weirdo-$", AttrRep, "", "weirdo-$", None),
         ("attr.weirdo-$", AttrRep, "", "attr", "weirdo-$"),
     ),
 )
