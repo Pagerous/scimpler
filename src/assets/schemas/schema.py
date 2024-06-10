@@ -1,7 +1,8 @@
-from typing import Any, Optional, Union
+from typing import Any, Iterator, Optional, Union, cast
 
-from src.container import Missing, SCIMDataContainer
+from src.container import BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attrs import (
+    Attribute,
     AttributeIssuer,
     AttributeMutability,
     Boolean,
@@ -219,8 +220,11 @@ class _Schema(BaseResourceSchema):
         schema: Union[ResourceSchema, SchemaExtension],
         version: Optional[str] = None,
     ) -> dict[str, Any]:
-        attrs = schema.attrs if isinstance(schema, SchemaExtension) else schema.attrs.core_attrs
-        output = {
+        attrs = cast(
+            Iterator[tuple[BoundedAttrRep, Attribute]],
+            schema.attrs if isinstance(schema, SchemaExtension) else schema.attrs.core_attrs,
+        )
+        output: dict[str, Any] = {
             "id": schema.schema,
             "schemas": self.schemas,
             "name": schema.name,

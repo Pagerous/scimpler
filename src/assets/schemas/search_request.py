@@ -1,13 +1,7 @@
 from typing import Any
 
 from src.assets.config import ServiceProviderConfig
-from src.container import (
-    AttrName,
-    AttrRepFactory,
-    BoundedAttrRep,
-    Missing,
-    SCIMDataContainer,
-)
+from src.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMDataContainer
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import Integer, String
 from src.data.filter import Filter
@@ -23,7 +17,7 @@ def validate_attr_reps(value: list[str]) -> ValidationIssues:
     return issues
 
 
-def deserialize_attr_reps(value: list[str]) -> list[BoundedAttrRep]:
+def deserialize_attr_reps(value: list[str]) -> list[AttrRep]:
     return [AttrRepFactory.deserialize(item) for item in value]
 
 

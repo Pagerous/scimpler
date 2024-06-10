@@ -1,9 +1,9 @@
 import functools
-from typing import Any, Optional, Sequence, TypeVar, Union
+from typing import Any, Generic, Optional, Sequence, TypeVar, Union, cast
 
 from src.container import AttrRep, Missing, SCIMDataContainer
 from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
-from src.data.schemas import BaseSchema
+from src.data.schemas import BaseResourceSchema
 
 
 class AlwaysLastKey:
@@ -46,11 +46,11 @@ class StringKey:
         return value.lower() < other_value.lower()
 
 
-TSorterData = TypeVar("TSorterData", bound=Union[list[SCIMDataContainer], list[dict[str, Any]]])
+TData = TypeVar("TData", bound=Union[list[SCIMDataContainer], list[dict[str, Any]]])
 TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
 
 
-class Sorter:
+class Sorter(Generic[TAttrRep]):
     def __init__(self, attr_rep: TAttrRep, asc: bool = True):
         self._attr_rep = attr_rep
         self._asc = asc
@@ -66,29 +66,31 @@ class Sorter:
 
     def __call__(
         self,
-        data: TSorterData,
-        schema: Union[BaseSchema, Sequence[BaseSchema]],
-    ) -> TSorterData:
+        data: TData,
+        schema: Union[BaseResourceSchema, Sequence[BaseResourceSchema]],
+    ) -> TData:
         if not data:
             return data
+        normalized = [SCIMDataContainer(item) for item in data]
+        if isinstance(data[0], dict):
+            return cast(TData, [item.to_dict() for item in self._sort(normalized, schema)])
+        return cast(TData, self._sort(normalized, schema))
 
-        item_type = type(data[0])
-        data = [SCIMDataContainer(item) if isinstance(item, dict) else item for item in data]
-
+    def _sort(
+        self,
+        data: list[SCIMDataContainer],
+        schema: Union[BaseResourceSchema, Sequence[BaseResourceSchema]],
+    ) -> list[SCIMDataContainer]:
         if not any(item.get(self._attr_rep) for item in data):
-            sorted_data = data
-        else:
-            if not isinstance(schema, BaseSchema) and len(set(schema)) == 1:
-                schema = schema[0]
-            if isinstance(schema, BaseSchema):
-                key = functools.partial(self._attr_key, schema=schema)
-            else:
-                key = self._attr_key_many_schemas(data, schema)
-            sorted_data = sorted(data, key=key, reverse=not self._asc)
+            return data
 
-        if item_type is dict:
-            return [item.to_dict() for item in sorted_data]
-        return sorted_data
+        if not isinstance(schema, BaseResourceSchema) and len(set(schema)) == 1:
+            schema = schema[0]
+        if isinstance(schema, BaseResourceSchema):
+            key = functools.partial(self._attr_key, schema=schema)
+        else:
+            key = self._attr_key_many_schemas(data, schema)
+        return sorted(data, key=key, reverse=not self._asc)
 
     def _get_key(self, value: Any, attr: Optional[Attribute]):
         if not value or attr is None:
@@ -102,14 +104,16 @@ class Sorter:
 
         return StringKey(value, attr)
 
-    def _attr_key_many_schemas(self, data: list[SCIMDataContainer], schemas: Sequence[BaseSchema]):
+    def _attr_key_many_schemas(
+        self, data: list[SCIMDataContainer], schemas: Sequence[BaseResourceSchema]
+    ):
         def attr_key(item):
             schema = schemas[data.index(item)]
             return self._attr_key(item, schema)
 
         return attr_key
 
-    def _attr_key(self, item: SCIMDataContainer, schema: BaseSchema):
+    def _attr_key(self, item: SCIMDataContainer, schema: BaseResourceSchema):
         attr = schema.attrs.get(self._attr_rep)
         if attr is None:
             return self._get_key(None, None)

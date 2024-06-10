@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Optional, Sequence, Union, cast
 
 from src.assets.config import ServiceProviderConfig
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
@@ -82,14 +82,16 @@ class Error(Validator):
     ) -> ValidationIssues:
         body_location = ("body",)
         issues = ValidationIssues()
-        body = SCIMDataContainer(body or {})
+        normalized = SCIMDataContainer(body or {})
         issues.merge(
-            self.response_schema.validate(body, AttrPresenceConfig("RESPONSE")),
+            self.response_schema.validate(normalized, AttrPresenceConfig("RESPONSE")),
             location=body_location,
         )
         status_attr_rep = self.response_schema.attrs.status
         status_location = body_location + status_attr_rep.location
-        if (status_in_body := body.get(status_attr_rep)) and str(status_code) != status_in_body:
+        if (status_in_body := normalized.get(status_attr_rep)) and str(
+            status_code
+        ) != status_in_body:
             issues.add_error(
                 issue=ValidationError.must_be_equal_to("response status code"),
                 location=status_location,
@@ -370,7 +372,7 @@ class ResourcesPOST(Validator):
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        body, query_string = SCIMDataContainer(body or {}), query_string or {}
+        normalized, query_string = SCIMDataContainer(body or {}), query_string or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
@@ -381,7 +383,7 @@ class ResourcesPOST(Validator):
             location=("query_string",),
         )
         issues.merge(
-            issues=self._schema.validate(body, AttrPresenceConfig("REQUEST")),
+            issues=self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
             location=("body",),
         )
         return issues
@@ -396,21 +398,21 @@ class ResourcesPOST(Validator):
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if not body:
-            issues.add_warning(issue=ValidationWarning.missing(), location=("body",))
+            issues.add_warning(issue=ValidationWarning.missing(), location=["body"])
             return issues
 
-        body = SCIMDataContainer(body)
+        normalized = SCIMDataContainer(body)
         issues = _validate_resource_output_body(
             schema=self._schema,
             config=self.config,
             location_header_required=True,
             expected_status_code=201,
             status_code=status_code,
-            body=body,
+            body=normalized,
             headers=headers or {},
             presence_config=kwargs.get("presence_config"),
         )
-        if body.get(self._schema.attrs.meta__created) != body.get(
+        if normalized.get(self._schema.attrs.meta__created) != normalized.get(
             self._schema.attrs.meta__lastModified
         ):
             issues.add_error(
@@ -424,7 +426,7 @@ class ResourcesPOST(Validator):
 def _validate_resources_sorted(
     sorter: Sorter,
     resources: list[SCIMDataContainer],
-    resource_schemas: Sequence[ResourceSchema],
+    resource_schemas: Sequence[BaseResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     if resources != sorter(resources, resource_schemas):
@@ -492,10 +494,15 @@ def _validate_pagination_info(
 
 
 def _validate_resources_filtered(
-    filter_: Filter, resources: list[Any], resource_schemas: Sequence[ResourceSchema]
+    filter_: Filter,
+    resources: list[Any],
+    resource_schemas: Sequence[BaseResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
+        if schema is None:
+            continue
+
         if not filter_(resource, schema):
             issues.add_error(
                 issue=ValidationError.resources_not_filtered(),
@@ -584,14 +591,18 @@ def _validate_resources_get_response(
         return issues
 
     resource_schemas = schema.get_schemas_for_resources(resources)
+    if not all(resource_schemas):
+        return issues
+
+    valid_resource_schemas = cast(Sequence[BaseResourceSchema], resource_schemas)
     if filter_ is not None and can_validate_filtering(filter_, resource_presence_config):
         issues.merge(
-            issues=_validate_resources_filtered(filter_, resources, resource_schemas),
+            issues=_validate_resources_filtered(filter_, resources, valid_resource_schemas),
             location=resources_location,
         )
     if sorter is not None and can_validate_sorting(sorter, resource_presence_config):
         issues.merge(
-            issues=_validate_resources_sorted(sorter, resources, resource_schemas),
+            issues=_validate_resources_sorted(sorter, resources, valid_resource_schemas),
             location=resources_location,
         )
     return issues
@@ -603,7 +614,7 @@ def _is_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
 
 def _is_parent_contained(attr_rep, attr_reps) -> bool:
     return bool(
-        attr_rep.sub_attr
+        attr_rep.is_sub_attr
         and (
             (
                 BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
@@ -617,7 +628,7 @@ def _is_parent_contained(attr_rep, attr_reps) -> bool:
 
 def _is_child_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
     for rep in attr_reps:
-        if not rep.sub_attr:
+        if not rep.is_sub_attr:
             continue
 
         if isinstance(attr_rep, BoundedAttrRep) and isinstance(rep, BoundedAttrRep):
@@ -666,7 +677,7 @@ def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) ->
 
 class ServerRootResourcesGET(Validator):
     def __init__(
-        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
+        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[BaseResourceSchema]
     ):
         super().__init__(config)
         self._request_query_validation_schema = create_search_request_schema(config)
@@ -715,7 +726,7 @@ class ServerRootResourcesGET(Validator):
 
 
 class ResourcesGET(ServerRootResourcesGET):
-    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+    def __init__(self, config: ServiceProviderConfig, *, resource_schema: BaseResourceSchema):
         super().__init__(config, resource_schemas=[resource_schema])
 
 
@@ -801,7 +812,7 @@ class ResourceObjectPATCH(Validator):
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        body, query_string = SCIMDataContainer(body or {}), query_string or {}
+        normalized, query_string = SCIMDataContainer(body or {}), query_string or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
@@ -812,7 +823,7 @@ class ResourceObjectPATCH(Validator):
             location=("query_string",),
         )
         issues.merge(
-            self._schema.validate(body, AttrPresenceConfig("REQUEST")),
+            self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
             location=["body"],
         )
         return issues
@@ -835,19 +846,19 @@ class ResourceObjectPATCH(Validator):
                     location=("status",),
                 )
             return issues
-        body = SCIMDataContainer(body or {})
+        normalized = SCIMDataContainer(body or {})
         issues = _validate_resource_output_body(
             schema=self._resource_schema,
             config=self.config,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=body,
+            body=normalized,
             headers=headers or {},
             presence_config=presence_config,
         )
         meta_version_rep = self.response_schema.attrs.meta__version
-        if body.get(meta_version_rep) is Missing:
+        if normalized.get(meta_version_rep) is Missing:
             issues.pop_errors([5, 8], ("body", *meta_version_rep.location))
             issues.pop_errors([8], ("headers", "ETag"))
         return issues
@@ -889,7 +900,7 @@ class BulkOperations(Validator):
             raise RuntimeError("bulk operations are not configured")
 
         super().__init__(config)
-        self._validators = {
+        self._validators: dict[str, dict[str, Validator]] = {
             "GET": {},
             "POST": {},
             "PUT": {},
@@ -932,9 +943,9 @@ class BulkOperations(Validator):
     ) -> ValidationIssues:
         issues = ValidationIssues()
         body_location = ("body",)
-        body = SCIMDataContainer(body or {})
+        normalized = SCIMDataContainer(body or {})
         issues.merge(
-            self._request_schema.validate(body, AttrPresenceConfig("REQUEST")),
+            self._request_schema.validate(normalized, AttrPresenceConfig("REQUEST")),
             location=body_location,
         )
         if not issues.can_proceed(body_location + self._request_schema.attrs.operations.location):
@@ -943,9 +954,9 @@ class BulkOperations(Validator):
         path_rep = self._request_schema.attrs.operations__path
         data_rep = self._request_schema.attrs.operations__data
         method_rep = self._request_schema.attrs.operations__method
-        paths = body.get(path_rep)
-        data = body.get(data_rep)
-        methods = body.get(method_rep)
+        paths = normalized.get(path_rep)
+        data = normalized.get(data_rep)
+        methods = normalized.get(method_rep)
         for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
             path_location = body_location + (path_rep.attr, i, path_rep.sub_attr)
             data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)
@@ -968,7 +979,11 @@ class BulkOperations(Validator):
                     continue
                 issues_ = validator.validate_request(body=data_item)
                 issues.merge(issues_.get(location=["body"]), location=data_item_location)
-        if len(body.get(self._request_schema.attrs.operations)) > self.config.bulk.max_operations:
+        if (
+            isinstance(self.config.bulk.max_operations, int)
+            and len(normalized.get(self._request_schema.attrs.operations))
+            > self.config.bulk.max_operations
+        ):
             issues.add_error(
                 issue=ValidationError.too_many_bulk_operations(self.config.bulk.max_operations),
                 proceed=True,
@@ -986,10 +1001,10 @@ class BulkOperations(Validator):
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        body = SCIMDataContainer(body or {})
+        normalized = SCIMDataContainer(body or {})
         body_location = ("body",)
         issues.merge(
-            self._response_schema.validate(body, AttrPresenceConfig("RESPONSE")),
+            self._response_schema.validate(normalized, AttrPresenceConfig("RESPONSE")),
             location=body_location,
         )
         issues.merge(
@@ -1005,11 +1020,11 @@ class BulkOperations(Validator):
         location_rep = self._response_schema.attrs.operations__location
         method_rep = self._request_schema.attrs.operations__method
         version_rep = self._response_schema.attrs.operations__version
-        statuses = body.get(status_rep)
-        responses = body.get(response_rep)
-        locations = body.get(location_rep)
-        methods = body.get(method_rep)
-        versions = body.get(version_rep)
+        statuses = normalized.get(status_rep)
+        responses = normalized.get(response_rep)
+        locations = normalized.get(location_rep)
+        methods = normalized.get(method_rep)
+        versions = normalized.get(version_rep)
         n_errors = 0
         for i, (method, status, response, location, version) in enumerate(
             zip(methods, statuses, responses, locations, versions)
@@ -1017,10 +1032,26 @@ class BulkOperations(Validator):
             if not method:
                 continue
 
-            response_location = operations_location + (i, response_rep.sub_attr)
-            status_location = operations_location + (i, status_rep.sub_attr)
-            location_location = operations_location + (i, location_rep.sub_attr)
-            version_location = operations_location + (i, version_rep.sub_attr)
+            response_location: tuple[Union[str, int], ...] = (
+                *operations_location,
+                i,
+                response_rep.sub_attr,
+            )
+            status_location: tuple[Union[str, int], ...] = (
+                *operations_location,
+                i,
+                status_rep.sub_attr,
+            )
+            location_location: tuple[Union[str, int], ...] = (
+                *operations_location,
+                i,
+                location_rep.sub_attr,
+            )
+            version_location: tuple[Union[str, int], ...] = (
+                *operations_location,
+                i,
+                version_rep.sub_attr,
+            )
 
             resource_validator = None
             if location:
@@ -1053,7 +1084,7 @@ class BulkOperations(Validator):
                     issues=issues_.get(location=("status",)),
                     location=status_location,
                 )
-            elif all([location, resource_validator]):
+            elif location and isinstance(resource_validator, Validator):
                 issues_ = resource_validator.validate_response(
                     body=response,
                     status_code=status,
@@ -1099,7 +1130,10 @@ class BulkOperations(Validator):
 
 class _ServiceProviderConfig(ResourcesGET):
     def __init__(
-        self, config: ServiceProviderConfig, *, resource_schema: Union[Schema, ResourceType]
+        self,
+        config: ServiceProviderConfig,
+        *,
+        resource_schema: BaseResourceSchema,
     ):
         super().__init__(config, resource_schema=resource_schema)
 

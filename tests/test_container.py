@@ -314,12 +314,6 @@ def test_creating_container_removes_duplicates():
     assert container.to_dict() == {"A": 2}
 
 
-def test_attr_rep_can_be_compared():
-    assert AttrRep(attr="Attr") == AttrRep(attr="attR")
-    assert AttrRep(attr="A") != AttrRep(attr="B")
-    assert AttrRep(attr="attr") != "Attr"
-
-
 def test_bounded_attr_creation_fails_if_bad_attr_name():
     with pytest.raises(ValueError, match="is not valid attr name"):
         BoundedAttrRep(

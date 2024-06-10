@@ -1313,7 +1313,7 @@ def test_bulk_operations_data_not_validated_if_bad_resource_name():
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_request_is_valid_if_correct_data():
+def test_bulk_operations_request_is_valid_if_correct_data() -> None:
     validator = BulkOperations(CONFIG, resource_schemas=[User])
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],

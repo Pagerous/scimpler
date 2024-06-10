@@ -173,13 +173,14 @@ def test_attribute_identifier_is_deserialized(
 
     attr_rep = AttrRepFactory.deserialize(input_)
     assert isinstance(attr_rep, attr_rep_type)
-    if isinstance(attr_rep, AttrName):
-        assert expected_attr == attr_rep
+
+    assert attr_rep.attr == expected_attr
+    if expected_sub_attr is None:
+        assert not attr_rep.is_sub_attr
     else:
-        assert attr_rep.attr == expected_attr
         assert attr_rep.sub_attr == expected_sub_attr
-        if isinstance(attr_rep, BoundedAttrRep):
-            assert attr_rep.schema == expected_schema
+    if isinstance(attr_rep, BoundedAttrRep):
+        assert attr_rep.schema == expected_schema
 
 
 @pytest.mark.parametrize(

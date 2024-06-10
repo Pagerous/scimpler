@@ -65,7 +65,7 @@ class Filter(Generic[TOperator]):
         reps = []
 
         def get_sub_attr_name(sub_rep_):
-            return sub_rep_.sub_attr or sub_rep_.attr
+            return sub_rep_.sub_attr if sub_rep_.is_sub_attr else sub_rep_.attr
 
         def extend_reps(reps_):
             for rep_ in reps_:
@@ -138,7 +138,7 @@ class Filter(Generic[TOperator]):
                         )
                     try:
                         attr_rep = AttrRepFactory.deserialize(complex_attr_rep)
-                        if isinstance(attr_rep, AttrRep) and attr_rep.sub_attr:
+                        if isinstance(attr_rep, AttrRep) and attr_rep.is_sub_attr:
                             issues_.add_error(
                                 issue=ValidationError.complex_sub_attribute(
                                     attr=attr_rep.attr, sub_attr=attr_rep.sub_attr
@@ -448,7 +448,7 @@ class Filter(Generic[TOperator]):
         for match in COMPLEX_OPERATOR_REGEX.finditer(filter_exp):
             complex_attr_rep = match.group(1)
             attr_rep = AttrRepFactory.deserialize(complex_attr_rep)
-            if isinstance(attr_rep, AttrRep) and attr_rep.sub_attr:
+            if isinstance(attr_rep, AttrRep) and attr_rep.is_sub_attr:
                 raise
             sub_op_exp = match.group(2)
             deserialized_sub_op = Filter._deserialize_operator(
@@ -570,14 +570,16 @@ class Filter(Generic[TOperator]):
             op_ = unary_operators[op_exp]
             attr_rep = AttrRepFactory.deserialize(components[0])
             if in_complex_group and isinstance(attr_rep, AttrRep):
-                attr_rep = AttrRep(attr=attr_rep.sub_attr or attr_rep.attr)
+                attr_rep = AttrRep(
+                    attr=attr_rep.sub_attr if attr_rep.is_sub_attr else attr_rep.attr
+                )
             return op_(attr_rep)
         op_ = binary_operators[components[1].lower()]
         value = deserialize_comparison_value(decode_placeholders(components[2], placeholders))
 
         attr_rep = AttrRepFactory.deserialize(components[0])
         if in_complex_group and isinstance(attr_rep, AttrRep):
-            attr_rep = AttrRep(attr=attr_rep.sub_attr or attr_rep.attr)
+            attr_rep = AttrRep(attr=attr_rep.sub_attr if attr_rep.is_sub_attr else attr_rep.attr)
         return op_(attr_rep, value)
 
     def __call__(

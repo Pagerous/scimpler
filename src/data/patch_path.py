@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Optional, TypeVar
+from typing import Any, Generic, Optional, TypeVar
 
 from src.container import (
     AttrName,
@@ -10,7 +10,7 @@ from src.container import (
 )
 from src.data.attrs import Complex
 from src.data.filter import Filter
-from src.data.operator import ComplexAttributeOperator, LogicalOperator
+from src.data.operator import ComplexAttributeOperator
 from src.data.schemas import BaseSchema
 from src.data.utils import decode_placeholders, encode_strings
 from src.error import ValidationError, ValidationIssues
@@ -18,14 +18,18 @@ from src.error import ValidationError, ValidationIssues
 TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
 
 
-class PatchPath:
+class PatchPath(Generic[TAttrRep]):
     def __init__(
         self,
         attr_rep: TAttrRep,
         sub_attr_name: Optional[str],
         filter_: Optional[Filter[ComplexAttributeOperator]] = None,
     ):
-        if attr_rep.sub_attr:
+        try:
+            getattr(attr_rep, "sub_attr")
+        except AttributeError:
+            pass
+        else:
             raise ValueError("'attr_rep' must not be a sub attribute")
 
         if filter_ is not None and filter_.operator.attr_rep != attr_rep:
@@ -36,7 +40,7 @@ class PatchPath:
 
         self._attr_rep = attr_rep
 
-        if sub_attr_name:
+        if sub_attr_name is not None:
             sub_attr_name = AttrName(sub_attr_name)
         self._sub_attr_name = sub_attr_name
         self._filter = filter_
@@ -112,7 +116,7 @@ class PatchPath:
             raise ValueError("invalid path expression")
 
         attr_rep = AttrRepFactory.deserialize(decode_placeholders(path, placeholders))
-        if attr_rep.sub_attr:
+        if attr_rep.is_sub_attr:
             sub_attr_name = attr_rep.sub_attr
             if isinstance(attr_rep, BoundedAttrRep):
                 attr_rep = BoundedAttrRep(

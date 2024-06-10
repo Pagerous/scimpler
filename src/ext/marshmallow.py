@@ -1,4 +1,4 @@
-from typing import Iterable, Optional
+from typing import Iterable, Optional, cast
 
 from marshmallow import Schema, fields, post_dump
 
@@ -27,7 +27,7 @@ def _get_fields(
     field_by_attr_name: Optional[dict[str, fields.Field]] = None,
 ) -> dict[str, fields.Field]:
     field_by_attr_name = field_by_attr_name or {}
-    fields_ = {}
+    fields_: dict[str, fields.Field] = {}
     for attr_rep, attr in attrs:
         if attr_rep.attr in field_by_attr_name:
             field = field_by_attr_name[attr_rep.attr]
@@ -46,7 +46,7 @@ def _get_complex_sub_fields(
     field_by_attr_name: Optional[dict[str, fields.Field]] = None,
 ) -> dict[str, fields.Field]:
     field_by_attr_name = field_by_attr_name or {}
-    fields_ = {}
+    fields_: dict[str, fields.Field] = {}
     for name, attr in attrs:
         if name in field_by_attr_name:
             field = field_by_attr_name[name]
@@ -112,19 +112,20 @@ def _apply_validator_on_schema(schema, validator: Validator):
 def response_serializer(validator: Validator):
     scimple_schema = validator.response_schema
     if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:
+        resources_attr = cast(Attribute, scimple_schema.attrs.get("resources"))
         base_fields = _get_fields(
             scimple_schema.attrs.core_attrs,
             field_by_attr_name={
                 scimple_schema.attrs.resources.attr: fields.List(
                     fields.Nested(_get_fields(scimple_schema.contained_schemas[0].attrs)),
-                    **_get_kwargs(scimple_schema.attrs.get("resources")),
+                    **_get_kwargs(resources_attr),
                 )
             },
         )
     else:
         base_fields = _get_fields(scimple_schema.attrs.core_attrs)
     extension_fields = {
-        extension_name: fields.Nested(_get_fields(attrs))
+        str(extension_name): fields.Nested(_get_fields(attrs))
         for extension_name, attrs in scimple_schema.attrs.extensions.items()
     }
     schema = Schema.from_dict(

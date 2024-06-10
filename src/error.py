@@ -320,7 +320,7 @@ class ValidationIssues:
         self,
         issue: ValidationError,
         proceed: bool,
-        location: Optional[Collection[Union[str, int]]] = None,
+        location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
         location = tuple(location or tuple())
         self._errors[location].append(issue)
@@ -330,7 +330,7 @@ class ValidationIssues:
     def add_warning(
         self,
         issue: ValidationWarning,
-        location: Optional[Collection[Union[str, int]]] = None,
+        location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
         location = tuple(location or tuple())
         self._warnings[location].append(issue)
@@ -401,7 +401,7 @@ class ValidationIssues:
 
         return popped
 
-    def can_proceed(self, *locations: Collection[Union[str, int]]) -> bool:
+    def can_proceed(self, *locations: Sequence[Union[str, int]]) -> bool:
         if not locations:
             locations = (tuple(),)
         for location in locations:
@@ -411,7 +411,7 @@ class ValidationIssues:
                     return False
         return True
 
-    def has_errors(self, *locations: Collection[Union[str, int]]) -> bool:
+    def has_errors(self, *locations: Sequence[Union[str, int]]) -> bool:
         if not locations:
             locations = (tuple(),)
 

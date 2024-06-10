@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Generator
 
 import pytest
 
@@ -18,7 +19,7 @@ from src.warning import ScimpleUserWarning
 
 
 @pytest.fixture
-def schema_with_extensions() -> ResourceSchema:
+def schema_with_extensions() -> Generator[ResourceSchema, None, None]:
     schema = ResourceSchema(
         schema="my:schema",
         name="MyResource",

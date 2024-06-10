@@ -1,8 +1,8 @@
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
-from src.container import Invalid, Missing, SCIMDataContainer
+from src.container import Invalid, Missing, MissingType, SCIMDataContainer
 from src.data.attr_presence import validate_presence
-from src.data.attrs import AttributeMutability, Complex, String, Unknown
+from src.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
 from src.data.patch_path import PatchPath
 from src.data.schemas import BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
@@ -18,14 +18,14 @@ def _validate_operations(value: list[SCIMDataContainer]) -> ValidationIssues:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, "path"),
+                location=[i, "path"],
             )
         elif type_ == "add":
             if op_value in [None, Missing]:
                 issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
-                    location=(i, "value"),
+                    location=[i, "value"],
                 )
     return issues
 
@@ -89,12 +89,16 @@ class PatchOp(BaseSchema):
 
     def _validate_remove_operation(self, path: PatchPath) -> ValidationIssues:
         issues = ValidationIssues()
-        if (issues_ := validate_operation_path(self._resource_schema, path)).has_errors():
-            issues.merge(issues_, location=(self.attrs.operations__path.sub_attr,))
+        attr = self._resource_schema.attrs.get_by_path(path)
+        if attr is None:
+            issues.add_error(
+                issue=ValidationError.unknown_modification_target(),
+                proceed=False,
+                location=[self.attrs.operations__path.sub_attr],
+            )
             return issues
 
-        attr = self._resource_schema.attrs.get(path.attr_rep)
-        path_location = (self.attrs.operations__path.sub_attr,)
+        path_location = [self.attrs.operations__path.sub_attr]
         if path.sub_attr_name is None:
             if attr.mutability == AttributeMutability.READ_ONLY:
                 issues.add_error(
@@ -109,16 +113,16 @@ class PatchOp(BaseSchema):
                     location=path_location,
                 )
         else:
-            sub_attr = self._resource_schema.attrs.get_by_path(path)
-            if sub_attr.required and not sub_attr.multi_valued:
+            parent_attr = cast(Attribute, self._resource_schema.attrs.get(path.attr_rep))
+            if attr.required and not attr.multi_valued:
                 issues.add_error(
                     issue=ValidationError.attribute_can_not_be_deleted(),
                     proceed=True,
                     location=path_location,
                 )
             if (
-                attr.mutability == AttributeMutability.READ_ONLY
-                or sub_attr.mutability == AttributeMutability.READ_ONLY
+                parent_attr.mutability == AttributeMutability.READ_ONLY
+                or attr.mutability == AttributeMutability.READ_ONLY
             ):
                 issues.add_error(
                     issue=ValidationError.attribute_can_not_be_modified(),
@@ -129,23 +133,31 @@ class PatchOp(BaseSchema):
         return issues
 
     def _validate_add_or_replace_operation(
-        self, path: Union[PatchPath, None, Missing], value: Any
+        self, path: Union[PatchPath, None, MissingType], value: Any
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        if path not in [None, Missing]:
-            issues_ = validate_operation_path(self._resource_schema, path)
-            if issues_.has_errors():
-                issues.merge(issues_, location=[self.attrs.operations__path.sub_attr])
+        attr = None
+
+        if isinstance(path, PatchPath):
+            attr = self._resource_schema.attrs.get_by_path(path)
+            if attr is None:
+                issues.add_error(
+                    issue=ValidationError.unknown_modification_target(),
+                    proceed=False,
+                    location=[self.attrs.operations__path.sub_attr],
+                )
                 return issues
 
         issues.merge(
-            issues=self._validate_operation_value(path, value),
+            issues=self._validate_operation_value(attr, path, value),
             location=[self.attrs.operations__value.sub_attr],
         )
         return issues
 
-    def _validate_operation_value(self, path: Optional[PatchPath], value: Any) -> ValidationIssues:
-        if path in [None, Missing]:
+    def _validate_operation_value(
+        self, attr: Optional[Attribute], path: Union[PatchPath, None, MissingType], value: Any
+    ) -> ValidationIssues:
+        if not isinstance(path, PatchPath):
             issues = self._resource_schema.validate(value)
             issues.pop_errors([27, 28, 29], ("schemas",))
             for attr_rep, attr in self._resource_schema.attrs:
@@ -185,11 +197,13 @@ class PatchOp(BaseSchema):
                         location=attr_location,
                     )
             return issues
-        return self._validate_update_attr_value(value, path)
+        return self._validate_update_attr_value(cast(Attribute, attr), value, path)
 
-    def _validate_update_attr_value(self, attr_value: Any, path: PatchPath) -> ValidationIssues:
+    @staticmethod
+    def _validate_update_attr_value(
+        attr: Attribute, attr_value: Any, path: PatchPath
+    ) -> ValidationIssues:
         issues = ValidationIssues()
-        attr = self._resource_schema.attrs.get_by_path(path)
         if attr.mutability == AttributeMutability.READ_ONLY:
             issues.add_error(
                 issue=ValidationError.attribute_can_not_be_modified(),
@@ -280,10 +294,14 @@ class PatchOp(BaseSchema):
         data.set(self.attrs.operations, deserialized)
         return data
 
-    def _deserialize_operation_value(self, path: Optional[PatchPath], value: Any) -> Any:
-        if path in [None, Missing]:
+    def _deserialize_operation_value(
+        self, path: Union[PatchPath, None, MissingType], value: Any
+    ) -> Any:
+        if not isinstance(path, PatchPath):
             return self._resource_schema.deserialize(value)
         attr = self._resource_schema.attrs.get_by_path(path)
+        if attr is None:
+            raise ValueError(f"target for path {path!r} does not exist")
         if path.has_filter and not path.sub_attr_name and not isinstance(value, list):
             return attr.deserialize([value])[0]
         return attr.deserialize(value)

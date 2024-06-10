@@ -2180,7 +2180,7 @@ def test_operators_are_case_insensitive(filter_exp):
         ),
     ),
 )
-def test_operators_are_case_insensitive(filter_exp, expected):
+def test_parsing_attr_value(filter_exp, expected):
     issues = Filter.validate(filter_exp)
     assert issues.to_dict(msg=True) == {}
 

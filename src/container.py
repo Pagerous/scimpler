@@ -71,8 +71,14 @@ class AttrRep:
         return self._attr
 
     @property
-    def sub_attr(self) -> Optional[AttrName]:
+    def sub_attr(self) -> AttrName:
+        if self._sub_attr is None:
+            raise AttributeError(f"{self!r} has no sub-attribute")
         return self._sub_attr
+
+    @property
+    def is_sub_attr(self) -> bool:
+        return self._sub_attr is not None
 
     @property
     def location(self) -> tuple[str, ...]:
@@ -387,12 +393,12 @@ class SCIMDataContainer:
             return _BoundedAttrKey(
                 schema=str(value.schema),
                 attr=str(value.attr),
-                sub_attr=value.sub_attr if value.sub_attr else None,
+                sub_attr=value.sub_attr if value.is_sub_attr else None,
                 extension=value.extension,
             )
         return _AttrKey(
             attr=str(value.attr),
-            sub_attr=str(value.sub_attr) if value.sub_attr else None,
+            sub_attr=str(value.sub_attr) if value.is_sub_attr else None,
         )
 
     @staticmethod

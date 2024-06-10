@@ -2,6 +2,8 @@ import copy
 import warnings
 from typing import Any, Callable, Iterable, Optional, TypeVar, Union, cast
 
+from typing_extensions import Self
+
 from src.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMDataContainer
 from src.data.attr_presence import (
     AttrPresenceConfig,
@@ -136,7 +138,7 @@ class BaseSchema:
         issues.merge(self._validate(data, **kwargs))
         return issues
 
-    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BaseSchema":
+    def clone(self, attr_filter: Callable[[Attribute], bool]) -> Self:
         cloned = copy.copy(self)
         cloned._attrs = self._attrs.clone(attr_filter)
         return cloned
@@ -312,7 +314,7 @@ class BaseSchema:
         if presence_config.include is None:
             # for example "userName" attribute, but not "manager.value"
             # from enterprise user extension
-            if attr.required and not attr_rep.sub_attr:
+            if attr.required and not attr_rep.is_sub_attr:
                 return DataInclusivity.INCLUDE
             return None
 
@@ -338,7 +340,7 @@ class BaseSchema:
                 return DataInclusivity.EXCLUDE
             return DataInclusivity.INCLUDE
 
-        if not attr_rep.sub_attr:
+        if not attr_rep.is_sub_attr:
             return None
 
         parent_attr_rep = BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
@@ -350,7 +352,7 @@ class BaseSchema:
         # handling "siblings", so if other sub-attributes
         # of the same complex attribute are included in attr_reps
         for rep in presence_config.attr_reps:
-            if not rep.sub_attr:
+            if not rep.is_sub_attr:
                 continue
 
             if (

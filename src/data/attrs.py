@@ -803,7 +803,7 @@ class BoundedAttrs:
                 attr=attr_rep.attr,
             )
             attr = self._attrs.get(top_level_rep)
-            if attr is None or not attr_rep.sub_attr:
+            if attr is None or not attr_rep.is_sub_attr:
                 return attr
             return self._bounded_complex_sub_attrs[top_level_rep].get(attr_rep)
 
@@ -812,7 +812,7 @@ class BoundedAttrs:
             attr=attr_rep.attr,
         )
         if attr := self._attrs.get(top_level_rep):
-            if not attr_rep.sub_attr:
+            if not attr_rep.is_sub_attr:
                 return attr
 
             return self._bounded_complex_sub_attrs[top_level_rep].get(
