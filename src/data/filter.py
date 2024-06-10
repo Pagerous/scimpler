@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import Any, Generic, TypeAlias, TypeVar, Union
+from typing import Any, Generic, Optional, Type, TypeAlias, TypeVar, Union, cast
 
 from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMDataContainer
 from src.data import operator as op
@@ -91,14 +91,9 @@ class Filter(Generic[TOperator]):
                     for sub_rep in Filter._get_attr_reps(operator.sub_operator)
                 ]
             extend_reps(sub_reps)
-
-        elif isinstance(operator, op.Not):
-            extend_reps(Filter._get_attr_reps(operator.sub_operator))
-
-        elif isinstance(operator, op.MultiOperandLogicalOperator):
+        elif isinstance(operator, op.LogicalOperator):
             for sub_op in operator.sub_operators:
                 extend_reps(Filter._get_attr_reps(sub_op))
-
         return reps
 
     @property
@@ -298,15 +293,17 @@ class Filter(Generic[TOperator]):
 
             invalid_exp = None
             if left_operand == "":
-                deserialized_op = placeholders.get(deserialize_placeholder(right_operand))
-                if deserialized_op is not None:
+                if (placeholder := deserialize_placeholder(right_operand)) and (
+                    deserialized_op := placeholders.get(placeholder)
+                ):
                     right_expression = deserialized_op.expression
                 else:
                     right_expression = right_operand
                 invalid_exp = (match.group(0) + right_expression).strip()
             elif right_operand == "":
-                deserialized_op = placeholders.get(deserialize_placeholder(left_operand))
-                if deserialized_op is not None:
+                if (placeholder := deserialize_placeholder(left_operand)) and (
+                    deserialized_op := placeholders.get(placeholder)
+                ):
                     left_expression = deserialized_op.expression
                 else:
                     left_expression = left_operand
@@ -336,11 +333,13 @@ class Filter(Generic[TOperator]):
     def _validate_op_attr_exp(attr_exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
         attr_exp = attr_exp.strip()
-        sub_or_complex = placeholders.get(deserialize_placeholder(attr_exp))
-        if sub_or_complex is not None:
+        if (placeholder := deserialize_placeholder(attr_exp)) and (
+            sub_or_complex := placeholders.get(placeholder)
+        ) is not None:
             return sub_or_complex.issues
 
         components = OP_REGEX.split(attr_exp)
+        op_: Optional[Union[Type[op.UnaryAttributeOperator], Type[op.BinaryAttributeOperator]]]
         if len(components) == 2:
             op_exp = components[1].lower()
             op_ = unary_operators.get(op_exp)
@@ -381,7 +380,6 @@ class Filter(Generic[TOperator]):
             try:
                 value = deserialize_comparison_value(value)
             except ValueError:
-                value = None
                 issues.add_error(
                     issue=ValidationError.bad_operand(
                         decode_placeholders(components[2], placeholders)
@@ -392,7 +390,7 @@ class Filter(Generic[TOperator]):
             if not issues.can_proceed():
                 return issues
 
-            if type(value) not in op_.SUPPORTED_TYPES:
+            if op_ and type(value) not in op_.SUPPORTED_TYPES:
                 issues.add_error(
                     issue=ValidationError.non_compatible_operand(value, op_.op()),
                     proceed=False,
@@ -427,9 +425,9 @@ class Filter(Generic[TOperator]):
             return f"{operator.attr_rep}[{Filter._serialize(operator.sub_operator)}]"
 
         if isinstance(operator, op.Not):
-            return f"{operator.op()} {Filter._serialize(operator.sub_operator)}"
+            return f"{operator.op()} {Filter._serialize(operator.sub_operators[0])}"
 
-        if isinstance(operator, op.MultiOperandLogicalOperator):
+        if isinstance(operator, (op.And, op.Or)):
             output = f" {operator.op()} ".join(
                 [Filter._serialize(sub_operator) for sub_operator in operator.sub_operators]
             )
@@ -466,7 +464,7 @@ class Filter(Generic[TOperator]):
         deserialized_op = Filter._deserialize_operator(
             filter_exp, placeholders, in_complex_group=False
         )
-        return cls(deserialized_op)
+        return cls(cast(TOperator, deserialized_op))
 
     @staticmethod
     def _deserialize_operator(
@@ -511,18 +509,21 @@ class Filter(Generic[TOperator]):
             exp=exp,
             regexp=AND_LOGICAL_OPERATOR_SPLIT_REGEX,
         )
-        deserialized_and_operands = []
+        deserialized_and_operands: list[_DeserializedOperator] = []
         for and_operand in and_operands:
             match = NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
             if match:
-                deserialized_and_operand = op.Not(
-                    Filter._deserialize_op_attr_exp(match.group(1), placeholders, in_complex_group)
+                deserialized_and_operands.append(
+                    op.Not(
+                        Filter._deserialize_op_attr_exp(
+                            match.group(1), placeholders, in_complex_group
+                        )
+                    )
                 )
             else:
-                deserialized_and_operand = Filter._deserialize_op_attr_exp(
-                    and_operand, placeholders, in_complex_group
+                deserialized_and_operands.append(
+                    Filter._deserialize_op_attr_exp(and_operand, placeholders, in_complex_group)
                 )
-            deserialized_and_operands.append(deserialized_and_operand)
         if len(deserialized_and_operands) == 1:
             return deserialized_and_operands[0]
         return op.And(*deserialized_and_operands)
@@ -556,12 +557,14 @@ class Filter(Generic[TOperator]):
         in_complex_group: bool,
     ) -> _DeserializedOperator:
         exp = exp.strip()
-        sub_or_complex = placeholders.get(deserialize_placeholder(exp))
-        if sub_or_complex is not None:
+        if (placeholder := deserialize_placeholder(exp)) and (
+            sub_or_complex := placeholders.get(placeholder)
+        ) is not None:
             return sub_or_complex
         components = OP_REGEX.split(exp)
         assert len(components) in [2, 3]
 
+        op_: Union[Type[op.UnaryAttributeOperator], Type[op.BinaryAttributeOperator]]
         if len(components) == 2:
             op_exp = components[1].lower()
             op_ = unary_operators[op_exp]
@@ -569,7 +572,7 @@ class Filter(Generic[TOperator]):
             if in_complex_group and isinstance(attr_rep, AttrRep):
                 attr_rep = AttrRep(attr=attr_rep.sub_attr or attr_rep.attr)
             return op_(attr_rep)
-        op_ = binary_operators.get(components[1].lower())
+        op_ = binary_operators[components[1].lower()]
         value = deserialize_comparison_value(decode_placeholders(components[2], placeholders))
 
         attr_rep = AttrRepFactory.deserialize(components[0])
@@ -585,7 +588,7 @@ class Filter(Generic[TOperator]):
         if isinstance(data, dict):
             data = SCIMDataContainer(data)
 
-        if not isinstance(self._operator, op.LogicalOperator):
+        if isinstance(self._operator, (op.AttributeOperator, op.ComplexAttributeOperator)):
             data = data.get(self._operator.attr_rep)
         return self._operator.match(data, schema_or_complex)
 
@@ -618,10 +621,10 @@ class Filter(Generic[TOperator]):
         if isinstance(operator, op.Not):
             return {
                 "op": operator.op(),
-                "sub_op": Filter._to_dict(operator.sub_operator),
+                "sub_op": Filter._to_dict(operator.sub_operators[0]),
             }
 
-        if isinstance(operator, op.MultiOperandLogicalOperator):
+        if isinstance(operator, (op.And, op.Or)):
             return {
                 "op": operator.op(),
                 "sub_ops": [

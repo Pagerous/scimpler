@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Collection, Literal, Optional, Union, overload
+from typing import Any, Collection, Literal, Optional, Union
 
 from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, Missing
 from src.data.attrs import Attribute, AttributeIssuer, AttributeReturn
@@ -22,12 +22,11 @@ _DataInclusivityLiteral = Literal["INCLUDE", "EXCLUDE"]
 
 
 class AttrPresenceConfig:
-    @overload
     def __init__(
         self,
         direction: Union[_DataDirectionLiteral, DataDirection],
-        attr_reps: Collection[_AttrRep],
-        include: bool,
+        attr_reps: Optional[Collection[_AttrRep]] = None,
+        include: Optional[bool] = None,
         ignore_issuer: Optional[Collection[_AttrRep]] = None,
     ):
         """
@@ -40,27 +39,6 @@ class AttrPresenceConfig:
         :param ignore_issuer: specifies for which attributes the attribute issuer configuration
             should be ignored when making presence checks.
         """
-
-    @overload
-    def __init__(
-        self,
-        direction: Union[_DataDirectionLiteral, DataDirection],
-        ignore_issuer: Optional[Collection[_AttrRep]] = None,
-    ):
-        """
-        Checks attributes presence according to the data flow direction and attribute properties.
-
-        :param ignore_issuer: specifies for which attributes the attribute issuer configuration
-            should be ignored when making presence checks.
-        """
-
-    def __init__(
-        self,
-        direction: Union[_DataDirectionLiteral, DataDirection],
-        attr_reps: Optional[Collection[_AttrRep]] = None,
-        include: Optional[bool] = None,
-        ignore_issuer: Optional[Collection[_AttrRep]] = None,
-    ):
         self._direction = DataDirection(direction)
         self._attr_reps = [
             AttrRepFactory.deserialize(attr_rep) if isinstance(attr_rep, str) else attr_rep
@@ -81,7 +59,7 @@ class AttrPresenceConfig:
         return self._direction
 
     @property
-    def attr_reps(self) -> list[_AttrRep]:
+    def attr_reps(self) -> list[AttrRep]:
         return self._attr_reps
 
     @property
@@ -89,7 +67,7 @@ class AttrPresenceConfig:
         return self._include
 
     @property
-    def ignore_issuer(self) -> list[_AttrRep]:
+    def ignore_issuer(self) -> list[AttrRep]:
         return self._ignore_issuer
 
 

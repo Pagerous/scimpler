@@ -1,6 +1,6 @@
 import copy
 import warnings
-from typing import Any, Callable, Iterable, Optional, TypeVar, Union
+from typing import Any, Callable, Iterable, Optional, TypeVar, Union, cast
 
 from src.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMDataContainer
 from src.data.attr_presence import (
@@ -35,7 +35,7 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-TData = TypeVar("TData", bound=Union[SCIMDataContainer, dict])
+TData = TypeVar("TData", bound=Union[dict, SCIMDataContainer])
 
 
 class BaseSchema:
@@ -59,7 +59,7 @@ class BaseSchema:
                 ),
                 *attrs,
             ],
-            common_attrs=(common_attrs or []) + ["schemas"],
+            common_attrs=list(common_attrs or []) + ["schemas"],
         )
         self._schema = schema
 
@@ -75,7 +75,7 @@ class BaseSchema:
     def schema(self) -> SchemaURI:
         return self._schema
 
-    def deserialize(self, data: TData) -> SCIMDataContainer:
+    def deserialize(self, data: Union[dict, SCIMDataContainer]) -> SCIMDataContainer:
         data = SCIMDataContainer(data)
         deserialized = SCIMDataContainer()
         for attr_rep, attr in self.attrs:
@@ -84,7 +84,7 @@ class BaseSchema:
                 deserialized.set(attr_rep, attr.deserialize(value))
         return deserialized
 
-    def serialize(self, data: TData) -> dict[str, Any]:
+    def serialize(self, data: Union[dict, SCIMDataContainer]) -> dict[str, Any]:
         data = SCIMDataContainer(data)
         serialized = SCIMDataContainer()
         for attr_rep, attr in self.attrs:
@@ -94,10 +94,13 @@ class BaseSchema:
         return self._serialize(serialized).to_dict()
 
     def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
-        is_dict = isinstance(data, dict)
-        if is_dict:
-            data = SCIMDataContainer(data)
+        if isinstance(data, dict):
+            return cast(TData, self._filter(SCIMDataContainer(data), attr_filter).to_dict())
+        return cast(TData, self._filter(cast(SCIMDataContainer, data), attr_filter))
 
+    def _filter(
+        self, data: SCIMDataContainer, attr_filter: Callable[[Attribute], bool]
+    ) -> SCIMDataContainer:
         filtered = SCIMDataContainer()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
@@ -110,8 +113,7 @@ class BaseSchema:
                     filtered.set(attr_rep, value)
             elif attr_filter(attr):
                 filtered.set(attr_rep, value)
-
-        return filtered.to_dict() if is_dict else filtered
+        return filtered
 
     def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:  # noqa
         return data
@@ -186,12 +188,9 @@ class BaseSchema:
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             issues_ = attr.validate(value)
-            location = (attr_rep.attr,)
-            if attr_rep.extension:
-                location = (attr_rep.schema,) + location
             issues.merge(
                 issues=issues_,
-                location=location,
+                location=attr_rep.location,
             )
             if not issues_.can_proceed():
                 data.set(attr_rep, Invalid)
@@ -248,7 +247,7 @@ class BaseSchema:
                                 presence_config=presence_config,
                                 required_by_schema=required_by_schema,
                             ),
-                            location=[i, bounded_sub_attr_rep.sub_attr],
+                            location=[i, sub_attr_name],
                         )
                 else:
                     issues.merge(
@@ -259,7 +258,7 @@ class BaseSchema:
                             presence_config=presence_config,
                             required_by_schema=required_by_schema,
                         ),
-                        location=[bounded_sub_attr_rep.sub_attr],
+                        location=[sub_attr_name],
                     )
             return issues
 
@@ -487,10 +486,6 @@ class ResourceSchema(BaseResourceSchema):
         self._plural_name = plural_name or name
         self._endpoint = endpoint or f"/{self._plural_name}"
         self._description = description
-
-    @property
-    def endpoint(self) -> str:
-        return self._endpoint
 
     @property
     def name(self) -> str:

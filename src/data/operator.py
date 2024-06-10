@@ -6,7 +6,8 @@ from src.container import AttrRep, Invalid, Missing, SCIMDataContainer
 from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
-TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=[BaseSchema, Complex])
+TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[BaseSchema, Complex])
+SubOperator = Union["LogicalOperator", "AttributeOperator", "ComplexAttributeOperator"]
 
 
 class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
@@ -23,33 +24,29 @@ class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
     def op(cls) -> str:
         """Docs placeholder."""
 
-
-class MultiOperandLogicalOperator(LogicalOperator, abc.ABC):
-    def __init__(
-        self,
-        *sub_operators: Union["LogicalOperator", "AttributeOperator", "ComplexAttributeOperator"],
-    ):
-        self._sub_operators = list(sub_operators)
-
     @property
-    def sub_operators(
-        self,
-    ) -> list[Union["LogicalOperator", "AttributeOperator", "ComplexAttributeOperator"]]:
-        return self._sub_operators
+    @abc.abstractmethod
+    def sub_operators(self) -> list[SubOperator]:
+        """Docs placeholder."""
 
     def _collect_matches(
         self,
-        value: SCIMDataContainer,
+        value: Optional[SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
     ) -> Generator[bool, None, None]:
         for sub_operator in self.sub_operators:
             if isinstance(sub_operator, LogicalOperator):
                 yield sub_operator.match(value, schema_or_complex)
+            elif value is None:
+                yield sub_operator.match(None, schema_or_complex)
             else:
                 yield sub_operator.match(value.get(sub_operator.attr_rep), schema_or_complex)
 
 
-class And(MultiOperandLogicalOperator):
+class And(LogicalOperator):
+    def __init__(self, *sub_operators: SubOperator):
+        self._sub_operators = list(sub_operators)
+
     def match(
         self,
         value: Optional[SCIMDataContainer],
@@ -65,8 +62,15 @@ class And(MultiOperandLogicalOperator):
     def op(cls) -> str:
         return "and"
 
+    @property
+    def sub_operators(self) -> list[SubOperator]:
+        return self._sub_operators
 
-class Or(MultiOperandLogicalOperator):
+
+class Or(LogicalOperator):
+    def __init__(self, *sub_operators: SubOperator):
+        self._sub_operators = list(sub_operators)
+
     def match(
         self,
         value: Optional[SCIMDataContainer],
@@ -82,37 +86,29 @@ class Or(MultiOperandLogicalOperator):
     def op(cls) -> str:
         return "or"
 
-
-TNotSubOperator = TypeVar(
-    "TNotSubOperator", bound=Union[MultiOperandLogicalOperator, "AttributeOperator"]
-)
+    @property
+    def sub_operators(self) -> list[SubOperator]:
+        return self._sub_operators
 
 
 class Not(LogicalOperator):
-    def __init__(self, sub_operator: TNotSubOperator):
-        self._sub_operator = sub_operator
+    def __init__(self, sub_operator: SubOperator):
+        self._sub_operators = [sub_operator]
 
     @classmethod
     def op(cls) -> str:
         return "not"
 
     @property
-    def sub_operator(self) -> TNotSubOperator:
-        return self._sub_operator
+    def sub_operators(self) -> list[SubOperator]:
+        return self._sub_operators
 
     def match(
         self,
         value: Optional[SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        value = value or SCIMDataContainer()
-        if isinstance(self._sub_operator, LogicalOperator):
-            match = self._sub_operator.match(value, schema_or_complex)
-        else:
-            match = self._sub_operator.match(
-                value.get(self._sub_operator.attr_rep), schema_or_complex
-            )
-        return not match
+        return not next(self._collect_matches(value, schema_or_complex))
 
 
 class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
@@ -194,15 +190,12 @@ class Present(UnaryAttributeOperator):
         return "pr"
 
 
-T2 = TypeVar("T2")
-
-
 class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     SUPPORTED_SCIM_TYPES: set[str]
     SUPPORTED_TYPES: set[type]
     OPERATOR: Callable[[Any, Any], bool]
 
-    def __init__(self, attr_rep: AttrRep, value: T2):
+    def __init__(self, attr_rep: AttrRep, value: Any):
         super().__init__(attr_rep=attr_rep)
         if type(value) not in self.SUPPORTED_TYPES:
             raise TypeError(
@@ -211,7 +204,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         self._value = value
 
     @property
-    def value(self) -> T2:
+    def value(self) -> Any:
         return self._value
 
     def _get_values_for_comparison(
@@ -405,7 +398,7 @@ TComplexAttributeSubOperator = TypeVar(
 )
 
 
-class ComplexAttributeOperator:
+class ComplexAttributeOperator(Generic[TComplexAttributeSubOperator]):
     def __init__(
         self,
         attr_rep: AttrRep,
@@ -440,25 +433,26 @@ class ComplexAttributeOperator:
         ):
             return False
 
-        value = value or ([] if attr.multi_valued else SCIMDataContainer())
-
-        if not isinstance(value, list):
-            value = [value]
-
-        value = [
-            SCIMDataContainer(item) for item in value if isinstance(item, (dict, SCIMDataContainer))
-        ]
-
+        normalized = self._normalize(attr, value)
         if isinstance(self._sub_operator, AttributeOperator):
-            for item in value:
+            for item in normalized:
                 item_value = item.get(self._sub_operator.attr_rep)
                 match = self._sub_operator.match(item_value, attr)
                 if match:
                     return True
             return False
 
-        for item in value:
+        for item in normalized:
             match = self._sub_operator.match(item, attr)
             if match:
                 return True
         return False
+
+    @staticmethod
+    def _normalize(attr: Complex, value: Any) -> list[SCIMDataContainer]:
+        value = value or ([] if attr.multi_valued else SCIMDataContainer())
+        return [
+            SCIMDataContainer(item)
+            for item in (value if isinstance(value, list) else [value])
+            if isinstance(item, (dict, SCIMDataContainer))
+        ]

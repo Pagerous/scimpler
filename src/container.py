@@ -1,6 +1,6 @@
 import re
 from dataclasses import dataclass
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 
 from src.error import ValidationError, ValidationIssues
 from src.registry import schemas
@@ -16,7 +16,7 @@ class AttrName(str):
     def __new__(cls, value: str) -> "AttrName":
         if not isinstance(value, AttrName) and not _ATTR_NAME.fullmatch(value):
             raise ValueError(f"{value!r} is not valid attr name")
-        return str.__new__(cls, value)  # type: ignore
+        return cast(AttrName, str.__new__(cls, value))
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, str):
@@ -31,7 +31,7 @@ class SchemaURI(str):
     def __new__(cls, value: str) -> "SchemaURI":
         if not isinstance(value, SchemaURI) and not _URI_PREFIX.fullmatch(value + ":"):
             raise ValueError(f"{value!r} is not a valid schema URI")
-        return str.__new__(cls, value)  # type: ignore
+        return cast(SchemaURI, str.__new__(cls, value))
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, str):

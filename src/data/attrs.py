@@ -15,11 +15,13 @@ from typing import (
     Optional,
     TypeVar,
     Union,
+    cast,
 )
 from urllib.parse import urlparse
 
 import precis_i18n.profile
 from precis_i18n import get_profile
+from typing_extensions import TypeAlias
 
 from src.constants import SCIMType
 from src.container import (
@@ -95,7 +97,7 @@ class Attribute(abc.ABC):
         self._description = description
         self._issuer = issuer
         self._required = required
-        self._canonical_values = canonical_values
+        self._canonical_values = list(canonical_values or [])
         self._validate_canonical_values = restrict_canonical_values
         self._multi_valued = multi_valued
         self._mutability = mutability
@@ -133,7 +135,7 @@ class Attribute(abc.ABC):
         return self._multi_valued
 
     @property
-    def canonical_values(self) -> Optional[list]:
+    def canonical_values(self) -> list:
         return self._canonical_values
 
     @property
@@ -167,7 +169,7 @@ class Attribute(abc.ABC):
         )
 
     def _is_canonical(self, value: Any) -> bool:
-        if self._canonical_values is None:
+        if not self._canonical_values:
             return True
         return value in self._canonical_values
 
@@ -522,8 +524,8 @@ _default_sub_attrs = [
 ]
 
 
-TMapping = TypeVar("TMapping", bound=[SCIMDataContainer, dict])
-TData = TypeVar("TData", bound=[TMapping, list[TMapping]])
+_AllowedData: TypeAlias = Union[SCIMDataContainer, dict]
+TData = TypeVar("TData", bound=Union[_AllowedData, list[_AllowedData]])
 
 
 class Complex(Attribute):
@@ -575,18 +577,22 @@ class Complex(Attribute):
 
     def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
         if isinstance(data, list):
-            return [self.filter(item, attr_filter) for item in data]
+            return cast(TData, [self.filter(item, attr_filter) for item in data])
 
-        is_dict = isinstance(data, dict)
-        if is_dict:
-            data = SCIMDataContainer(data)
+        if isinstance(data, dict):
+            return cast(TData, self._filter(SCIMDataContainer(data), attr_filter).to_dict())
+        return cast(TData, self._filter(cast(SCIMDataContainer, data), attr_filter))
 
+    def _filter(
+        self,
+        data: SCIMDataContainer,
+        attr_filter: Callable[[Attribute], bool],
+    ) -> SCIMDataContainer:
         filtered = SCIMDataContainer()
         for name, attr in self.attrs:
             if attr_filter(attr) and (value := data.get(name)) is not Missing:
-                filtered.set(name, value, expand=False)
-
-        return filtered.to_dict() if is_dict else filtered
+                filtered.set(name, value)
+        return filtered
 
     def clone(self, attr_filter: Callable[["Attribute"], bool]) -> "Complex":
         cloned = copy(self)
@@ -651,7 +657,7 @@ def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> Valid
 
 def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> ValidationIssues:
     issues = ValidationIssues()
-    pairs = defaultdict(int)
+    pairs: dict[tuple[Any, Any], int] = defaultdict(int)
     for item in value:
         if item is Invalid:
             continue
@@ -744,10 +750,9 @@ class BoundedAttrs:
                     sub_attr=sub_attr.name,
                 )
 
-        for bounded_attrs in self._extensions.values():
-            attr_rep = getattr(bounded_attrs, name, None)
-            if attr_rep is not None:
-                return attr_rep
+        for attrs in self._extensions.values():
+            if attr_rep_extension := getattr(attrs, name, None):
+                return attr_rep_extension
 
         raise AttributeError(
             f"attribute {name.replace('__', '.')!r} "
@@ -762,7 +767,7 @@ class BoundedAttrs:
         return iter(self._core_attrs.items())
 
     @property
-    def extensions(self) -> dict[str, "BoundedAttrs"]:
+    def extensions(self) -> dict[SchemaURI, "BoundedAttrs"]:
         return self._extensions
 
     def extend(self, schema: SchemaURI, attrs: "BoundedAttrs") -> None:
@@ -772,14 +777,13 @@ class BoundedAttrs:
         self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
 
     def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BoundedAttrs":
-        attrs = (
-            attr.clone(attr_filter=attr_filter) if isinstance(attr, Complex) else attr
-            for attr_rep, attr in self._attrs.items()
-            if not attr_rep.extension and attr_filter(attr)
-        )
         cloned = BoundedAttrs(
             schema=self._schema,
-            attrs=attrs,
+            attrs=(
+                attr.clone(attr_filter=attr_filter) if isinstance(attr, Complex) else attr
+                for attr_rep, attr in self._attrs.items()
+                if not attr_rep.extension and attr_filter(attr)
+            ),
             common_attrs=self._common_attrs,
         )
         for schema, attrs in self._extensions.items():
