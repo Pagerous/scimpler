@@ -7,10 +7,9 @@ from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[BaseSchema, Complex])
-SubOperator = Union["LogicalOperator", "AttributeOperator", "ComplexAttributeOperator"]
 
 
-class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
+class Operator(abc.ABC, Generic[TSchemaOrComplex]):
     @abc.abstractmethod
     def match(
         self,
@@ -19,6 +18,8 @@ class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
     ) -> bool:
         """Docs placeholder."""
 
+
+class LogicalOperator(Operator, abc.ABC):
     @classmethod
     @abc.abstractmethod
     def op(cls) -> str:
@@ -26,7 +27,7 @@ class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
 
     @property
     @abc.abstractmethod
-    def sub_operators(self) -> list[SubOperator]:
+    def sub_operators(self) -> list[Operator]:
         """Docs placeholder."""
 
     def _collect_matches(
@@ -35,16 +36,11 @@ class LogicalOperator(abc.ABC, Generic[TSchemaOrComplex]):
         schema_or_complex: TSchemaOrComplex,
     ) -> Generator[bool, None, None]:
         for sub_operator in self.sub_operators:
-            if isinstance(sub_operator, LogicalOperator):
-                yield sub_operator.match(value, schema_or_complex)
-            elif value is None:
-                yield sub_operator.match(None, schema_or_complex)
-            else:
-                yield sub_operator.match(value.get(sub_operator.attr_rep), schema_or_complex)
+            yield sub_operator.match(value, schema_or_complex)
 
 
 class And(LogicalOperator):
-    def __init__(self, *sub_operators: SubOperator):
+    def __init__(self, *sub_operators: Operator):
         self._sub_operators = list(sub_operators)
 
     def match(
@@ -63,12 +59,12 @@ class And(LogicalOperator):
         return "and"
 
     @property
-    def sub_operators(self) -> list[SubOperator]:
+    def sub_operators(self) -> list[Operator]:
         return self._sub_operators
 
 
 class Or(LogicalOperator):
-    def __init__(self, *sub_operators: SubOperator):
+    def __init__(self, *sub_operators: Operator):
         self._sub_operators = list(sub_operators)
 
     def match(
@@ -87,12 +83,12 @@ class Or(LogicalOperator):
         return "or"
 
     @property
-    def sub_operators(self) -> list[SubOperator]:
+    def sub_operators(self) -> list[Operator]:
         return self._sub_operators
 
 
 class Not(LogicalOperator):
-    def __init__(self, sub_operator: SubOperator):
+    def __init__(self, sub_operator: Operator):
         self._sub_operators = [sub_operator]
 
     @classmethod
@@ -100,7 +96,7 @@ class Not(LogicalOperator):
         return "not"
 
     @property
-    def sub_operators(self) -> list[SubOperator]:
+    def sub_operators(self) -> list[Operator]:
         return self._sub_operators
 
     def match(
@@ -111,7 +107,7 @@ class Not(LogicalOperator):
         return not next(self._collect_matches(value, schema_or_complex))
 
 
-class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
+class AttributeOperator(Operator, abc.ABC):
     def __init__(self, attr_rep: AttrRep):
         self._attr_rep = attr_rep
 
@@ -124,14 +120,6 @@ class AttributeOperator(abc.ABC, Generic[TSchemaOrComplex]):
     def attr_rep(self) -> AttrRep:
         return self._attr_rep
 
-    @abc.abstractmethod
-    def match(
-        self,
-        value: Any,
-        schema_or_complex: TSchemaOrComplex,
-    ) -> bool:
-        """Docs placeholder."""
-
 
 class UnaryAttributeOperator(AttributeOperator, abc.ABC):
     SUPPORTED_SCIM_TYPES: set[str]
@@ -140,7 +128,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Any,
+        value: Optional[SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         attr = schema_or_complex.attrs.get(self._attr_rep)
@@ -150,15 +138,24 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr.SCIM_TYPE not in self.SUPPORTED_SCIM_TYPES:
             return False
 
+        if not value:
+            return False
+
+        attr_value = value.get(self.attr_rep)
+
         if attr.multi_valued:
-            if isinstance(value, list):
+            if isinstance(attr_value, list):
                 match = any(
-                    [self.OPERATOR(item) for item in value if type(item) in self.SUPPORTED_TYPES]
+                    [
+                        self.OPERATOR(item)
+                        for item in attr_value
+                        if type(item) in self.SUPPORTED_TYPES
+                    ]
                 )
             else:
                 match = False
         else:
-            match = self.OPERATOR(value)
+            match = self.OPERATOR(attr_value)
 
         return match
 
@@ -252,17 +249,19 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Any,
+        value: Optional[SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None:
             return False
 
-        if value in [None, Missing, Invalid]:
+        attr_value = None if not value else value.get(self._attr_rep)
+
+        if attr_value in [None, Missing, Invalid]:
             return False
 
-        values = self._get_values_for_comparison(value, attr)
+        values = self._get_values_for_comparison(attr_value, attr)
 
         if values is None:
             return False
@@ -398,7 +397,7 @@ TComplexAttributeSubOperator = TypeVar(
 )
 
 
-class ComplexAttributeOperator(Generic[TComplexAttributeSubOperator]):
+class ComplexAttributeOperator(Operator, Generic[TComplexAttributeSubOperator]):
     def __init__(
         self,
         attr_rep: AttrRep,
@@ -417,31 +416,23 @@ class ComplexAttributeOperator(Generic[TComplexAttributeSubOperator]):
 
     def match(
         self,
-        value: Optional[
-            Union[list[Union[SCIMDataContainer, dict[str, Any]]], SCIMDataContainer, dict[str, Any]]
-        ],
+        value: Optional[SCIMDataContainer],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         attr = schema_or_complex.attrs.get(self._attr_rep)
-        if attr is None or not isinstance(attr, Complex):
+        if attr is None or not value or not isinstance(attr, Complex):
             return False
+
+        attr_value = value.get(self._attr_rep)
         if (
             attr.multi_valued
-            and not isinstance(value, list)
+            and not isinstance(attr_value, list)
             or not attr.multi_valued
-            and isinstance(value, list)
+            and isinstance(attr_value, list)
         ):
             return False
 
-        normalized = self._normalize(attr, value)
-        if isinstance(self._sub_operator, AttributeOperator):
-            for item in normalized:
-                item_value = item.get(self._sub_operator.attr_rep)
-                match = self._sub_operator.match(item_value, attr)
-                if match:
-                    return True
-            return False
-
+        normalized = self._normalize(attr, attr_value)
         for item in normalized:
             match = self._sub_operator.match(item, attr)
             if match:

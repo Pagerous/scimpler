@@ -585,12 +585,7 @@ class Filter(Generic[TOperator]):
         data: Union[SCIMDataContainer, dict],
         schema_or_complex: Union[BaseSchema, Complex],
     ) -> bool:
-        if isinstance(data, dict):
-            data = SCIMDataContainer(data)
-
-        if isinstance(self._operator, (op.AttributeOperator, op.ComplexAttributeOperator)):
-            data = data.get(self._operator.attr_rep)
-        return self._operator.match(data, schema_or_complex)
+        return self._operator.match(SCIMDataContainer(data), schema_or_complex)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Filter):

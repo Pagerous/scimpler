@@ -405,7 +405,7 @@ def test_any_sequence_of_whitespaces_has_no_influence_on_filter_with_groups():
                                 "op": "not",
                                 "sub_op": {
                                     "op": "co",
-                                    "attr": ("urn:ietf:params:scim:schemas:core:2.0:User:nickName"),
+                                    "attr": "urn:ietf:params:scim:schemas:core:2.0:User:nickName",
                                     "value": "b\t\tj",
                                 },
                             },

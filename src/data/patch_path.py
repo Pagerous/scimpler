@@ -199,13 +199,7 @@ class PatchPath:
             data.set(self._attr_rep, value)
             return self._filter(data, schema)
 
-        operator = self._filter.operator.sub_operator
-        if isinstance(operator, LogicalOperator):
-            data = SCIMDataContainer()
-            data.set("value", value)
-        else:
-            data = value
-
+        data = SCIMDataContainer({"value": value})
         value_attr = copy(attr)
         value_attr._name = AttrName("value")
         return self._filter.operator.sub_operator.match(

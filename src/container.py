@@ -208,12 +208,17 @@ class _BoundedAttrKey(_AttrKey):
 
 
 class SCIMDataContainer:
-    def __init__(self, d: Optional[Union[dict[str, Any], "SCIMDataContainer"]] = None):
+    def __init__(
+        self, d: Optional[Union[dict[str, Any], dict[AttrRep, Any], "SCIMDataContainer"]] = None
+    ):
         self._data: dict[str, Any] = {}
         self._lower_case_to_original: dict[str, str] = {}
 
         if isinstance(d, dict):
             for key, value in d.items():
+                if isinstance(key, AttrRep):
+                    self.set(key, value)
+
                 if not isinstance(key, str):
                     continue
 
