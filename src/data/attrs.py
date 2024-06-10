@@ -702,9 +702,9 @@ class BoundedAttrs:
         self._extensions: dict[SchemaURI, BoundedAttrs] = {}
 
         self._attrs: dict[BoundedAttrRep, Attribute] = {}
-        self._bounded_complex_sub_attrs: dict[
-            BoundedAttrRep, dict[BoundedAttrRep, Attribute]
-        ] = defaultdict(dict)
+        self._bounded_complex_sub_attrs: dict[BoundedAttrRep, dict[BoundedAttrRep, Attribute]] = (
+            defaultdict(dict)
+        )
 
         for attr in attrs or []:
             attr_rep = BoundedAttrRep(

@@ -185,9 +185,9 @@ def list_user_data(user_data_server):
             "type": "home",
         },
     ]
-    resources[1]["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"][
-        "employeeNumber"
-    ] = "2"
+    resources[1]["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]["employeeNumber"] = (
+        "2"
+    )
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 2,
