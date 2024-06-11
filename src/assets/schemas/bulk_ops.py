@@ -87,6 +87,11 @@ class BulkRequest(BaseSchema):
             attrs=[
                 Integer("failOnErrors"),
                 Complex(
+                    name="Operations",
+                    required=True,
+                    multi_valued=True,
+                    validators=[validate_request_operations],
+                    deserializer=deserialize_request_operations,
                     sub_attributes=[
                         String(
                             name="method",
@@ -102,11 +107,6 @@ class BulkRequest(BaseSchema):
                         ),
                         Unknown("data"),
                     ],
-                    name="Operations",
-                    required=True,
-                    multi_valued=True,
-                    validators=[validate_request_operations],
-                    deserializer=deserialize_request_operations,
                 ),
             ],
         )

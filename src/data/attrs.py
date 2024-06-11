@@ -706,7 +706,7 @@ class BoundedAttrs:
             defaultdict(dict)
         )
 
-        for attr in attrs or []:
+        for attr in (attrs or []):
             attr_rep = BoundedAttrRep(
                 schema=self._schema,
                 attr=attr.name,
@@ -782,7 +782,7 @@ class BoundedAttrs:
             attrs=(
                 attr.clone(attr_filter=attr_filter) if isinstance(attr, Complex) else attr
                 for attr_rep, attr in self._attrs.items()
-                if not attr_rep.extension and attr_filter(attr)
+                if attr_rep.schema not in self._extensions and attr_filter(attr)
             ),
             common_attrs=self._common_attrs,
         )

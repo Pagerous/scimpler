@@ -205,7 +205,7 @@ def test_get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(
 
 
 def test_list_response_can_be_serialized(user_data_client):
-    schema = list_response.ListResponse(schemas=[user.User])
+    schema = list_response.ListResponse(resource_schemas=[user.User])
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
@@ -227,7 +227,7 @@ def test_list_response_can_be_serialized(user_data_client):
 
 
 def test_list_response_with_missing_resources_can_be_serialized(user_data_client):
-    schema = list_response.ListResponse(schemas=[user.User])
+    schema = list_response.ListResponse(resource_schemas=[user.User])
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
@@ -239,7 +239,7 @@ def test_list_response_with_missing_resources_can_be_serialized(user_data_client
 
 
 def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client):
-    schema = list_response.ListResponse(schemas=[user.User])
+    schema = list_response.ListResponse(resource_schemas=[user.User])
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
@@ -257,7 +257,7 @@ def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client):
 
 
 def test_bad_resources_type_is_validated(user_data_client):
-    schema = list_response.ListResponse(schemas=[user.User])
+    schema = list_response.ListResponse(resource_schemas=[user.User])
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
@@ -271,7 +271,7 @@ def test_bad_resources_type_is_validated(user_data_client):
 
 
 def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schemas():
-    schema = list_response.ListResponse(schemas=[user.User, group.Group])
+    schema = list_response.ListResponse(resource_schemas=[user.User, group.Group])
 
     schemas = schema.get_schemas_for_resources([{"userName": "some_user"}])
 
@@ -280,7 +280,7 @@ def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schem
 
 
 def test_no_schema_is_inferred_for_resource_with_unknown_schemas_and_many_schemas():
-    schema = list_response.ListResponse(schemas=[user.User, group.Group])
+    schema = list_response.ListResponse(resource_schemas=[user.User, group.Group])
 
     schemas = schema.get_schemas_for_resources(
         [{"schemas": ["unknown:schema"], "userName": "some_user"}]

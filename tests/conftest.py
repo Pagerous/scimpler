@@ -198,6 +198,40 @@ def list_user_data(user_data_server):
 
 
 @pytest.fixture
+def list_data(list_user_data):
+    data = list_user_data.copy()
+    data["Resources"].append(
+        {
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+            "id": "e9e30dba-f08f-4109-8486-d5c6a331660a",
+            "displayName": "Tour Guides",
+            "members": [
+                {
+                    "value": "2819c223-7f76-453a-919d-413861904646",
+                    "$ref": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+                    "type": "User",
+                },
+                {
+                    "value": "902c246b-6245-4190-8e05-00816be7344a",
+                    "$ref": "https://example.com/v2/Users/902c246b-6245-4190-8e05-00816be7344a",
+                    "type": "User",
+                },
+            ],
+            "meta": {
+                "location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
+                "resourceType": "Group",
+                "created": "2011-05-13T04:42:34Z",
+                "lastModified": "2011-05-13T04:42:34Z",
+                "version": 'W/"3694e05e9dff594"',
+            },
+        }
+    )
+    data["totalResults"] = 3
+    data["itemsPerPage"] = 3
+    return data
+
+
+@pytest.fixture
 def error_data():
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
