@@ -1,6 +1,6 @@
 from typing import Any
 
-from src.assets.config import ServiceProviderConfig
+from src.config import ServiceProviderConfig
 from src.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMDataContainer
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import Integer, String

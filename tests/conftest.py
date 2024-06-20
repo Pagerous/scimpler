@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from src.assets.config import create_service_provider_config
+from src.config import create_service_provider_config
 from src.assets.schemas import Group, User
 from src.assets.schemas.user import EnterpriseUserExtension
 from src.data.attrs import (
@@ -18,15 +18,29 @@ from src.data.attrs import (
     URIReference,
 )
 from src.data.schemas import ResourceSchema
-from src.registry import register_resource_schema
+from src import registry
 
 
 @pytest.fixture(scope="session", autouse=True)
 def register_schemas():
     User.extend(EnterpriseUserExtension, required=True)
-    register_resource_schema(User)
-    register_resource_schema(Group)
-    register_resource_schema(SchemaForTests)
+    registry.register_resource_schema(User)
+    registry.register_resource_schema(Group)
+    registry.register_resource_schema(SchemaForTests)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def set_service_provider_config():
+    registry.set_service_provider_config(
+        create_service_provider_config(
+            patch={"supported": True},
+            bulk={"max_operations": 10, "max_payload_size": 4242, "supported": True},
+            filter_={"max_results": 100, "supported": True},
+            change_password={"supported": True},
+            sort={"supported": True},
+            etag={"supported": True},
+        )
+    )
 
 
 @pytest.fixture
@@ -154,8 +168,8 @@ def user_data_server(user_data_client):
     data["id"] = "2819c223-7f76-453a-919d-413861904646"
     data["meta"] = {
         "resourceType": "User",
-        "created": "2010-01-23T04:56:22Z",
-        "lastModified": "2010-01-23T04:56:22Z",
+        "created": "2010-01-23T04:56:22+00:00",
+        "lastModified": "2010-01-23T04:56:22+00:00",
         "version": r'W/"3694e05e9dff591"',
         "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
     }
@@ -220,8 +234,8 @@ def list_data(list_user_data):
             "meta": {
                 "location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
                 "resourceType": "Group",
-                "created": "2011-05-13T04:42:34Z",
-                "lastModified": "2011-05-13T04:42:34Z",
+                "created": "2011-05-13T04:42:34+00:00",
+                "lastModified": "2011-05-13T04:42:34+00:00",
                 "version": 'W/"3694e05e9dff594"',
             },
         }
@@ -238,6 +252,34 @@ def error_data():
         "status": "400",
         "scimType": "tooMany",
         "detail": "you did wrong, bro",
+    }
+
+
+@pytest.fixture
+def group_data_server():
+    return {
+        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+        "id": "e9e30dba-f08f-4109-8486-d5c6a331660a",
+        "displayName": "Tour Guides",
+        "members": [
+            {
+                "value": "2819c223-7f76-453a-919d-413861904646",
+                "$ref": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+                "type": "User",
+            },
+            {
+                "value": "902c246b-6245-4190-8e05-00816be7344a",
+                "$ref": "https://example.com/v2/Users/902c246b-6245-4190-8e05-00816be7344a",
+                "type": "User",
+            },
+        ],
+        "meta": {
+            "location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
+            "resourceType": "Group",
+            "created": "2011-05-13T04:42:34+00:00",
+            "lastModified": "2011-05-13T04:42:34+00:00",
+            "version": 'W/"3694e05e9dff594"',
+        },
     }
 
 

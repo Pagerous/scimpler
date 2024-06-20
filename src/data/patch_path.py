@@ -13,7 +13,7 @@ from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator
 from src.data.schemas import BaseSchema
 from src.data.utils import decode_placeholders, encode_strings
-from src.error import ValidationError, ValidationIssues
+from src.error import SCIMErrorType, ValidationError, ValidationIssues
 
 TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
 
@@ -59,7 +59,6 @@ class PatchPath(Generic[TAttrRep]):
 
     @classmethod
     def validate(cls, path: str) -> ValidationIssues:
-        issues = ValidationIssues()
         path, placeholders = encode_strings(path)
         if (
             path.count("[") > 1
@@ -68,14 +67,20 @@ class PatchPath(Generic[TAttrRep]):
             or ("]" in path and "[" not in path)
             or ("[" in path and "]" in path and path.index("[") > path.index("]"))
         ):
+            issues = ValidationIssues()
             issues.add_error(issue=ValidationError.bad_value_syntax(), proceed=False)
             return issues
 
-        if "[" in path and "]" in path:
-            return cls._validate_complex_multivalued_path(path, placeholders)
+        elif "[" in path and "]" in path:
+            issues = cls._validate_complex_multivalued_path(path, placeholders)
+        else:
+            issues = ValidationIssues()
+            path = decode_placeholders(path, placeholders)
+            issues.merge(AttrRepFactory.validate(path))
 
-        path = decode_placeholders(path, placeholders)
-        issues.merge(AttrRepFactory.validate(path))
+        for _, errors in issues.errors:
+            for error in errors:
+                error.scim_error = SCIMErrorType.INVALID_PATH
         return issues
 
     @classmethod

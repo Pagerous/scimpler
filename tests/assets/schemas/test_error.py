@@ -8,8 +8,8 @@ from src.data.attr_presence import AttrPresenceConfig
     ("value", "expected_issues"),
     (
         ("abc", {"_errors": [{"code": 1}]}),
-        ("399", {"_errors": [{"code": 18}]}),
-        ("600", {"_errors": [{"code": 18}]}),
+        ("399", {"_errors": [{"code": 4}]}),
+        ("600", {"_errors": [{"code": 4}]}),
         ("400", {}),
     ),
 )

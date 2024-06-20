@@ -14,7 +14,7 @@ from src.data.utils import (
     encode_strings,
     get_placeholder,
 )
-from src.error import ValidationError, ValidationIssues
+from src.error import SCIMErrorType, ValidationError, ValidationIssues
 from src.registry import (
     binary_operators,
     register_binary_operator,
@@ -228,6 +228,10 @@ class Filter(Generic[TOperator]):
             return issues
 
         issues.merge(Filter._validate_op_or_exp(op_exp_preprocessed, placeholders))
+
+        for _, errors in issues.errors:
+            for error in errors:
+                error.scim_error = SCIMErrorType.INVALID_FILTER
         return issues
 
     @staticmethod

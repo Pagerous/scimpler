@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING, Any, Callable
 
+from src.config import create_service_provider_config, ServiceProviderConfig
+
 if TYPE_CHECKING:
     from src.container import SchemaURI
     from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
@@ -42,3 +44,11 @@ def register_binary_operator(operator: type["BinaryAttributeOperator"]):
         raise RuntimeError(f"binary operator {op!r} already registered")
 
     binary_operators[op] = operator
+
+
+service_provider_config: ServiceProviderConfig = create_service_provider_config()
+
+
+def set_service_provider_config(config: ServiceProviderConfig):
+    global service_provider_config
+    service_provider_config = config

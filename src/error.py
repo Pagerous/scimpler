@@ -1,7 +1,21 @@
 from collections import defaultdict
-from typing import Any, Collection, Optional, Sequence, TypedDict, Union
+from enum import Enum
+from typing import Any, Collection, Iterator, Optional, Sequence, TypedDict, Union
 
 from typing_extensions import NotRequired
+
+
+class SCIMErrorType(str, Enum):
+    INVALID_FILTER = "invalidFilter"
+    TOO_MANY = "tooMany"
+    UNIQUENESS = "uniqueness"
+    MUTABILITY = "mutability"
+    INVALID_SYNTAX = "invalidSyntax"
+    INVALID_PATH = "invalidPath"
+    NO_TARGET = "noTarget"
+    INVALID_VALUE = "invalidValue"
+    INVALID_VERS = "invalidVers"
+    SENSITIVE = "sensitive"
 
 
 class ValidationError:
@@ -13,7 +27,7 @@ class ValidationError:
         5: "missing",
         6: "must not be provided",
         7: "must not be returned",
-        8: "must be equal to {value!r}",
+        8: "must be equal to {value}",
         9: "must be one of: {expected_values}",
         10: "contains duplicates, which are not allowed",
         11: "can not be used together with {other!r}",
@@ -51,178 +65,200 @@ class ValidationError:
         110: "operand {value!r} is not compatible with {operator!r} operator",
     }
 
-    def __init__(self, code: int, **context):
+    def __init__(self, code: int, scim_error: str, **context):
         self._code = code
         self._message = self._message_for_code[code].format(**context)
         self._context = context
 
-    @classmethod
-    def bad_value_syntax(cls):
-        return cls(code=1)
+        self.scim_error = SCIMErrorType(scim_error)
 
     @classmethod
-    def bad_type(cls, expected: str):
-        return cls(code=2, expected=expected)
+    def bad_value_syntax(cls, scim_error: str = SCIMErrorType.INVALID_SYNTAX):
+        return cls(code=1, scim_error=scim_error)
 
     @classmethod
-    def bad_encoding(cls, expected: str):
-        return cls(code=3, expected=expected)
+    def bad_type(cls, expected: str, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=2, scim_error=scim_error, expected=expected)
 
     @classmethod
-    def bad_value_content(cls):
-        return cls(code=4)
+    def bad_encoding(cls, expected: str, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=3, scim_error=scim_error, expected=expected)
 
     @classmethod
-    def missing(cls):
-        return cls(code=5)
+    def bad_value_content(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=4, scim_error=scim_error)
 
     @classmethod
-    def must_not_be_provided(cls):
-        return cls(code=6)
+    def missing(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=5, scim_error=scim_error)
 
     @classmethod
-    def must_not_be_returned(cls):
-        return cls(code=7)
+    def must_not_be_provided(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=6, scim_error=scim_error)
 
     @classmethod
-    def must_be_equal_to(cls, value: Any):
-        return cls(code=8, value=value)
+    def must_not_be_returned(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=7, scim_error=scim_error)
 
     @classmethod
-    def must_be_one_of(cls, expected_values: Collection[Any]):
-        return cls(code=9, expected_values=expected_values)
+    def must_be_equal_to(cls, value: Any, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=8, scim_error=scim_error, value=value)
 
     @classmethod
-    def duplicated_values(cls):
-        return cls(code=10)
+    def must_be_one_of(
+        cls,
+        expected_values: Collection[Any],
+        scim_error: str = SCIMErrorType.INVALID_VALUE,
+    ):
+        return cls(code=9, scim_error=scim_error, expected_values=expected_values)
 
     @classmethod
-    def can_not_be_used_together(cls, other: str):
-        return cls(code=11, other=other)
+    def duplicated_values(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=10, scim_error=scim_error)
 
     @classmethod
-    def missing_main_schema(cls):
-        return cls(code=12)
+    def can_not_be_used_together(cls, other: str, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=11, scim_error=scim_error, other=other)
 
     @classmethod
-    def missing_schema_extension(cls, extension: str):
-        return cls(code=13, extension=extension)
+    def missing_main_schema(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=12, scim_error=scim_error)
 
     @classmethod
-    def unknown_schema(cls):
-        return cls(code=14)
+    def missing_schema_extension(
+        cls,
+        extension: str,
+        scim_error: str = SCIMErrorType.INVALID_VALUE,
+    ):
+        return cls(code=13, scim_error=scim_error, extension=extension)
 
     @classmethod
-    def multiple_primary_values(cls):
-        return cls(code=15)
+    def unknown_schema(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=14, scim_error=scim_error)
 
     @classmethod
-    def bad_scim_reference(cls, allowed_resources: Collection[str]):
-        return cls(code=16, allowed_resources=list(allowed_resources))
+    def multiple_primary_values(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=15, scim_error=scim_error)
 
     @classmethod
-    def bad_attribute_name(cls, attribute: str):
-        return cls(code=17, attribute=attribute)
+    def bad_scim_reference(
+        cls,
+        allowed_resources: Collection[str],
+        scim_error: str = SCIMErrorType.INVALID_VALUE,
+    ):
+        return cls(code=16, scim_error=scim_error, allowed_resources=list(allowed_resources))
 
     @classmethod
-    def bad_error_status(cls):
-        return cls(code=18)
+    def bad_attribute_name(cls, attribute: str, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=17, scim_error=scim_error, attribute=attribute)
 
     @classmethod
-    def bad_status_code(cls, expected: int):
-        return cls(code=19, expected=expected)
+    def bad_status_code(cls, expected: int, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=19, scim_error=scim_error, expected=expected)
 
     @classmethod
-    def bad_number_of_resources(cls, reason: str):
-        return cls(code=20, reason=reason)
+    def bad_number_of_resources(cls, reason: str, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=20, scim_error=scim_error, reason=reason)
 
     @classmethod
-    def resources_not_filtered(cls):
-        return cls(code=21)
+    def resources_not_filtered(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=21, scim_error=scim_error)
 
     @classmethod
-    def resources_not_sorted(cls):
-        return cls(code=22)
+    def resources_not_sorted(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=22, scim_error=scim_error)
 
     @classmethod
-    def resource_type_endpoint_required(cls):
-        return cls(code=23)
+    def unknown_operation_resource(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=25, scim_error=scim_error)
 
     @classmethod
-    def resource_object_endpoint_required(cls):
-        return cls(code=24)
+    def too_many_bulk_operations(cls, max_: int, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=26, scim_error=scim_error, max=max_)
 
     @classmethod
-    def unknown_operation_resource(cls):
-        return cls(code=25)
+    def too_many_errors_in_bulk(cls, max_: int, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=27, scim_error=scim_error, max=max_)
 
     @classmethod
-    def too_many_bulk_operations(cls, max_: int):
-        return cls(code=26, max=max_)
+    def unknown_modification_target(cls, scim_error: str = SCIMErrorType.NO_TARGET):
+        return cls(code=28, scim_error=scim_error)
 
     @classmethod
-    def too_many_errors_in_bulk(cls, max_: int):
-        return cls(code=27, max=max_)
+    def attribute_can_not_be_modified(cls, scim_error: str = SCIMErrorType.MUTABILITY):
+        return cls(code=29, scim_error=scim_error)
 
     @classmethod
-    def unknown_modification_target(cls):
-        return cls(code=28)
+    def attribute_can_not_be_deleted(cls, scim_error: str = SCIMErrorType.MUTABILITY):
+        return cls(code=30, scim_error=scim_error)
 
     @classmethod
-    def attribute_can_not_be_modified(cls):
-        return cls(code=29)
+    def not_supported(cls, scim_error: str = SCIMErrorType.INVALID_VALUE):
+        return cls(code=31, scim_error=scim_error)
 
     @classmethod
-    def attribute_can_not_be_deleted(cls):
-        return cls(code=30)
+    def bracket_not_opened_or_closed(cls, scim_error: str = SCIMErrorType.INVALID_FILTER):
+        return cls(code=100, scim_error=scim_error)
 
     @classmethod
-    def not_supported(cls):
-        return cls(code=31)
+    def complex_attribute_bracket_not_opened_or_closed(
+        cls, scim_error: str = SCIMErrorType.INVALID_FILTER
+    ):
+        return cls(code=101, scim_error=scim_error)
 
     @classmethod
-    def bracket_not_opened_or_closed(cls):
-        return cls(code=100)
+    def complex_sub_attribute(
+        cls,
+        attr: str,
+        sub_attr: str,
+        scim_error: str = SCIMErrorType.INVALID_FILTER,
+    ):
+        return cls(code=102, scim_error=scim_error, attr=attr, sub_attr=sub_attr)
 
     @classmethod
-    def complex_attribute_bracket_not_opened_or_closed(cls):
-        return cls(code=101)
+    def missing_operand_for_operator(
+        cls,
+        operator: str,
+        expression: str,
+        scim_error: str = SCIMErrorType.INVALID_FILTER,
+    ):
+        return cls(code=103, scim_error=scim_error, operator=operator, expression=expression)
 
     @classmethod
-    def complex_sub_attribute(cls, attr: str, sub_attr: str):
-        return cls(code=102, attr=attr, sub_attr=sub_attr)
+    def unknown_operator(
+        cls, operator: str, expression: str, scim_error: str = SCIMErrorType.INVALID_FILTER
+    ):
+        return cls(code=104, scim_error=scim_error, operator=operator, expression=expression)
 
     @classmethod
-    def missing_operand_for_operator(cls, operator: str, expression: str):
-        return cls(code=103, operator=operator, expression=expression)
+    def empty_filter_expression(cls, scim_error: str = SCIMErrorType.INVALID_FILTER):
+        return cls(code=105, scim_error=scim_error)
 
     @classmethod
-    def unknown_operator(cls, operator: str, expression: str):
-        return cls(code=104, operator=operator, expression=expression)
+    def unknown_expression(cls, expression: str, scim_error: str = SCIMErrorType.INVALID_FILTER):
+        return cls(code=106, scim_error=scim_error, expression=expression)
 
     @classmethod
-    def empty_filter_expression(cls):
-        return cls(code=105)
+    def inner_complex_attribute_or_square_bracket(
+        cls, scim_error: str = SCIMErrorType.INVALID_FILTER
+    ):
+        return cls(code=107, scim_error=scim_error)
 
     @classmethod
-    def unknown_expression(cls, expression: str):
-        return cls(code=106, expression=expression)
+    def empty_complex_attribute_expression(
+        cls, attribute: str, scim_error: str = SCIMErrorType.INVALID_FILTER
+    ):
+        return cls(code=108, scim_error=scim_error, attribute=attribute)
 
     @classmethod
-    def inner_complex_attribute_or_square_bracket(cls):
-        return cls(code=107)
+    def bad_operand(cls, value: Any, scim_error: str = SCIMErrorType.INVALID_FILTER):
+        return cls(code=109, scim_error=scim_error, value=value)
 
     @classmethod
-    def empty_complex_attribute_expression(cls, attribute: str):
-        return cls(code=108, attribute=attribute)
-
-    @classmethod
-    def bad_operand(cls, value: Any):
-        return cls(code=109, value=value)
-
-    @classmethod
-    def non_compatible_operand(cls, value: Any, operator: str):
-        return cls(code=110, value=value, operator=operator)
+    def non_compatible_operand(
+        cls, value: Any, operator: str, scim_error: str = SCIMErrorType.INVALID_FILTER
+    ):
+        return cls(code=110, scim_error=scim_error, value=value, operator=operator)
 
     @property
     def context(self) -> dict:
@@ -299,6 +335,14 @@ class ValidationIssues:
         self._errors: dict[tuple, list[ValidationError]] = defaultdict(list)
         self._warnings: dict[tuple, list[ValidationWarning]] = defaultdict(list)
         self._stop_proceeding: dict[tuple, set[int]] = defaultdict(set)
+
+    @property
+    def errors(self) -> Iterator[tuple[tuple[str, ...], list[ValidationError]]]:
+        return iter(self._errors.items())
+
+    @property
+    def warnings(self) -> Iterator[tuple[tuple[str, ...], list[ValidationWarning]]]:
+        return iter(self._warnings.items())
 
     def merge(
         self,
@@ -451,27 +495,6 @@ class ValidationIssues:
                 for error in errors:
                     output[key].append(ValidationIssues._issue_to_dict(error, msg=msg, ctx=ctx))
 
-        return output
-
-    def flatten(self, msg: bool = False, ctx: bool = False) -> dict:
-        return {
-            "errors": self._flatten(self._errors, msg=msg, ctx=ctx),
-            "warnings": self._flatten(self._warnings, msg=msg, ctx=ctx),
-        }
-
-    @staticmethod
-    def _flatten(structure: dict, msg: bool = False, ctx: bool = False):
-        output = {}
-        for location, issues in structure.items():
-            if location:
-                location_key = ".".join([str(part) for part in location])
-                output[location_key] = [
-                    ValidationIssues._issue_to_dict(issue, msg=msg, ctx=ctx) for issue in issues
-                ]
-            else:
-                output[""] = [
-                    ValidationIssues._issue_to_dict(issue, msg=msg, ctx=ctx) for issue in issues
-                ]
         return output
 
     @staticmethod

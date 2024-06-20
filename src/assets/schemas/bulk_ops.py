@@ -46,7 +46,7 @@ def validate_request_operations(value: list[SCIMDataContainer]) -> ValidationIss
         else:
             if method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path):
                 issues.add_error(
-                    issue=ValidationError.resource_type_endpoint_required(),
+                    issue=ValidationError.bad_value_syntax(),
                     proceed=False,
                     location=(i, "path"),
                 )
@@ -57,7 +57,7 @@ def validate_request_operations(value: list[SCIMDataContainer]) -> ValidationIss
                 "DELETE",
             ] and not _RESOURCE_OBJECT_REGEX.fullmatch(path):
                 issues.add_error(
-                    issue=ValidationError.resource_object_endpoint_required(),
+                    issue=ValidationError.bad_value_syntax(),
                     proceed=False,
                     location=(i, "path"),
                 )

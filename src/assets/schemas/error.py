@@ -15,7 +15,7 @@ def validate_error_status(value: str) -> ValidationIssues:
         return issues
     if not 400 <= value_int < 600:
         issues.add_error(
-            issue=ValidationError.bad_error_status(),
+            issue=ValidationError.bad_value_content(),
             proceed=True,
         )
     return issues

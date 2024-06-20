@@ -109,24 +109,3 @@ def test_issues_can_be_converted_to_dict(issues):
     actual = issues.to_dict(msg=True, ctx=True)
 
     assert actual == expected
-
-
-def test_issues_can_be_converted_to_flat_dict(issues):
-    expected = {
-        "errors": {
-            "": [{"code": 31, "error": "value or operation not supported", "context": {}}],
-            "a.b": [
-                {"code": 4, "error": "bad value content", "context": {}},
-                {"code": 1, "error": "bad value syntax", "context": {}},
-            ],
-            "a.b.c": [{"code": 4, "error": "bad value content", "context": {}}],
-            "a.b.d": [{"code": 1, "error": "bad value syntax", "context": {}}],
-        },
-        "warnings": {
-            "a.e": [{"code": 4, "error": "missing", "context": {}}],
-        },
-    }
-
-    actual = issues.flatten(msg=True, ctx=True)
-
-    assert actual == expected

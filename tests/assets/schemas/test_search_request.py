@@ -1,4 +1,4 @@
-from src.assets.config import create_service_provider_config
+from src.config import create_service_provider_config
 from src.assets.schemas.search_request import (
     SearchRequest,
     create_search_request_schema,

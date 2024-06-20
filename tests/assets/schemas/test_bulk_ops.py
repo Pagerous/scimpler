@@ -91,7 +91,7 @@ def test_validation_bulk_request_operation_fails_if_path_missing():
 
 
 def test_validation_bulk_request_operation_fails_if_bad_path_for_post():
-    expected_issues = {"0": {"path": {"_errors": [{"code": 23}]}}}
+    expected_issues = {"0": {"path": {"_errors": [{"code": 1}]}}}
 
     issues = (
         BulkRequest()
@@ -115,7 +115,7 @@ def test_validation_bulk_request_operation_fails_if_bad_path_for_post():
 
 @pytest.mark.parametrize("method", ["GET", "PATCH", "PUT", "DELETE"])
 def test_validation_bulk_request_operation_fails_if_bad_path(method):
-    expected_issues = {"0": {"path": {"_errors": [{"code": 24}]}}}
+    expected_issues = {"0": {"path": {"_errors": [{"code": 1}]}}}
 
     issues = (
         BulkRequest()

@@ -1,7 +1,7 @@
 import abc
 from typing import Any, Optional, Sequence, Union, cast
 
-from src.assets.config import ServiceProviderConfig
+from src.config import ServiceProviderConfig
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
@@ -18,11 +18,12 @@ from src.data.filter import Filter
 from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues, ValidationWarning
+from src import registry
 
 
 class Validator(abc.ABC):
-    def __init__(self, config: ServiceProviderConfig):
-        self.config = config
+    def __init__(self, config: Optional[ServiceProviderConfig] = None):
+        self.config = config or registry.service_provider_config
 
     @property
     def request_schema(self) -> BaseSchema:
@@ -55,7 +56,7 @@ class Validator(abc.ABC):
 
 
 class Error(Validator):
-    def __init__(self, config: ServiceProviderConfig):
+    def __init__(self, config: Optional[ServiceProviderConfig] = None):
         super().__init__(config)
         self._schema = error.Error
 
@@ -104,7 +105,7 @@ class Error(Validator):
             )
         if not 200 <= status_code < 600:
             issues.add_error(
-                issue=ValidationError.bad_error_status(),
+                issue=ValidationError.bad_value_content(),
                 location=["status"],
                 proceed=True,
             )
@@ -215,7 +216,9 @@ def _validate_resource_output_body(
 
 
 class ResourceObjectGET(Validator):
-    def __init__(self, config: ServiceProviderConfig, *, resource_schema: BaseResourceSchema):
+    def __init__(
+        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: BaseResourceSchema
+    ):
         super().__init__(config)
         self._schema = resource_schema
         self._response_schema = resource_schema.clone(_resource_output_filter)
@@ -276,7 +279,9 @@ class ServiceResourceObjectGET(ResourceObjectGET):
 
 
 class ResourceObjectPUT(Validator):
-    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+    def __init__(
+        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
+    ):
         super().__init__(config)
         self._request_schema = resource_schema.clone(
             lambda attr: attr.mutability != AttributeMutability.READ_ONLY or attr.required
@@ -345,7 +350,9 @@ class ResourceObjectPUT(Validator):
 
 
 class ResourcesPOST(Validator):
-    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
+    def __init__(
+        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
+    ):
         super().__init__(config)
         self._schema = resource_schema
         self._request_schema = resource_schema.clone(
@@ -672,10 +679,13 @@ def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) ->
 
 class ServerRootResourcesGET(Validator):
     def __init__(
-        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[BaseResourceSchema]
+        self,
+        config: Optional[ServiceProviderConfig] = None,
+        *,
+        resource_schemas: Sequence[BaseResourceSchema],
     ):
         super().__init__(config)
-        self._request_query_validation_schema = create_search_request_schema(config)
+        self._request_query_validation_schema = create_search_request_schema(self.config)
         self._response_validation_schema = list_response.ListResponse(resource_schemas)
         self._response_schema = list_response.ListResponse(
             [resource_schema.clone(_resource_output_filter) for resource_schema in resource_schemas]
@@ -721,13 +731,18 @@ class ServerRootResourcesGET(Validator):
 
 
 class ResourcesGET(ServerRootResourcesGET):
-    def __init__(self, config: ServiceProviderConfig, *, resource_schema: BaseResourceSchema):
+    def __init__(
+        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: BaseResourceSchema
+    ):
         super().__init__(config, resource_schemas=[resource_schema])
 
 
 class SearchRequestPOST(Validator):
     def __init__(
-        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
+        self,
+        config: Optional[ServiceProviderConfig] = None,
+        *,
+        resource_schemas: Sequence[ResourceSchema],
     ):
         super().__init__(config)
         self._request_validation_schema = create_search_request_schema(config)
@@ -779,11 +794,12 @@ class SearchRequestPOST(Validator):
 
 
 class ResourceObjectPATCH(Validator):
-    def __init__(self, config: ServiceProviderConfig, *, resource_schema: ResourceSchema):
-        if not config.patch.supported:
-            raise RuntimeError("patch operation is not configured")
-
+    def __init__(
+        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
+    ):
         super().__init__(config)
+        if not self.config.patch.supported:
+            raise RuntimeError("patch operation is not configured")
         self._schema = patch_op.PatchOp(resource_schema)
         self._request_schema = patch_op.PatchOp(
             resource_schema.clone(lambda attr: attr.mutability != AttributeMutability.READ_ONLY)
@@ -889,12 +905,14 @@ class ResourceObjectDELETE(Validator):
 
 class BulkOperations(Validator):
     def __init__(
-        self, config: ServiceProviderConfig, *, resource_schemas: Sequence[ResourceSchema]
+        self,
+        config: Optional[ServiceProviderConfig] = None,
+        *,
+        resource_schemas: Sequence[ResourceSchema],
     ):
-        if not config.bulk.supported:
-            raise RuntimeError("bulk operations are not configured")
-
         super().__init__(config)
+        if not self.config.bulk.supported:
+            raise RuntimeError("bulk operations are not configured")
         self._validators: dict[str, dict[str, Validator]] = {
             "GET": {},
             "POST": {},
@@ -1072,22 +1090,24 @@ class BulkOperations(Validator):
                     body=response,
                 )
                 issues.merge(
-                    issues=issues_.get(location=("body",)),
+                    issues=issues_.get(location=["body"]),
                     location=response_location,
                 )
                 issues.merge(
-                    issues=issues_.get(location=("status",)),
+                    issues=issues_.get(location=["status"]),
                     location=status_location,
                 )
             elif location and isinstance(resource_validator, Validator):
+                resource_version = response.get("meta.version")
                 issues_ = resource_validator.validate_response(
                     body=response,
                     status_code=status,
-                    headers={"Location": location},
+                    headers={"Location": location, "ETag": resource_version},
                 )
                 meta_location_missmatch = issues_.pop_errors([8], ("body", "meta", "location"))
                 header_location_mismatch = issues_.pop_errors([8], ("headers", "Location"))
-                issues.merge(issues_.get(location=("body",)), location=response_location)
+                issues.merge(issues_.get(location=["body"]), location=response_location)
+                issues.merge(issues_.get(location=["status"]), location=status_location)
                 if meta_location_missmatch.has_errors() and header_location_mismatch.has_errors():
                     issues.add_error(
                         issue=ValidationError.must_be_equal_to("operation's location"),
@@ -1099,8 +1119,6 @@ class BulkOperations(Validator):
                         proceed=True,
                         location=location_location,
                     )
-
-                resource_version = response.get("meta.version")
                 if version and resource_version and version != resource_version:
                     issues.add_error(
                         issue=ValidationError.must_be_equal_to("operation's version"),
@@ -1126,7 +1144,7 @@ class BulkOperations(Validator):
 class _ServiceProviderConfig(ResourcesGET):
     def __init__(
         self,
-        config: ServiceProviderConfig,
+        config: Optional[ServiceProviderConfig] = None,
         *,
         resource_schema: BaseResourceSchema,
     ):
@@ -1151,12 +1169,12 @@ class _ServiceProviderConfig(ResourcesGET):
 
 
 class SchemasGET(_ServiceProviderConfig):
-    def __init__(self, config: ServiceProviderConfig):
+    def __init__(self, config: Optional[ServiceProviderConfig] = None):
         super().__init__(config, resource_schema=Schema)
 
 
 class ResourceTypesGET(_ServiceProviderConfig):
-    def __init__(self, config: ServiceProviderConfig):
+    def __init__(self, config: Optional[ServiceProviderConfig] = None):
         super().__init__(config, resource_schema=ResourceType)
 
 

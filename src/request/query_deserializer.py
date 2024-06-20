@@ -1,7 +1,7 @@
 import abc
 from typing import Any, Optional
 
-from src.assets.config import ServiceProviderConfig
+from src.config import ServiceProviderConfig
 from src.assets.schemas import search_request
 from src.assets.schemas.search_request import create_search_request_schema
 from src.container import Missing, SCIMDataContainer

@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from src.assets.config import create_service_provider_config
+from src.config import create_service_provider_config
 from src.assets.schemas import Group, User, service_provider_config
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
@@ -61,8 +61,8 @@ def test_validate_error_status_code_consistency(status_code, expected):
 def test_validate_error_status_code_value():
     validator = Error(CONFIG)
     expected_issues = {
-        "body": {"status": {"_errors": [{"code": 18}]}},
-        "status": {"_errors": [{"code": 18}]},
+        "body": {"status": {"_errors": [{"code": 4}]}},
+        "status": {"_errors": [{"code": 4}]},
     }
 
     issues = validator.validate_response(
@@ -1291,7 +1291,7 @@ def test_bulk_operations_data_not_validated_if_bad_path_or_method():
     expected_issues = {
         "body": {
             "Operations": {
-                "0": {"path": {"_errors": [{"code": 23}]}},
+                "0": {"path": {"_errors": [{"code": 1}]}},
                 "1": {"method": {"_errors": [{"code": 9}]}},
             }
         }
@@ -1759,39 +1759,15 @@ def test_service_provider_configuration_is_validated():
     assert issues.to_dict(msg=True) == {}
 
 
-def test_group_output_is_validated_correctly():
+def test_group_output_is_validated_correctly(group_data_server):
     validator = ResourceObjectGET(CONFIG, resource_schema=Group)
-    input_ = {
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
-        "id": "e9e30dba-f08f-4109-8486-d5c6a331660a",
-        "displayName": "Tour Guides",
-        "members": [
-            {
-                "value": "2819c223-7f76-453a-919d-413861904646",
-                "$ref": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
-                "display": "Babs Jensen",
-            },
-            {
-                "value": "902c246b-6245-4190-8e05-00816be7344a",
-                "$ref": "https://example.com/v2/Users/902c246b-6245-4190-8e05-00816be7344a",
-                "display": "Mandy Pepperidge",
-            },
-        ],
-        "meta": {
-            "location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
-            "resourceType": "Group",
-            "created": "2011-05-13T04:42:34Z",
-            "lastModified": "2011-05-13T04:42:34Z",
-            "version": 'W/"3694e05e9dff594"',
-        },
-    }
 
     issues = validator.validate_response(
         status_code=200,
-        body=input_,
+        body=group_data_server,
         headers={
-            "Location": input_["meta"]["location"],
-            "ETag": input_["meta"]["version"],
+            "Location": group_data_server["meta"]["location"],
+            "ETag": group_data_server["meta"]["version"],
         },
     )
 

@@ -1,19 +1,6 @@
-from enum import Enum
 from typing import Optional
 
-
-class SCIMErrorType(str, Enum):
-    INVALID_FILTER = "invalidFilter"
-    TOO_MANY = "tooMany"
-    UNIQUENESS = "uniqueness"
-    MUTABILITY = "mutability"
-    INVALID_SYNTAX = "invalidSyntax"
-    INVALID_PATH = "invalidPath"
-    NO_TARGET = "noTarget"
-    INVALID_VALUE = "invalidValue"
-    INVALID_VERS = "invalidVers"
-    SENSITIVE = "sensitive"
-
+from src.error import SCIMErrorType
 
 INVALID_FILTER = {
     "status": "400",
