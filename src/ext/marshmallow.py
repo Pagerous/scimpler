@@ -1,15 +1,69 @@
-from typing import Iterable, Optional, cast
+from dataclasses import dataclass
+from typing import Any, Callable, Iterable, Optional, cast, Protocol
 
 import marshmallow
 
-from src.assets.schemas import ListResponse
-from src.container import AttrName, BoundedAttrRep, AttrRep
+from src.assets.schemas import BulkResponse, ListResponse
+from src.container import AttrName, BoundedAttrRep, AttrRep, SCIMDataContainer
 from src.data import attrs
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.request.validator import Validator
+from src.registry import resources
+from src.request import validator
 
 
 _marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
+
+
+@dataclass
+class Processors:
+    response_validator: Optional[Callable] = None
+
+
+class RequestContext:
+    def __init__(
+        self,
+        query_string: Optional[dict[str, Any]] = None,
+        headers: Optional[dict[str, Any]] = None,
+    ) -> None:
+        self._query_string = query_string or {}
+        self._headers = headers or {}
+
+    @property
+    def query_string(self) -> dict[str, Any]:
+        return self._query_string
+
+    @property
+    def headers(self) -> dict[str, Any]:
+        return self._headers
+
+
+class RequestContextProvider(Protocol):
+    def __call__(self) -> RequestContext: ...
+
+
+class ResponseContext:
+    def __init__(
+        self, status_code: int, headers: Optional[dict[str, Any]] | None = None, **kwargs: Any
+    ) -> None:
+        self._status_code = status_code
+        self._headers = headers or {}
+        self._kwargs = kwargs
+
+    @property
+    def status_code(self) -> int:
+        return self._status_code
+
+    @property
+    def headers(self) -> dict[str, Any]:
+        return self._headers
+
+    @property
+    def kwargs(self) -> dict[str, Any]:
+        return self._kwargs
+
+
+class ResponseContextProvider(Protocol):
+    def __call__(self) -> ResponseContext: ...
 
 
 def initialize(
@@ -45,10 +99,12 @@ def _get_fields(
             field = field_by_attr_rep[attr_rep]
         else:
             kwargs = _get_kwargs(attr)
-            if attr.multi_valued:
-                field = marshmallow.fields.List(_get_field(attr), **kwargs)
+            if attr.has_custom_processing:
+                field = marshmallow.fields.Raw
             else:
-                field = _get_field(attr, **kwargs)
+                field = _get_field(attr)
+            if attr.multi_valued:
+                field = marshmallow.fields.List(field, **kwargs)
         fields_[str(attr_rep.attr)] = field
     return fields_
 
@@ -82,51 +138,307 @@ def _get_kwargs(attr: attrs.Attribute):
     return {"required": attr.returned == attrs.AttributeReturn.ALWAYS}
 
 
-def _apply_validator_on_schema(schema, scimple_schema):
-    marshmallow_schema_attrs = {}
+def _transform_errors_dict(input_dict):
+    output_dict = {}
+    for key, value in input_dict.items():
+        if isinstance(value, dict):
+            transformed_value = _transform_errors_dict(value)
+            if "_errors" in transformed_value and len(transformed_value) == 1:
+                output_dict[key] = [error["error"] for error in transformed_value["_errors"]]
+            else:
+                output_dict[key] = transformed_value
+        else:
+            output_dict[key] = value
+    return output_dict
 
-    if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) > 1:
 
-        def _post_dump(self, data, **kwargs):
-            serialized = []
-            for resource in data.get("Resources", []):
-                schema_uris = [
-                    item.lower() for item in resource.get("schemas", []) if isinstance(item, str)
-                ]
-                for resource_schema in scimple_schema.contained_schemas:
-                    if resource_schema.schema in schema_uris:
-                        marshmallow_schema = _get_marshmallow_schema(resource_schema)()
-                        serialized.append(marshmallow_schema.dump(resource))
-            if serialized:
-                data["Resources"] = serialized
-            return data
+def _validate_response(data: dict, response_validator: Callable, context: ResponseContext) -> None:
+    issues = response_validator(
+        status_code=context.status_code,
+        body=data,
+        headers=context.headers,
+        **context.kwargs,
+    )
+    if issues.has_errors():
+        raise marshmallow.ValidationError(
+            message=_transform_errors_dict(issues.to_dict(msg=True)),
+        )
 
-        marshmallow_schema_attrs["_post_dump"] = marshmallow.post_dump(_post_dump, pass_many=False)
 
-    if isinstance(scimple_schema, ResourceSchema):
+def _get_list_response_response_processors(
+    scimple_schema: ListResponse,
+    processors: Processors,
+    context_provider: Optional[ResponseContextProvider],
+):
+    processors_ = {}
 
-        def _pre_dump(self, data, **kwargs):
-            for extension_uri in scimple_schema.extensions:
-                extension_uri_lower = extension_uri.lower()
-                for k, v in data.copy().items():
-                    if k.lower() == extension_uri_lower:
-                        key_parts = k.split(".")
-                        if len(key_parts) == 1:
-                            continue
+    def deserialize(data):
+        deserialized = scimple_schema.deserialize(data)
+        deserialized_resources = []
+        for resource in data.get("Resources", []):
+            schema_uris = [
+                item.lower() for item in resource.get("schemas", []) if isinstance(item, str)
+            ]
+            for resource_schema in scimple_schema.contained_schemas:
+                if resource_schema.schema in schema_uris:
+                    marshmallow_schema = _create_response_schema(
+                        scimple_schema=resource_schema,
+                        processors=Processors(),
+                        context_provider=None,
+                    )()
+                    deserialized_resources.append(marshmallow_schema.load(resource))
+        if deserialized_resources:
+            deserialized.set("Resources", deserialized_resources)
+        return deserialized.to_dict()
 
-                        data[key_parts[0]] = _transform_extension_key_parts(
-                            key_parts[1:], data.pop(k)
-                        )
-            return data
+    if processors.response_validator:
 
-        marshmallow_schema_attrs["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
+        def _pre_load(self, data, **kwargs):
+            if context_provider is None:
+                raise ValueError("context must be provided when loading data")
+            _validate_response(data, processors.response_validator, context_provider())
+            return deserialize(data)
+    else:
 
+        def _pre_load(self, data, **kwargs):
+            return deserialize(data)
+
+    def _post_load(self, data, **kwargs):
+        return SCIMDataContainer(data)
+
+    def _pre_dump(self, data, **kwargs):
+        serialized = scimple_schema.serialize(data)
+        serialized_resources = []
+        for resource in serialized.get("Resources", []):
+            schema_uris = [
+                item.lower() for item in resource.get("schemas", []) if isinstance(item, str)
+            ]
+            for resource_schema in scimple_schema.contained_schemas:
+                if resource_schema.schema in schema_uris:
+                    marshmallow_schema = _create_response_schema(
+                        scimple_schema=resource_schema,
+                        processors=Processors(),
+                        context_provider=None,
+                    )()
+                    serialized_resources.append(marshmallow_schema.dump(resource))
+        if serialized_resources:
+            serialized["Resources"] = serialized_resources
+        return serialized
+
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_post_load"] = marshmallow.post_load(_post_load)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+
+    return processors_
+
+
+def _get_resource_response_processors(
+    scimple_schema: ResourceSchema,
+    processors: Processors,
+    context_provider: Optional[ResponseContextProvider],
+):
+    processors_ = {}
+
+    def deserialize(data):
+        return scimple_schema.deserialize(data).to_dict()
+
+    if processors.response_validator:
+
+        def _pre_load(self, data, **kwargs):
+            if context_provider is None:
+                raise ValueError("context must be provided when loading data")
+            _validate_response(data, processors.response_validator, context_provider())
+            return deserialize(data)
+    else:
+
+        def _pre_load(self, data, **kwargs):
+            return deserialize(data)
+
+    def _post_load(self, data, original_data, **kwargs):
+        for extension_uri in scimple_schema.extensions:
+            extension_uri_lower = extension_uri.lower()
+            for k in original_data:
+                if k.lower() == extension_uri_lower:
+                    key_parts = k.split(".")
+                    if len(key_parts) == 1:
+                        continue
+                    extension_data = data
+                    for part in key_parts:
+                        extension_data = extension_data[part]
+                    data.pop(key_parts[0])
+                    data[k] = extension_data
+        return SCIMDataContainer(data)
+
+    def _pre_dump(self, data, **kwargs):
+        serialized = scimple_schema.serialize(data)
+        for extension_uri in scimple_schema.extensions:
+            extension_uri_lower = extension_uri.lower()
+            for k in serialized.copy():
+                if k.lower() == extension_uri_lower:
+                    key_parts = k.split(".")
+                    if len(key_parts) == 1:
+                        continue
+
+                    serialized[key_parts[0]] = _transform_extension_key_parts(
+                        key_parts[1:], serialized.pop(k)
+                    )
+        return serialized
+
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_post_load"] = marshmallow.post_load(_post_load, pass_original=True)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+
+    return processors_
+
+
+def _get_bulk_response_response_processors(
+    scimple_schema: BulkResponse,
+    processors: Processors,
+    context_provider: Optional[ResponseContextProvider],
+):
+    sub_validators = {
+        "GET": validator.ResourceObjectGET,
+        "POST": validator.ResourcesPOST,
+        "PUT": validator.ResourceObjectPUT,
+        "PATCH": validator.ResourceObjectPATCH,
+        "DELETE": validator.ResourceObjectDELETE,
+    }
+    processors_ = {}
+
+    def _get_operation_response_schema(operation: dict, sub_processors: Processors):
+        status = int(operation["status"])
+        if status >= 300:
+            return _create_response_schema(
+                scimple_schema=validator.Error().response_schema,
+                processors=sub_processors,
+                context_provider=None,
+            )
+        for resource_schema in resources.values():
+            location = operation.get("location", "")
+            if f"/{resource_schema.plural_name}/" in location:
+                return _create_response_schema(
+                    scimple_schema=(
+                        sub_validators[operation["method"].upper()](
+                            resource_schema=resource_schema
+                        ).response_schema
+                    ),
+                    processors=sub_processors,
+                    context_provider=None,
+                )
+        raise ValueError("operation response could not be processed due to unknown resource")
+
+    def deserialize(data):
+        deserialized = scimple_schema.deserialize(data)
+        for operation in deserialized.get("Operations") or []:
+            operation_dict = operation.to_dict()
+            response_schema = _get_operation_response_schema(
+                operation_dict, sub_processors=Processors(response_validator=None),
+            )
+            operation.set("response", response_schema().load(operation_dict.get("response", {})))
+        return deserialized.to_dict()
+
+    if processors.response_validator:
+
+        def _pre_load(self, data, **kwargs):
+            if context_provider is None:
+                raise ValueError("context must be provided when loading data")
+            _validate_response(data, processors.response_validator, context_provider())
+            return deserialize(data)
+    else:
+
+        def _pre_load(self, data, **kwargs):
+            return deserialize(data)
+
+    def _post_load(self, data, **kwargs):
+        return SCIMDataContainer(data)
+
+    def _pre_dump(self, data, **kwargs):
+        serialized = scimple_schema.serialize(data)
+        for operation in serialized.get("Operations", []):
+            response_schema = _get_operation_response_schema(
+                operation, sub_processors=Processors(response_validator=None)
+            )
+            operation["response"] = response_schema().dump(operation.get("response"))
+        return serialized
+
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_post_load"] = marshmallow.post_load(_post_load)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+
+    return processors_
+
+
+def _get_generic_response_processors(
+    scimple_schema: BaseSchema,
+    processors: Processors,
+    context_provider: Optional[ResponseContextProvider] = None,
+):
+    processors_ = {}
+
+    def deserialize(data):
+        return scimple_schema.deserialize(data).to_dict()
+
+    if processors.response_validator:
+
+        def _pre_load(self, data, **kwargs):
+            if context_provider is None:
+                raise ValueError("context must be provided when loading data")
+            _validate_response(data, processors.response_validator, context_provider())
+            return deserialize(data)
+    else:
+
+        def _pre_load(self, data, **kwargs):
+            return deserialize(data)
+
+    def _post_load(self, data, **kwargs):
+        return SCIMDataContainer(data)
+
+    def _pre_dump(self, data, **kwargs):
+        return scimple_schema.serialize(data)
+
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_post_load"] = marshmallow.post_load(_post_load)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+
+    return processors_
+
+
+def _include_processing_on_response_schema(
+    schema_cls: type[marshmallow.Schema],
+    scimple_schema: BaseSchema,
+    processors: Processors,
+    context_provider: Optional[ResponseContextProvider],
+) -> type[marshmallow.Schema]:
+    if isinstance(scimple_schema, ListResponse):
+        processors = _get_list_response_response_processors(
+            scimple_schema=scimple_schema,
+            processors=processors,
+            context_provider=context_provider,
+        )
+    elif isinstance(scimple_schema, ResourceSchema):
+        processors = _get_resource_response_processors(
+            scimple_schema=scimple_schema,
+            processors=processors,
+            context_provider=context_provider,
+        )
+    elif isinstance(scimple_schema, BulkResponse):
+        processors = _get_bulk_response_response_processors(
+            scimple_schema=scimple_schema,
+            processors=processors,
+            context_provider=context_provider,
+        )
+    else:
+        processors = _get_generic_response_processors(
+            scimple_schema=scimple_schema,
+            processors=processors,
+            context_provider=context_provider,
+        )
     class_ = type(
         type(scimple_schema).__name__,
-        (schema,),
-        marshmallow_schema_attrs,
+        (schema_cls,),
+        processors,
     )
-    return class_
+    return cast(type[marshmallow.Schema], class_)
 
 
 def _transform_extension_key_parts(keys, value):
@@ -144,7 +456,11 @@ def _transform_extension_key_parts(keys, value):
     return result
 
 
-def _get_marshmallow_schema(scimple_schema: BaseSchema) -> type[marshmallow.Schema]:
+def _create_response_schema(
+    scimple_schema: BaseSchema,
+    processors: Processors,
+    context_provider: Optional[ResponseContextProvider],
+) -> type[marshmallow.Schema]:
     if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:
         resources_attr = cast(attrs.Attribute, scimple_schema.attrs.get("resources"))
         fields = _get_fields(
@@ -164,15 +480,24 @@ def _get_marshmallow_schema(scimple_schema: BaseSchema) -> type[marshmallow.Sche
     if isinstance(scimple_schema, ResourceSchema):
         extension_fields = {}
         for extension_uri, attrs_ in scimple_schema.attrs.extensions.items():
-            extension_fields[str(extension_uri)] = marshmallow.fields.Nested(
-                _get_fields(attrs_)
-            )
+            extension_fields[str(extension_uri)] = marshmallow.fields.Nested(_get_fields(attrs_))
         fields.update(extension_fields)
 
-    schema_cls = marshmallow.Schema.from_dict(fields={**fields})
-    return cast(type[marshmallow.Schema], _apply_validator_on_schema(schema_cls, scimple_schema))
+    schema_cls = cast(type[marshmallow.Schema], marshmallow.Schema.from_dict(fields={**fields}))
+    return _include_processing_on_response_schema(
+        schema_cls=schema_cls,
+        processors=processors,
+        scimple_schema=scimple_schema,
+        context_provider=context_provider,
+    )
 
 
-def response_serializer(validator: Validator):
-    scimple_schema = validator.response_schema
-    return _get_marshmallow_schema(scimple_schema)
+def create_response_schema(
+    v: validator.Validator,
+    context_provider: Optional[ResponseContextProvider] = None,
+) -> type[marshmallow.Schema]:
+    return _create_response_schema(
+        scimple_schema=v.response_schema,
+        processors=Processors(response_validator=v.validate_response),
+        context_provider=context_provider,
+    )
