@@ -36,6 +36,10 @@ class PatchOp(BaseSchema):
             schema="urn:ietf:params:scim:api:messages:2.0:PatchOp",
             attrs=[
                 Complex(
+                    name="Operations",
+                    required=True,
+                    multi_valued=True,
+                    validators=[_validate_operations],
                     sub_attributes=[
                         String(
                             "op",
@@ -47,13 +51,10 @@ class PatchOp(BaseSchema):
                             "path",
                             validators=[PatchPath.validate],
                             deserializer=PatchPath.deserialize,
+                            serializer=lambda path: path.serialize(),
                         ),
                         Unknown("value"),
                     ],
-                    name="Operations",
-                    required=True,
-                    multi_valued=True,
-                    validators=[_validate_operations],
                 )
             ],
         )
@@ -272,8 +273,42 @@ class PatchOp(BaseSchema):
             )
         return issues
 
-    def deserialize(self, data: Any) -> SCIMDataContainer:
-        data = super().deserialize(data)
+    def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
+        ops = data.get(self.attrs.operations__op)
+        paths = data.get(self.attrs.operations__path)
+        values = data.get(self.attrs.operations__value)
+        deserialized = []
+        for i, (op, path, value) in enumerate(zip(ops, paths, values)):
+            attr: Optional[Attribute] = None
+            deserialized_path = PatchPath.deserialize(path) if path else None
+            if deserialized_path is not None:
+                attr = self._resource_schema.attrs.get_by_path(deserialized_path)
+                if attr is None:
+                    raise ValueError(
+                        f"target indicated by path {deserialized_path!r} does not exist"
+                    )
+
+            if op in ["add", "replace"]:
+                deserialized.append(
+                    SCIMDataContainer(
+                        {
+                            "op": op,
+                            "path": path,
+                            "value": self._process_operation_value(
+                                attr=attr,
+                                path=deserialized_path,
+                                value=value,
+                                method="serialize",
+                            ),
+                        }
+                    )
+                )
+            else:
+                deserialized.append(SCIMDataContainer({"op": "remove", "path": path}))
+        data.set(self.attrs.operations, deserialized)
+        return data
+
+    def _deserialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
         ops = data.get(self.attrs.operations__op)
         paths = data.get(self.attrs.operations__path)
         values = data.get(self.attrs.operations__value)
@@ -291,7 +326,12 @@ class PatchOp(BaseSchema):
                         {
                             "op": op,
                             "path": path,
-                            "value": self._deserialize_operation_value(attr, path, value),
+                            "value": self._process_operation_value(
+                                attr=attr,
+                                path=path,
+                                value=value,
+                                method="deserialize",
+                            ),
                         }
                     )
                 )
@@ -300,16 +340,20 @@ class PatchOp(BaseSchema):
         data.set(self.attrs.operations, deserialized)
         return data
 
-    def _deserialize_operation_value(
-        self, attr: Optional[Attribute], path: Union[PatchPath, None, MissingType], value: Any
+    def _process_operation_value(
+        self,
+        attr: Optional[Attribute],
+        path: Union[PatchPath, None, MissingType],
+        value: Any,
+        method: str,
     ) -> Any:
         if not isinstance(path, PatchPath):
-            return self._resource_schema.deserialize(value)
+            return getattr(self._resource_schema, method)(value)
 
         attr_ = cast(Attribute, attr)
         if path.has_filter and not path.sub_attr_name and not isinstance(value, list):
-            return attr_.deserialize([value])[0]
-        return attr_.deserialize(value)
+            return getattr(attr_, method)([value])[0]
+        return getattr(attr_, method)(value)
 
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:

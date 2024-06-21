@@ -159,25 +159,27 @@ class PatchPath(Generic[TAttrRep]):
             filter_=filter_,
         )
 
-    def __repr__(self):
+    def serialize(self) -> str:
         if self._filter:
-            repr_ = self._filter.serialize()
-        elif isinstance(self._attr_rep, BoundedAttrRep):
-            repr_ = str(
+            return self._filter.serialize()
+
+        if isinstance(self._attr_rep, BoundedAttrRep):
+            return str(
                 BoundedAttrRep(
                     schema=self._attr_rep.schema,
                     attr=self._attr_rep.attr,
                     sub_attr=self._sub_attr_name,
                 )
             )
-        else:
-            repr_ = str(
-                AttrRep(
-                    attr=self._attr_rep.attr,
-                    sub_attr=self._sub_attr_name,
-                )
+        return str(
+            AttrRep(
+                attr=self._attr_rep.attr,
+                sub_attr=self._sub_attr_name,
             )
-        return f"PatchPath({repr_})"
+        )
+
+    def __repr__(self):
+        return f"PatchPath({self.serialize()})"
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, PatchPath):

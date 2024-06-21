@@ -240,31 +240,17 @@ def test_bulk_response_can_be_validated(bulk_response_serialized: dict):
     expected_issues = {
         "body": {
             "Operations": {
-                "0": {
-                    "status": ["bad status code, expecting '201'"]
-                },
-                "1": {
-                    "response": {
-                        "name": {
-                            "formatted": ["bad type, expecting 'string'"]
-                        }
-                    }
-                },
+                "0": {"status": ["bad status code, expecting '201'"]},
+                "1": {"response": {"name": {"formatted": ["bad type, expecting 'string'"]}}},
                 "2": {
                     "response": {
                         "status": ["must be equal to response status code"],
                     },
-                    "status": ["must be equal to 'status' attribute", 'bad value content']
+                    "status": ["must be equal to 'status' attribute", "bad value content"],
                 },
                 "3": {
-                    "response": {
-                        "members": {
-                            "1": {
-                                "type": ["must be one of: ['user', 'group']"]
-                            }
-                        }
-                    }
-                }
+                    "response": {"members": {"1": {"type": ["must be one of: ['user', 'group']"]}}}
+                },
             }
         }
     }

@@ -81,14 +81,21 @@ class ListResponse(BaseSchema):
             )
         return issues
 
+    def _deserialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
+        resources = data.pop(self.attrs.resources)
+        deserialized = self._process_resources(resources, "deserialize")
+        if deserialized:
+            data.set(self.attrs.resources, deserialized)
+        return data
+
     def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
         resources = data.pop(self.attrs.resources)
-        serialized = self._serialize_resources(resources)
+        serialized = self._process_resources(resources, "serialize")
         if serialized:
             data.set(self.attrs.resources, serialized)
         return data
 
-    def _serialize_resources(self, resources: list[Any]) -> list[dict[str, Any]]:
+    def _process_resources(self, resources: list[Any], method: str) -> list[dict[str, Any]]:
         if not isinstance(resources, list):
             return []
         schemas = self.get_schemas_for_resources(resources)
@@ -97,7 +104,7 @@ class ListResponse(BaseSchema):
             if schema is None:
                 serialized_resources.append({})
             else:
-                serialized_resources.append(schema.serialize(resource))
+                serialized_resources.append(getattr(schema, method)(resource))
         return serialized_resources
 
     def get_schemas_for_resources(

@@ -256,7 +256,7 @@ class Attribute(abc.ABC):
         return self._serialize(value)
 
     def _serialize(self, value: Any) -> Any:
-        if self._global_serializer is None:
+        if self._global_serializer is None or self.has_custom_processing:
             return value
         return self._global_serializer(value)
 
@@ -269,7 +269,7 @@ class Attribute(abc.ABC):
         return self._deserialize(value)
 
     def _deserialize(self, value: Any) -> Any:
-        if self._global_deserializer is None:
+        if self._global_deserializer is None or self.has_custom_processing:
             return value
         return self._global_deserializer(value)
 

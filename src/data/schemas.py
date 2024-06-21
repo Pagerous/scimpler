@@ -84,7 +84,7 @@ class BaseSchema:
             value = data.get(attr_rep)
             if value is not Missing:
                 deserialized.set(attr_rep, attr.deserialize(value))
-        return deserialized
+        return self._deserialize(deserialized)
 
     def serialize(self, data: Union[dict, SCIMDataContainer]) -> dict[str, Any]:
         data = SCIMDataContainer(data)
@@ -117,7 +117,10 @@ class BaseSchema:
                 filtered.set(attr_rep, value)
         return filtered
 
-    def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:  # noqa
+    def _deserialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
+        return data
+
+    def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
         return data
 
     def validate(

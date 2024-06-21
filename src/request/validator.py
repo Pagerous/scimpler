@@ -940,6 +940,10 @@ class BulkOperations(Validator):
         self._error_validator = Error(config)
 
     @property
+    def sub_validators(self) -> dict[str, dict[str, Validator]]:
+        return self._validators
+
+    @property
     def request_schema(self) -> bulk_ops.BulkRequest:
         return self._request_schema
 
