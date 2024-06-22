@@ -60,6 +60,10 @@ class PatchOp(BaseSchema):
         )
         self._resource_schema = resource_schema
 
+    @property
+    def resource_schema(self) -> ResourceSchema:
+        return self._resource_schema
+
     def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         ops = data.get(self.attrs.operations__op)
@@ -274,70 +278,57 @@ class PatchOp(BaseSchema):
         return issues
 
     def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
-        ops = data.get(self.attrs.operations__op)
-        paths = data.get(self.attrs.operations__path)
-        values = data.get(self.attrs.operations__value)
-        deserialized = []
-        for i, (op, path, value) in enumerate(zip(ops, paths, values)):
+        processed = []
+        for operation in data.get(self.attrs.operations):
+            op = operation.get("op")
+            path_str = operation.get("path")
+            value = operation.get("value")
             attr: Optional[Attribute] = None
-            deserialized_path = PatchPath.deserialize(path) if path else None
-            if deserialized_path is not None:
-                attr = self._resource_schema.attrs.get_by_path(deserialized_path)
+            path: Optional[PatchPath] = None
+            if path_str:
+                path = PatchPath.deserialize(path_str)
+                attr = self._resource_schema.attrs.get_by_path(path)
                 if attr is None:
-                    raise ValueError(
-                        f"target indicated by path {deserialized_path!r} does not exist"
-                    )
+                    raise ValueError(f"target indicated by path {path!r} does not exist")
 
+            processed_operation = {"op": op}
             if op in ["add", "replace"]:
-                deserialized.append(
-                    SCIMDataContainer(
-                        {
-                            "op": op,
-                            "path": path,
-                            "value": self._process_operation_value(
-                                attr=attr,
-                                path=deserialized_path,
-                                value=value,
-                                method="serialize",
-                            ),
-                        }
-                    )
+                processed_operation["value"] = self._process_operation_value(
+                    attr=attr,
+                    path=path,
+                    value=value,
+                    method="serialize",
                 )
-            else:
-                deserialized.append(SCIMDataContainer({"op": "remove", "path": path}))
-        data.set(self.attrs.operations, deserialized)
+            if path_str:
+                processed_operation["path"] = path_str
+            processed.append(SCIMDataContainer(processed_operation))
+        data.set(self.attrs.operations, processed)
         return data
 
     def _deserialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
         ops = data.get(self.attrs.operations__op)
         paths = data.get(self.attrs.operations__path)
         values = data.get(self.attrs.operations__value)
-        deserialized = []
-        for i, (op, path, value) in enumerate(zip(ops, paths, values)):
+        processed = []
+        for op, path, value in zip(ops, paths, values):
             attr: Optional[Attribute] = None
             if isinstance(path, PatchPath):
                 attr = self._resource_schema.attrs.get_by_path(path)
                 if attr is None:
                     raise ValueError(f"target indicated by path {path!r} does not exist")
 
+            processed_operation = {"op": op}
             if op in ["add", "replace"]:
-                deserialized.append(
-                    SCIMDataContainer(
-                        {
-                            "op": op,
-                            "path": path,
-                            "value": self._process_operation_value(
-                                attr=attr,
-                                path=path,
-                                value=value,
-                                method="deserialize",
-                            ),
-                        }
-                    )
+                processed_operation["value"] = self._process_operation_value(
+                    attr=attr,
+                    path=path,
+                    value=value,
+                    method="deserialize",
                 )
-            else:
-                deserialized.append(SCIMDataContainer({"op": "remove", "path": path}))
-        data.set(self.attrs.operations, deserialized)
+            if path:
+                processed_operation["path"] = path
+            processed.append(SCIMDataContainer(processed_operation))
+        data.set(self.attrs.operations, processed)
         return data
 
     def _process_operation_value(
@@ -347,6 +338,9 @@ class PatchOp(BaseSchema):
         value: Any,
         method: str,
     ) -> Any:
+        if value in [Missing, None]:
+            return None
+
         if not isinstance(path, PatchPath):
             return getattr(self._resource_schema, method)(value)
 

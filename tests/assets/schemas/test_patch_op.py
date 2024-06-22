@@ -1,7 +1,7 @@
 import pytest
 
 from src.assets.schemas import User, patch_op, user
-from src.container import AttrName, AttrRep, Invalid, Missing, SCIMDataContainer
+from src.container import AttrName, AttrRep, Invalid, SCIMDataContainer
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import AttributeMutability, String
 from src.data.filter import Filter
@@ -187,7 +187,6 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
         "Operations": [
             {
                 "op": op,
-                "path": Missing,
                 "value": {
                     "name": {
                         "formatted": "Ms. Barbara J Jensen III",

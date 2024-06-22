@@ -1,11 +1,12 @@
 import abc
 from typing import Any, Optional, Sequence, Union, cast
 
-from src.config import ServiceProviderConfig
+from src import registry
 from src.assets.schemas import bulk_ops, error, list_response, patch_op, search_request
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import create_search_request_schema
+from src.config import ServiceProviderConfig
 from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import (
@@ -18,7 +19,6 @@ from src.data.filter import Filter
 from src.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from src.data.sorter import Sorter
 from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src import registry
 
 
 class Validator(abc.ABC):

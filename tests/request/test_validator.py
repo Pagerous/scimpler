@@ -3,10 +3,10 @@ from datetime import datetime
 
 import pytest
 
-from src.config import create_service_provider_config
 from src.assets.schemas import Group, User, service_provider_config
 from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
+from src.config import create_service_provider_config
 from src.container import AttrRep, BoundedAttrRep, Missing
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import DateTime

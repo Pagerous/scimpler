@@ -9,7 +9,6 @@ from src.assets.schemas.search_request import SearchRequest
 from src.assets.schemas.service_provider_config import ServiceProviderConfig
 from src.assets.schemas.user import EnterpriseUserExtension, User
 
-
 __all__ = [
     "BulkRequest",
     "BulkResponse",

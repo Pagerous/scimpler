@@ -4,10 +4,22 @@ from datetime import datetime
 import marshmallow
 import pytest
 
-from src.assets.schemas import User, Group
+from src.assets.schemas import Group, User
 from src.container import SCIMDataContainer
-from src.ext.marshmallow import initialize, create_response_schema, ResponseContext
-from src.request.validator import BulkOperations, ResourceObjectGET, ServerRootResourcesGET
+from src.data.patch_path import PatchPath
+from src.ext.marshmallow import (
+    RequestContext,
+    ResponseContext,
+    create_request_schema,
+    create_response_schema,
+    initialize,
+)
+from src.request.validator import (
+    BulkOperations,
+    ResourceObjectGET,
+    ResourceObjectPATCH,
+    ServerRootResourcesGET,
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -115,6 +127,62 @@ def bulk_response_serialized(user_data_server, group_data_server):
     user_2["meta"]["location"] = "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041"
     user_2["meta"]["version"] = 'W/"huJj29dMNgu3WXPD"'
     return get_bulk_data(user_1, user_2, group_data_server)
+
+
+@pytest.fixture
+def user_patch_serialized():
+    return {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {
+                "op": "add",
+                "path": "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
+                "value": {"$ref": "/Users/10", "value": "10"},
+            },
+            {
+                "op": "replace",
+                "path": "emails[value ew '.com']",
+                "value": {"type": "home"},
+            },
+            {
+                "op": "replace",
+                "value": {
+                    "nickName": "SuperSonic",
+                },
+            },
+            {
+                "op": "add",
+                "path": "emails",
+                "value": [
+                    {"type": "home", "value": "example@domain.pl"},
+                    {"type": "work", "value": "example@domain.eu"},
+                ],
+            },
+            {
+                "op": "replace",
+                "path": "name.formatted",
+                "value": "John Doe",
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def user_patch_deserialized(user_patch_serialized):
+    deserialized: dict = deepcopy(user_patch_serialized)
+    deserialized["Operations"][0]["path"] = PatchPath.deserialize(
+        deserialized["Operations"][0]["path"]
+    )
+    deserialized["Operations"][1]["path"] = PatchPath.deserialize(
+        deserialized["Operations"][1]["path"]
+    )
+    deserialized["Operations"][3]["path"] = PatchPath.deserialize(
+        deserialized["Operations"][3]["path"]
+    )
+    deserialized["Operations"][4]["path"] = PatchPath.deserialize(
+        deserialized["Operations"][4]["path"]
+    )
+    return SCIMDataContainer(deserialized)
 
 
 def test_user_response_can_be_dumped(user_deserialized, user_data_server):
@@ -256,5 +324,46 @@ def test_bulk_response_can_be_validated(bulk_response_serialized: dict):
     }
 
     issues = schema_cls().validate(bulk_response_serialized)
+
+    assert issues == expected_issues
+
+
+def test_resource_patch_request_can_be_dumped(user_patch_serialized, user_patch_deserialized):
+    validator = ResourceObjectPATCH(resource_schema=User)
+    schema_cls = create_request_schema(validator, lambda: RequestContext())
+
+    dumped = schema_cls().dump(user_patch_deserialized)
+
+    assert dumped == user_patch_serialized
+
+
+def test_resource_patch_request_can_be_loaded(user_patch_serialized, user_patch_deserialized):
+    validator = ResourceObjectPATCH(resource_schema=User)
+    schema_cls = create_request_schema(validator, lambda: RequestContext())
+
+    loaded = schema_cls().load(user_patch_serialized)
+
+    assert loaded == user_patch_deserialized
+
+
+def test_resource_patch_request_can_be_validated(user_patch_serialized):
+    validator = ResourceObjectPATCH(resource_schema=User)
+    schema_cls = create_request_schema(validator, lambda: RequestContext())
+    user_patch_serialized["Operations"][0]["value"]["displayName"] = "John Doe"
+    user_patch_serialized["Operations"][1]["path"] = "bad^attr"
+    user_patch_serialized["Operations"][2]["value"]["nickName"] = 123  # noqa
+    user_patch_serialized["Operations"][3]["op"] = "delete"
+    expected_issues = {
+        "body": {
+            "Operations": {
+                "0": {"value": {"displayName": ["attribute can not be modified"]}},
+                "1": {"path": ["bad attribute name 'bad^attr'"]},
+                "2": {"value": {"nickName": ["bad type, expecting 'string'"]}},
+                "3": {"op": ["must be one of: ['add', 'remove', 'replace']"]},
+            }
+        }
+    }
+
+    issues = schema_cls().validate(user_patch_serialized)
 
     assert issues == expected_issues

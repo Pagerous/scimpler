@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, Callable
 
-from src.config import create_service_provider_config, ServiceProviderConfig
+from src.config import ServiceProviderConfig, create_service_provider_config
 
 if TYPE_CHECKING:
     from src.container import SchemaURI

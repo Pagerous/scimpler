@@ -1,8 +1,8 @@
-from src.config import create_service_provider_config
 from src.assets.schemas.search_request import (
     SearchRequest,
     create_search_request_schema,
 )
+from src.config import create_service_provider_config
 from src.container import AttrRep
 
 

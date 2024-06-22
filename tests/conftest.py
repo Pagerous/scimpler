@@ -2,9 +2,10 @@ from copy import deepcopy
 
 import pytest
 
-from src.config import create_service_provider_config
+from src import registry
 from src.assets.schemas import Group, User
 from src.assets.schemas.user import EnterpriseUserExtension
+from src.config import create_service_provider_config
 from src.data.attrs import (
     Binary,
     Boolean,
@@ -18,7 +19,6 @@ from src.data.attrs import (
     URIReference,
 )
 from src.data.schemas import ResourceSchema
-from src import registry
 
 
 @pytest.fixture(scope="session", autouse=True)
