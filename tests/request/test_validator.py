@@ -1341,70 +1341,14 @@ def test_bulk_operations_data_not_validated_if_bad_resource_name():
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_request_is_valid_if_correct_data() -> None:
+def test_bulk_operations_request_is_valid_if_correct_data(
+    bulk_request_serialized, bulk_request_deserialized
+) -> None:
     validator = BulkOperations(CONFIG, resource_schemas=[User])
-    data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
-        "failOnErrors": 1,
-        "Operations": [
-            {
-                "method": "POST",
-                "path": "/Users",
-                "bulkId": "qwerty",
-                "data": {
-                    "schemas": [
-                        "urn:ietf:params:scim:schemas:core:2.0:User",
-                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                    ],
-                    "userName": "Alice",
-                },
-            },
-            {
-                "method": "PUT",
-                "path": "/Users/b7c14771-226c-4d05-8860-134711653041",
-                "version": 'W/"3694e05e9dff591"',
-                "data": {
-                    "schemas": [
-                        "urn:ietf:params:scim:schemas:core:2.0:User",
-                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                    ],
-                    "id": "b7c14771-226c-4d05-8860-134711653041",
-                    "userName": "Bob",
-                },
-            },
-            {
-                "method": "PATCH",
-                "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
-                "version": 'W"edac3253e2c0ef2"',
-                "data": {
-                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-                    "Operations": [
-                        {"op": "remove", "path": "nickName"},
-                        {"op": "add", "path": "userName", "value": "Dave"},
-                    ],
-                },
-            },
-            {
-                "method": "DELETE",
-                "path": "/Users/e9025315-6bea-44e1-899c-1e07454e468b",
-                "version": 'W/"0ee8add0a938e1a"',
-            },
-        ],
-    }
-    expected_body: dict = deepcopy(data)
-    expected_body["Operations"][1]["data"] = {"userName": "Bob"}
-    expected_body["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath(
-        attr_rep=AttrRep(attr="nickName"), filter_=None, sub_attr_name=None
-    )
-    expected_body["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath(
-        attr_rep=AttrRep(attr="userName"), filter_=None, sub_attr_name=None
-    )
 
-    issues = validator.validate_request(body=data)
+    issues = validator.validate_request(body=bulk_request_serialized)
 
     assert issues.to_dict(msg=True) == {}
-
-    assert validator.request_schema.deserialize(data)
 
 
 def test_bulk_operations_request_validation_fails_for_bad_data():

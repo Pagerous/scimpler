@@ -367,3 +367,44 @@ def test_resource_patch_request_can_be_validated(user_patch_serialized):
     issues = schema_cls().validate(user_patch_serialized)
 
     assert issues == expected_issues
+
+
+def test_bulk_request_can_be_dumped(bulk_request_deserialized, bulk_request_serialized):
+    validator = BulkOperations(resource_schemas=[User, Group])
+    schema_cls = create_request_schema(validator)
+
+    dumped = schema_cls().dump(bulk_request_deserialized)
+
+    assert dumped == bulk_request_serialized
+
+
+def test_bulk_request_can_be_loaded(bulk_request_deserialized, bulk_request_serialized):
+    validator = BulkOperations(resource_schemas=[User, Group])
+    schema_cls = create_request_schema(validator, lambda: RequestContext())
+
+    loaded = schema_cls().load(bulk_request_serialized)
+
+    assert loaded == bulk_request_deserialized
+
+
+def test_bulk_request_can_be_validated(bulk_request_serialized):
+    validator = BulkOperations(resource_schemas=[User, Group])
+    schema_cls = create_request_schema(validator, lambda: RequestContext())
+    bulk_request_serialized["Operations"][0]["data"]["schemas"].append("unknown:schema")
+    bulk_request_serialized["Operations"][1]["data"]["userName"] = 123
+    bulk_request_serialized["Operations"][2]["data"]["Operations"][1]["path"] = "nonExisting"
+    bulk_request_serialized["Operations"][3]["method"] = "ANNIHILATE"
+    expected_issues = {
+        "body": {
+            "Operations": {
+                "0": {"data": {"schemas": ["unknown schema"]}},
+                "1": {"data": {"userName": ["bad type, expecting 'string'"]}},
+                "2": {"data": {"Operations": {"1": {"path": ["unknown modification target"]}}}},
+                "3": {"method": ["must be one of: ['get', 'post', 'patch', 'put', 'delete']"]},
+            }
+        }
+    }
+
+    issues = schema_cls().validate(bulk_request_serialized)
+
+    assert issues == expected_issues

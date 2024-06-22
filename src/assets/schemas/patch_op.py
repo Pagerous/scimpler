@@ -301,6 +301,10 @@ class PatchOp(BaseSchema):
                 )
             if path_str:
                 processed_operation["path"] = path_str
+
+            if processed_operation.get("value") is None:
+                processed_operation.pop("value", None)
+
             processed.append(SCIMDataContainer(processed_operation))
         data.set(self.attrs.operations, processed)
         return data

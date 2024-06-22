@@ -6,6 +6,7 @@ from src import registry
 from src.assets.schemas import Group, User
 from src.assets.schemas.user import EnterpriseUserExtension
 from src.config import create_service_provider_config
+from src.container import SCIMDataContainer
 from src.data.attrs import (
     Binary,
     Boolean,
@@ -18,6 +19,7 @@ from src.data.attrs import (
     String,
     URIReference,
 )
+from src.data.patch_path import PatchPath
 from src.data.schemas import ResourceSchema
 
 
@@ -253,6 +255,70 @@ def error_data():
         "scimType": "tooMany",
         "detail": "you did wrong, bro",
     }
+
+
+@pytest.fixture
+def bulk_request_serialized():
+    return {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "failOnErrors": 1,
+        "Operations": [
+            {
+                "method": "POST",
+                "path": "/Users",
+                "bulkId": "qwerty",
+                "data": {
+                    "schemas": [
+                        "urn:ietf:params:scim:schemas:core:2.0:User",
+                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                    ],
+                    "userName": "Alice",
+                },
+            },
+            {
+                "method": "PUT",
+                "path": "/Users/b7c14771-226c-4d05-8860-134711653041",
+                "version": 'W/"3694e05e9dff591"',
+                "data": {
+                    "schemas": [
+                        "urn:ietf:params:scim:schemas:core:2.0:User",
+                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                    ],
+                    "id": "b7c14771-226c-4d05-8860-134711653041",
+                    "userName": "Bob",
+                },
+            },
+            {
+                "method": "PATCH",
+                "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
+                "version": 'W"edac3253e2c0ef2"',
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                    "Operations": [
+                        {"op": "remove", "path": "nickName"},
+                        {"op": "add", "path": "userName", "value": "Dave"},
+                    ],
+                },
+            },
+            {
+                "method": "DELETE",
+                "path": "/Users/e9025315-6bea-44e1-899c-1e07454e468b",
+                "version": 'W/"0ee8add0a938e1a"',
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def bulk_request_deserialized(bulk_request_serialized):
+    deserialized: dict = deepcopy(bulk_request_serialized)
+    deserialized["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath.deserialize(
+        deserialized["Operations"][2]["data"]["Operations"][0]["path"]
+    )
+    deserialized["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath.deserialize(
+        deserialized["Operations"][2]["data"]["Operations"][1]["path"]
+    )
+    return SCIMDataContainer(deserialized)
 
 
 @pytest.fixture
