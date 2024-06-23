@@ -61,7 +61,7 @@ class ListResponse(BaseSchema):
         if resource_presence_config is None:
             resource_presence_config = AttrPresenceConfig("RESPONSE")
 
-        resource_schemas = self.get_schemas_for_resources(resources)
+        resource_schemas = self.get_schemas(resources)
         for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
             if resource is Invalid:
                 continue
@@ -98,7 +98,7 @@ class ListResponse(BaseSchema):
     def _process_resources(self, resources: list[Any], method: str) -> list[dict[str, Any]]:
         if not isinstance(resources, list):
             return []
-        schemas = self.get_schemas_for_resources(resources)
+        schemas = self.get_schemas(resources)
         serialized_resources: list[dict[str, Any]] = []
         for i, (resource, schema) in enumerate(zip(resources, schemas)):
             if schema is None:
@@ -107,10 +107,7 @@ class ListResponse(BaseSchema):
                 serialized_resources.append(getattr(schema, method)(resource))
         return serialized_resources
 
-    def get_schemas_for_resources(
-        self,
-        resources: list[Any],
-    ) -> list[Optional[BaseResourceSchema]]:
+    def get_schemas(self, resources: list[Any]) -> list[Optional[BaseResourceSchema]]:
         resource_schemas: list[Optional[BaseResourceSchema]] = []
         n_schemas = len(self._contained_schemas)
         for resource in resources:
@@ -121,11 +118,11 @@ class ListResponse(BaseSchema):
             elif n_schemas == 1:
                 resource_schemas.append(self._contained_schemas[0])
             else:
-                resource_schemas.append(self._infer_schema_from_data(resource))
+                resource_schemas.append(self.get_schema(resource))
         return resource_schemas
 
-    def _infer_schema_from_data(self, data: SCIMDataContainer) -> Optional[BaseResourceSchema]:
-        schemas_value = data.get("schemas")
+    def get_schema(self, resource: SCIMDataContainer) -> Optional[BaseResourceSchema]:
+        schemas_value = resource.get("schemas")
         if isinstance(schemas_value, list) and len(schemas_value) > 0:
             schemas_value = {
                 item.lower() if isinstance(item, str) else item for item in schemas_value

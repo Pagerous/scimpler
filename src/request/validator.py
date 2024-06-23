@@ -597,9 +597,7 @@ def _validate_resources_get_response(
     if issues.has_errors(resources_location):
         return issues
 
-    resource_schemas = cast(
-        Sequence[BaseResourceSchema], schema.get_schemas_for_resources(resources)
-    )
+    resource_schemas = cast(Sequence[BaseResourceSchema], schema.get_schemas(resources))
     if filter_ is not None and can_validate_filtering(filter_, resource_presence_config):
         issues.merge(
             issues=_validate_resources_filtered(filter_, resources, resource_schemas),

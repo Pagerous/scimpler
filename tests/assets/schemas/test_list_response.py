@@ -142,7 +142,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data
 def test_get_schema_for_resources(data, expected):
     schema = list_response.ListResponse([user.User, user.User])
 
-    actual = schema.get_schemas_for_resources(data)
+    actual = schema.get_schemas(data)
 
     assert isinstance(actual, type(expected))
 
@@ -199,7 +199,7 @@ def test_get_schema_for_resources(data, expected):
 def test_get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(data, expected):
     schema = list_response.ListResponse([user.User])
 
-    actual = schema.get_schemas_for_resources(data)
+    actual = schema.get_schemas(data)
 
     assert isinstance(actual, type(expected))
 
@@ -273,7 +273,7 @@ def test_bad_resources_type_is_validated(user_data_client):
 def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schemas():
     schema = list_response.ListResponse(resource_schemas=[user.User, group.Group])
 
-    schemas = schema.get_schemas_for_resources([{"userName": "some_user"}])
+    schemas = schema.get_schemas([{"userName": "some_user"}])
 
     assert len(schemas) == 1
     assert schemas[0] is None
@@ -282,9 +282,7 @@ def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schem
 def test_no_schema_is_inferred_for_resource_with_unknown_schemas_and_many_schemas():
     schema = list_response.ListResponse(resource_schemas=[user.User, group.Group])
 
-    schemas = schema.get_schemas_for_resources(
-        [{"schemas": ["unknown:schema"], "userName": "some_user"}]
-    )
+    schemas = schema.get_schemas([{"schemas": ["unknown:schema"], "userName": "some_user"}])
 
     assert len(schemas) == 1
     assert schemas[0] is None

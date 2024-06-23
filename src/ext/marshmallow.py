@@ -177,22 +177,21 @@ def _get_list_response_processors(
     processors_ = {}
 
     def deserialize(data):
-        resources_ = data.pop("Resources", [])
+        resources = data.pop("Resources", [])
         deserialized = scimple_schema.deserialize(data)
         deserialized_resources = []
-        for resource in resources_:
-            schema_uris = [
-                item.lower() for item in resource.get("schemas", []) if isinstance(item, str)
-            ]
-            for resource_schema in scimple_schema.contained_schemas:
-                if resource_schema.schema in schema_uris:
-                    marshmallow_schema = _create_schema(
-                        scimple_schema=resource_schema,
-                        processors=Processors(),
-                        context_provider=None,
-                        validator=None,
-                    )()
-                    deserialized_resources.append(marshmallow_schema.load(resource))
+        for resource in resources:
+            resource_schema = scimple_schema.get_schema(SCIMDataContainer(resource))
+            if resource_schema is None:
+                deserialized_resource = SCIMDataContainer()
+            else:
+                deserialized_resource = _create_schema(
+                    scimple_schema=resource_schema,
+                    processors=Processors(),
+                    context_provider=None,
+                    validator=None,
+                )().load(resource)
+            deserialized_resources.append(deserialized_resource)
         if deserialized_resources:
             deserialized.set("Resources", deserialized_resources)
         return deserialized.to_dict()
@@ -217,19 +216,17 @@ def _get_list_response_processors(
         serialized = scimple_schema.serialize(data)
         serialized_resources = []
         for resource in resources_:
-            resource_dict = resource.to_dict()
-            schema_uris = [
-                item.lower() for item in resource_dict.get("schemas", []) if isinstance(item, str)
-            ]
-            for resource_schema in scimple_schema.contained_schemas:
-                if resource_schema.schema in schema_uris:
-                    marshmallow_schema = _create_schema(
-                        scimple_schema=resource_schema,
-                        processors=Processors(),
-                        context_provider=None,
-                        validator=None,
-                    )
-                    serialized_resources.append(marshmallow_schema().dump(resource_dict))
+            resource_schema = scimple_schema.get_schema(resource)
+            if resource_schema is None:
+                serialized_resource = {}
+            else:
+                serialized_resource = _create_schema(
+                    scimple_schema=resource_schema,
+                    processors=Processors(),
+                    context_provider=None,
+                    validator=None,
+                )().dump(resource.to_dict())
+            serialized_resources.append(serialized_resource)
         if serialized_resources:
             serialized["Resources"] = serialized_resources
         return serialized
@@ -237,7 +234,6 @@ def _get_list_response_processors(
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
     processors_["_post_load"] = marshmallow.post_load(_post_load)
     processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
-
     return processors_
 
 
@@ -329,12 +325,11 @@ def _get_patch_op_processors(
     processors_ = {}
 
     def deserialize(data):
+        values = [operation.pop("value", Missing) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
-        for operation in deserialized.get("Operations") or []:
-            value = operation.get("value")
+        for operation, value in zip(deserialized.get("Operations") or [], values):
             if value is Missing:
                 continue
-
             value_schema = _create_schema(
                 scimple_schema=scimple_schema.get_value_schema(
                     path=operation.get("path"),
@@ -363,10 +358,10 @@ def _get_patch_op_processors(
         return SCIMDataContainer(data)
 
     def _pre_dump(_, data, **__):
+        values = [operation.pop("value") for operation in data.get("Operations") or []]
         serialized = scimple_schema.serialize(data)
-        for operation in serialized.get("Operations", []):
-            value = operation.get("value")
-            if value is None:
+        for operation, value in zip(serialized.get("Operations", []), values):
+            if value in [None, Missing]:
                 continue
             value_schema = _create_schema(
                 scimple_schema=scimple_schema.get_value_schema(
@@ -418,12 +413,11 @@ def _get_bulk_response_processors(
         raise marshmallow.ValidationError("unknown resource")
 
     def deserialize(data):
+        responses = [operation.pop("response") for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
-        for operation in deserialized.get("Operations") or []:
-            operation_dict = operation.to_dict()
-            response = operation_dict.get("response")
+        for operation, response in zip(deserialized.get("Operations") or [], responses):
             if response:
-                response_schema = _get_operation_response_schema(operation_dict)
+                response_schema = _get_operation_response_schema(operation.to_dict())
                 operation.set("response", response_schema().load(response))
         return deserialized.to_dict()
 
@@ -443,12 +437,12 @@ def _get_bulk_response_processors(
         return SCIMDataContainer(data)
 
     def _pre_dump(_, data, **__):
+        responses = [operation.pop("response") for operation in data.get("Operations") or []]
         serialized = scimple_schema.serialize(data)
-        for operation in serialized.get("Operations", []):
-            response = operation.get("response")
+        for operation, response in zip(serialized.get("Operations", []), responses):
             if response:
                 response_schema = _get_operation_response_schema(operation)
-                operation["response"] = response_schema().dump(operation.get("response"))
+                operation["response"] = response_schema().dump(response)
         return serialized
 
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
@@ -517,12 +511,12 @@ def _get_bulk_request_processors(
         return SCIMDataContainer(data)
 
     def _pre_dump(_, data, **__):
+        operation_data = [operation.pop("data") for operation in data.get("Operations") or []]
         serialized = scimple_schema.serialize(data)
-        for operation in serialized.get("Operations", []):
-            data = operation.get("data")
-            if data:
+        for operation, data_item in zip(serialized.get("Operations", []), operation_data):
+            if data_item:
                 request_schema = _get_operation_request_schema(operation)
-                operation["data"] = request_schema().dump(data)
+                operation["data"] = request_schema().dump(data_item)
         return serialized
 
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
