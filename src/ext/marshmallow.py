@@ -6,9 +6,9 @@ import marshmallow
 from src.assets.schemas import BulkRequest, BulkResponse, ListResponse, PatchOp
 from src.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
 from src.data import attrs
-from src.data.patch_path import PatchPath
+from src.data.attrs import Attribute
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.request.validator import BulkOperations, Error, Validator
+from src.request.validator import BulkOperations, Validator
 
 _marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
 
@@ -97,12 +97,7 @@ def _get_fields(
         if attr_rep in field_by_attr_rep:
             field = field_by_attr_rep[attr_rep]
         else:
-            if attr.has_custom_processing:
-                field = marshmallow.fields.Raw
-            else:
-                field = _get_field(attr)
-            if attr.multi_valued:
-                field = marshmallow.fields.List(field)
+            field = _get_field(attr)
         fields_[str(attr_rep.attr)] = field
     return fields_
 
@@ -117,20 +112,22 @@ def _get_complex_sub_fields(
         if name in field_by_attr_name:
             field = field_by_attr_name[name]
         else:
-            if attr.has_custom_processing:
-                field = marshmallow.fields.Raw()
-            else:
-                field = _get_field(attr)
-            if attr.multi_valued:
-                field = marshmallow.fields.List(field)
+            field = _get_field(attr)
         fields_[str(name)] = field
     return fields_
 
 
-def _get_field(attr, **kwargs):
-    if isinstance(attr, attrs.Complex):
-        return marshmallow.fields.Nested(_get_complex_sub_fields(attr.attrs))
-    return _marshmallow_field_by_attr_type[type(attr)](**kwargs)
+def _get_field(attr):
+    if attr.has_custom_processing:
+        field = marshmallow.fields.Raw()
+    else:
+        if isinstance(attr, attrs.Complex):
+            field = marshmallow.fields.Nested(_get_complex_sub_fields(attr.attrs))
+        else:
+            field = _marshmallow_field_by_attr_type[type(attr)]()
+    if attr.multi_valued:
+        field = marshmallow.fields.List(field)
+    return field
 
 
 def _transform_errors_dict(input_dict):
@@ -285,6 +282,9 @@ def _get_resource_processors(
             return deserialize(data)
 
     def _post_load(_, data, original_data, **__):
+        if isinstance(original_data, SCIMDataContainer):
+            original_data = original_data.to_dict()
+
         for extension_uri in scimple_schema.extensions:
             extension_uri_lower = extension_uri.lower()
             for k in original_data:
@@ -314,9 +314,9 @@ def _get_resource_processors(
                     )
         return serialized
 
-    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
     processors_["_post_load"] = marshmallow.post_load(_post_load, pass_original=True)
-    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
 
     return processors_
 
@@ -331,55 +331,20 @@ def _get_patch_op_processors(
     def deserialize(data):
         deserialized = scimple_schema.deserialize(data)
         for operation in deserialized.get("Operations") or []:
-            path = operation.get("path")
             value = operation.get("value")
             if value is Missing:
                 continue
 
-            resource_request_schema = _create_schema(
-                scimple_schema=scimple_schema.resource_schema,
+            value_schema = _create_schema(
+                scimple_schema=scimple_schema.get_value_schema(
+                    path=operation.get("path"),
+                    value=value,
+                ),
                 processors=Processors(validator=None),
                 context_provider=None,
                 validator=None,
-            )()
-
-            if isinstance(value, SCIMDataContainer):
-                value_ = value.to_dict()
-            elif isinstance(value, list):
-                value_ = [
-                    item.to_dict() if isinstance(item, SCIMDataContainer) else item
-                    for item in value
-                ]
-            else:
-                value_ = value
-
-            if isinstance(path, PatchPath):
-                attr = scimple_schema.resource_schema.attrs.get_by_path(path)
-                if attr is None:
-                    raise ValueError(f"target indicated by path {path!r} does not exist")
-
-                if not path.sub_attr_name:
-                    if path.has_filter and not isinstance(value_, list):
-                        operation.set(
-                            "value",
-                            resource_request_schema.fields[str(attr.name)].deserialize([value_])[0],
-                        )
-                    else:
-                        operation.set(
-                            "value",
-                            resource_request_schema.fields[str(attr.name)].deserialize(value_),
-                        )
-                else:
-                    parent_field = resource_request_schema.fields[str(path.attr_rep.attr)]
-                    if not isinstance(parent_field, marshmallow.fields.Nested):
-                        raise TypeError(f"{path.attr_rep} is not complex")
-
-                    operation.set(
-                        "value",
-                        parent_field.nested[str(attr.name)].deserialize(value_),
-                    )
-            else:
-                operation.set("value", resource_request_schema.load(value_))
+            )
+            operation.set("value", value_schema().load(value))
         return deserialized.to_dict()
 
     if processors.validator:
@@ -400,47 +365,24 @@ def _get_patch_op_processors(
     def _pre_dump(_, data, **__):
         serialized = scimple_schema.serialize(data)
         for operation in serialized.get("Operations", []):
-            path_str = operation.get("path")
             value = operation.get("value")
             if value is None:
                 continue
-
-            resource_request_schema = _create_schema(
-                scimple_schema=scimple_schema.resource_schema,
+            value_schema = _create_schema(
+                scimple_schema=scimple_schema.get_value_schema(
+                    path=operation.get("path"),
+                    value=value,
+                ),
                 processors=Processors(validator=None),
                 context_provider=None,
                 validator=None,
-            )()
-            if isinstance(path_str, str):
-                path = PatchPath.deserialize(path_str)
-                attr = scimple_schema.resource_schema.attrs.get_by_path(path)
-                if attr is None:
-                    raise ValueError(f"target indicated by path {path!r} does not exist")
-
-                if not path.sub_attr_name:
-                    if path.has_filter and not isinstance(value, list):
-                        operation["value"] = resource_request_schema.fields[
-                            str(attr.name)
-                        ].serialize(str(attr.name), {str(attr.name): [value]})[0]
-                    else:
-                        operation["value"] = resource_request_schema.fields[
-                            str(attr.name)
-                        ].serialize(str(attr.name), {str(attr.name): value})
-                else:
-                    parent_field = resource_request_schema.fields[str(path.attr_rep.attr)]
-                    if not isinstance(parent_field, marshmallow.fields.Nested):
-                        raise TypeError(f"{path.attr_rep} is not complex")
-
-                    operation["value"] = parent_field.nested[str(attr.name)].serialize(
-                        str(attr.name), {str(attr.name): value}
-                    )
-            else:
-                operation["value"] = resource_request_schema.dump(value)
+            )
+            operation["value"] = value_schema().dump(value)
         return serialized
 
-    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
     processors_["_post_load"] = marshmallow.post_load(_post_load)
-    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
 
     return processors_
 
@@ -457,7 +399,7 @@ def _get_bulk_response_processors(
         status = int(operation["status"])
         if status >= 300:
             return _create_schema(
-                scimple_schema=Error().response_schema,
+                scimple_schema=validator.error_validator.response_schema,
                 processors=Processors(validator=None),
                 context_provider=None,
                 validator=None,
@@ -509,9 +451,9 @@ def _get_bulk_response_processors(
                 operation["response"] = response_schema().dump(operation.get("response"))
         return serialized
 
-    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
     processors_["_post_load"] = marshmallow.post_load(_post_load)
-    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
 
     return processors_
 
@@ -583,9 +525,9 @@ def _get_bulk_request_processors(
                 operation["data"] = request_schema().dump(data)
         return serialized
 
-    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
     processors_["_post_load"] = marshmallow.post_load(_post_load)
-    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
 
     return processors_
 
@@ -622,16 +564,56 @@ def _get_generic_processors(
     def _pre_dump(_, data, **__):
         return scimple_schema.serialize(data)
 
-    processors_["_pre_load"] = marshmallow.pre_load(_pre_load, pass_many=False)
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
     processors_["_post_load"] = marshmallow.post_load(_post_load)
-    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump, pass_many=False)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
+
+    return processors_
+
+
+def _get_generic_attr_processors(
+    scimple_schema: Attribute,
+):
+    processors_ = {}
+
+    def _pre_load(_, data, **__):
+        deserialized = scimple_schema.deserialize(data)
+        if isinstance(deserialized, SCIMDataContainer):
+            deserialized = deserialized.to_dict()
+        elif isinstance(deserialized, list):
+            deserialized = [
+                item.to_dict() if isinstance(item, SCIMDataContainer) else item
+                for item in deserialized
+            ]
+        return {str(scimple_schema.name): deserialized}
+
+    def _post_load(_, data, **__):
+        data = data.get(str(scimple_schema.name))
+        if data is None:
+            return data
+        if isinstance(data, dict):
+            return SCIMDataContainer(data)
+        if isinstance(data, list):
+            return [SCIMDataContainer(item) if isinstance(item, dict) else item for item in data]
+        return data
+
+    def _pre_dump(_, data, **__):
+        return {str(scimple_schema.name): scimple_schema.serialize(data)}
+
+    def _post_dump(_, data, **__):
+        return data.get(str(scimple_schema.name))
+
+    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
+    processors_["_post_load"] = marshmallow.post_load(_post_load)
+    processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
+    processors_["_post_dump"] = marshmallow.post_dump(_post_dump)
 
     return processors_
 
 
 def _include_processing_in_schema(
     schema_cls: type[marshmallow.Schema],
-    scimple_schema: BaseSchema,
+    scimple_schema: Union[BaseSchema, Attribute],
     processors: Processors,
     context_provider: Optional[Union[ResponseContextProvider, ResponseContextProvider]],
     validator: Optional[Validator],
@@ -668,6 +650,10 @@ def _include_processing_in_schema(
             processors=processors,
             context_provider=context_provider,
         )
+    elif isinstance(scimple_schema, Attribute):
+        processors = _get_generic_attr_processors(
+            scimple_schema=scimple_schema,
+        )
     else:
         processors = _get_generic_processors(
             scimple_schema=scimple_schema,
@@ -683,30 +669,35 @@ def _include_processing_in_schema(
 
 
 def _create_schema(
-    scimple_schema: BaseSchema,
+    scimple_schema: Union[BaseSchema, Attribute],
     processors: Processors,
     context_provider: Optional[Union[ResponseContextProvider, RequestContextProvider]],
     validator: Optional[Validator],
 ) -> type[marshmallow.Schema]:
-    if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:
-        fields = _get_fields(
-            scimple_schema.attrs,
-            field_by_attr_rep={
-                scimple_schema.attrs.resources: marshmallow.fields.List(
-                    marshmallow.fields.Nested(
-                        _get_fields(scimple_schema.contained_schemas[0].attrs)
-                    ),
-                )
-            },
-        )
-    else:
-        fields = _get_fields(scimple_schema.attrs)
+    if isinstance(scimple_schema, BaseSchema):
+        if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:
+            fields = _get_fields(
+                scimple_schema.attrs,
+                field_by_attr_rep={
+                    scimple_schema.attrs.resources: marshmallow.fields.List(
+                        marshmallow.fields.Nested(
+                            _get_fields(scimple_schema.contained_schemas[0].attrs)
+                        ),
+                    )
+                },
+            )
+        else:
+            fields = _get_fields(scimple_schema.attrs)
 
-    if isinstance(scimple_schema, ResourceSchema):
-        extension_fields = {}
-        for extension_uri, attrs_ in scimple_schema.attrs.extensions.items():
-            extension_fields[str(extension_uri)] = marshmallow.fields.Nested(_get_fields(attrs_))
-        fields.update(extension_fields)
+        if isinstance(scimple_schema, ResourceSchema):
+            extension_fields = {}
+            for extension_uri, attrs_ in scimple_schema.attrs.extensions.items():
+                extension_fields[str(extension_uri)] = marshmallow.fields.Nested(
+                    _get_fields(attrs_)
+                )
+            fields.update(extension_fields)
+    else:
+        fields = {str(scimple_schema.name): _get_field(scimple_schema)}
 
     schema_cls = cast(type[marshmallow.Schema], marshmallow.Schema.from_dict(fields={**fields}))
     return _include_processing_in_schema(

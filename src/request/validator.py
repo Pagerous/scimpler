@@ -925,22 +925,28 @@ class BulkOperations(Validator):
         }
         for resource_schema in resource_schemas:
             self._validators["GET"][resource_schema.plural_name] = ResourceObjectGET(
-                config, resource_schema=resource_schema
+                self.config, resource_schema=resource_schema
             )
             self._validators["POST"][resource_schema.plural_name] = ResourcesPOST(
-                config, resource_schema=resource_schema
+                self.config, resource_schema=resource_schema
             )
             self._validators["PUT"][resource_schema.plural_name] = ResourceObjectPUT(
-                config, resource_schema=resource_schema
+                self.config, resource_schema=resource_schema
             )
             self._validators["PATCH"][resource_schema.plural_name] = ResourceObjectPATCH(
-                config, resource_schema=resource_schema
+                self.config, resource_schema=resource_schema
             )
-            self._validators["DELETE"][resource_schema.plural_name] = ResourceObjectDELETE(config)
+            self._validators["DELETE"][resource_schema.plural_name] = ResourceObjectDELETE(
+                self.config
+            )
 
         self._request_schema = bulk_ops.BulkRequest()
         self._response_schema = bulk_ops.BulkResponse()
-        self._error_validator = Error(config)
+        self._error_validator = Error(self.config)
+
+    @property
+    def error_validator(self) -> Error:
+        return self._error_validator
 
     @property
     def sub_validators(self) -> dict[str, dict[str, Validator]]:
@@ -1029,7 +1035,7 @@ class BulkOperations(Validator):
         )
         issues.merge(
             issues=_validate_status_code(200, status_code),
-            location=("status",),
+            location=["status"],
         )
         operations_location = body_location + self._response_schema.attrs.operations.location
         if not issues.can_proceed(operations_location):

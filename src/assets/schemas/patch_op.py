@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Any, Optional, Union, cast
 
 from src.container import Invalid, Missing, MissingType, SCIMDataContainer
@@ -281,29 +282,17 @@ class PatchOp(BaseSchema):
         processed = []
         for operation in data.get(self.attrs.operations):
             op = operation.get("op")
-            path_str = operation.get("path")
+            path = operation.get("path")
             value = operation.get("value")
-            attr: Optional[Attribute] = None
-            path: Optional[PatchPath] = None
-            if path_str:
-                path = PatchPath.deserialize(path_str)
-                attr = self._resource_schema.attrs.get_by_path(path)
-                if attr is None:
-                    raise ValueError(f"target indicated by path {path!r} does not exist")
-
             processed_operation = {"op": op}
-            if op in ["add", "replace"]:
+            if op in ["add", "replace"] and value not in [None, Missing]:
                 processed_operation["value"] = self._process_operation_value(
-                    attr=attr,
                     path=path,
                     value=value,
                     method="serialize",
                 )
-            if path_str:
-                processed_operation["path"] = path_str
-
-            if processed_operation.get("value") is None:
-                processed_operation.pop("value", None)
+            if path:
+                processed_operation["path"] = path
 
             processed.append(SCIMDataContainer(processed_operation))
         data.set(self.attrs.operations, processed)
@@ -315,43 +304,56 @@ class PatchOp(BaseSchema):
         values = data.get(self.attrs.operations__value)
         processed = []
         for op, path, value in zip(ops, paths, values):
-            attr: Optional[Attribute] = None
-            if isinstance(path, PatchPath):
-                attr = self._resource_schema.attrs.get_by_path(path)
-                if attr is None:
-                    raise ValueError(f"target indicated by path {path!r} does not exist")
-
             processed_operation = {"op": op}
             if op in ["add", "replace"]:
-                processed_operation["value"] = self._process_operation_value(
-                    attr=attr,
-                    path=path,
-                    value=value,
-                    method="deserialize",
-                )
+                if value in [None, Missing]:
+                    processed_operation["value"] = None
+                else:
+                    processed_operation["value"] = self._process_operation_value(
+                        path=path,
+                        value=value,
+                        method="deserialize",
+                    )
             if path:
                 processed_operation["path"] = path
             processed.append(SCIMDataContainer(processed_operation))
         data.set(self.attrs.operations, processed)
         return data
 
+    def get_value_schema(
+        self,
+        path: Union[str, PatchPath, None, MissingType],
+        value: Any,
+    ) -> Union[BaseSchema, Attribute]:
+        if not isinstance(path, (str, PatchPath)):
+            return self._resource_schema
+
+        if isinstance(path, str):
+            path_normalized = PatchPath.deserialize(path)
+        else:
+            path_normalized = path
+
+        attr = self._resource_schema.attrs.get_by_path(path_normalized)
+        if attr is None:
+            raise ValueError(f"target indicated by path {path!r} does not exist")
+
+        if (
+            path_normalized.has_filter
+            and not path_normalized.sub_attr_name
+            and not isinstance(value, list)
+        ):
+            attr = cast(Attribute, copy(attr))
+            attr._multi_valued = False
+            return attr
+        return attr
+
     def _process_operation_value(
         self,
-        attr: Optional[Attribute],
         path: Union[PatchPath, None, MissingType],
         value: Any,
         method: str,
     ) -> Any:
-        if value in [Missing, None]:
-            return None
-
-        if not isinstance(path, PatchPath):
-            return getattr(self._resource_schema, method)(value)
-
-        attr_ = cast(Attribute, attr)
-        if path.has_filter and not path.sub_attr_name and not isinstance(value, list):
-            return getattr(attr_, method)([value])[0]
-        return getattr(attr_, method)(value)
+        return getattr(self.get_value_schema(path, value), method)(value)
 
 
 def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:
