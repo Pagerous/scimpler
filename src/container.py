@@ -1,4 +1,5 @@
 import re
+from collections.abc import MutableMapping
 from dataclasses import dataclass
 from typing import Any, Optional, Union, cast
 
@@ -213,7 +214,7 @@ class _BoundedAttrKey(_AttrKey):
     extension: bool
 
 
-class SCIMData:
+class SCIMData(MutableMapping):
     def __init__(self, d: Optional[Union[dict[str, Any], dict[AttrRep, Any], "SCIMData"]] = None):
         self._data: dict[str, Any] = {}
         self._lower_case_to_original: dict[str, str] = {}
@@ -243,6 +244,26 @@ class SCIMData:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({str(self._data)})"
+
+    def __getitem__(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey]):
+        value = self.get(key)
+        if value is Missing:
+            raise KeyError(key)
+        return value
+
+    def __setitem__(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey], value: Any):
+        self.set(key, value)
+
+    def __delitem__(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey]):
+        value = self.pop(key)
+        if value is Missing:
+            raise KeyError(key)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __iter__(self):
+        return iter(self._data)
 
     def set(
         self,
@@ -292,25 +313,25 @@ class SCIMData:
 
         self._data[parent_attr_key].set(_AttrKey(attr=key.sub_attr, sub_attr=None), value)
 
-    def get(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey]):
+    def get(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey], default: Any = Missing) -> Any:
         if not isinstance(key, (_SchemaKey, _AttrKey)):
             key = self._normalize(key)
 
         if isinstance(key, _SchemaKey):
             extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
-                return Missing
-            return self._data.get(extension, Missing)
+                return default
+            return self._data.get(extension, default)
 
         if isinstance(key, _BoundedAttrKey) and key.extension:
             extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
-                return Missing
+                return default
             return self._data[extension].get(_AttrKey(attr=key.attr, sub_attr=key.sub_attr))
 
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
-            return Missing
+            return default
 
         if key.sub_attr:
             attr_value = self._data[attr]
@@ -320,45 +341,47 @@ class SCIMData:
                 return [
                     item.get(_AttrKey(attr=key.sub_attr, sub_attr=None))
                     if isinstance(item, SCIMData)
-                    else Missing
+                    else default
                     for item in attr_value
                 ]
-            return Missing
-        return self._data[attr]
+            return default
+        return self._data.get(attr, default)
 
-    def pop(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey]):
+    def pop(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey], default: Any = Missing) -> Any:
         if not isinstance(key, (_SchemaKey, _AttrKey)):
             key = self._normalize(key)
 
         if isinstance(key, _SchemaKey):
             extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
-                return Missing
-            return self._data.pop(extension, Missing)
+                return default
+            return self._data.pop(extension, default)
 
         elif isinstance(key, _BoundedAttrKey) and key.extension:
             extension = self._lower_case_to_original.get(key.schema.lower())
             if extension is None:
-                return Missing
-            return self._data[extension].pop(_AttrKey(attr=key.attr, sub_attr=key.sub_attr))
+                return default
+            return self._data[extension].pop(
+                _AttrKey(attr=key.attr, sub_attr=key.sub_attr), default
+            )
 
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
-            return Missing
+            return default
 
         if key.sub_attr:
             attr_value = self._data[attr]
             if isinstance(attr_value, SCIMData):
-                return attr_value.pop(key.sub_attr)
+                return attr_value.pop(key.sub_attr, default)
             elif isinstance(attr_value, list):
                 return [
-                    item.pop(key.sub_attr) if isinstance(item, SCIMData) else Missing
+                    item.pop(key.sub_attr, default) if isinstance(item, SCIMData) else default
                     for item in attr_value
                 ]
-            return Missing
+            return default
 
         self._lower_case_to_original.pop(key.attr.lower())
-        return self._data.pop(attr)
+        return self._data.pop(attr, default)
 
     @staticmethod
     def _normalize(value: Union[str, AttrRep]) -> Union[_SchemaKey, _AttrKey]:
