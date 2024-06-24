@@ -1,13 +1,6 @@
 import pytest
 
-from src.container import (
-    AttrRep,
-    BoundedAttrRep,
-    Invalid,
-    Missing,
-    SchemaURI,
-    SCIMDataContainer,
-)
+from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMData
 
 
 @pytest.mark.parametrize(
@@ -70,8 +63,8 @@ from src.container import (
         ),
     ),
 )
-def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, user_data_server):
-    actual = SCIMDataContainer(user_data_server).get(attr_rep)
+def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_data_server):
+    actual = SCIMData(user_data_server).get(attr_rep)
 
     assert actual == expected
 
@@ -176,142 +169,142 @@ def test_value_from_scim_data_container_can_be_retrieved(attr_rep, expected, use
         ),
     ),
 )
-def test_value_can_be_inserted_to_scim_data_container(key, value, expand, expected):
-    container = SCIMDataContainer()
+def test_value_can_be_inserted_to_scim_data_data(key, value, expand, expected):
+    data = SCIMData()
 
-    container.set(key, value, expand)
+    data.set(key, value, expand)
 
-    assert container == expected
-
-
-def test_attr_value_in_container_can_be_reassigned():
-    container = SCIMDataContainer()
-    container.set("key", 123)
-
-    container.set("KEY", 456)
-
-    assert container.get("key") == 456
+    assert data == expected
 
 
-def test_sub_attr_value_in_container_can_be_reassigned():
-    container = SCIMDataContainer()
-    container.set("key.subkey", 123)
+def test_attr_value_in_data_can_be_reassigned():
+    data = SCIMData()
+    data.set("key", 123)
 
-    container.set("KEY.SUBKEY", 456)
+    data.set("KEY", 456)
 
-    assert container.get("key.subkey") == 456
+    assert data.get("key") == 456
+
+
+def test_sub_attr_value_in_data_can_be_reassigned():
+    data = SCIMData()
+    data.set("key.subkey", 123)
+
+    data.set("KEY.SUBKEY", 456)
+
+    assert data.get("key.subkey") == 456
 
 
 def test_can_set_and_retrieve_sub_attrs_for_multivalued_complex_attr():
-    container = SCIMDataContainer()
+    data = SCIMData()
 
-    container.set("KEY.SUBKEY", [4, 5, 6], expand=True)
+    data.set("KEY.SUBKEY", [4, 5, 6], expand=True)
 
-    assert container.get("key.subkey") == [4, 5, 6]
-    assert container.to_dict() == {"KEY": [{"SUBKEY": 4}, {"SUBKEY": 5}, {"SUBKEY": 6}]}
+    assert data.get("key.subkey") == [4, 5, 6]
+    assert data.to_dict() == {"KEY": [{"SUBKEY": 4}, {"SUBKEY": 5}, {"SUBKEY": 6}]}
 
 
-def test_sub_attr_bigger_list_value_in_container_can_be_reassigned():
-    container = SCIMDataContainer()
-    container.set("key.subkey", [1, 2], expand=True)
+def test_sub_attr_bigger_list_value_in_data_can_be_reassigned():
+    data = SCIMData()
+    data.set("key.subkey", [1, 2], expand=True)
 
-    container.set("KEY.SUBKEY", [4, 5, 6], expand=True)
+    data.set("KEY.SUBKEY", [4, 5, 6], expand=True)
 
-    assert container.get("key.subkey") == [4, 5, 6]
-    assert container.to_dict() == {"key": [{"SUBKEY": 4}, {"SUBKEY": 5}, {"SUBKEY": 6}]}
+    assert data.get("key.subkey") == [4, 5, 6]
+    assert data.to_dict() == {"key": [{"SUBKEY": 4}, {"SUBKEY": 5}, {"SUBKEY": 6}]}
 
 
 def test_can_not_reassign_simple_value_to_sub_attr_when_expanding():
-    container = SCIMDataContainer()
-    container.set("key.subkey", [1, 2], expand=True)
+    data = SCIMData()
+    data.set("key.subkey", [1, 2], expand=True)
 
     with pytest.raises(KeyError, match=r"can not assign"):
-        container.set("KEY.SUBKEY", 1, expand=True)
+        data.set("KEY.SUBKEY", 1, expand=True)
 
 
-def test_sub_attr_smaller_list_value_in_container_can_be_reassigned():
-    container = SCIMDataContainer()
-    container.set("key.subkey", [1, 2, 3], expand=True)
+def test_sub_attr_smaller_list_value_in_data_can_be_reassigned():
+    data = SCIMData()
+    data.set("key.subkey", [1, 2, 3], expand=True)
 
-    container.set("KEY.SUBKEY", [4, 5], expand=True)
+    data.set("KEY.SUBKEY", [4, 5], expand=True)
 
-    assert container.get("key.subkey") == [4, 5, 3]
+    assert data.get("key.subkey") == [4, 5, 3]
 
 
 def test_assigning_sub_attr_to_non_complex_attr_fails():
-    container = SCIMDataContainer()
-    container.set("key", 1)
+    data = SCIMData()
+    data.set("key", 1)
 
     with pytest.raises(KeyError, match=r"can not assign \(subkey, \[1, 2, 3\]\) to 'key'"):
-        container.set("key.subkey", [1, 2, 3])
+        data.set("key.subkey", [1, 2, 3])
 
 
 def test_multivalued_sub_attr_can_be_set_and_retrieved():
-    container = SCIMDataContainer()
-    container.set("key.subkey", [1, 2, 3])
+    data = SCIMData()
+    data.set("key.subkey", [1, 2, 3])
 
-    assert container.get("key.subkey") == [1, 2, 3]
-    assert container.to_dict() == {"key": {"subkey": [1, 2, 3]}}
+    assert data.get("key.subkey") == [1, 2, 3]
+    assert data.to_dict() == {"key": {"subkey": [1, 2, 3]}}
 
 
 def test_multivalued_sub_attr_can_be_set_and_reassigned():
-    container = SCIMDataContainer()
-    container.set("key.subkey", [1, 2, 3])
-    container.set("KEY.SUBKEY", [4, 5, 6])
+    data = SCIMData()
+    data.set("key.subkey", [1, 2, 3])
+    data.set("KEY.SUBKEY", [4, 5, 6])
 
-    assert container.get("key.subkey") == [4, 5, 6]
-    assert container.to_dict() == {"key": {"SUBKEY": [4, 5, 6]}}
+    assert data.get("key.subkey") == [4, 5, 6]
+    assert data.to_dict() == {"key": {"SUBKEY": [4, 5, 6]}}
 
 
 def test_reassigning_simple_multivalued_with_expanded_value_fails():
-    container = SCIMDataContainer()
-    container.set("key.subkey", [1, 2, 3])
+    data = SCIMData()
+    data.set("key.subkey", [1, 2, 3])
 
     with pytest.raises(KeyError, match="can not assign"):
-        container.set("KEY.SUBKEY", [4, 5, 6], expand=True)
+        data.set("KEY.SUBKEY", [4, 5, 6], expand=True)
 
 
 def test_extension_can_be_reassigned():
-    container = SCIMDataContainer()
-    container.set(SchemaURI("my:schema:extension"), {"a": "b"})
+    data = SCIMData()
+    data.set(SchemaURI("my:schema:extension"), {"a": "b"})
 
-    container.set(SchemaURI("MY:schema:EXTENSION"), {"a": "C"})
+    data.set(SchemaURI("MY:schema:EXTENSION"), {"a": "C"})
 
-    assert container.get(SchemaURI("my:SCHEMA:extension")) == {"a": "C"}
+    assert data.get(SchemaURI("my:SCHEMA:extension")) == {"a": "C"}
 
 
 def test_can_reassign_primitive_value_to_simple_multivalued_attr():
-    container = SCIMDataContainer()
-    container.set("key.subkey", [1, 2, 3])
-    container.set("KEY.SUBKEY", 4)
+    data = SCIMData()
+    data.set("key.subkey", [1, 2, 3])
+    data.set("KEY.SUBKEY", 4)
 
-    assert container.get("key.SUBKEY") == 4
-    assert container.to_dict() == {"key": {"SUBKEY": 4}}
+    assert data.get("key.SUBKEY") == 4
+    assert data.to_dict() == {"key": {"SUBKEY": 4}}
 
 
 def test_can_set_and_retrieve_simple_multivalued_attr():
-    container = SCIMDataContainer()
+    data = SCIMData()
 
-    container.set("key", [1, 2, 3])
+    data.set("key", [1, 2, 3])
 
-    assert container.get("KEY") == [1, 2, 3]
-    assert container.to_dict() == {"key": [1, 2, 3]}
+    assert data.get("KEY") == [1, 2, 3]
+    assert data.to_dict() == {"key": [1, 2, 3]}
 
 
 def test_reassign_simple_multivalued_attr():
-    container = SCIMDataContainer()
+    data = SCIMData()
 
-    container.set("key", [1, 2, 3])
-    container.set("KEY", [4, 5, 6])
+    data.set("key", [1, 2, 3])
+    data.set("KEY", [4, 5, 6])
 
-    assert container.get("KEY") == [4, 5, 6]
-    assert container.to_dict() == {"KEY": [4, 5, 6]}
+    assert data.get("KEY") == [4, 5, 6]
+    assert data.to_dict() == {"KEY": [4, 5, 6]}
 
 
-def test_creating_container_removes_duplicates():
-    container = SCIMDataContainer({"a": 1, "A": 2})
+def test_creating_data_removes_duplicates():
+    data = SCIMData({"a": 1, "A": 2})
 
-    assert container.to_dict() == {"A": 2}
+    assert data.to_dict() == {"A": 2}
 
 
 def test_bounded_attr_creation_fails_if_bad_attr_name():
@@ -395,17 +388,17 @@ def test_missing_type_repr():
     assert repr(Missing) == "Missing"
 
 
-def test_non_string_keys_are_excluded_from_container():
+def test_non_string_keys_are_excluded_from_data():
     data = {"a": "b", 1: 2, True: False}
-    container = SCIMDataContainer(data)
+    data = SCIMData(data)
 
-    assert container.to_dict() == {"a": "b"}
+    assert data.to_dict() == {"a": "b"}
 
 
-def test_container_repr():
-    container = SCIMDataContainer({"a": "b", "c": "d", "e": "f"})
+def test_data_repr():
+    data = SCIMData({"a": "b", "c": "d", "e": "f"})
 
-    assert repr(container) == "SCIMDataContainer({'a': 'b', 'c': 'd', 'e': 'f'})"
+    assert repr(data) == "SCIMData({'a': 'b', 'c': 'd', 'e': 'f'})"
 
 
 @pytest.mark.parametrize(
@@ -503,13 +496,13 @@ def test_container_repr():
         ),
     ),
 )
-def test_entry_can_be_popped_from_container(data, attr_rep, expected, remaining):
-    container = SCIMDataContainer(data)
+def test_entry_can_be_popped_from_data(data, attr_rep, expected, remaining):
+    data = SCIMData(data)
 
-    actual = container.pop(attr_rep)
+    actual = data.pop(attr_rep)
 
     assert actual == expected
-    assert container.get(attr_rep) == remaining
+    assert data.get(attr_rep) == remaining
 
 
 def test_schema_uri_creation_fails_if_bad_uri():
@@ -518,15 +511,15 @@ def test_schema_uri_creation_fails_if_bad_uri():
 
 
 @pytest.mark.parametrize(
-    ("container_1", "container_2", "expected"),
+    ("data_1", "data_2", "expected"),
     (
         (
-            SCIMDataContainer(),
-            SCIMDataContainer(),
+            SCIMData(),
+            SCIMData(),
             True,
         ),
         (
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "userName": "bjensen",
                     "name": {"formatted": "Bjensen"},
@@ -536,7 +529,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
                     },
                 }
             ),
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "USERNAME": "bjensen",
                     "NAME": {"FORMATTED": "Bjensen"},
@@ -549,7 +542,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
             True,
         ),
         (
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "userName": "bjensen",
                     "name": {"formatted": "Bjensen"},
@@ -559,7 +552,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
                     },
                 }
             ),
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "NAME": {"FORMATTED": "Bjensen"},
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
@@ -571,7 +564,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
             False,
         ),
         (
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "name": {"formatted": "Bjensen"},
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
@@ -580,7 +573,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
                     },
                 }
             ),
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "USERNAME": "bjensen",
                     "NAME": {"FORMATTED": "Bjensen"},
@@ -594,5 +587,5 @@ def test_schema_uri_creation_fails_if_bad_uri():
         ),
     ),
 )
-def test_containers_can_be_compared(container_1, container_2, expected):
-    assert (container_1 == container_2) is expected
+def test_data_can_be_compared(data_1, data_2, expected):
+    assert (data_1 == data_2) is expected

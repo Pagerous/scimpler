@@ -2,7 +2,7 @@ import abc
 import operator
 from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
 
-from src.container import AttrRep, Invalid, Missing, SCIMDataContainer
+from src.container import AttrRep, Invalid, Missing, SCIMData
 from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseSchema
 
@@ -13,7 +13,7 @@ class Operator(abc.ABC, Generic[TSchemaOrComplex]):
     @abc.abstractmethod
     def match(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """Docs placeholder."""
@@ -32,7 +32,7 @@ class LogicalOperator(Operator, abc.ABC):
 
     def _collect_matches(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> Generator[bool, None, None]:
         for sub_operator in self.sub_operators:
@@ -45,10 +45,10 @@ class And(LogicalOperator):
 
     def match(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        value = value or SCIMDataContainer()
+        value = value or SCIMData()
         for match in self._collect_matches(value, schema_or_complex):
             if not match:
                 return False
@@ -69,10 +69,10 @@ class Or(LogicalOperator):
 
     def match(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        value = value or SCIMDataContainer()
+        value = value or SCIMData()
         for match in self._collect_matches(value, schema_or_complex):
             if match:
                 return True
@@ -101,7 +101,7 @@ class Not(LogicalOperator):
 
     def match(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         return not next(self._collect_matches(value, schema_or_complex))
@@ -128,7 +128,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         attr = schema_or_complex.attrs.get(self._attr_rep)
@@ -249,7 +249,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         attr = schema_or_complex.attrs.get(self._attr_rep)
@@ -416,7 +416,7 @@ class ComplexAttributeOperator(Operator, Generic[TComplexAttributeSubOperator]):
 
     def match(
         self,
-        value: Optional[SCIMDataContainer],
+        value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         attr = schema_or_complex.attrs.get(self._attr_rep)
@@ -440,10 +440,10 @@ class ComplexAttributeOperator(Operator, Generic[TComplexAttributeSubOperator]):
         return False
 
     @staticmethod
-    def _normalize(attr: Complex, value: Any) -> list[SCIMDataContainer]:
-        value = value or ([] if attr.multi_valued else SCIMDataContainer())
+    def _normalize(attr: Complex, value: Any) -> list[SCIMData]:
+        value = value or ([] if attr.multi_valued else SCIMData())
         return [
-            SCIMDataContainer(item)
+            SCIMData(item)
             for item in (value if isinstance(value, list) else [value])
-            if isinstance(item, (dict, SCIMDataContainer))
+            if isinstance(item, (dict, SCIMData))
         ]

@@ -1,6 +1,6 @@
 from typing import Any, Iterator, Optional, Union, cast
 
-from src.container import BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import BoundedAttrRep, Missing, SCIMData
 from src.data.attrs import (
     Attribute,
     AttributeIssuer,
@@ -14,7 +14,7 @@ from src.data.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 
-def validate_attributes(value: list[SCIMDataContainer]) -> ValidationIssues:
+def validate_attributes(value: list[SCIMData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         attr_type = item.get("type")
@@ -40,7 +40,7 @@ def validate_attributes(value: list[SCIMDataContainer]) -> ValidationIssues:
     return issues
 
 
-def serialize_attributes(value: list[SCIMDataContainer]) -> list[dict]:
+def serialize_attributes(value: list[SCIMData]) -> list[dict]:
     serialized = []
     for i, item in enumerate(value):
         attr_type = item.get("type")

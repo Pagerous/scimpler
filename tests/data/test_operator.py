@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from src.assets.schemas import User
-from src.container import AttrRep, SCIMDataContainer
+from src.container import AttrRep, SCIMData
 from src.data.attrs import Attribute, Complex, DateTime, String
 from src.data.operator import (
     And,
@@ -100,7 +100,7 @@ from tests.conftest import SchemaForTests
 def test_equal_operator(value, operator_value, attr_rep, expected):
     operator = Equal(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -181,7 +181,7 @@ def test_equal_operator(value, operator_value, attr_rep, expected):
 def test_not_equal_operator(value, operator_value, attr_rep, expected):
     operator = NotEqual(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -212,7 +212,7 @@ def test_not_equal_operator(value, operator_value, attr_rep, expected):
 def test_greater_than_operator(value, operator_value, attr_rep, expected):
     operator = GreaterThan(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -252,7 +252,7 @@ def test_greater_than_operator(value, operator_value, attr_rep, expected):
 def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expected):
     operator = GreaterThanOrEqual(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -283,7 +283,7 @@ def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expecte
 def test_lesser_than_operator(value, operator_value, attr_rep, expected):
     operator = LesserThan(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -323,7 +323,7 @@ def test_lesser_than_operator(value, operator_value, attr_rep, expected):
 def test_lesser_than_or_equal_operator(value, operator_value, attr_rep, expected):
     operator = LesserThanOrEqual(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -332,7 +332,7 @@ def test_binary_operator_does_not_match_if_non_matching_attribute_type():
     attr_rep = AttrRep(attr="int")
     operator = Equal(attr_rep, "1")
 
-    match = operator.match(SCIMDataContainer({attr_rep: 1}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: 1}), SchemaForTests)
 
     assert not match
 
@@ -341,7 +341,7 @@ def test_binary_operator_does_not_match_if_attr_missing_in_schema():
     attr_rep = AttrRep(attr="other_int")
     operator = Equal(AttrRep(attr="other_int"), 1)
 
-    match = operator.match(SCIMDataContainer({attr_rep: 1}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: 1}), SchemaForTests)
 
     assert not match
 
@@ -350,7 +350,7 @@ def test_binary_operator_does_not_match_if_not_supported_scim_type():
     attr_rep = AttrRep(attr="scim_ref")
     operator = GreaterThan(AttrRep(attr="scim_ref"), chr(0))
 
-    match = operator.match(SCIMDataContainer({attr_rep: "Users"}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: "Users"}), SchemaForTests)
 
     assert not match
 
@@ -373,7 +373,7 @@ def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expect
     attr_rep = AttrRep(attr="str")
     operator = operator_cls(attr_rep, "A")
 
-    actual = operator.match(SCIMDataContainer({attr_rep: "a"}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: "a"}), SchemaForTests)
 
     assert actual == expected
 
@@ -391,7 +391,7 @@ def test_contains_operator(value, operator_value, expected):
     attr_rep = AttrRep(attr="str_cs")
     operator = Contains(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -410,7 +410,7 @@ def test_starts_with_operator(value, operator_value, expected):
     attr_rep = AttrRep(attr="str_cs")
     operator = StartsWith(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -429,7 +429,7 @@ def test_ends_with_operator(value, operator_value, expected):
     attr_rep = AttrRep(attr="str_cs")
     operator = EndsWith(attr_rep, operator_value)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -438,9 +438,7 @@ def test_multi_value_attribute_is_matched_if_one_of_values_match():
     attr_rep = AttrRep(attr="str_cs_mv")
     operator = Equal(AttrRep(attr="str_cs_mv"), "abc")
 
-    match = operator.match(
-        SCIMDataContainer({attr_rep: ["b", "c", "ab", "abc", "ca"]}), SchemaForTests
-    )
+    match = operator.match(SCIMData({attr_rep: ["b", "c", "ab", "abc", "ca"]}), SchemaForTests)
 
     assert match
 
@@ -449,9 +447,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
     attr_rep = AttrRep(attr="str_mv")
     operator = Equal(attr_rep, "abc")
 
-    match = operator.match(
-        SCIMDataContainer({attr_rep: ["b", "c", "ab", "ABc", "ca"]}), SchemaForTests
-    )
+    match = operator.match(SCIMData({attr_rep: ["b", "c", "ab", "ABc", "ca"]}), SchemaForTests)
 
     assert match
 
@@ -512,7 +508,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
 def test_present_operator(value, attr_rep, expected):
     operator = Present(attr_rep)
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -522,7 +518,7 @@ def test_complex_attribute_matches_binary_operator_if_one_of_values_matches():
     operator = StartsWith(attr_rep, "abc")
 
     match = operator.match(
-        SCIMDataContainer({attr_rep: [{"value": "a"}, {"value": "bac"}, {"value": "abcd"}]}),
+        SCIMData({attr_rep: [{"value": "a"}, {"value": "bac"}, {"value": "abcd"}]}),
         SchemaForTests,
     )
 
@@ -534,7 +530,7 @@ def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_m
     operator = StartsWith(attr_rep, "abc")
 
     match = operator.match(
-        SCIMDataContainer({attr_rep: [{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}]}),
+        SCIMData({attr_rep: [{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}]}),
         SchemaForTests,
     )
 
@@ -562,7 +558,7 @@ def test_and_operator_matches(str_cs_value, expected):
     )
 
     actual = operator.match(
-        SCIMDataContainer(
+        SCIMData(
             {
                 "int": 1,
                 "decimal": 1.1,
@@ -598,7 +594,7 @@ def test_or_operator_matches(str_cs_value, expected):
     )
 
     actual = operator.match(
-        SCIMDataContainer(
+        SCIMData(
             {
                 "int": 2,
                 "decimal": 1.0,
@@ -625,7 +621,7 @@ def test_complex_attribute_operator_matches_all_complex_sub_attrs():
     )
 
     match = operator.match(
-        SCIMDataContainer({attr_rep: {"str": "admin", "int": 19, "bool": False}}), SchemaForTests
+        SCIMData({attr_rep: {"str": "admin", "int": 19, "bool": False}}), SchemaForTests
     )
 
     assert match
@@ -641,9 +637,7 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
         ),
     )
 
-    match = operator.match(
-        SCIMDataContainer({"str": "user", "int": 18, "bool": True}), SchemaForTests
-    )
+    match = operator.match(SCIMData({"str": "user", "int": 18, "bool": True}), SchemaForTests)
 
     assert not match
 
@@ -660,12 +654,12 @@ def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
     )
 
     match = operator.match(
-        SCIMDataContainer(
+        SCIMData(
             {
                 attr_rep: [
-                    SCIMDataContainer({"str": "admin", "int": 19, "bool": False}),
-                    SCIMDataContainer({"str": "user", "int": 18, "bool": True}),
-                    SCIMDataContainer({"str": "user", "int": 19, "bool": False}),
+                    SCIMData({"str": "admin", "int": 19, "bool": False}),
+                    SCIMData({"str": "user", "int": 18, "bool": True}),
+                    SCIMData({"str": "user", "int": 19, "bool": False}),
                 ]
             }
         ),
@@ -687,12 +681,12 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
     )
 
     match = operator.match(
-        SCIMDataContainer(
+        SCIMData(
             {
                 attr_rep: [
-                    SCIMDataContainer({"str": "user", "int": 16, "bool": True}),
-                    SCIMDataContainer({"str": "customer", "int": 18, "bool": True}),
-                    SCIMDataContainer({"str": "santa-claus", "int": 12, "bool": True}),
+                    SCIMData({"str": "user", "int": 16, "bool": True}),
+                    SCIMData({"str": "customer", "int": 18, "bool": True}),
+                    SCIMData({"str": "santa-claus", "int": 12, "bool": True}),
                 ],
             }
         ),
@@ -706,29 +700,29 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
     ("value", "is_multivalued", "expected"),
     (
         (
-            SCIMDataContainer({"str": "admin", "int": 19, "bool": False}),
+            SCIMData({"str": "admin", "int": 19, "bool": False}),
             False,
             True,
         ),
         (
-            SCIMDataContainer({"str": "user", "int": 18, "bool": True}),
+            SCIMData({"str": "user", "int": 18, "bool": True}),
             False,
             False,
         ),
         (
             [
-                SCIMDataContainer({"str": "admin", "int": 19, "bool": False}),
-                SCIMDataContainer({"str": "user", "int": 18, "bool": True}),
-                SCIMDataContainer({"str": "user", "int": 19, "bool": False}),
+                SCIMData({"str": "admin", "int": 19, "bool": False}),
+                SCIMData({"str": "user", "int": 18, "bool": True}),
+                SCIMData({"str": "user", "int": 19, "bool": False}),
             ],
             True,
             True,
         ),
         (
             [
-                SCIMDataContainer({"str": "user", "int": 16, "bool": True}),
-                SCIMDataContainer({"str": "customer", "int": 18, "bool": True}),
-                SCIMDataContainer({"str": "santa-claus", "int": 12, "bool": True}),
+                SCIMData({"str": "user", "int": 16, "bool": True}),
+                SCIMData({"str": "customer", "int": 18, "bool": True}),
+                SCIMData({"str": "santa-claus", "int": 12, "bool": True}),
             ],
             True,
             False,
@@ -742,7 +736,7 @@ def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalue
         sub_operator=Equal(AttrRep(attr="str"), "admin"),
     )
 
-    actual = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert actual == expected
 
@@ -761,7 +755,7 @@ def test_complex_op_does_not_matches_if_sub_attribute_not_provided():
         sub_operator=Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({}), SchemaForTests)
+    match = operator.match(SCIMData({}), SchemaForTests)
 
     assert not match
 
@@ -772,7 +766,7 @@ def test_or_op_does_not_match_if_no_sub_attr_matched():
         Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 2}), SchemaForTests)
 
     assert not match
 
@@ -783,7 +777,7 @@ def test_or_op_matches_if_any_sub_attr_matched():
         Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 1}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 1}), SchemaForTests)
 
     assert match
 
@@ -795,7 +789,7 @@ def test_and_op_does_not_match_if_any_sub_attr_is_without_data():
     )
     value = {"int": 1}  # value for this attr is correct, but missing 'str'
 
-    match = operator.match(SCIMDataContainer(value), SchemaForTests)
+    match = operator.match(SCIMData(value), SchemaForTests)
 
     assert not match
 
@@ -806,7 +800,7 @@ def test_and_op_does_not_match_if_any_sub_attr_does_not_match():
         Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 1, "str": "cba"}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 1, "str": "cba"}), SchemaForTests)
 
     assert not match
 
@@ -819,7 +813,7 @@ def test_not_op_matches_if_missing_value_in_logical_sub_op():
         ),
     )
 
-    match = operator.match(SCIMDataContainer({"int": 2}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 2}), SchemaForTests)
 
     assert match
 
@@ -827,7 +821,7 @@ def test_not_op_matches_if_missing_value_in_logical_sub_op():
 def test_not_op_matches_for_missing_value_in_attr_sub_op():
     operator = Not(Equal(AttrRep(attr="int"), 1))
 
-    match = operator.match(SCIMDataContainer({}), SchemaForTests)
+    match = operator.match(SCIMData({}), SchemaForTests)
 
     assert match
 
@@ -835,7 +829,7 @@ def test_not_op_matches_for_missing_value_in_attr_sub_op():
 def test_not_op_matches_if_op_attr_not_in_attrs():
     operator = Not(Equal(AttrRep(attr="other_attr"), 1))
 
-    match = operator.match(SCIMDataContainer({"other_attr": 2}), SchemaForTests)
+    match = operator.match(SCIMData({"other_attr": 2}), SchemaForTests)
 
     assert match
 
@@ -843,7 +837,7 @@ def test_not_op_matches_if_op_attr_not_in_attrs():
 def test_not_op_matches_if_no_data_for_pr_sub_op():
     operator = Not(Present(AttrRep(attr="int")))
 
-    match = operator.match(SCIMDataContainer({}), SchemaForTests)
+    match = operator.match(SCIMData({}), SchemaForTests)
 
     assert match
 
@@ -853,7 +847,7 @@ def test_binary_attributes_allows_to_compare_int_with_decimal(value, expected):
     attr_rep = AttrRep(attr="decimal")
     operator = Equal(attr_rep, 1)
 
-    match = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert bool(match) is expected
 
@@ -863,7 +857,7 @@ def test_binary_attributes_allows_to_compare_decimal_with_int(value, expected):
     attr_rep = AttrRep(attr="int")
     operator = Equal(attr_rep, 1.0)
 
-    match = operator.match(SCIMDataContainer({attr_rep: value}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
 
     assert bool(match) is expected
 
@@ -875,7 +869,7 @@ def test_complex_op_can_be_used_with_logical_op():
         sub_operator=And(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
-    match = operator.match(SCIMDataContainer({attr_rep: {"int": 1, "str": "abc"}}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: {"int": 1, "str": "abc"}}), SchemaForTests)
 
     assert match
 
@@ -887,7 +881,7 @@ def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches():
         sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
-    match = operator.match(SCIMDataContainer({attr_rep: {"int": 1}}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: {"int": 1}}), SchemaForTests)
 
     assert match
 
@@ -898,7 +892,7 @@ def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided():
         sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
-    match = operator.match(SCIMDataContainer({}), SchemaForTests)
+    match = operator.match(SCIMData({}), SchemaForTests)
 
     assert not match
 
@@ -911,12 +905,12 @@ def test_multivalued_complex_op_can_be_used_with_logical_op():
     )
 
     match = operator.match(
-        SCIMDataContainer(
+        SCIMData(
             {
                 attr_rep: [
-                    SCIMDataContainer({"int": 2, "str": "abc"}),
-                    SCIMDataContainer({"int": 1, "str": "cba"}),
-                    SCIMDataContainer({"int": 1, "str": "abc"}),
+                    SCIMData({"int": 2, "str": "abc"}),
+                    SCIMData({"int": 1, "str": "cba"}),
+                    SCIMData({"int": 1, "str": "abc"}),
                 ]
             }
         ),
@@ -931,7 +925,7 @@ def test_operator_values_are_converted_if_deserializer_registered():
     attr_rep = AttrRep(attr="datetime")
     operator = GreaterThan(attr_rep, value="2024-04-29T18:14:15.189594")
 
-    match = operator.match(SCIMDataContainer({attr_rep: datetime.now()}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: datetime.now()}), SchemaForTests)
 
     assert match
 
@@ -942,7 +936,7 @@ def test_value_is_not_matched_if_bad_input_value_type():
     attr_rep = AttrRep(attr="str")
     operator = GreaterThan(attr_rep, value="abc")
 
-    match = operator.match(SCIMDataContainer({attr_rep: 1}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: 1}), SchemaForTests)
 
     assert not match
 
@@ -951,7 +945,7 @@ def test_value_is_not_matched_if_bad_operator_value_type():
     attr_rep = AttrRep(attr="str")
     operator = GreaterThan(attr_rep, value=1)
 
-    match = operator.match(SCIMDataContainer({attr_rep: "abc"}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: "abc"}), SchemaForTests)
 
     assert not match
 
@@ -960,7 +954,7 @@ def test_matching_unary_operator_fails_if_missing_attr():
     op = Present(AttrRep("attr"))
     complex_attr = Complex("complex")
 
-    assert op.match(SCIMDataContainer({"complex": {"attr": "I'm here!"}}), complex_attr) is False
+    assert op.match(SCIMData({"complex": {"attr": "I'm here!"}}), complex_attr) is False
 
 
 def test_matching_unary_operator_fails_if_attr_scim_type_is_not_supported():
@@ -971,7 +965,7 @@ def test_matching_unary_operator_fails_if_attr_scim_type_is_not_supported():
 
     complex_attr = Complex("complex", sub_attributes=[CustomAttribute("attr")])
 
-    assert op.match(SCIMDataContainer({"complex": {"attr": "I'm here!"}}), complex_attr) is False
+    assert op.match(SCIMData({"complex": {"attr": "I'm here!"}}), complex_attr) is False
 
 
 def test_matching_unary_operator_fails_if_attr_multivalued_but_value_is_not_list():
@@ -979,7 +973,7 @@ def test_matching_unary_operator_fails_if_attr_multivalued_but_value_is_not_list
 
     complex_attr = Complex("complex", sub_attributes=[String("attr", multi_valued=True)])
 
-    assert op.match(SCIMDataContainer({"complex": {"attr": "I'm here!"}}), complex_attr) is False
+    assert op.match(SCIMData({"complex": {"attr": "I'm here!"}}), complex_attr) is False
 
 
 def test_binary_operator_does_not_match_complex_attr_if_no_value_sub_attr():
@@ -987,7 +981,7 @@ def test_binary_operator_does_not_match_complex_attr_if_no_value_sub_attr():
     op = Equal(attr_rep, value="test")
 
     # c2 has no 'value' sub-attr in 'SchemaForTests'
-    match = op.match(SCIMDataContainer({attr_rep: [{"value": "test"}]}), SchemaForTests)
+    match = op.match(SCIMData({attr_rep: [{"value": "test"}]}), SchemaForTests)
 
     assert match is False
 
@@ -997,7 +991,7 @@ def test_binary_operator_does_not_match_complex_attr_if_not_multivalued():
     op = Equal(attr_rep, value="test")
 
     # c is not multivalued in 'SchemaForTests'
-    match = op.match(SCIMDataContainer({attr_rep: {"value": "test"}}), SchemaForTests)
+    match = op.match(SCIMData({attr_rep: {"value": "test"}}), SchemaForTests)
 
     assert match is False
 
@@ -1009,7 +1003,7 @@ def test_complex_operator_does_not_match_if_no_attr_in_schema():
         sub_operator=Equal(attr_rep=AttrRep(attr="sub_attr"), value="test"),
     )
 
-    assert op.match(SCIMDataContainer({attr_rep: {"sub_attr": "test"}}), User) is False
+    assert op.match(SCIMData({attr_rep: {"sub_attr": "test"}}), User) is False
 
 
 def test_complex_operator_does_not_match_if_attr_is_not_complex():
@@ -1019,7 +1013,7 @@ def test_complex_operator_does_not_match_if_attr_is_not_complex():
         sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="test"),
     )
 
-    assert op.match(SCIMDataContainer({attr_rep: {"formatted": "test"}}), User) is False
+    assert op.match(SCIMData({attr_rep: {"formatted": "test"}}), User) is False
 
 
 def test_complex_operator_does_not_match_if_provided_list_for_single_valued_attr():
@@ -1029,7 +1023,7 @@ def test_complex_operator_does_not_match_if_provided_list_for_single_valued_attr
         sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="test"),
     )
 
-    assert op.match(SCIMDataContainer({attr_rep: [{"formatted": "test"}]}), User) is False
+    assert op.match(SCIMData({attr_rep: [{"formatted": "test"}]}), User) is False
 
 
 def test_complex_operator_does_not_match_if_provided_mapping_for_multi_valued_attr():
@@ -1039,4 +1033,4 @@ def test_complex_operator_does_not_match_if_provided_mapping_for_multi_valued_at
         sub_operator=Equal(attr_rep=AttrRep(attr="value"), value="test@example.com"),
     )
 
-    assert op.match(SCIMDataContainer({attr_rep: {"value": "test@example.com"}}), User) is False
+    assert op.match(SCIMData({attr_rep: {"value": "test@example.com"}}), User) is False

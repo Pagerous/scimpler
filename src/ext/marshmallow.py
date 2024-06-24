@@ -4,7 +4,7 @@ from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 import marshmallow
 
 from src.assets.schemas import BulkRequest, BulkResponse, ListResponse, PatchOp
-from src.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMData
 from src.data import attrs
 from src.data.attrs import Attribute
 from src.data.schemas import BaseSchema, ResourceSchema
@@ -191,9 +191,9 @@ def _get_list_response_processors(
         deserialized = scimple_schema.deserialize(data)
         deserialized_resources = []
         for resource in resources:
-            resource_schema = scimple_schema.get_schema(SCIMDataContainer(resource))
+            resource_schema = scimple_schema.get_schema(SCIMData(resource))
             if resource_schema is None:
-                deserialized_resource = SCIMDataContainer()
+                deserialized_resource = SCIMData()
             else:
                 deserialized_resource = _create_schema(
                     scimple_schema=resource_schema,
@@ -219,7 +219,7 @@ def _get_list_response_processors(
             return deserialize(data)
 
     def _post_load(_, data, **__):
-        return SCIMDataContainer(data)
+        return SCIMData(data)
 
     def _pre_dump(_, data, **__):
         resources_ = data.pop("Resources") or []
@@ -274,7 +274,7 @@ def _get_resource_processors(
             return deserialize(data)
 
     def _post_load(_, data, original_data, **__):
-        if isinstance(original_data, SCIMDataContainer):
+        if isinstance(original_data, SCIMData):
             original_data = original_data.to_dict()
 
         for extension_uri in scimple_schema.extensions:
@@ -289,7 +289,7 @@ def _get_resource_processors(
                         extension_data = extension_data[part]
                     data.pop(key_parts[0])
                     data[k] = extension_data
-        return SCIMDataContainer(data)
+        return SCIMData(data)
 
     def _pre_dump(_, data, **__):
         return scimple_schema.serialize(data)
@@ -339,7 +339,7 @@ def _get_patch_op_processors(
             return deserialize(data)
 
     def _post_load(_, data, **__):
-        return SCIMDataContainer(data)
+        return SCIMData(data)
 
     def _pre_dump(_, data, **__):
         values = [operation.pop("value") for operation in data.get("Operations") or []]
@@ -418,7 +418,7 @@ def _get_bulk_response_processors(
             return deserialize(data)
 
     def _post_load(_, data, **__):
-        return SCIMDataContainer(data)
+        return SCIMData(data)
 
     def _pre_dump(_, data, **__):
         responses = [operation.pop("response") for operation in data.get("Operations") or []]
@@ -492,7 +492,7 @@ def _get_bulk_request_processors(
             return deserialize(data)
 
     def _post_load(_, data, **__):
-        return SCIMDataContainer(data)
+        return SCIMData(data)
 
     def _pre_dump(_, data, **__):
         operation_data = [operation.pop("data") for operation in data.get("Operations") or []]
@@ -537,7 +537,7 @@ def _get_generic_processors(
             return deserialize(data)
 
     def _post_load(_, data, **__):
-        return SCIMDataContainer(data)
+        return SCIMData(data)
 
     def _pre_dump(_, data, **__):
         return scimple_schema.serialize(data)
@@ -556,12 +556,11 @@ def _get_generic_attr_processors(
 
     def _pre_load(_, data, **__):
         deserialized = scimple_schema.deserialize(data)
-        if isinstance(deserialized, SCIMDataContainer):
+        if isinstance(deserialized, SCIMData):
             deserialized = deserialized.to_dict()
         elif isinstance(deserialized, list):
             deserialized = [
-                item.to_dict() if isinstance(item, SCIMDataContainer) else item
-                for item in deserialized
+                item.to_dict() if isinstance(item, SCIMData) else item for item in deserialized
             ]
         return {str(scimple_schema.name): deserialized}
 
@@ -570,9 +569,9 @@ def _get_generic_attr_processors(
         if data is None:
             return data
         if isinstance(data, dict):
-            return SCIMDataContainer(data)
+            return SCIMData(data)
         if isinstance(data, list):
-            return [SCIMDataContainer(item) if isinstance(item, dict) else item for item in data]
+            return [SCIMData(item) if isinstance(item, dict) else item for item in data]
         return data
 
     def _pre_dump(_, data, **__):

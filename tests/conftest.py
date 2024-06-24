@@ -6,7 +6,7 @@ from src import registry
 from src.assets.schemas import Group, User
 from src.assets.schemas.user import EnterpriseUserExtension
 from src.config import create_service_provider_config
-from src.container import SCIMDataContainer
+from src.container import SCIMData
 from src.data.attrs import (
     Binary,
     Boolean,
@@ -318,7 +318,7 @@ def bulk_request_deserialized(bulk_request_serialized):
     deserialized["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath.deserialize(
         deserialized["Operations"][2]["data"]["Operations"][1]["path"]
     )
-    return SCIMDataContainer(deserialized)
+    return SCIMData(deserialized)
 
 
 @pytest.fixture

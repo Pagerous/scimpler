@@ -4,7 +4,7 @@ from typing import Any, Callable, Iterable, Optional, TypeVar, Union, cast
 
 from typing_extensions import Self
 
-from src.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMDataContainer
+from src.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMData
 from src.data.attr_presence import (
     AttrPresenceConfig,
     DataInclusivity,
@@ -37,7 +37,7 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-TData = TypeVar("TData", bound=Union[dict, SCIMDataContainer])
+TData = TypeVar("TData", bound=Union[dict, SCIMData])
 
 
 class BaseSchema:
@@ -77,18 +77,18 @@ class BaseSchema:
     def schema(self) -> SchemaURI:
         return self._schema
 
-    def deserialize(self, data: Union[dict, SCIMDataContainer]) -> SCIMDataContainer:
-        data = SCIMDataContainer(data)
-        deserialized = SCIMDataContainer()
+    def deserialize(self, data: Union[dict, SCIMData]) -> SCIMData:
+        data = SCIMData(data)
+        deserialized = SCIMData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             if value is not Missing:
                 deserialized.set(attr_rep, attr.deserialize(value))
         return self._deserialize(deserialized)
 
-    def serialize(self, data: Union[dict, SCIMDataContainer]) -> dict[str, Any]:
-        data = SCIMDataContainer(data)
-        serialized = SCIMDataContainer()
+    def serialize(self, data: Union[dict, SCIMData]) -> dict[str, Any]:
+        data = SCIMData(data)
+        serialized = SCIMData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             if value is not Missing:
@@ -97,13 +97,11 @@ class BaseSchema:
 
     def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
         if isinstance(data, dict):
-            return cast(TData, self._filter(SCIMDataContainer(data), attr_filter).to_dict())
-        return cast(TData, self._filter(cast(SCIMDataContainer, data), attr_filter))
+            return cast(TData, self._filter(SCIMData(data), attr_filter).to_dict())
+        return cast(TData, self._filter(cast(SCIMData, data), attr_filter))
 
-    def _filter(
-        self, data: SCIMDataContainer, attr_filter: Callable[[Attribute], bool]
-    ) -> SCIMDataContainer:
-        filtered = SCIMDataContainer()
+    def _filter(self, data: SCIMData, attr_filter: Callable[[Attribute], bool]) -> SCIMData:
+        filtered = SCIMData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             if value is Missing:
@@ -117,21 +115,21 @@ class BaseSchema:
                 filtered.set(attr_rep, value)
         return filtered
 
-    def _deserialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
+    def _deserialize(self, data: SCIMData) -> SCIMData:
         return data
 
-    def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
+    def _serialize(self, data: SCIMData) -> SCIMData:
         return data
 
     def validate(
         self,
-        data: Union[SCIMDataContainer, dict[str, Any]],
+        data: Union[SCIMData, dict[str, Any]],
         presence_config: Optional[AttrPresenceConfig] = None,
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if isinstance(data, dict):
-            data = SCIMDataContainer(data)
+            data = SCIMData(data)
         issues.merge(self._validate_data(data, presence_config))
         if issues.can_proceed(("schemas",)):
             issues.merge(
@@ -181,12 +179,12 @@ class BaseSchema:
             )
         return issues
 
-    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
+    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         return ValidationIssues()
 
     def _validate_data(
         self,
-        data: SCIMDataContainer,
+        data: SCIMData,
         presence_config: Optional[AttrPresenceConfig] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -377,7 +375,7 @@ class BaseSchema:
     def _is_attr_required_by_schema(
         self,
         attr_rep: BoundedAttrRep,
-        data: SCIMDataContainer,
+        data: SCIMData,
     ) -> bool:
         return True
 
@@ -548,7 +546,7 @@ class ResourceSchema(BaseResourceSchema):
             attrs=extension.attrs,
         )
 
-    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
+    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         resource_type = data.get(self.attrs.meta__resourcetype)
         if resource_type not in [Missing, Invalid]:
@@ -560,7 +558,7 @@ class ResourceSchema(BaseResourceSchema):
             )
         return issues
 
-    def _validate_schemas_field(self, data: SCIMDataContainer) -> ValidationIssues:
+    def _validate_schemas_field(self, data: SCIMData) -> ValidationIssues:
         provided_schemas = data.get(self.attrs.schemas)
         if not provided_schemas:
             return ValidationIssues()
@@ -582,7 +580,7 @@ class ResourceSchema(BaseResourceSchema):
     def _is_attr_required_by_schema(
         self,
         attr_rep: BoundedAttrRep,
-        data: SCIMDataContainer,
+        data: SCIMData,
     ) -> bool:
         if (
             attr_rep.schema not in (data.get("schemas") or [])

@@ -1,6 +1,6 @@
 from src.assets.schemas import User
 from src.assets.schemas.schema import Schema, attributes
-from src.container import SCIMDataContainer
+from src.container import SCIMData
 
 
 def test_validation_attributes_field_fails_for_bad_sub_attributes():
@@ -14,7 +14,7 @@ def test_validation_attributes_field_fails_for_bad_sub_attributes():
 
     issues = attributes.validate(
         value=[
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "name": "emails",
                     "type": "complex",
@@ -73,7 +73,7 @@ def test_validation_attributes_field_fails_for_bad_sub_attributes():
 def test_case_exact_is_removed_from_non_string_attrs_while_serializing_attributes():
     serialized = attributes.serialize(
         value=[
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "name": "value",
                     "type": "integer",
@@ -91,7 +91,7 @@ def test_case_exact_is_removed_from_non_string_attrs_while_serializing_attribute
 def test_sub_attributes_are_removed_from_non_complex_attrs_while_serializing_attributes():
     serialized = attributes.serialize(
         value=[
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "name": "value",
                     "type": "integer",
@@ -111,7 +111,7 @@ def test_warning_is_returned_if_missing_sub_attrs_for_complex_attr():
 
     issues = attributes.validate(
         value=[
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "name": "value",
                     "type": "complex",
@@ -128,7 +128,7 @@ def test_validation_fails_if_missing_case_exact_for_string_attr():
 
     issues = attributes.validate(
         value=[
-            SCIMDataContainer(
+            SCIMData(
                 {
                     "name": "value",
                     "type": "string",

@@ -7,7 +7,7 @@ from src.assets.schemas.resource_type import ResourceType
 from src.assets.schemas.schema import Schema
 from src.assets.schemas.search_request import create_search_request_schema
 from src.config import ServiceProviderConfig
-from src.container import AttrRep, BoundedAttrRep, Missing, SCIMDataContainer
+from src.container import AttrRep, BoundedAttrRep, Missing, SCIMData
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import (
     Attribute,
@@ -83,7 +83,7 @@ class Error(Validator):
     ) -> ValidationIssues:
         body_location = ("body",)
         issues = ValidationIssues()
-        normalized = SCIMDataContainer(body or {})
+        normalized = SCIMData(body or {})
         issues.merge(
             self.response_schema.validate(normalized, AttrPresenceConfig("RESPONSE")),
             location=body_location,
@@ -147,7 +147,7 @@ def _validate_resource_output_body(
     location_header_required: bool,
     expected_status_code: int,
     status_code: int,
-    body: SCIMDataContainer,
+    body: SCIMData,
     headers: dict[str, Any],
     presence_config: Optional[AttrPresenceConfig],
 ) -> ValidationIssues:
@@ -261,7 +261,7 @@ class ResourceObjectGET(Validator):
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=SCIMDataContainer(body or {}),
+            body=SCIMData(body or {}),
             headers=headers or {},
             presence_config=kwargs.get("presence_config"),
         )
@@ -343,7 +343,7 @@ class ResourceObjectPUT(Validator):
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=SCIMDataContainer(body or {}),
+            body=SCIMData(body or {}),
             headers=headers or {},
             presence_config=kwargs.get("presence_config"),
         )
@@ -382,7 +382,7 @@ class ResourcesPOST(Validator):
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        normalized, query_string = SCIMDataContainer(body or {}), query_string or {}
+        normalized, query_string = SCIMData(body or {}), query_string or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
@@ -411,7 +411,7 @@ class ResourcesPOST(Validator):
             issues.add_warning(issue=ValidationWarning.missing(), location=["body"])
             return issues
 
-        normalized = SCIMDataContainer(body)
+        normalized = SCIMData(body)
         issues = _validate_resource_output_body(
             schema=self._schema,
             config=self.config,
@@ -435,7 +435,7 @@ class ResourcesPOST(Validator):
 
 def _validate_resources_sorted(
     sorter: Sorter,
-    resources: list[SCIMDataContainer],
+    resources: list[SCIMData],
     resource_schemas: Sequence[BaseResourceSchema],
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -522,7 +522,7 @@ def _validate_resources_filtered(
 def _validate_resources_get_response(
     schema: list_response.ListResponse,
     status_code: int,
-    body: SCIMDataContainer,
+    body: SCIMData,
     start_index: int = 1,
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
@@ -722,7 +722,7 @@ class ServerRootResourcesGET(Validator):
         return _validate_resources_get_response(
             schema=self._response_validation_schema,
             status_code=status_code,
-            body=SCIMDataContainer(body or {}),
+            body=SCIMData(body or {}),
             start_index=kwargs.get("start_index", 1),
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
@@ -769,7 +769,7 @@ class SearchRequestPOST(Validator):
     ) -> ValidationIssues:
         issues = ValidationIssues()
         issues.merge(
-            self._request_validation_schema.validate(SCIMDataContainer(body or {})),
+            self._request_validation_schema.validate(SCIMData(body or {})),
             location=("body",),
         )
         return issues
@@ -785,7 +785,7 @@ class SearchRequestPOST(Validator):
         return _validate_resources_get_response(
             schema=self._response_validation_schema,
             status_code=status_code,
-            body=SCIMDataContainer(body or {}),
+            body=SCIMData(body or {}),
             start_index=kwargs.get("start_index", 1),
             count=kwargs.get("count"),
             filter_=kwargs.get("filter"),
@@ -824,7 +824,7 @@ class ResourceObjectPATCH(Validator):
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        normalized, query_string = SCIMDataContainer(body or {}), query_string or {}
+        normalized, query_string = SCIMData(body or {}), query_string or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
@@ -858,7 +858,7 @@ class ResourceObjectPATCH(Validator):
                     location=("status",),
                 )
             return issues
-        normalized = SCIMDataContainer(body or {})
+        normalized = SCIMData(body or {})
         issues = _validate_resource_output_body(
             schema=self._resource_schema,
             config=self.config,
@@ -967,7 +967,7 @@ class BulkOperations(Validator):
     ) -> ValidationIssues:
         issues = ValidationIssues()
         body_location = ("body",)
-        normalized = SCIMDataContainer(body or {})
+        normalized = SCIMData(body or {})
         issues.merge(
             self._request_schema.validate(normalized, AttrPresenceConfig("REQUEST")),
             location=body_location,
@@ -1025,7 +1025,7 @@ class BulkOperations(Validator):
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        normalized = SCIMDataContainer(body or {})
+        normalized = SCIMData(body or {})
         body_location = ("body",)
         issues.merge(
             self._response_schema.validate(normalized, AttrPresenceConfig("RESPONSE")),

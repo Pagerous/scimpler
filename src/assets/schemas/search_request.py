@@ -1,7 +1,7 @@
 from typing import Any
 
 from src.config import ServiceProviderConfig
-from src.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMDataContainer
+from src.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMData
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import Integer, String
 from src.data.filter import Filter
@@ -73,7 +73,7 @@ class SearchRequest(BaseSchema):
             ],
         )
 
-    def deserialize(self, data: Any) -> SCIMDataContainer:
+    def deserialize(self, data: Any) -> SCIMData:
         data = super().deserialize(data)
         to_include = data.pop(self.attrs.attributes)
         to_exclude = data.pop(self.attrs.excludeattributes)
@@ -94,7 +94,7 @@ class SearchRequest(BaseSchema):
             )
         return data
 
-    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
+    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         to_include = data.get(self.attrs.attributes)
         to_exclude = data.get(self.attrs.excludeattributes)

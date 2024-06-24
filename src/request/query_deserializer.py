@@ -4,7 +4,7 @@ from typing import Any, Optional
 from src.assets.schemas import search_request
 from src.assets.schemas.search_request import create_search_request_schema
 from src.config import ServiceProviderConfig
-from src.container import Missing, SCIMDataContainer
+from src.container import Missing, SCIMData
 
 
 class QueryStringDeserializer(abc.ABC):
@@ -22,7 +22,7 @@ class _AttributesDeserializer(QueryStringDeserializer, abc.ABC):
         deserialized = (
             search_request.SearchRequest()
             .deserialize(
-                SCIMDataContainer(
+                SCIMData(
                     {
                         "attributes": query_string.pop("attributes", Missing),
                         "excludeAttributes": query_string.pop("excludeAttributes", Missing),
@@ -58,9 +58,9 @@ class ServerRootResourcesGET(QueryStringDeserializer):
 
     def deserialize(self, query_string: Optional[dict[str, Any]] = None) -> dict[str, Any]:
         query_string = query_string or {}
-        additional_params = SCIMDataContainer(query_string)
+        additional_params = SCIMData(query_string)
 
-        input_ = SCIMDataContainer(query_string)
+        input_ = SCIMData(query_string)
         for attr_rep, attr in self._schema.attrs:
             additional_params.pop(attr_rep)
 

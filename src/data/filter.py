@@ -2,7 +2,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Generic, Optional, Type, TypeAlias, TypeVar, Union, cast
 
-from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMDataContainer
+from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
 from src.data import operator as op
 from src.data.attrs import Complex
 from src.data.schemas import BaseSchema
@@ -588,15 +588,15 @@ class Filter(Generic[TOperator]):
 
     def __call__(
         self,
-        data: Union[SCIMDataContainer, dict],
+        data: Union[SCIMData, dict],
         schema_or_complex: Union[BaseSchema, Complex],
     ) -> bool:
-        return self._operator.match(SCIMDataContainer(data), schema_or_complex)
+        return self._operator.match(SCIMData(data), schema_or_complex)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Filter):
             return False
-        return SCIMDataContainer(self.to_dict()) == SCIMDataContainer(other.to_dict())
+        return SCIMData(self.to_dict()) == SCIMData(other.to_dict())
 
     def to_dict(self):
         return self._to_dict(self._operator)

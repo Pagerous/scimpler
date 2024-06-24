@@ -1,13 +1,7 @@
 from copy import copy
 from typing import Any, Generic, Optional, TypeVar
 
-from src.container import (
-    AttrName,
-    AttrRep,
-    AttrRepFactory,
-    BoundedAttrRep,
-    SCIMDataContainer,
-)
+from src.container import AttrName, AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
 from src.data.attrs import Complex
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator
@@ -200,17 +194,17 @@ class PatchPath(Generic[TAttrRep]):
             return True
 
         if isinstance(value, dict):
-            value = SCIMDataContainer(value)
+            value = SCIMData(value)
 
         if attr.multi_valued:
             value = [value]
 
         if isinstance(attr, Complex):
-            data = SCIMDataContainer()
+            data = SCIMData()
             data.set(self._attr_rep, value)
             return self._filter(data, schema)
 
-        data = SCIMDataContainer({"value": value})
+        data = SCIMData({"value": value})
         value_attr = copy(attr)
         value_attr._name = AttrName("value")
         return self._filter.operator.sub_operator.match(

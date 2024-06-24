@@ -213,10 +213,8 @@ class _BoundedAttrKey(_AttrKey):
     extension: bool
 
 
-class SCIMDataContainer:
-    def __init__(
-        self, d: Optional[Union[dict[str, Any], dict[AttrRep, Any], "SCIMDataContainer"]] = None
-    ):
+class SCIMData:
+    def __init__(self, d: Optional[Union[dict[str, Any], dict[AttrRep, Any], "SCIMData"]] = None):
         self._data: dict[str, Any] = {}
         self._lower_case_to_original: dict[str, str] = {}
 
@@ -232,15 +230,14 @@ class SCIMDataContainer:
                     self._data.pop(original_key, None)
                 self._lower_case_to_original[key.lower()] = key
                 if isinstance(value, dict):
-                    self._data[key] = SCIMDataContainer(value)
+                    self._data[key] = SCIMData(value)
                 elif isinstance(value, list):
                     self._data[key] = [
-                        SCIMDataContainer(item) if isinstance(item, dict) else item
-                        for item in value
+                        SCIMData(item) if isinstance(item, dict) else item for item in value
                     ]
                 else:
                     self._data[key] = value
-        elif isinstance(d, SCIMDataContainer):
+        elif isinstance(d, SCIMData):
             self._data = d._data
             self._lower_case_to_original = d._lower_case_to_original
 
@@ -269,7 +266,7 @@ class SCIMDataContainer:
             if extension is None:
                 extension = key.schema
                 self._lower_case_to_original[key.schema.lower()] = extension
-                self._data[extension] = SCIMDataContainer()
+                self._data[extension] = SCIMData()
             self._data[extension].set(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), value, expand)
             return
 
@@ -287,7 +284,7 @@ class SCIMDataContainer:
             if isinstance(value, list) and expand:
                 self._data[parent_attr_key] = []
             else:
-                self._data[parent_attr_key] = SCIMDataContainer()
+                self._data[parent_attr_key] = SCIMData()
 
         parent_value = self._data[self._lower_case_to_original[parent_attr_key.lower()]]
         if not self._is_child_value_compatible(parent_value, value, expand):
@@ -300,7 +297,7 @@ class SCIMDataContainer:
         if expand:
             to_create = len(value) - len(self._data[parent_attr_key])
             if to_create > 0:
-                self._data[parent_attr_key].extend([SCIMDataContainer() for _ in range(to_create)])
+                self._data[parent_attr_key].extend([SCIMData() for _ in range(to_create)])
             for item, container in zip(value, self._data[parent_attr_key]):
                 if item is not Missing:
                     container.set(_AttrKey(attr=key.sub_attr, sub_attr=None), item)
@@ -329,12 +326,12 @@ class SCIMDataContainer:
 
         if key.sub_attr:
             attr_value = self._data[attr]
-            if isinstance(attr_value, SCIMDataContainer):
+            if isinstance(attr_value, SCIMData):
                 return attr_value.get(_AttrKey(attr=key.sub_attr, sub_attr=None))
             if isinstance(attr_value, list):
                 return [
                     item.get(_AttrKey(attr=key.sub_attr, sub_attr=None))
-                    if isinstance(item, SCIMDataContainer)
+                    if isinstance(item, SCIMData)
                     else Missing
                     for item in attr_value
                 ]
@@ -363,11 +360,11 @@ class SCIMDataContainer:
 
         if key.sub_attr:
             attr_value = self._data[attr]
-            if isinstance(attr_value, SCIMDataContainer):
+            if isinstance(attr_value, SCIMData):
                 return attr_value.pop(key.sub_attr)
             elif isinstance(attr_value, list):
                 return [
-                    item.pop(key.sub_attr) if isinstance(item, SCIMDataContainer) else Missing
+                    item.pop(key.sub_attr) if isinstance(item, SCIMData) else Missing
                     for item in attr_value
                 ]
             return Missing
@@ -412,7 +409,7 @@ class SCIMDataContainer:
                 return False
             return True
 
-        if not isinstance(parent_value, SCIMDataContainer):
+        if not isinstance(parent_value, SCIMData):
             return False
 
         if isinstance(child_value, list) and expand:
@@ -423,17 +420,17 @@ class SCIMDataContainer:
     def to_dict(self) -> dict[str, Any]:
         output: dict[str, Any] = {}
         for key, value in self._data.items():
-            if isinstance(value, SCIMDataContainer):
+            if isinstance(value, SCIMData):
                 output[key] = value.to_dict()
             elif isinstance(value, list):
                 value_output = []
                 for item in value:
-                    if isinstance(item, SCIMDataContainer):
+                    if isinstance(item, SCIMData):
                         value_output.append(item.to_dict())
                     elif isinstance(item, dict):
                         value_output.append(
                             {
-                                k: v.to_dict() if isinstance(v, SCIMDataContainer) else v
+                                k: v.to_dict() if isinstance(v, SCIMData) else v
                                 for k, v in item.items()
                             }
                         )
@@ -446,8 +443,8 @@ class SCIMDataContainer:
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, dict):
-            other = SCIMDataContainer(other)
-        elif not isinstance(other, SCIMDataContainer):
+            other = SCIMData(other)
+        elif not isinstance(other, SCIMData):
             return False
 
         if len(self._data) != len(other._data):

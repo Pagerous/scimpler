@@ -1,7 +1,7 @@
 import pytest
 
 from src.assets.schemas import User, patch_op, user
-from src.container import AttrName, AttrRep, Invalid, SCIMDataContainer
+from src.container import AttrName, AttrRep, Invalid, SCIMData
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import AttributeMutability, String
 from src.data.filter import Filter
@@ -16,22 +16,22 @@ from tests.conftest import SchemaForTests
     (
         (
             [
-                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
-                SCIMDataContainer({"op": "unknown"}),
+                SCIMData({"op": "add", "path": "userName", "value": "bjensen"}),
+                SCIMData({"op": "unknown"}),
             ],
             {"1": {"op": {"_errors": [{"code": 9}]}}},
         ),
         (
             [
-                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
-                SCIMDataContainer({"op": "remove", "path": None}),
+                SCIMData({"op": "add", "path": "userName", "value": "bjensen"}),
+                SCIMData({"op": "remove", "path": None}),
             ],
             {"1": {"path": {"_errors": [{"code": 5}]}}},
         ),
         (
             [
-                SCIMDataContainer({"op": "add", "path": "userName", "value": "bjensen"}),
-                SCIMDataContainer({"op": "add", "value": None}),
+                SCIMData({"op": "add", "path": "userName", "value": "bjensen"}),
+                SCIMData({"op": "add", "value": None}),
             ],
             {"1": {"value": {"_errors": [{"code": 5}]}}},
         ),
@@ -387,7 +387,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
                 filter_=None,
             ),
             {"formatted": "Jan Kowalski", "familyName": "Kowalski"},
-            SCIMDataContainer({"formatted": "Jan Kowalski", "familyName": "Kowalski"}),
+            SCIMData({"formatted": "Jan Kowalski", "familyName": "Kowalski"}),
         ),
         (
             "emails",
@@ -397,7 +397,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
                 filter_=None,
             ),
             [{"type": "work", "value": "work@example.com"}],
-            [SCIMDataContainer({"type": "work", "value": "work@example.com"})],
+            [SCIMData({"type": "work", "value": "work@example.com"})],
         ),
         (
             'emails[type eq "work"].value',

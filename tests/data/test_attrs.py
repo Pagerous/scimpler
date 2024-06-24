@@ -4,7 +4,7 @@ from datetime import datetime
 import pytest
 
 from src.assets.schemas import User
-from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMDataContainer
+from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
 from src.data.attrs import (
     AttributeUniqueness,
     Binary,
@@ -78,7 +78,7 @@ def test_complex_attribute_sub_attributes_are_validated_separately():
         },
     }
 
-    issues = attr.validate(SCIMDataContainer({"sub_attr_1": "123", "sub_attr_2": "123"}))
+    issues = attr.validate(SCIMData({"sub_attr_1": "123", "sub_attr_2": "123"}))
 
     assert issues.to_dict() == expected_issues
 
@@ -122,8 +122,8 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
 
     issues = attr.validate(
         value=[
-            SCIMDataContainer({"sub_attr_1": 123, "sub_attr_2": "123"}),
-            SCIMDataContainer({"sub_attr_1": 123, "sub_attr_2": 123}),
+            SCIMData({"sub_attr_1": 123, "sub_attr_2": "123"}),
+            SCIMData({"sub_attr_1": 123, "sub_attr_2": 123}),
         ],
     )
 
@@ -472,7 +472,7 @@ def test_validate_bad_type(input_value, attr, expected_issues):
             DateTime("datetime"),
         ),
         (
-            SCIMDataContainer({"sub_attr_1": 1, "sub_attr_2": "2"}),
+            SCIMData({"sub_attr_1": 1, "sub_attr_2": "2"}),
             Complex("complex", sub_attributes=[]),
         ),
     ),
@@ -489,8 +489,8 @@ def test_complex_mv_attr_fails_if_multiple_primary_items():
 
     issues = attr.validate(
         [
-            SCIMDataContainer({"value": 1, "primary": True}),
-            SCIMDataContainer({"value": "abc", "primary": True}),
+            SCIMData({"value": 1, "primary": True}),
+            SCIMData({"value": "abc", "primary": True}),
         ]
     )
 
@@ -503,8 +503,8 @@ def test_warning_is_returned_if_multiple_type_value_pairs():
 
     issues = attr.validate(
         [
-            SCIMDataContainer({"value": 1, "type": "work"}),
-            SCIMDataContainer({"value": 1, "type": "work"}),
+            SCIMData({"value": 1, "type": "work"}),
+            SCIMData({"value": 1, "type": "work"}),
         ]
     )
 
@@ -518,7 +518,7 @@ def test_invalid_items_dont_count_in_type_value_pairs():
     issues = attr.validate(
         [
             2,
-            SCIMDataContainer({"value": 1, "type": "work"}),
+            SCIMData({"value": 1, "type": "work"}),
         ]
     )
 

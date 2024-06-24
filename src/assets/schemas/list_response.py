@@ -1,6 +1,6 @@
 from typing import Any, Optional, Sequence, Union
 
-from src.container import Invalid, Missing, SCIMDataContainer
+from src.container import Invalid, Missing, SCIMData
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import Integer, Unknown
 from src.data.schemas import BaseResourceSchema, BaseSchema
@@ -10,7 +10,7 @@ from src.error import ValidationError, ValidationIssues
 def _validate_resources_type(value) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
-        if not isinstance(item, SCIMDataContainer):
+        if not isinstance(item, SCIMData):
             issues.add_error(
                 issue=ValidationError.bad_type("complex"),
                 proceed=True,
@@ -41,7 +41,7 @@ class ListResponse(BaseSchema):
     def contained_schemas(self) -> list[BaseResourceSchema]:
         return self._contained_schemas
 
-    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
+    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
 
         resources_rep = self.attrs.resources
@@ -81,14 +81,14 @@ class ListResponse(BaseSchema):
             )
         return issues
 
-    def _deserialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
+    def _deserialize(self, data: SCIMData) -> SCIMData:
         resources = data.pop(self.attrs.resources)
         deserialized = self._process_resources(resources, "deserialize")
         if deserialized:
             data.set(self.attrs.resources, deserialized)
         return data
 
-    def _serialize(self, data: SCIMDataContainer) -> SCIMDataContainer:
+    def _serialize(self, data: SCIMData) -> SCIMData:
         resources = data.pop(self.attrs.resources)
         serialized = self._process_resources(resources, "serialize")
         if serialized:
@@ -112,8 +112,8 @@ class ListResponse(BaseSchema):
         n_schemas = len(self._contained_schemas)
         for resource in resources:
             if isinstance(resource, dict):
-                resource = SCIMDataContainer(resource)
-            if not isinstance(resource, SCIMDataContainer):
+                resource = SCIMData(resource)
+            if not isinstance(resource, SCIMData):
                 resource_schemas.append(None)
             elif n_schemas == 1:
                 resource_schemas.append(self._contained_schemas[0])
@@ -121,7 +121,7 @@ class ListResponse(BaseSchema):
                 resource_schemas.append(self.get_schema(resource))
         return resource_schemas
 
-    def get_schema(self, resource: SCIMDataContainer) -> Optional[BaseResourceSchema]:
+    def get_schema(self, resource: SCIMData) -> Optional[BaseResourceSchema]:
         schemas_value = resource.get("schemas")
         if isinstance(schemas_value, list) and len(schemas_value) > 0:
             schemas_value = {

@@ -2,7 +2,7 @@ import re
 from copy import deepcopy
 from typing import Any
 
-from src.container import Missing, SCIMDataContainer
+from src.container import Missing, SCIMData
 from src.data.attrs import Complex, ExternalReference, Integer, String, Unknown
 from src.data.schemas import BaseSchema
 from src.error import ValidationError, ValidationIssues
@@ -21,7 +21,7 @@ def _validate_operation_method_existence(method: Any) -> ValidationIssues:
     return issues
 
 
-def validate_request_operations(value: list[SCIMDataContainer]) -> ValidationIssues:
+def validate_request_operations(value: list[SCIMData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         method = item.get("method")
@@ -71,7 +71,7 @@ def validate_request_operations(value: list[SCIMDataContainer]) -> ValidationIss
     return issues
 
 
-def deserialize_request_operations(value: list[SCIMDataContainer]) -> list[SCIMDataContainer]:
+def deserialize_request_operations(value: list[SCIMData]) -> list[SCIMData]:
     value = deepcopy(value)
     for i, item in enumerate(value):
         method = item.get("method")
@@ -112,7 +112,7 @@ class BulkRequest(BaseSchema):
         )
 
 
-def validate_response_operations(value: list[SCIMDataContainer]) -> ValidationIssues:
+def validate_response_operations(value: list[SCIMData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         method = item.get("method")

@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Generic, Optional, Sequence, TypeVar, Union, cast
 
-from src.container import AttrRep, Missing, SCIMDataContainer
+from src.container import AttrRep, Missing, SCIMData
 from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from src.data.schemas import BaseResourceSchema
 
@@ -46,7 +46,7 @@ class StringKey:
         return value.lower() < other_value.lower()
 
 
-TData = TypeVar("TData", bound=Union[list[SCIMDataContainer], list[dict[str, Any]]])
+TData = TypeVar("TData", bound=Union[list[SCIMData], list[dict[str, Any]]])
 TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
 
 
@@ -71,16 +71,16 @@ class Sorter(Generic[TAttrRep]):
     ) -> TData:
         if not data:
             return data
-        normalized = [SCIMDataContainer(item) for item in data]
+        normalized = [SCIMData(item) for item in data]
         if isinstance(data[0], dict):
             return cast(TData, [item.to_dict() for item in self._sort(normalized, schema)])
         return cast(TData, self._sort(normalized, schema))
 
     def _sort(
         self,
-        data: list[SCIMDataContainer],
+        data: list[SCIMData],
         schema: Union[BaseResourceSchema, Sequence[BaseResourceSchema]],
-    ) -> list[SCIMDataContainer]:
+    ) -> list[SCIMData]:
         if not any(item.get(self._attr_rep) for item in data):
             return data
 
@@ -104,16 +104,14 @@ class Sorter(Generic[TAttrRep]):
 
         return StringKey(value, attr)
 
-    def _attr_key_many_schemas(
-        self, data: list[SCIMDataContainer], schemas: Sequence[BaseResourceSchema]
-    ):
+    def _attr_key_many_schemas(self, data: list[SCIMData], schemas: Sequence[BaseResourceSchema]):
         def attr_key(item):
             schema = schemas[data.index(item)]
             return self._attr_key(item, schema)
 
         return attr_key
 
-    def _attr_key(self, item: SCIMDataContainer, schema: BaseResourceSchema):
+    def _attr_key(self, item: SCIMData, schema: BaseResourceSchema):
         attr = schema.attrs.get(self._attr_rep)
         if attr is None:
             return self._get_key(None, None)

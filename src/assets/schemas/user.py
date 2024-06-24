@@ -5,7 +5,7 @@ import iso3166
 import phonenumbers
 import precis_i18n
 
-from src.container import SCIMDataContainer
+from src.container import SCIMData
 from src.data.attrs import (
     AttributeMutability,
     AttributeReturn,
@@ -608,7 +608,7 @@ class _User(ResourceSchema):
             ],
         )
 
-    def _validate(self, data: SCIMDataContainer, **kwargs) -> ValidationIssues:
+    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = super()._validate(data)
         username = data.get("userName")
         nickname = data.get("nickName")

@@ -32,7 +32,7 @@ from src.container import (
     Invalid,
     Missing,
     SchemaURI,
-    SCIMDataContainer,
+    SCIMData,
 )
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 from src.registry import resources
@@ -519,13 +519,13 @@ _default_sub_attrs = [
 ]
 
 
-_AllowedData: TypeAlias = Union[SCIMDataContainer, dict]
+_AllowedData: TypeAlias = Union[SCIMData, dict]
 TData = TypeVar("TData", bound=Union[_AllowedData, list[_AllowedData]])
 
 
 class Complex(Attribute):
     SCIM_TYPE = "complex"
-    BASE_TYPES = (SCIMDataContainer, dict)
+    BASE_TYPES = (SCIMData, dict)
 
     def __init__(
         self,
@@ -573,15 +573,15 @@ class Complex(Attribute):
             return cast(TData, [self.filter(item, attr_filter) for item in data])
 
         if isinstance(data, dict):
-            return cast(TData, self._filter(SCIMDataContainer(data), attr_filter).to_dict())
-        return cast(TData, self._filter(cast(SCIMDataContainer, data), attr_filter))
+            return cast(TData, self._filter(SCIMData(data), attr_filter).to_dict())
+        return cast(TData, self._filter(cast(SCIMData, data), attr_filter))
 
     def _filter(
         self,
-        data: SCIMDataContainer,
+        data: SCIMData,
         attr_filter: Callable[[Attribute], bool],
-    ) -> SCIMDataContainer:
-        filtered = SCIMDataContainer()
+    ) -> SCIMData:
+        filtered = SCIMData()
         for name, attr in self.attrs:
             if attr_filter(attr) and (value := data.get(name)) is not Missing:
                 filtered.set(name, value)
@@ -592,9 +592,9 @@ class Complex(Attribute):
         cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
         return cloned
 
-    def _validate(self, value: Union[SCIMDataContainer, dict[str, Any]]) -> ValidationIssues:
+    def _validate(self, value: Union[SCIMData, dict[str, Any]]) -> ValidationIssues:
         issues = ValidationIssues()
-        value = SCIMDataContainer(value)
+        value = SCIMData(value)
         for name, sub_attr in self._sub_attributes:
             sub_attr_value = value.get(name)
             if sub_attr_value is Missing:
@@ -608,9 +608,9 @@ class Complex(Attribute):
             )
         return issues
 
-    def _deserialize(self, value: Union[dict, SCIMDataContainer]) -> SCIMDataContainer:
-        value = SCIMDataContainer(value)
-        deserialized = SCIMDataContainer()
+    def _deserialize(self, value: Union[dict, SCIMData]) -> SCIMData:
+        value = SCIMData(value)
+        deserialized = SCIMData()
         for name, sub_attr in self._sub_attributes:
             sub_attr_value = value.get(name)
             if sub_attr_value is Missing:
@@ -618,9 +618,9 @@ class Complex(Attribute):
             deserialized.set(name, sub_attr.deserialize(sub_attr_value))
         return deserialized
 
-    def _serialize(self, value: Union[dict, SCIMDataContainer]) -> dict[str, Any]:
-        value = SCIMDataContainer(value)
-        serialized = SCIMDataContainer()
+    def _serialize(self, value: Union[dict, SCIMData]) -> dict[str, Any]:
+        value = SCIMData(value)
+        serialized = SCIMData()
         for name, sub_attr in self._sub_attributes:
             sub_attr_value = value.get(name)
             if sub_attr_value is Missing:
@@ -634,7 +634,7 @@ class Complex(Attribute):
         return output
 
 
-def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> ValidationIssues:
+def validate_single_primary_value(value: Collection[SCIMData]) -> ValidationIssues:
     issues = ValidationIssues()
     primary_entries = 0
     for item in value:
@@ -648,7 +648,7 @@ def validate_single_primary_value(value: Collection[SCIMDataContainer]) -> Valid
     return issues
 
 
-def validate_type_value_pairs(value: Collection[SCIMDataContainer]) -> ValidationIssues:
+def validate_type_value_pairs(value: Collection[SCIMData]) -> ValidationIssues:
     issues = ValidationIssues()
     pairs: dict[tuple[Any, Any], int] = defaultdict(int)
     for item in value:
