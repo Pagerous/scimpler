@@ -122,12 +122,22 @@ def _get_field(attr):
         field = marshmallow.fields.Raw()
     else:
         if isinstance(attr, attrs.Complex):
-            field = marshmallow.fields.Nested(_get_complex_sub_fields(attr.attrs))
+            field = _get_nested_field(_get_complex_sub_fields(attr.attrs))
         else:
             field = _marshmallow_field_by_attr_type[type(attr)]()
     if attr.multi_valued:
         field = marshmallow.fields.List(field)
     return field
+
+
+def _get_nested_field(*args, **kwargs):
+    field = marshmallow.fields.Nested(*args, **kwargs)
+    field.get_attribute = _get_field_value
+    return field
+
+
+def _get_field_value(_, obj, key, default):
+    return obj.get(key) or default
 
 
 def _transform_errors_dict(input_dict):
@@ -244,20 +254,6 @@ def _get_resource_processors(
 ):
     processors_ = {}
 
-    def _transform_extension_key_parts(keys, value):
-        def insert(d, keys_, value_):
-            key = keys_[0]
-            if len(keys_) == 1:
-                d[key] = value_
-            else:
-                if key not in d:
-                    d[key] = {}
-                insert(d[key], keys_[1:], value_)
-
-        result = {}
-        insert(result, keys, value)
-        return result
-
     def deserialize(data):
         return scimple_schema.deserialize(data).to_dict()
 
@@ -296,19 +292,7 @@ def _get_resource_processors(
         return SCIMDataContainer(data)
 
     def _pre_dump(_, data, **__):
-        serialized = scimple_schema.serialize(data)
-        for extension_uri in scimple_schema.extensions:
-            extension_uri_lower = extension_uri.lower()
-            for k in serialized.copy():
-                if k.lower() == extension_uri_lower:
-                    key_parts = k.split(".")
-                    if len(key_parts) == 1:
-                        continue
-
-                    serialized[key_parts[0]] = _transform_extension_key_parts(
-                        key_parts[1:], serialized.pop(k)
-                    )
-        return serialized
+        return scimple_schema.serialize(data)
 
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
     processors_["_post_load"] = marshmallow.post_load(_post_load, pass_original=True)
@@ -654,6 +638,8 @@ def _include_processing_in_schema(
             processors=processors,
             context_provider=context_provider,
         )
+
+    processors["get_attribute"] = _get_field_value
     class_ = type(
         type(scimple_schema).__name__,
         (schema_cls,),
@@ -674,9 +660,7 @@ def _create_schema(
                 scimple_schema.attrs,
                 field_by_attr_rep={
                     scimple_schema.attrs.resources: marshmallow.fields.List(
-                        marshmallow.fields.Nested(
-                            _get_fields(scimple_schema.contained_schemas[0].attrs)
-                        ),
+                        _get_nested_field(_get_fields(scimple_schema.contained_schemas[0].attrs)),
                     )
                 },
             )
@@ -686,9 +670,7 @@ def _create_schema(
         if isinstance(scimple_schema, ResourceSchema):
             extension_fields = {}
             for extension_uri, attrs_ in scimple_schema.attrs.extensions.items():
-                extension_fields[str(extension_uri)] = marshmallow.fields.Nested(
-                    _get_fields(attrs_)
-                )
+                extension_fields[str(extension_uri)] = _get_nested_field(_get_fields(attrs_))
             fields.update(extension_fields)
     else:
         fields = {str(scimple_schema.name): _get_field(scimple_schema)}
