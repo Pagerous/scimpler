@@ -1,3 +1,4 @@
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 
@@ -204,7 +205,7 @@ def _get_list_response_processors(
             deserialized_resources.append(deserialized_resource)
         if deserialized_resources:
             deserialized.set("Resources", deserialized_resources)
-        return deserialized.to_dict()
+        return deserialized
 
     if processors.validator:
 
@@ -255,7 +256,7 @@ def _get_resource_processors(
     processors_ = {}
 
     def deserialize(data):
-        return scimple_schema.deserialize(data).to_dict()
+        return scimple_schema.deserialize(data)
 
     if processors.validator:
 
@@ -274,9 +275,6 @@ def _get_resource_processors(
             return deserialize(data)
 
     def _post_load(_, data, original_data, **__):
-        if isinstance(original_data, SCIMData):
-            original_data = original_data.to_dict()
-
         for extension_uri in scimple_schema.extensions:
             extension_uri_lower = extension_uri.lower()
             for k in original_data:
@@ -324,7 +322,7 @@ def _get_patch_op_processors(
                 validator=None,
             )
             operation.set("value", value_schema().load(value))
-        return deserialized.to_dict()
+        return deserialized
 
     if processors.validator:
 
@@ -401,9 +399,9 @@ def _get_bulk_response_processors(
         deserialized = scimple_schema.deserialize(data)
         for operation, response in zip(deserialized.get("Operations") or [], responses):
             if response:
-                response_schema = _get_operation_response_schema(operation.to_dict())
+                response_schema = _get_operation_response_schema(operation)
                 operation.set("response", response_schema().load(response))
-        return deserialized.to_dict()
+        return deserialized
 
     if processors.validator:
 
@@ -468,12 +466,12 @@ def _get_bulk_request_processors(
     def deserialize(data):
         deserialized = scimple_schema.deserialize(data)
         for operation in deserialized.get("Operations") or []:
-            operation_dict = operation.to_dict()
+            operation_dict = operation
             data = operation_dict.get("data")
             if data:
                 request_schema = _get_operation_request_schema(operation_dict)
                 operation.set("data", request_schema().load(data))
-        return deserialized.to_dict()
+        return deserialized
 
     if processors.validator:
 
@@ -518,7 +516,7 @@ def _get_generic_processors(
     processors_ = {}
 
     def deserialize(data):
-        return scimple_schema.deserialize(data).to_dict()
+        return scimple_schema.deserialize(data)
 
     if processors.validator:
 
@@ -555,23 +553,16 @@ def _get_generic_attr_processors(
     processors_ = {}
 
     def _pre_load(_, data, **__):
-        deserialized = scimple_schema.deserialize(data)
-        if isinstance(deserialized, SCIMData):
-            deserialized = deserialized.to_dict()
-        elif isinstance(deserialized, list):
-            deserialized = [
-                item.to_dict() if isinstance(item, SCIMData) else item for item in deserialized
-            ]
-        return {str(scimple_schema.name): deserialized}
+        return {str(scimple_schema.name): scimple_schema.deserialize(data)}
 
     def _post_load(_, data, **__):
         data = data.get(str(scimple_schema.name))
         if data is None:
             return data
-        if isinstance(data, dict):
+        if isinstance(data, Mapping):
             return SCIMData(data)
         if isinstance(data, list):
-            return [SCIMData(item) if isinstance(item, dict) else item for item in data]
+            return [SCIMData(item) if isinstance(item, Mapping) else item for item in data]
         return data
 
     def _pre_dump(_, data, **__):

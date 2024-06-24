@@ -1,5 +1,5 @@
 import re
-from collections.abc import MutableMapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Optional, Union, cast
 
@@ -215,11 +215,16 @@ class _BoundedAttrKey(_AttrKey):
 
 
 class SCIMData(MutableMapping):
-    def __init__(self, d: Optional[Union[dict[str, Any], dict[AttrRep, Any], "SCIMData"]] = None):
+    def __init__(
+        self, d: Optional[Union[Mapping[str, Any], Mapping[AttrRep, Any], "SCIMData"]] = None
+    ):
         self._data: dict[str, Any] = {}
         self._lower_case_to_original: dict[str, str] = {}
 
-        if isinstance(d, dict):
+        if isinstance(d, SCIMData):
+            self._data = d._data
+            self._lower_case_to_original = d._lower_case_to_original
+        elif isinstance(d, Mapping):
             for key, value in d.items():
                 if isinstance(key, AttrRep):
                     self.set(key, value)
@@ -230,17 +235,14 @@ class SCIMData(MutableMapping):
                 if original_key := self._lower_case_to_original.get(key.lower()):
                     self._data.pop(original_key, None)
                 self._lower_case_to_original[key.lower()] = key
-                if isinstance(value, dict):
+                if isinstance(value, Mapping):
                     self._data[key] = SCIMData(value)
                 elif isinstance(value, list):
                     self._data[key] = [
-                        SCIMData(item) if isinstance(item, dict) else item for item in value
+                        SCIMData(item) if isinstance(item, Mapping) else item for item in value
                     ]
                 else:
                     self._data[key] = value
-        elif isinstance(d, SCIMData):
-            self._data = d._data
-            self._lower_case_to_original = d._lower_case_to_original
 
     def __repr__(self):
         return f"{self.__class__.__name__}({str(self._data)})"
@@ -449,12 +451,13 @@ class SCIMData(MutableMapping):
         return output
 
     def __eq__(self, other: Any) -> bool:
-        if isinstance(other, dict):
+        if isinstance(other, Mapping):
             other = SCIMData(other)
-        elif not isinstance(other, SCIMData):
+
+        if not isinstance(other, SCIMData):
             return False
 
-        if len(self._data) != len(other._data):
+        if len(self) != len(other):
             return False
 
         for key, value in self._data.items():
@@ -464,6 +467,3 @@ class SCIMData(MutableMapping):
             return other.get(SchemaURI(key)) == value
 
         return True
-
-    def __bool__(self):
-        return bool(self._data)

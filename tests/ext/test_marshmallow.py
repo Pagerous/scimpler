@@ -206,6 +206,20 @@ def test_user_response_can_be_loaded(user_deserialized, user_data_server):
     assert loaded == user_deserialized
 
 
+def test_attr_names_are_case_insensitive_when_loading_data(user_deserialized, user_data_server):
+    validator = ResourceObjectGET(resource_schema=User)
+    schema_cls = create_response_schema(
+        validator,
+        lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
+    )
+    user_data_server["sChEmAs"] = user_data_server.pop("schemas")
+    user_data_server["name"]["FORMATTED"] = user_data_server["name"].pop("formatted")
+
+    loaded = schema_cls().load(user_data_server)
+
+    assert loaded == user_deserialized
+
+
 def test_user_response_loading_fails_if_validation_error(user_data_server):
     user_data_server["id"] = 123
     validator = ResourceObjectGET(resource_schema=User)
