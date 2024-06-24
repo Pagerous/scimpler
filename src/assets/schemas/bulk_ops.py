@@ -1,7 +1,9 @@
 import re
+from collections.abc import Mapping
 from copy import deepcopy
-from typing import Any
+from typing import Any, Optional
 
+from src.assets.schemas.error import ErrorSchema
 from src.container import Missing, SCIMData
 from src.data.attrs import Complex, ExternalReference, Integer, String, Unknown
 from src.data.schemas import BaseSchema
@@ -81,7 +83,7 @@ def deserialize_request_operations(value: list[SCIMData]) -> list[SCIMData]:
 
 
 class BulkRequest(BaseSchema):
-    def __init__(self):
+    def __init__(self, sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]]):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:BulkRequest",
             attrs=[
@@ -110,6 +112,43 @@ class BulkRequest(BaseSchema):
                 ),
             ],
         )
+        self._sub_schemas = sub_schemas
+
+    def _deserialize(self, data: SCIMData) -> SCIMData:
+        return self._process(data, "deserialize")
+
+    def _serialize(self, data: SCIMData) -> SCIMData:
+        return self._process(data, "serialize")
+
+    def _process(self, data: SCIMData, method: str) -> SCIMData:
+        operations = data.get("Operations", [])
+        processed = []
+        for operation in operations:
+            operation = SCIMData(operation)
+            schema = self.get_schema(operation)
+            if schema is None:
+                processed.append(operation)
+                continue
+            request = operation.get("data")
+            if not request:
+                processed.append(operation)
+                continue
+            operation.set("data", getattr(schema, method)(request))
+            processed.append(operation)
+        data["Operations"] = processed
+        return data
+
+    def get_schema(self, operation: Mapping) -> Optional[BaseSchema]:
+        method = operation.get("method", "").upper()
+        if method not in self._sub_schemas:
+            return None
+        if method == "POST":
+            path_parts = operation.get("path", "").split("/", 1)
+        else:
+            path_parts = operation.get("path", "").split("/", 2)
+        if len(path_parts) < 2:
+            return None
+        return self._sub_schemas[method].get(path_parts[1])
 
 
 def validate_response_operations(value: list[SCIMData]) -> ValidationIssues:
@@ -165,7 +204,11 @@ def _validate_status(value: Any) -> ValidationIssues:
 
 
 class BulkResponse(BaseSchema):
-    def __init__(self):
+    def __init__(
+        self,
+        sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]],
+        error_schema: ErrorSchema,
+    ):
         super().__init__(
             schema="urn:ietf:params:scim:api:messages:2.0:BulkResponse",
             attrs=[
@@ -194,3 +237,44 @@ class BulkResponse(BaseSchema):
                 )
             ],
         )
+        self._sub_schemas = sub_schemas
+        self._error_schema = error_schema
+
+    def _deserialize(self, data: SCIMData) -> SCIMData:
+        return self._process(data, "deserialize")
+
+    def _serialize(self, data: SCIMData) -> SCIMData:
+        return self._process(data, "serialize")
+
+    def _process(self, data: SCIMData, method: str) -> SCIMData:
+        operations = data.get("Operations", [])
+        processed = []
+        for operation in operations:
+            operation = SCIMData(operation)
+            schema = self.get_schema(operation)
+            if schema is None:
+                processed.append(operation)
+                continue
+            response = operation.get("response")
+            if not response:
+                processed.append(operation)
+                continue
+            operation.set("response", getattr(schema, method)(response))
+            processed.append(operation)
+        data["Operations"] = processed
+        return data
+
+    def get_schema(self, operation: Mapping) -> Optional[BaseSchema]:
+        operation = SCIMData(operation)
+        status = operation.get("status")
+        if status in [None, Missing]:
+            return None
+        if int(status) >= 300:
+            return self._error_schema
+        location = operation.get("location", "")
+        for resource_name, schema in self._sub_schemas.get(
+            operation.get("method", "").upper(), {}
+        ).items():
+            if f"/{resource_name}/" in location:
+                return schema
+        return None

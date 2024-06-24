@@ -921,26 +921,52 @@ class BulkOperations(Validator):
             "PATCH": {},
             "DELETE": {},
         }
+        response_schemas: dict[str, dict[str, Optional[BaseSchema]]] = {
+            "GET": {},
+            "POST": {},
+            "PUT": {},
+            "PATCH": {},
+            "DELETE": {},
+        }
+        request_schemas: dict[str, dict[str, Optional[BaseSchema]]] = {
+            "GET": {},
+            "POST": {},
+            "PUT": {},
+            "PATCH": {},
+            "DELETE": {},
+        }
         for resource_schema in resource_schemas:
-            self._validators["GET"][resource_schema.plural_name] = ResourceObjectGET(
-                self.config, resource_schema=resource_schema
-            )
-            self._validators["POST"][resource_schema.plural_name] = ResourcesPOST(
-                self.config, resource_schema=resource_schema
-            )
-            self._validators["PUT"][resource_schema.plural_name] = ResourceObjectPUT(
-                self.config, resource_schema=resource_schema
-            )
-            self._validators["PATCH"][resource_schema.plural_name] = ResourceObjectPATCH(
-                self.config, resource_schema=resource_schema
-            )
-            self._validators["DELETE"][resource_schema.plural_name] = ResourceObjectDELETE(
-                self.config
-            )
+            get = ResourceObjectGET(self.config, resource_schema=resource_schema)
+            self._validators["GET"][resource_schema.plural_name] = get
+            response_schemas["GET"][resource_schema.plural_name] = get.response_schema
+            request_schemas["GET"][resource_schema.plural_name] = None
 
-        self._request_schema = bulk_ops.BulkRequest()
-        self._response_schema = bulk_ops.BulkResponse()
+            post = ResourcesPOST(self.config, resource_schema=resource_schema)
+            self._validators["POST"][resource_schema.plural_name] = post
+            response_schemas["POST"][resource_schema.plural_name] = post.response_schema
+            request_schemas["POST"][resource_schema.plural_name] = post.request_schema
+
+            put = ResourceObjectPUT(self.config, resource_schema=resource_schema)
+            self._validators["PUT"][resource_schema.plural_name] = put
+            response_schemas["PUT"][resource_schema.plural_name] = put.response_schema
+            request_schemas["PUT"][resource_schema.plural_name] = put.request_schema
+
+            patch = ResourceObjectPATCH(self.config, resource_schema=resource_schema)
+            self._validators["PATCH"][resource_schema.plural_name] = patch
+            response_schemas["PATCH"][resource_schema.plural_name] = patch.response_schema
+            request_schemas["PATCH"][resource_schema.plural_name] = patch.request_schema
+
+            delete = ResourceObjectDELETE(self.config)
+            self._validators["DELETE"][resource_schema.plural_name] = delete
+            response_schemas["DELETE"][resource_schema.plural_name] = None
+            request_schemas["DELETE"][resource_schema.plural_name] = None
+
         self._error_validator = Error(self.config)
+        self._request_schema = bulk_ops.BulkRequest(sub_schemas=request_schemas)
+        self._response_schema = bulk_ops.BulkResponse(
+            sub_schemas=response_schemas,
+            error_schema=self._error_validator.response_schema,
+        )
 
     @property
     def error_validator(self) -> Error:

@@ -9,7 +9,7 @@ from src.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMData
 from src.data import attrs
 from src.data.attrs import Attribute
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.request.validator import BulkOperations, Validator
+from src.request.validator import Validator
 
 _marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
 
@@ -200,7 +200,6 @@ def _get_list_response_processors(
                     scimple_schema=resource_schema,
                     processors=Processors(),
                     context_provider=None,
-                    validator=None,
                 )().load(resource)
             deserialized_resources.append(deserialized_resource)
         if deserialized_resources:
@@ -223,7 +222,7 @@ def _get_list_response_processors(
         return SCIMData(data)
 
     def _pre_dump(_, data, **__):
-        resources_ = data.pop("Resources") or []
+        resources_ = data.pop("Resources", [])
         serialized = scimple_schema.serialize(data)
         serialized_resources = []
         for resource in resources_:
@@ -235,7 +234,6 @@ def _get_list_response_processors(
                     scimple_schema=resource_schema,
                     processors=Processors(),
                     context_provider=None,
-                    validator=None,
                 )().dump(resource.to_dict())
             serialized_resources.append(serialized_resource)
         if serialized_resources:
@@ -309,7 +307,7 @@ def _get_patch_op_processors(
     def deserialize(data):
         values = [operation.pop("value", Missing) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
-        for operation, value in zip(deserialized.get("Operations") or [], values):
+        for operation, value in zip(deserialized.get("Operations", []), values):
             if value is Missing:
                 continue
             value_schema = _create_schema(
@@ -319,7 +317,6 @@ def _get_patch_op_processors(
                 ),
                 processors=Processors(validator=None),
                 context_provider=None,
-                validator=None,
             )
             operation.set("value", value_schema().load(value))
         return deserialized
@@ -340,7 +337,7 @@ def _get_patch_op_processors(
         return SCIMData(data)
 
     def _pre_dump(_, data, **__):
-        values = [operation.pop("value") for operation in data.get("Operations") or []]
+        values = [operation.pop("value") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, value in zip(serialized.get("Operations", []), values):
             if value in [None, Missing]:
@@ -352,7 +349,6 @@ def _get_patch_op_processors(
                 ),
                 processors=Processors(validator=None),
                 context_provider=None,
-                validator=None,
             )
             operation["value"] = value_schema().dump(value)
         return serialized
@@ -368,36 +364,23 @@ def _get_bulk_response_processors(
     scimple_schema: BulkResponse,
     processors: Processors,
     context_provider: Optional[ResponseContextProvider],
-    validator: BulkOperations,
 ):
     processors_ = {}
 
-    def _get_operation_response_schema(operation: dict):
-        status = int(operation["status"])
-        if status >= 300:
-            return _create_schema(
-                scimple_schema=validator.error_validator.response_schema,
-                processors=Processors(validator=None),
-                context_provider=None,
-                validator=None,
-            )
-        location = operation.get("location", "")
-        for resource_name, sub_validator in validator.sub_validators[
-            operation["method"].upper()
-        ].items():
-            if f"/{resource_name}/" in location:
-                return _create_schema(
-                    scimple_schema=sub_validator.response_schema,
-                    processors=Processors(validator=None),
-                    context_provider=None,
-                    validator=None,
-                )
-        raise marshmallow.ValidationError("unknown resource")
+    def _get_operation_response_schema(operation: Mapping):
+        response_schema = scimple_schema.get_schema(operation)
+        if response_schema is None:
+            raise marshmallow.ValidationError("unknown resource")
+        return _create_schema(
+            scimple_schema=response_schema,
+            processors=Processors(validator=None),
+            context_provider=None,
+        )
 
     def deserialize(data):
         responses = [operation.pop("response") for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
-        for operation, response in zip(deserialized.get("Operations") or [], responses):
+        for operation, response in zip(deserialized.get("Operations", []), responses):
             if response:
                 response_schema = _get_operation_response_schema(operation)
                 operation.set("response", response_schema().load(response))
@@ -419,7 +402,7 @@ def _get_bulk_response_processors(
         return SCIMData(data)
 
     def _pre_dump(_, data, **__):
-        responses = [operation.pop("response") for operation in data.get("Operations") or []]
+        responses = [operation.pop("response") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, response in zip(serialized.get("Operations", []), responses):
             if response:
@@ -438,38 +421,23 @@ def _get_bulk_request_processors(
     scimple_schema: BulkRequest,
     processors: Processors,
     context_provider: Optional[Union[ResponseContextProvider, RequestContextProvider]],
-    validator: BulkOperations,
 ):
     processors_ = {}
 
-    def _get_operation_request_schema(operation: dict):
-        method = operation["method"].upper()
-        if method == "POST":
-            path_parts = operation.get("path", "").split("/", 1)
-        else:
-            path_parts = operation.get("path", "").split("/", 2)
-
-        if len(path_parts) < 2:
-            raise marshmallow.ValidationError(f"invalid path {operation['path']!r}")
-
-        resource_name = path_parts[1]
-        sub_validator = validator.sub_validators.get(method, {}).get(resource_name)
-        if sub_validator is None:
-            raise marshmallow.ValidationError("unknown resource")
-        return _create_schema(
-            scimple_schema=sub_validator.request_schema,
-            processors=Processors(validator=None),
-            context_provider=None,
-            validator=None,
-        )
-
     def deserialize(data):
+        requests_data = [operation.pop("data", None) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
-        for operation in deserialized.get("Operations") or []:
-            operation_dict = operation
-            data = operation_dict.get("data")
+        for operation, data in zip(deserialized.get("Operations", []), requests_data):
             if data:
-                request_schema = _get_operation_request_schema(operation_dict)
+                request_scimple_schema = scimple_schema.get_schema(operation)
+                if request_scimple_schema is None:
+                    raise marshmallow.ValidationError("unknown resource")
+
+                request_schema = _create_schema(
+                    scimple_schema=request_scimple_schema,
+                    processors=Processors(validator=None),
+                    context_provider=None,
+                )
                 operation.set("data", request_schema().load(data))
         return deserialized
 
@@ -493,11 +461,18 @@ def _get_bulk_request_processors(
         return SCIMData(data)
 
     def _pre_dump(_, data, **__):
-        operation_data = [operation.pop("data") for operation in data.get("Operations") or []]
+        operation_data = [operation.pop("data") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, data_item in zip(serialized.get("Operations", []), operation_data):
             if data_item:
-                request_schema = _get_operation_request_schema(operation)
+                request_scimple_schema = scimple_schema.get_schema(operation)
+                if request_scimple_schema is None:
+                    raise RuntimeError("unknown resource")
+                request_schema = _create_schema(
+                    scimple_schema=request_scimple_schema,
+                    processors=Processors(validator=None),
+                    context_provider=None,
+                )
                 operation["data"] = request_schema().dump(data_item)
         return serialized
 
@@ -584,7 +559,6 @@ def _include_processing_in_schema(
     scimple_schema: Union[BaseSchema, Attribute],
     processors: Processors,
     context_provider: Optional[Union[ResponseContextProvider, ResponseContextProvider]],
-    validator: Optional[Validator],
 ) -> type[marshmallow.Schema]:
     if isinstance(scimple_schema, ListResponse):
         processors = _get_list_response_processors(
@@ -598,19 +572,17 @@ def _include_processing_in_schema(
             processors=processors,
             context_provider=context_provider,
         )
-    elif isinstance(scimple_schema, BulkResponse) and isinstance(validator, BulkOperations):
+    elif isinstance(scimple_schema, BulkResponse):
         processors = _get_bulk_response_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
-            validator=validator,
         )
-    elif isinstance(scimple_schema, BulkRequest) and isinstance(validator, BulkOperations):
+    elif isinstance(scimple_schema, BulkRequest):
         processors = _get_bulk_request_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
-            validator=validator,
         )
     elif isinstance(scimple_schema, PatchOp):
         processors = _get_patch_op_processors(
@@ -642,7 +614,6 @@ def _create_schema(
     scimple_schema: Union[BaseSchema, Attribute],
     processors: Processors,
     context_provider: Optional[Union[ResponseContextProvider, RequestContextProvider]],
-    validator: Optional[Validator],
 ) -> type[marshmallow.Schema]:
     if isinstance(scimple_schema, BaseSchema):
         if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:
@@ -671,7 +642,6 @@ def _create_schema(
         processors=processors,
         scimple_schema=scimple_schema,
         context_provider=context_provider,
-        validator=validator,
     )
 
 
@@ -683,7 +653,6 @@ def create_response_schema(
         scimple_schema=validator.response_schema,
         processors=Processors(validator=validator.validate_response),
         context_provider=context_provider,
-        validator=validator,
     )
 
 
@@ -695,5 +664,4 @@ def create_request_schema(
         scimple_schema=validator.request_schema,
         processors=Processors(validator=validator.validate_request),
         context_provider=context_provider,
-        validator=validator,
     )
