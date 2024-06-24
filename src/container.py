@@ -248,7 +248,6 @@ class SCIMData:
         self,
         key: Union[str, AttrRep, _SchemaKey, _AttrKey],
         value: Any,
-        expand: bool = False,
     ) -> None:
         if not isinstance(key, (_SchemaKey, _AttrKey)):
             key = self._normalize(key)
@@ -267,7 +266,7 @@ class SCIMData:
                 extension = key.schema
                 self._lower_case_to_original[key.schema.lower()] = extension
                 self._data[extension] = SCIMData()
-            self._data[extension].set(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), value, expand)
+            self._data[extension].set(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), value)
             return
 
         if not key.sub_attr:
@@ -281,27 +280,16 @@ class SCIMData:
         if parent_attr_key is None:
             parent_attr_key = key.attr
             self._lower_case_to_original[parent_attr_key.lower()] = parent_attr_key
-            if isinstance(value, list) and expand:
-                self._data[parent_attr_key] = []
-            else:
-                self._data[parent_attr_key] = SCIMData()
+            self._data[parent_attr_key] = SCIMData()
 
         parent_value = self._data[self._lower_case_to_original[parent_attr_key.lower()]]
-        if not self._is_child_value_compatible(parent_value, value, expand):
+        if not self._is_child_value_compatible(parent_value, value):
             raise KeyError(f"can not assign ({key.sub_attr}, {value}) to '{key.attr}'")
 
         if not isinstance(value, list):
             self._data[parent_attr_key].set(_AttrKey(attr=key.sub_attr, sub_attr=None), value)
             return
 
-        if expand:
-            to_create = len(value) - len(self._data[parent_attr_key])
-            if to_create > 0:
-                self._data[parent_attr_key].extend([SCIMData() for _ in range(to_create)])
-            for item, container in zip(value, self._data[parent_attr_key]):
-                if item is not Missing:
-                    container.set(_AttrKey(attr=key.sub_attr, sub_attr=None), item)
-            return
         self._data[parent_attr_key].set(_AttrKey(attr=key.sub_attr, sub_attr=None), value)
 
     def get(self, key: Union[str, AttrRep, _SchemaKey, _AttrKey]):
@@ -402,7 +390,6 @@ class SCIMData:
     def _is_child_value_compatible(
         parent_value: Any,
         child_value: Any,
-        expand: bool,
     ) -> bool:
         if isinstance(parent_value, list):
             if not isinstance(child_value, list):
@@ -410,9 +397,6 @@ class SCIMData:
             return True
 
         if not isinstance(parent_value, SCIMData):
-            return False
-
-        if isinstance(child_value, list) and expand:
             return False
 
         return True

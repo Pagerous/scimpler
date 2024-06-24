@@ -70,12 +70,11 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
 
 
 @pytest.mark.parametrize(
-    ("key", "value", "expand", "expected"),
+    ("key", "value", "expected"),
     (
         (
             AttrRep(attr="id"),
             "2819c223-7f76-453a-919d-413861904646",
-            False,
             {"id": "2819c223-7f76-453a-919d-413861904646"},
         ),
         (
@@ -84,19 +83,16 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
                 attr="userName",
             ),
             "bjensen@example.com",
-            False,
             {"userName": "bjensen@example.com"},
         ),
         (
             AttrRep(attr="userName"),
             "bjensen@example.com",
-            False,
             {"userName": "bjensen@example.com"},
         ),
         (
             AttrRep(attr="meta", sub_attr="resourceType"),
             "User",
-            False,
             {"meta": {"resourceType": "User"}},
         ),
         (
@@ -106,28 +102,7 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
                 sub_attr="resourceType",
             ),
             "User",
-            False,
             {"meta": {"resourceType": "User"}},
-        ),
-        (
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                attr="emails",
-                sub_attr="type",
-            ),
-            ["work", "home"],
-            True,
-            {"emails": [{"type": "work"}, {"type": "home"}]},
-        ),
-        (
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                attr="emails",
-                sub_attr="type",
-            ),
-            [Missing, "home"],
-            True,
-            {"emails": [{}, {"type": "home"}]},
         ),
         (
             BoundedAttrRep(
@@ -135,7 +110,6 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
                 attr="employeeNumber",
             ),
             "701984",
-            False,
             {
                 "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                     "employeeNumber": "701984"
@@ -149,7 +123,6 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
                 sub_attr="displayName",
             ),
             "John Smith",
-            False,
             {
                 "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                     "manager": {"displayName": "John Smith"}
@@ -159,7 +132,6 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
         (
             SchemaURI("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
             {"employeeNumber": "10", "manager": {"displayName": "John Smith"}},
-            False,
             {
                 "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                     "employeeNumber": "10",
@@ -169,10 +141,10 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
         ),
     ),
 )
-def test_value_can_be_inserted_to_scim_data_data(key, value, expand, expected):
+def test_value_can_be_inserted_to_scim_data_data(key, value, expected):
     data = SCIMData()
 
-    data.set(key, value, expand)
+    data.set(key, value)
 
     assert data == expected
 
@@ -193,42 +165,6 @@ def test_sub_attr_value_in_data_can_be_reassigned():
     data.set("KEY.SUBKEY", 456)
 
     assert data.get("key.subkey") == 456
-
-
-def test_can_set_and_retrieve_sub_attrs_for_multivalued_complex_attr():
-    data = SCIMData()
-
-    data.set("KEY.SUBKEY", [4, 5, 6], expand=True)
-
-    assert data.get("key.subkey") == [4, 5, 6]
-    assert data.to_dict() == {"KEY": [{"SUBKEY": 4}, {"SUBKEY": 5}, {"SUBKEY": 6}]}
-
-
-def test_sub_attr_bigger_list_value_in_data_can_be_reassigned():
-    data = SCIMData()
-    data.set("key.subkey", [1, 2], expand=True)
-
-    data.set("KEY.SUBKEY", [4, 5, 6], expand=True)
-
-    assert data.get("key.subkey") == [4, 5, 6]
-    assert data.to_dict() == {"key": [{"SUBKEY": 4}, {"SUBKEY": 5}, {"SUBKEY": 6}]}
-
-
-def test_can_not_reassign_simple_value_to_sub_attr_when_expanding():
-    data = SCIMData()
-    data.set("key.subkey", [1, 2], expand=True)
-
-    with pytest.raises(KeyError, match=r"can not assign"):
-        data.set("KEY.SUBKEY", 1, expand=True)
-
-
-def test_sub_attr_smaller_list_value_in_data_can_be_reassigned():
-    data = SCIMData()
-    data.set("key.subkey", [1, 2, 3], expand=True)
-
-    data.set("KEY.SUBKEY", [4, 5], expand=True)
-
-    assert data.get("key.subkey") == [4, 5, 3]
 
 
 def test_assigning_sub_attr_to_non_complex_attr_fails():
@@ -254,14 +190,6 @@ def test_multivalued_sub_attr_can_be_set_and_reassigned():
 
     assert data.get("key.subkey") == [4, 5, 6]
     assert data.to_dict() == {"key": {"SUBKEY": [4, 5, 6]}}
-
-
-def test_reassigning_simple_multivalued_with_expanded_value_fails():
-    data = SCIMData()
-    data.set("key.subkey", [1, 2, 3])
-
-    with pytest.raises(KeyError, match="can not assign"):
-        data.set("KEY.SUBKEY", [4, 5, 6], expand=True)
 
 
 def test_extension_can_be_reassigned():
