@@ -38,7 +38,7 @@ class Validator(abc.ABC):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         """Docs placeholder."""
@@ -68,7 +68,7 @@ class Error(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         raise NotImplementedError
@@ -231,19 +231,19 @@ class ResourceObjectGET(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        query_string = query_string or {}
+        query_params = query_params or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
-                    "attributes": query_string.get("attributes"),
-                    "excludeAttributes": query_string.get("excludeAttributes"),
+                    "attributes": query_params.get("attributes"),
+                    "excludeAttributes": query_params.get("excludeAttributes"),
                 }
             ),
-            location=("query_string",),
+            location=("query_params",),
         )
         return issues
 
@@ -272,7 +272,7 @@ class ServiceResourceObjectGET(ResourceObjectGET):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         return ValidationIssues()
@@ -301,19 +301,19 @@ class ResourceObjectPUT(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        query_string = query_string or {}
+        query_params = query_params or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
-                    "attributes": query_string.get("attributes"),
-                    "excludeAttributes": query_string.get("excludeAttributes"),
+                    "attributes": query_params.get("attributes"),
+                    "excludeAttributes": query_params.get("excludeAttributes"),
                 }
             ),
-            location=["query_string"],
+            location=["query_params"],
         )
         issues.merge(
             issues=self._schema.validate(
@@ -378,19 +378,19 @@ class ResourcesPOST(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        normalized, query_string = SCIMData(body or {}), query_string or {}
+        normalized, query_params = SCIMData(body or {}), query_params or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
-                    "attributes": query_string.get("attributes"),
-                    "excludeAttributes": query_string.get("excludeAttributes"),
+                    "attributes": query_params.get("attributes"),
+                    "excludeAttributes": query_params.get("excludeAttributes"),
                 }
             ),
-            location=("query_string",),
+            location=("query_params",),
         )
         issues.merge(
             issues=self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
@@ -700,14 +700,14 @@ class ServerRootResourcesGET(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        query_string = query_string or {}
+        query_params = query_params or {}
         issues.merge(
-            self._request_query_validation_schema.validate(query_string),
-            location=("query_string",),
+            self._request_query_validation_schema.validate(query_params),
+            location=("query_params",),
         )
         return issues
 
@@ -764,7 +764,7 @@ class SearchRequestPOST(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -820,19 +820,19 @@ class ResourceObjectPATCH(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        normalized, query_string = SCIMData(body or {}), query_string or {}
+        normalized, query_params = SCIMData(body or {}), query_params or {}
         issues.merge(
             search_request.SearchRequest().validate(
                 {
-                    "attributes": query_string.get("attributes"),
-                    "excludeAttributes": query_string.get("excludeAttributes"),
+                    "attributes": query_params.get("attributes"),
+                    "excludeAttributes": query_params.get("excludeAttributes"),
                 }
             ),
-            location=("query_string",),
+            location=("query_params",),
         )
         issues.merge(
             self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
@@ -881,7 +881,7 @@ class ResourceObjectDELETE(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         return ValidationIssues()
@@ -988,7 +988,7 @@ class BulkOperations(Validator):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -1191,16 +1191,16 @@ class _ServiceProviderConfig(ResourcesGET):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_string: Optional[dict[str, Any]] = None,
+        query_params: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        query_string = query_string or {}
-        if "filter" in query_string:
+        query_params = query_params or {}
+        if "filter" in query_params:
             issues.add_error(
                 issue=ValidationError.not_supported(),
                 proceed=False,
-                location=("query_string", "filter"),
+                location=("query_params", "filter"),
             )
         return issues
 

@@ -439,7 +439,7 @@ def test_error_data_can_be_serialized(error_data):
 def test_correct_resource_object_get_request_passes_validation():
     validator = ResourceObjectGET(CONFIG, resource_schema=User)
 
-    issues = validator.validate_request(body=None, query_string={"attributes": ["name.familyName"]})
+    issues = validator.validate_request(body=None, query_params={"attributes": ["name.familyName"]})
 
     assert issues.to_dict(msg=True) == {}
 
@@ -595,7 +595,7 @@ def test_correct_resource_type_post_request_passes_validation(user_data_client):
 
     issues = validator.validate_request(
         body=user_data_client,
-        query_string={"attributes": ["name.familyName"]},
+        query_params={"attributes": ["name.familyName"]},
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -657,7 +657,7 @@ def test_correct_resource_object_put_request_passes_validation(user_data_client)
 
     issues = validator.validate_request(
         body=user_data_client,
-        query_string={"attributes": ["name.familyName"]},
+        query_params={"attributes": ["name.familyName"]},
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -933,7 +933,7 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
 )
 def test_resources_get_request_is_validated(validator, list_user_data):
     expected_issues = {
-        "query_string": {
+        "query_params": {
             "filter": {"_errors": [{"code": 104}, {"code": 17}, {"code": 109}]},
             "attributes": {"_errors": [{"code": 11}]},
             "excludeAttributes": {"_errors": [{"code": 11}]},
@@ -941,7 +941,7 @@ def test_resources_get_request_is_validated(validator, list_user_data):
     }
 
     issues = validator.validate_request(
-        query_string={
+        query_params={
             "filter": "totally^bad fi lter",
             "attributes": ["userName"],
             "excludeAttributes": ["name"],
@@ -1251,7 +1251,7 @@ def test_resource_object_delete_response_validation_succeeds_if_status_204():
 def test_resource_object_delete_request_validation_does_nothing():
     validator = ResourceObjectDELETE(CONFIG)
 
-    issues = validator.validate_request(query_string={"weird": "stuff"})
+    issues = validator.validate_request(query_params={"weird": "stuff"})
 
     assert issues.to_dict(msg=True) == {}
 
@@ -1735,16 +1735,16 @@ def test_schemas_output_can_be_validated():
 
 @pytest.mark.parametrize("validator", [SchemasGET(CONFIG), ResourceTypesGET(CONFIG)])
 def test_service_config_request_parsing_fails_if_requested_filtering(validator):
-    expected_issues = {"query_string": {"filter": {"_errors": [{"code": 31}]}}}
+    expected_issues = {"query_params": {"filter": {"_errors": [{"code": 31}]}}}
 
-    issues = validator.validate_request(query_string={"filter": 'description sw "Hello, World!"'})
+    issues = validator.validate_request(query_params={"filter": 'description sw "Hello, World!"'})
 
     assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize("validator", [SchemasGET(CONFIG), ResourceTypesGET(CONFIG)])
 def test_service_config_request_parsing_succeeds_if_filtering_not_requested(validator):
-    issues = validator.validate_request(query_string={"anything": "else"})
+    issues = validator.validate_request(query_params={"anything": "else"})
 
     assert issues.to_dict(msg=True) == {}
 

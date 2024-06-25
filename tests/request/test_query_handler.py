@@ -1,7 +1,7 @@
 import pytest
 
 from src.container import AttrRep
-from src.request.query_deserializer import (
+from src.request.query_handler import (
     ResourceObjectGET,
     ResourceObjectPATCH,
     ResourceObjectPUT,
@@ -20,8 +20,8 @@ from tests.conftest import CONFIG
         ResourceObjectPATCH(CONFIG),
     ),
 )
-def test_presence_config_is_deserialized_from_query_string(deserializer):
-    deserialized = deserializer.deserialize(query_string={"attributes": ["name.familyName"]})
+def test_presence_config_is_deserialized_from_query_params(deserializer):
+    deserialized = deserializer.deserialize(query_params={"attributes": ["name.familyName"]})
 
     assert deserialized["presence_config"].attr_reps == [
         AttrRep(attr="name", sub_attr="familyName")
@@ -29,7 +29,7 @@ def test_presence_config_is_deserialized_from_query_string(deserializer):
     assert deserialized["presence_config"].include is True
 
 
-def test_server_root_resources_get_query_string_is_deserialized():
+def test_server_root_resources_get_query_params_is_deserialized():
     data = ServerRootResourcesGET(CONFIG).deserialize(
         {
             "attributes": ["userName", "name"],

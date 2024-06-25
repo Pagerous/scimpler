@@ -587,7 +587,7 @@ class Complex(Attribute):
         cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
         return cloned
 
-    def _validate(self, value: MutableMapping) -> ValidationIssues:
+    def _validate(self, value: MutableMapping[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
         value = SCIMData(value)
         for name, sub_attr in self._sub_attributes:
@@ -603,7 +603,7 @@ class Complex(Attribute):
             )
         return issues
 
-    def _deserialize(self, value: MutableMapping) -> SCIMData:
+    def _deserialize(self, value: MutableMapping[str, Any]) -> SCIMData:
         value = SCIMData(value)
         deserialized = SCIMData()
         for name, sub_attr in self._sub_attributes:
@@ -613,7 +613,7 @@ class Complex(Attribute):
             deserialized.set(name, sub_attr.deserialize(sub_attr_value))
         return deserialized
 
-    def _serialize(self, value: MutableMapping) -> dict[str, Any]:
+    def _serialize(self, value: MutableMapping[str, Any]) -> SCIMData:
         value = SCIMData(value)
         serialized = SCIMData()
         for name, sub_attr in self._sub_attributes:
@@ -621,7 +621,7 @@ class Complex(Attribute):
             if sub_attr_value is Missing:
                 continue
             serialized.set(name, sub_attr.serialize(sub_attr_value))
-        return serialized.to_dict()
+        return serialized
 
     def to_dict(self) -> dict[str, Any]:
         output = super().to_dict()

@@ -74,7 +74,7 @@ class BaseSchema:
     def schema(self) -> SchemaURI:
         return self._schema
 
-    def deserialize(self, data: MutableMapping) -> SCIMData:
+    def deserialize(self, data: MutableMapping[str, Any]) -> SCIMData:
         data = SCIMData(data)
         deserialized = SCIMData()
         for attr_rep, attr in self.attrs:
@@ -83,16 +83,18 @@ class BaseSchema:
                 deserialized.set(attr_rep, attr.deserialize(value))
         return self._deserialize(deserialized)
 
-    def serialize(self, data: MutableMapping) -> dict[str, Any]:
+    def serialize(self, data: MutableMapping[str, Any]) -> SCIMData:
         data = SCIMData(data)
         serialized = SCIMData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             if value is not Missing:
                 serialized.set(attr_rep, attr.serialize(value))
-        return self._serialize(serialized).to_dict()
+        return self._serialize(serialized)
 
-    def filter(self, data: MutableMapping, attr_filter: Callable[[Attribute], bool]) -> SCIMData:
+    def filter(
+        self, data: MutableMapping[str, Any], attr_filter: Callable[[Attribute], bool]
+    ) -> SCIMData:
         data = SCIMData(data)
         filtered = SCIMData()
         for attr_rep, attr in self.attrs:
@@ -115,7 +117,7 @@ class BaseSchema:
 
     def validate(
         self,
-        data: MutableMapping,
+        data: MutableMapping[str, Any],
         presence_config: Optional[AttrPresenceConfig] = None,
         **kwargs,
     ) -> ValidationIssues:

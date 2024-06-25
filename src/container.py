@@ -46,17 +46,20 @@ class SchemaURI(str):
 class AttrRep:
     def __init__(self, attr: str, sub_attr: Optional[str] = None):
         attr = AttrName(attr)
-        repr_: str = attr
+        str_: str = attr
         if sub_attr is not None:
             sub_attr = AttrName(sub_attr)
-            repr_ += "." + sub_attr
+            str_ += "." + sub_attr
 
         self._attr = attr
         self._sub_attr = sub_attr
-        self._repr = repr_
+        self._str = str_
+
+    def __str__(self) -> str:
+        return self._str
 
     def __repr__(self) -> str:
-        return self._repr
+        return f"{self.__class__.__name__}({str(self)})"
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, AttrRep):
@@ -101,7 +104,7 @@ class BoundedAttrRep(AttrRep):
         if is_extension is None:
             raise ValueError(f"unknown schema {schema!r}")
 
-        self._repr = f"{schema}:{self._repr}"
+        self._str = f"{schema}:{self._str}"
         self._schema = schema
         self._extension = is_extension
 

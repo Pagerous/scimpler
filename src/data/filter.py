@@ -598,7 +598,7 @@ class Filter(Generic[TOperator]):
 
     def __call__(
         self,
-        data: MutableMapping,
+        data: MutableMapping[str, Any],
         schema_or_complex: Union[BaseSchema, Complex],
     ) -> bool:
         return self._operator.match(SCIMData(data), schema_or_complex)
