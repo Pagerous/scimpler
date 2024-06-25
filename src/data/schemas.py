@@ -1,6 +1,6 @@
 import copy
 import warnings
-from typing import Any, Callable, Iterable, MutableMapping, Optional, TypeVar, Union, cast
+from typing import Any, Callable, Iterable, MutableMapping, Optional
 
 from typing_extensions import Self
 
@@ -35,9 +35,6 @@ def bulk_id_validator(value) -> ValidationIssues:
             proceed=False,
         )
     return issues
-
-
-TData = TypeVar("TData")
 
 
 class BaseSchema:
@@ -95,16 +92,13 @@ class BaseSchema:
                 serialized.set(attr_rep, attr.serialize(value))
         return self._serialize(serialized).to_dict()
 
-    def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
-        return cast(TData, type(data)(self._filter(SCIMData(data), attr_filter)))
-
-    def _filter(self, data: SCIMData, attr_filter: Callable[[Attribute], bool]) -> SCIMData:
+    def filter(self, data: MutableMapping, attr_filter: Callable[[Attribute], bool]) -> SCIMData:
+        data = SCIMData(data)
         filtered = SCIMData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             if value is Missing:
                 continue
-
             if isinstance(attr, Complex):
                 value = attr.filter(value, attr_filter)
                 if all(value) if isinstance(value, list) else value:
@@ -121,13 +115,12 @@ class BaseSchema:
 
     def validate(
         self,
-        data: Union[SCIMData, dict[str, Any]],
+        data: MutableMapping,
         presence_config: Optional[AttrPresenceConfig] = None,
         **kwargs,
     ) -> ValidationIssues:
         issues = ValidationIssues()
-        if isinstance(data, dict):
-            data = SCIMData(data)
+        data = SCIMData(data)
         issues.merge(self._validate_data(data, presence_config))
         if issues.can_proceed(("schemas",)):
             issues.merge(

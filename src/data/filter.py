@@ -1,6 +1,16 @@
 import re
 from dataclasses import dataclass
-from typing import Any, Generic, Optional, Type, TypeAlias, TypeVar, Union, cast
+from typing import (
+    Any,
+    Generic,
+    MutableMapping,
+    Optional,
+    Type,
+    TypeAlias,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
 from src.data import operator as op
@@ -588,7 +598,7 @@ class Filter(Generic[TOperator]):
 
     def __call__(
         self,
-        data: Union[SCIMData, dict],
+        data: MutableMapping,
         schema_or_complex: Union[BaseSchema, Complex],
     ) -> bool:
         return self._operator.match(SCIMData(data), schema_or_complex)

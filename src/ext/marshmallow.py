@@ -250,7 +250,7 @@ def _get_list_response_processors(
                     scimple_schema=resource_schema,
                     processors=Processors(),
                     context_provider=None,
-                )().dump(resource.to_dict())
+                )().dump(resource)
             serialized_resources.append(serialized_resource)
         if serialized_resources:
             serialized["Resources"] = serialized_resources

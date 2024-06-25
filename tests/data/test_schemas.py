@@ -174,42 +174,42 @@ def test_schema_can_be_cloned_with_attr_filter_specified():
     assert len(list(schema.attrs)) == 2
 
 
-@pytest.mark.parametrize("use_container", (True, False))
-def test_data_can_be_filtered_according_to_attr_filter(user_data_client, use_container):
-    expected = {
-        "schemas": [
-            "urn:ietf:params:scim:schemas:core:2.0:User",
-            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-        ],
-        "groups": [
-            {
-                "value": "e9e30dba-f08f-4109-8486-d5c6a331660a",
-                "$ref": "../Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
-                "display": "Tour Guides",
+def test_data_can_be_filtered_according_to_attr_filter(user_data_client):
+    expected = SCIMData(
+        {
+            "schemas": [
+                "urn:ietf:params:scim:schemas:core:2.0:User",
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+            ],
+            "groups": [
+                {
+                    "value": "e9e30dba-f08f-4109-8486-d5c6a331660a",
+                    "$ref": "../Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
+                    "display": "Tour Guides",
+                },
+                {
+                    "value": "fc348aa8-3835-40eb-a20b-c726e15c55b5",
+                    "$ref": "../Groups/fc348aa8-3835-40eb-a20b-c726e15c55b5",
+                    "display": "Employees",
+                },
+                {
+                    "value": "71ddacd2-a8e7-49b8-a5db-ae50d0a5bfd7",
+                    "$ref": "../Groups/71ddacd2-a8e7-49b8-a5db-ae50d0a5bfd7",
+                    "display": "US Employees",
+                },
+            ],
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+                "manager": {
+                    "displayName": "John Smith",
+                },
             },
-            {
-                "value": "fc348aa8-3835-40eb-a20b-c726e15c55b5",
-                "$ref": "../Groups/fc348aa8-3835-40eb-a20b-c726e15c55b5",
-                "display": "Employees",
-            },
-            {
-                "value": "71ddacd2-a8e7-49b8-a5db-ae50d0a5bfd7",
-                "$ref": "../Groups/71ddacd2-a8e7-49b8-a5db-ae50d0a5bfd7",
-                "display": "US Employees",
-            },
-        ],
-        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-            "manager": {
-                "displayName": "John Smith",
-            },
-        },
-    }
-    if use_container:
-        user_data_client = SCIMData(user_data_client)
+        }
+    )
+    user_data_client = SCIMData(user_data_client)
 
     actual = User.filter(user_data_client, lambda attr: attr.mutability == "readOnly")
 
-    assert actual == expected
+    assert actual.to_dict() == expected.to_dict()
 
 
 def test_schemas_is_not_validated_further_if_bad_type(user_data_client):

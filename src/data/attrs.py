@@ -12,16 +12,14 @@ from typing import (
     Collection,
     Iterable,
     Iterator,
+    MutableMapping,
     Optional,
-    TypeVar,
     Union,
-    cast,
 )
 from urllib.parse import urlparse
 
 import precis_i18n.profile
 from precis_i18n import get_profile
-from typing_extensions import TypeAlias
 
 from src.constants import SCIMType
 from src.container import (
@@ -519,10 +517,6 @@ _default_sub_attrs = [
 ]
 
 
-_AllowedData: TypeAlias = Union[SCIMData, dict]
-TData = TypeVar("TData", bound=Union[_AllowedData, list[_AllowedData]])
-
-
 class Complex(Attribute):
     SCIM_TYPE = "complex"
     BASE_TYPES = (SCIMData, dict)
@@ -568,13 +562,14 @@ class Complex(Attribute):
     def attrs(self) -> "Attrs":
         return self._sub_attributes
 
-    def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
-        if isinstance(data, list):
-            return cast(TData, [self.filter(item, attr_filter) for item in data])
-
-        if isinstance(data, dict):
-            return cast(TData, self._filter(SCIMData(data), attr_filter).to_dict())
-        return cast(TData, self._filter(cast(SCIMData, data), attr_filter))
+    def filter(
+        self,
+        data: Union[MutableMapping, Iterable[MutableMapping]],
+        attr_filter: Callable[[Attribute], bool],
+    ) -> Union[MutableMapping, Iterable[MutableMapping]]:
+        if isinstance(data, MutableMapping):
+            return self._filter(SCIMData(data), attr_filter)
+        return [self._filter(SCIMData(item), attr_filter) for item in data]
 
     def _filter(
         self,
@@ -592,7 +587,7 @@ class Complex(Attribute):
         cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
         return cloned
 
-    def _validate(self, value: Union[SCIMData, dict[str, Any]]) -> ValidationIssues:
+    def _validate(self, value: MutableMapping) -> ValidationIssues:
         issues = ValidationIssues()
         value = SCIMData(value)
         for name, sub_attr in self._sub_attributes:
@@ -608,7 +603,7 @@ class Complex(Attribute):
             )
         return issues
 
-    def _deserialize(self, value: Union[dict, SCIMData]) -> SCIMData:
+    def _deserialize(self, value: MutableMapping) -> SCIMData:
         value = SCIMData(value)
         deserialized = SCIMData()
         for name, sub_attr in self._sub_attributes:
@@ -618,7 +613,7 @@ class Complex(Attribute):
             deserialized.set(name, sub_attr.deserialize(sub_attr_value))
         return deserialized
 
-    def _serialize(self, value: Union[dict, SCIMData]) -> dict[str, Any]:
+    def _serialize(self, value: MutableMapping) -> dict[str, Any]:
         value = SCIMData(value)
         serialized = SCIMData()
         for name, sub_attr in self._sub_attributes:
