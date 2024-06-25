@@ -310,7 +310,7 @@ def bulk_request_serialized():
 
 
 @pytest.fixture
-def bulk_request_deserialized(bulk_request_serialized):
+def bulk_request_deserialized(bulk_request_serialized: dict):
     deserialized: dict = deepcopy(bulk_request_serialized)
     deserialized["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath.deserialize(
         deserialized["Operations"][2]["data"]["Operations"][0]["path"]

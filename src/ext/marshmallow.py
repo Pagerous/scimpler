@@ -1,4 +1,4 @@
-from collections.abc import Mapping
+from collections.abc import MutableMapping
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 
@@ -12,6 +12,10 @@ from src.data.schemas import BaseSchema, ResourceSchema
 from src.request.validator import Validator
 
 _marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
+
+
+class ContextError(Exception):
+    pass
 
 
 @dataclass
@@ -66,12 +70,15 @@ class ResponseContextProvider(Protocol):
     def __call__(self) -> ResponseContext: ...
 
 
+ContextProvider = Union[RequestContextProvider, ResponseContextProvider]
+
+
 def initialize(
     fields_by_attrs: Optional[dict[type[attrs.Attribute], type[marshmallow.fields.Field]]] = None,
 ):
     global _marshmallow_field_by_attr_type
 
-    default = {
+    default: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {
         attrs.Unknown: marshmallow.fields.Raw,
         attrs.Boolean: marshmallow.fields.Boolean,
         attrs.Integer: marshmallow.fields.Integer,
@@ -155,7 +162,9 @@ def _transform_errors_dict(input_dict):
     return output_dict
 
 
-def _validate_response(data: dict, response_validator: Callable, context: ResponseContext) -> None:
+def _validate_response(
+    data: MutableMapping, response_validator: Callable, context: ResponseContext
+) -> None:
     issues = response_validator(
         status_code=context.status_code,
         body=data,
@@ -168,7 +177,9 @@ def _validate_response(data: dict, response_validator: Callable, context: Respon
         )
 
 
-def _validate_request(data: dict, request_validator: Callable, context: RequestContext) -> None:
+def _validate_request(
+    data: MutableMapping, request_validator: Callable, context: RequestContext
+) -> None:
     issues = request_validator(
         body=data,
         headers=context.headers,
@@ -183,11 +194,12 @@ def _validate_request(data: dict, request_validator: Callable, context: RequestC
 def _get_list_response_processors(
     scimple_schema: ListResponse,
     processors: Processors,
-    context_provider: Optional[ResponseContextProvider],
+    context_provider: Optional[ContextProvider],
 ):
     processors_ = {}
 
-    def deserialize(data):
+    def deserialize(data: MutableMapping) -> SCIMData:
+        data = SCIMData(data)
         resources = data.pop("Resources", [])
         deserialized = scimple_schema.deserialize(data)
         deserialized_resources = []
@@ -206,22 +218,26 @@ def _get_list_response_processors(
             deserialized.set("Resources", deserialized_resources)
         return deserialized
 
-    if processors.validator:
+    if validator := processors.validator:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             if context_provider is None:
-                raise ValueError("context must be provided when loading data")
-            _validate_response(data, processors.validator, context_provider())
+                raise ContextError("context must be provided when loading data")
+            context = context_provider()
+            if isinstance(context, RequestContext):
+                raise
+            _validate_response(data, validator, context)
             return deserialize(data)
     else:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             return deserialize(data)
 
-    def _post_load(_, data, **__):
+    def _post_load(_, data: MutableMapping, **__) -> SCIMData:
         return SCIMData(data)
 
-    def _pre_dump(_, data, **__):
+    def _pre_dump(_, data: MutableMapping, **__) -> dict[str, Any]:
+        data = SCIMData(data)
         resources_ = data.pop("Resources", [])
         serialized = scimple_schema.serialize(data)
         serialized_resources = []
@@ -249,30 +265,11 @@ def _get_list_response_processors(
 def _get_resource_processors(
     scimple_schema: ResourceSchema,
     processors: Processors,
-    context_provider: Optional[Union[ResponseContextProvider, RequestContextProvider]],
-):
+    context_provider: Optional[ContextProvider],
+) -> dict[str, Callable]:
     processors_ = {}
 
-    def deserialize(data):
-        return scimple_schema.deserialize(data)
-
-    if processors.validator:
-
-        def _pre_load(_, data, **__):
-            if context_provider is None:
-                raise ValueError("context must be provided when loading data")
-            context = context_provider()
-            if isinstance(context, ResponseContext):
-                _validate_response(data, processors.validator, context)
-            else:
-                _validate_request(data, processors.validator, context)
-            return deserialize(data)
-    else:
-
-        def _pre_load(_, data, **__):
-            return deserialize(data)
-
-    def _post_load(_, data, original_data, **__):
+    def _post_load(_, data: MutableMapping, original_data: MutableMapping, **__) -> SCIMData:
         for extension_uri in scimple_schema.extensions:
             extension_uri_lower = extension_uri.lower()
             for k in original_data:
@@ -287,10 +284,14 @@ def _get_resource_processors(
                     data[k] = extension_data
         return SCIMData(data)
 
-    def _pre_dump(_, data, **__):
+    def _pre_dump(_, data: MutableMapping, **__) -> dict[str, Any]:
         return scimple_schema.serialize(data)
 
-    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
+    processors_["_pre_load"] = _get_generic_pre_load(
+        scimple_schema=scimple_schema,
+        processors=processors,
+        context_provider=context_provider,
+    )
     processors_["_post_load"] = marshmallow.post_load(_post_load, pass_original=True)
     processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
 
@@ -300,11 +301,11 @@ def _get_resource_processors(
 def _get_patch_op_processors(
     scimple_schema: PatchOp,
     processors: Processors,
-    context_provider: Optional[RequestContextProvider],
-):
+    context_provider: Optional[ContextProvider],
+) -> dict[str, Callable]:
     processors_ = {}
 
-    def deserialize(data):
+    def deserialize(data: MutableMapping) -> SCIMData:
         values = [operation.pop("value", Missing) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
         for operation, value in zip(deserialized.get("Operations", []), values):
@@ -321,22 +322,25 @@ def _get_patch_op_processors(
             operation.set("value", value_schema().load(value))
         return deserialized
 
-    if processors.validator:
+    if validator := processors.validator:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             if context_provider is None:
-                raise ValueError("context must be provided when loading data")
-            _validate_request(data, processors.validator, context_provider())
+                raise ContextError("context must be provided when loading data")
+            context = context_provider()
+            if isinstance(context, ResponseContext):
+                raise ContextError(f"{scimple_schema} for response is not available")
+            _validate_request(data, validator, context)
             return deserialize(data)
     else:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             return deserialize(data)
 
-    def _post_load(_, data, **__):
+    def _post_load(_, data: MutableMapping, **__) -> SCIMData:
         return SCIMData(data)
 
-    def _pre_dump(_, data, **__):
+    def _pre_dump(_, data: MutableMapping, **__) -> dict[str, Any]:
         values = [operation.pop("value") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, value in zip(serialized.get("Operations", []), values):
@@ -363,11 +367,11 @@ def _get_patch_op_processors(
 def _get_bulk_response_processors(
     scimple_schema: BulkResponse,
     processors: Processors,
-    context_provider: Optional[ResponseContextProvider],
-):
+    context_provider: Optional[ContextProvider],
+) -> dict[str, Callable]:
     processors_ = {}
 
-    def _get_operation_response_schema(operation: Mapping):
+    def _get_operation_response_schema(operation: MutableMapping) -> type[marshmallow.Schema]:
         response_schema = scimple_schema.get_schema(operation)
         if response_schema is None:
             raise marshmallow.ValidationError("unknown resource")
@@ -377,7 +381,7 @@ def _get_bulk_response_processors(
             context_provider=None,
         )
 
-    def deserialize(data):
+    def deserialize(data: MutableMapping) -> SCIMData:
         responses = [operation.pop("response") for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
         for operation, response in zip(deserialized.get("Operations", []), responses):
@@ -386,22 +390,25 @@ def _get_bulk_response_processors(
                 operation.set("response", response_schema().load(response))
         return deserialized
 
-    if processors.validator:
+    if validator := processors.validator:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             if context_provider is None:
-                raise ValueError("context must be provided when loading data")
-            _validate_response(data, processors.validator, context_provider())
+                raise ContextError("context must be provided when loading data")
+            context = context_provider()
+            if isinstance(context, RequestContext):
+                raise ContextError(f"{scimple_schema} for request is not available")
+            _validate_response(data, validator, context)
             return deserialize(data)
     else:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             return deserialize(data)
 
-    def _post_load(_, data, **__):
+    def _post_load(_, data: MutableMapping, **__) -> SCIMData:
         return SCIMData(data)
 
-    def _pre_dump(_, data, **__):
+    def _pre_dump(_, data: MutableMapping, **__) -> dict[str, Any]:
         responses = [operation.pop("response") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, response in zip(serialized.get("Operations", []), responses):
@@ -420,11 +427,11 @@ def _get_bulk_response_processors(
 def _get_bulk_request_processors(
     scimple_schema: BulkRequest,
     processors: Processors,
-    context_provider: Optional[Union[ResponseContextProvider, RequestContextProvider]],
-):
+    context_provider: Optional[ContextProvider],
+) -> dict[str, Callable]:
     processors_ = {}
 
-    def deserialize(data):
+    def deserialize(data: MutableMapping) -> SCIMData:
         requests_data = [operation.pop("data", None) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
         for operation, data in zip(deserialized.get("Operations", []), requests_data):
@@ -441,26 +448,25 @@ def _get_bulk_request_processors(
                 operation.set("data", request_schema().load(data))
         return deserialized
 
-    if processors.validator:
+    if validator := processors.validator:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             if context_provider is None:
-                raise ValueError("context must be provided when loading data")
+                raise ContextError("context must be provided when loading data")
             context = context_provider()
-            if isinstance(context, RequestContext):
-                _validate_request(data, processors.validator, context)
-            else:
-                raise NotImplementedError
+            if isinstance(context, ResponseContext):
+                raise ContextError(f"{scimple_schema} for response is not available")
+            _validate_request(data, validator, context)
             return deserialize(data)
     else:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             return deserialize(data)
 
-    def _post_load(_, data, **__):
+    def _post_load(_, data: MutableMapping, **__) -> SCIMData:
         return SCIMData(data)
 
-    def _pre_dump(_, data, **__):
+    def _pre_dump(_, data: MutableMapping, **__) -> dict[str, Any]:
         operation_data = [operation.pop("data") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, data_item in zip(serialized.get("Operations", []), operation_data):
@@ -483,39 +489,51 @@ def _get_bulk_request_processors(
     return processors_
 
 
-def _get_generic_processors(
+def _get_generic_pre_load(
     scimple_schema: BaseSchema,
     processors: Processors,
-    context_provider: Optional[Union[ResponseContextProvider, RequestContextProvider]] = None,
-):
-    processors_ = {}
-
-    def deserialize(data):
+    context_provider: Optional[ContextProvider] = None,
+) -> Callable:
+    def deserialize(data: MutableMapping) -> SCIMData:
         return scimple_schema.deserialize(data)
 
-    if processors.validator:
+    if validator := processors.validator:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             if context_provider is None:
-                raise ValueError("context must be provided when loading data")
+                raise ContextError("context must be provided when loading data")
             context = context_provider()
             if isinstance(context, ResponseContext):
-                _validate_response(data, processors.validator, context)
+                _validate_response(data, validator, context)
             else:
-                _validate_request(data, processors.validator, context)
+                _validate_request(data, validator, context)
             return deserialize(data)
     else:
 
-        def _pre_load(_, data, **__):
+        def _pre_load(_, data: MutableMapping, **__) -> SCIMData:
             return deserialize(data)
 
-    def _post_load(_, data, **__):
+    return marshmallow.pre_load(_pre_load)
+
+
+def _get_generic_processors(
+    scimple_schema: BaseSchema,
+    processors: Processors,
+    context_provider: Optional[ContextProvider] = None,
+) -> dict[str, Callable]:
+    processors_ = {}
+
+    def _post_load(_, data: MutableMapping, **__) -> SCIMData:
         return SCIMData(data)
 
-    def _pre_dump(_, data, **__):
+    def _pre_dump(_, data: MutableMapping, **__) -> dict[str, Any]:
         return scimple_schema.serialize(data)
 
-    processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
+    processors_["_pre_load"] = _get_generic_pre_load(
+        scimple_schema=scimple_schema,
+        processors=processors,
+        context_provider=context_provider,
+    )
     processors_["_post_load"] = marshmallow.post_load(_post_load)
     processors_["_pre_dump"] = marshmallow.pre_dump(_pre_dump)
 
@@ -524,26 +542,26 @@ def _get_generic_processors(
 
 def _get_generic_attr_processors(
     scimple_schema: Attribute,
-):
+) -> dict[str, Callable]:
     processors_ = {}
 
-    def _pre_load(_, data, **__):
+    def _pre_load(_, data: Any, **__) -> dict[str, Any]:
         return {str(scimple_schema.name): scimple_schema.deserialize(data)}
 
-    def _post_load(_, data, **__):
+    def _post_load(_, data: Any, **__) -> Any:
         data = data.get(str(scimple_schema.name))
         if data is None:
             return data
-        if isinstance(data, Mapping):
+        if isinstance(data, MutableMapping):
             return SCIMData(data)
         if isinstance(data, list):
-            return [SCIMData(item) if isinstance(item, Mapping) else item for item in data]
+            return [SCIMData(item) if isinstance(item, MutableMapping) else item for item in data]
         return data
 
-    def _pre_dump(_, data, **__):
+    def _pre_dump(_, data: Any, **__) -> dict[str, Any]:
         return {str(scimple_schema.name): scimple_schema.serialize(data)}
 
-    def _post_dump(_, data, **__):
+    def _post_dump(_, data: MutableMapping, **__) -> Any:
         return data.get(str(scimple_schema.name))
 
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
@@ -558,54 +576,54 @@ def _include_processing_in_schema(
     schema_cls: type[marshmallow.Schema],
     scimple_schema: Union[BaseSchema, Attribute],
     processors: Processors,
-    context_provider: Optional[Union[ResponseContextProvider, ResponseContextProvider]],
+    context_provider: Optional[ContextProvider],
 ) -> type[marshmallow.Schema]:
     if isinstance(scimple_schema, ListResponse):
-        processors = _get_list_response_processors(
+        processors_ = _get_list_response_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
         )
     elif isinstance(scimple_schema, ResourceSchema):
-        processors = _get_resource_processors(
+        processors_ = _get_resource_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
         )
     elif isinstance(scimple_schema, BulkResponse):
-        processors = _get_bulk_response_processors(
+        processors_ = _get_bulk_response_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
         )
     elif isinstance(scimple_schema, BulkRequest):
-        processors = _get_bulk_request_processors(
+        processors_ = _get_bulk_request_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
         )
     elif isinstance(scimple_schema, PatchOp):
-        processors = _get_patch_op_processors(
+        processors_ = _get_patch_op_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
         )
     elif isinstance(scimple_schema, Attribute):
-        processors = _get_generic_attr_processors(
+        processors_ = _get_generic_attr_processors(
             scimple_schema=scimple_schema,
         )
     else:
-        processors = _get_generic_processors(
+        processors_ = _get_generic_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             context_provider=context_provider,
         )
 
-    processors["get_attribute"] = _get_field_value
+    processors_["get_attribute"] = _get_field_value
     class_ = type(
         type(scimple_schema).__name__,
         (schema_cls,),
-        processors,
+        processors_,
     )
     return cast(type[marshmallow.Schema], class_)
 
@@ -613,7 +631,7 @@ def _include_processing_in_schema(
 def _create_schema(
     scimple_schema: Union[BaseSchema, Attribute],
     processors: Processors,
-    context_provider: Optional[Union[ResponseContextProvider, RequestContextProvider]],
+    context_provider: Optional[ContextProvider],
 ) -> type[marshmallow.Schema]:
     if isinstance(scimple_schema, BaseSchema):
         if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:

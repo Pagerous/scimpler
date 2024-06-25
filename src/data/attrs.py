@@ -74,8 +74,8 @@ _AttributeValidator = Callable[[Any], ValidationIssues]
 class Attribute(abc.ABC):
     SCIM_TYPE: str
     BASE_TYPES: tuple
-    _global_serializer: Callable[[Any], Any] = None
-    _global_deserializer: Callable[[Any], Any] = None
+    _global_serializer: Optional[Callable[[Any], Any]] = None
+    _global_deserializer: Optional[Callable[[Any], Any]] = None
 
     def __init__(
         self,

@@ -9,9 +9,7 @@ def test_validation_bulk_request_operation_fails_if_no_method():
     expected_issues = {"0": {"method": {"_errors": [{"code": 5}]}}}
 
     issues = (
-        BulkRequest(sub_schemas={})
-        .attrs.get("operations")
-        .validate([SCIMData({"path": "/Users"})])
+        BulkRequest(sub_schemas={}).attrs.get("operations").validate([SCIMData({"path": "/Users"})])
     )
 
     assert issues.to_dict() == expected_issues

@@ -168,7 +168,7 @@ def user_patch_serialized():
 
 
 @pytest.fixture
-def user_patch_deserialized(user_patch_serialized):
+def user_patch_deserialized(user_patch_serialized: dict):
     deserialized: dict = deepcopy(user_patch_serialized)
     deserialized["Operations"][0]["path"] = PatchPath.deserialize(
         deserialized["Operations"][0]["path"]

@@ -1,6 +1,6 @@
 import copy
 import warnings
-from typing import Any, Callable, Iterable, Optional, TypeVar, Union, cast
+from typing import Any, Callable, Iterable, MutableMapping, Optional, TypeVar, Union, cast
 
 from typing_extensions import Self
 
@@ -37,7 +37,7 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-TData = TypeVar("TData", bound=Union[dict, SCIMData])
+TData = TypeVar("TData")
 
 
 class BaseSchema:
@@ -77,7 +77,7 @@ class BaseSchema:
     def schema(self) -> SchemaURI:
         return self._schema
 
-    def deserialize(self, data: Union[dict, SCIMData]) -> SCIMData:
+    def deserialize(self, data: MutableMapping) -> SCIMData:
         data = SCIMData(data)
         deserialized = SCIMData()
         for attr_rep, attr in self.attrs:
@@ -86,7 +86,7 @@ class BaseSchema:
                 deserialized.set(attr_rep, attr.deserialize(value))
         return self._deserialize(deserialized)
 
-    def serialize(self, data: Union[dict, SCIMData]) -> dict[str, Any]:
+    def serialize(self, data: MutableMapping) -> dict[str, Any]:
         data = SCIMData(data)
         serialized = SCIMData()
         for attr_rep, attr in self.attrs:
@@ -96,9 +96,7 @@ class BaseSchema:
         return self._serialize(serialized).to_dict()
 
     def filter(self, data: TData, attr_filter: Callable[[Attribute], bool]) -> TData:
-        if isinstance(data, dict):
-            return cast(TData, self._filter(SCIMData(data), attr_filter).to_dict())
-        return cast(TData, self._filter(cast(SCIMData, data), attr_filter))
+        return cast(TData, type(data)(self._filter(SCIMData(data), attr_filter)))
 
     def _filter(self, data: SCIMData, attr_filter: Callable[[Attribute], bool]) -> SCIMData:
         filtered = SCIMData()

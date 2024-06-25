@@ -746,7 +746,7 @@ class SearchRequestPOST(Validator):
         resource_schemas: Sequence[ResourceSchema],
     ):
         super().__init__(config)
-        self._request_validation_schema = create_search_request_schema(config)
+        self._request_validation_schema = create_search_request_schema(self.config)
         self._response_validation_schema = list_response.ListResponse(resource_schemas)
         self._response_schema = list_response.ListResponse(
             [resource_schema.clone(_resource_output_filter) for resource_schema in resource_schemas]
