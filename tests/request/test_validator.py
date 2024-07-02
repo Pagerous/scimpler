@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pytest
 
-from src.assets.schemas import Group, User, service_provider_config
-from src.assets.schemas.resource_type import ResourceType
-from src.assets.schemas.schema import Schema
+from src.assets.schemas import service_provider_config
+from src.assets.schemas.resource_type import ResourceTypeSchema
+from src.assets.schemas.schema import SchemaSchema
 from src.config import create_service_provider_config
 from src.container import AttrRep, BoundedAttrRep, Missing
 from src.data.attr_presence import AttrPresenceConfig
@@ -23,15 +23,13 @@ from src.request.validator import (
     ResourceObjectPUT,
     ResourcesGET,
     ResourcesPOST,
-    ResourceTypesGET,
-    SchemasGET,
     SearchRequestPOST,
     ServerRootResourcesGET,
     ServiceResourceObjectGET,
     can_validate_filtering,
     can_validate_sorting,
 )
-from tests.conftest import CONFIG, SchemaForTests
+from tests.conftest import CONFIG
 
 
 @pytest.mark.parametrize(
@@ -73,8 +71,10 @@ def test_validate_error_status_code_value():
     assert issues.to_dict() == expected_issues
 
 
-def test_resource_location_consistency_validation_fails_if_no_consistency(user_data_server):
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+def test_resource_location_consistency_validation_fails_if_no_consistency(
+    user_data_server, user_schema
+):
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
 
     expected_issues = {
         "body": {
@@ -110,8 +110,10 @@ def test_resource_location_consistency_validation_fails_if_no_consistency(user_d
     assert issues.to_dict() == expected_issues
 
 
-def test_validate_resource_location_consistency__succeeds_if_consistency(user_data_server):
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+def test_validate_resource_location_consistency__succeeds_if_consistency(
+    user_data_server, user_schema
+):
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=201,
@@ -124,9 +126,11 @@ def test_validate_resource_location_consistency__succeeds_if_consistency(user_da
     assert issues.to_dict(msg=True) == {}
 
 
-def test_number_of_resources_validation_fails_if_more_resources_than_total_results(list_user_data):
+def test_number_of_resources_validation_fails_if_more_resources_than_total_results(
+    list_user_data, user_schema
+):
     list_user_data["totalResults"] = 1
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -139,10 +143,10 @@ def test_number_of_resources_validation_fails_if_more_resources_than_total_resul
 
 
 def test_number_of_resources_validation_fails_if_less_resources_than_total_results_without_count(
-    list_user_data,
+    list_user_data, user_schema
 ):
     list_user_data["totalResults"] = 3
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -155,9 +159,9 @@ def test_number_of_resources_validation_fails_if_less_resources_than_total_resul
 
 
 def test_number_of_resources_validation_fails_if_more_resources_than_specified_count(
-    list_user_data,
+    list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -171,9 +175,9 @@ def test_number_of_resources_validation_fails_if_more_resources_than_specified_c
 
 @pytest.mark.parametrize("count", (2, None))
 def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
-    count, list_user_data
+    count, list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -184,8 +188,10 @@ def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
     assert issues.to_dict(msg=True) == {}
 
 
-def test_pagination_info_validation_fails_if_start_index_is_missing_when_pagination(list_user_data):
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+def test_pagination_info_validation_fails_if_start_index_is_missing_when_pagination(
+    list_user_data, user_schema
+):
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data["itemsPerPage"] = 1
     list_user_data.pop("startIndex")
@@ -200,8 +206,10 @@ def test_pagination_info_validation_fails_if_start_index_is_missing_when_paginat
     assert issues.to_dict() == expected
 
 
-def test_resources_get_response_validation_fails_if_mismatch_in_start_index(list_user_data):
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+def test_resources_get_response_validation_fails_if_mismatch_in_start_index(
+    list_user_data, user_schema
+):
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     list_user_data["startIndex"] = 3
     expected = {"body": {"startIndex": {"_errors": [{"code": 4}]}}}
 
@@ -215,9 +223,9 @@ def test_resources_get_response_validation_fails_if_mismatch_in_start_index(list
 
 
 def test_pagination_info_validation_fails_if_items_per_page_is_missing_when_pagination(
-    list_user_data,
+    list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data.pop("itemsPerPage")
     expected = {"body": {"itemsPerPage": {"_errors": [{"code": 5}]}}}
@@ -231,8 +239,10 @@ def test_pagination_info_validation_fails_if_items_per_page_is_missing_when_pagi
     assert issues.to_dict() == expected
 
 
-def test_validate_pagination_info_validation_succeeds_when_if_data_for_pagination(list_user_data):
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+def test_validate_pagination_info_validation_succeeds_when_if_data_for_pagination(
+    list_user_data, user_schema
+):
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data["itemsPerPage"] = 1
 
@@ -253,7 +263,7 @@ def test_validate_pagination_info_validation_succeeds_when_if_data_for_paginatio
         'name.familyName eq "Sven"',
     ),
 )
-def test_validate_resources_filtered(filter_exp, list_user_data):
+def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
     filter_ = Filter.deserialize(filter_exp)
     expected = {
         "body": {
@@ -268,7 +278,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
             }
         }
     }
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -279,7 +289,9 @@ def test_validate_resources_filtered(filter_exp, list_user_data):
     assert issues.to_dict() == expected
 
 
-def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schema(list_user_data):
+def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schema(
+    list_user_data, user_schema, group_schema
+):
     list_user_data["Resources"].append({"schemas": ["complete:unknown:schema"]})
     list_user_data["totalResults"] = 3
     list_user_data["itemsPerPage"] = 3
@@ -296,7 +308,7 @@ def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schem
             }
         }
     }
-    validator = ServerRootResourcesGET(CONFIG, resource_schemas=[User, Group])
+    validator = ServerRootResourcesGET(CONFIG, resource_schema=[user_schema, group_schema])
 
     issues = validator.validate_response(
         status_code=200,
@@ -307,7 +319,7 @@ def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schem
     assert issues.to_dict() == expected
 
 
-def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
+def test_validate_resources_filtered__case_sensitivity_matters(list_user_data, user_schema):
     filter_ = Filter.deserialize('meta.resourcetype eq "user"')  # "user", not "User"
     expected = {
         "body": {
@@ -329,7 +341,7 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
             }
         }
     }
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -341,7 +353,7 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data):
 
 
 def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_by_filter(
-    list_user_data,
+    list_user_data, user_schema
 ):
     filter_ = Filter.deserialize(
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName "
@@ -360,7 +372,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
             }
         }
     }
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -371,24 +383,32 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
     assert issues.to_dict() == expected
 
 
-@pytest.mark.parametrize(
-    "sorter",
-    (
-        Sorter(AttrRep(attr="name", sub_attr="familyName"), asc=False),
-        Sorter(
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                attr="manager",
-                sub_attr="displayName",
-            ),
-            asc=False,
-        ),
-    ),
-)
-def test_validate_resources_sorted__not_sorted(sorter, list_user_data):
+def test_validate_resources_sorted__not_sorted(list_user_data, user_schema):
+    sorter = Sorter(AttrRep(attr="name", sub_attr="familyName"), asc=False)
     expected = {"body": {"Resources": {"_errors": [{"code": 22}]}}}
 
-    validator = ResourcesGET(CONFIG, resource_schema=User)
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    issues = validator.validate_response(
+        status_code=200,
+        sorter=sorter,
+        body=list_user_data,
+    )
+
+    assert issues.to_dict() == expected
+
+
+def test_validate_resources_sorted__not_sorted_by_extended_attr(list_user_data, user_schema):
+    sorter = Sorter(
+        BoundedAttrRep(
+            schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+            attr="manager",
+            sub_attr="displayName",
+        ),
+        asc=False,
+    )
+    expected = {"body": {"Resources": {"_errors": [{"code": 22}]}}}
+
+    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
     issues = validator.validate_response(
         status_code=200,
         sorter=sorter,
@@ -436,8 +456,8 @@ def test_error_data_can_be_serialized(error_data):
     assert validator.response_schema.serialize(error_data) == error_data
 
 
-def test_correct_resource_object_get_response_passes_validation(user_data_server):
-    validator = ResourceObjectGET(CONFIG, resource_schema=User)
+def test_correct_resource_object_get_response_passes_validation(user_data_server, user_schema):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
     user_data_server.pop("name")
 
     issues = validator.validate_response(
@@ -457,8 +477,10 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
     assert issues.to_dict(msg=True) == {}
 
 
-def test_validation_failure_on_missing_etag_header_when_etag_supported(user_data_server):
-    validator = ResourceObjectGET(CONFIG, resource_schema=User)
+def test_validation_failure_on_missing_etag_header_when_etag_supported(
+    user_data_server, user_schema
+):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
     expected_issues = {"headers": {"ETag": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
@@ -472,8 +494,10 @@ def test_validation_failure_on_missing_etag_header_when_etag_supported(user_data
     assert issues.to_dict() == expected_issues
 
 
-def test_validation_failure_on_missing_meta_version_when_etag_supported(user_data_server):
-    validator = ResourceObjectGET(CONFIG, resource_schema=User)
+def test_validation_failure_on_missing_meta_version_when_etag_supported(
+    user_data_server, user_schema
+):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
     user_data_server["meta"].pop("version")
     expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 5}]}}}}
 
@@ -490,11 +514,13 @@ def test_validation_failure_on_missing_meta_version_when_etag_supported(user_dat
 
 
 @pytest.mark.parametrize("etag_supported", (True, False))
-def test_validation_failure_on_etag_and_meta_version_mismatch(etag_supported, user_data_server):
+def test_validation_failure_on_etag_and_meta_version_mismatch(
+    etag_supported, user_data_server, user_schema
+):
     config = deepcopy(CONFIG)
     config.etag.supported = etag_supported
 
-    validator = ResourceObjectGET(config, resource_schema=User)
+    validator = ResourceObjectGET(config, resource_schema=user_schema)
     expected_issues = {
         "body": {"meta": {"version": {"_errors": [{"code": 8}]}}},
         "headers": {"ETag": {"_errors": [{"code": 8}]}},
@@ -512,10 +538,12 @@ def test_validation_failure_on_etag_and_meta_version_mismatch(etag_supported, us
     assert issues.to_dict() == expected_issues
 
 
-def test_response_is_validated_without_tag_and_version_if_etag_not_supported(user_data_server):
+def test_response_is_validated_without_tag_and_version_if_etag_not_supported(
+    user_data_server, user_schema
+):
     config = deepcopy(CONFIG)
     config.etag.supported = False
-    validator = ResourceObjectGET(config, resource_schema=User)
+    validator = ResourceObjectGET(config, resource_schema=user_schema)
     user_data_server["meta"].pop("version")
 
     issues = validator.validate_response(
@@ -529,8 +557,8 @@ def test_response_is_validated_without_tag_and_version_if_etag_not_supported(use
     assert issues.to_dict(msg=True) == {}
 
 
-def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server):
-    validator = ResourceObjectGET(CONFIG, resource_schema=User)
+def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server, user_schema):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
     user_data_server["meta"]["version"] = 123
     expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 2}]}}}}
 
@@ -546,16 +574,16 @@ def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server
     assert issues.to_dict() == expected_issues
 
 
-def test_request_schema_in_resource_object_get_request_data_is_not_supported():
-    validator = ResourceObjectGET(CONFIG, resource_schema=User)
+def test_request_schema_in_resource_object_get_request_data_is_not_supported(user_schema):
+    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
 
     with pytest.raises(NotImplementedError):
         print(validator.request_schema)
 
 
-def test_data_for_resource_object_get_response_can_be_serialized(user_data_server):
+def test_data_for_resource_object_get_response_can_be_serialized(user_data_server, user_schema):
     user_data_server["password"] = "1234"
-    validator = ResourceObjectGET(CONFIG, resource_schema=User)
+    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -563,15 +591,15 @@ def test_data_for_resource_object_get_response_can_be_serialized(user_data_serve
 
 
 def test_service_object_resource_get_request_is_not_validated():
-    validator = ServiceResourceObjectGET(CONFIG, resource_schema=ResourceType)
+    validator = ServiceResourceObjectGET(CONFIG, resource_schema=ResourceTypeSchema())
 
     issues = validator.validate_request(body={"some": "weird_stuff"})
 
     assert issues.to_dict(msg=True) == {}
 
 
-def test_validation_warning_for_missing_response_body_for_resources_post():
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+def test_validation_warning_for_missing_response_body_for_resources_post(user_schema):
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
     expected_issues = {"body": {"_warnings": [{"code": 4}]}}
 
     issues = validator.validate_response(
@@ -582,8 +610,8 @@ def test_validation_warning_for_missing_response_body_for_resources_post():
     assert issues.to_dict() == expected_issues
 
 
-def test_correct_resource_type_post_request_passes_validation(user_data_client):
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+def test_correct_resource_type_post_request_passes_validation(user_data_client, user_schema):
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_request(
         body=user_data_client,
@@ -593,9 +621,9 @@ def test_correct_resource_type_post_request_passes_validation(user_data_client):
 
 
 def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
-    user_data_client,
+    user_data_client, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
     user_data_client["userName"] = 123
     expected_issues = {"body": {"userName": {"_errors": [{"code": 2}]}}}
 
@@ -607,9 +635,9 @@ def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_vali
 
 
 def test_resources_post_response_validation_fails_if_different_created_and_last_modified(
-    user_data_server,
+    user_data_server, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
     user_data_server["meta"]["lastModified"] = "2011-05-13T04:42:34Z"
     expected_issues = {"body": {"meta": {"lastModified": {"_errors": [{"code": 8}]}}}}
 
@@ -626,9 +654,9 @@ def test_resources_post_response_validation_fails_if_different_created_and_last_
 
 
 def test_resources_post_response_validation_fails_if_missing_location_header(
-    user_data_server,
+    user_data_server, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
     expected_issues = {"headers": {"Location": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
@@ -642,8 +670,8 @@ def test_resources_post_response_validation_fails_if_missing_location_header(
     assert issues.to_dict() == expected_issues
 
 
-def test_correct_resource_object_put_request_passes_validation(user_data_client):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=User)
+def test_correct_resource_object_put_request_passes_validation(user_data_client, user_schema):
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
     user_data_client["id"] = "anything"
 
     issues = validator.validate_request(
@@ -653,8 +681,10 @@ def test_correct_resource_object_put_request_passes_validation(user_data_client)
     assert issues.to_dict(msg=True) == {}
 
 
-def test_resource_object_put_request__fails_when_missing_required_field(user_data_client):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=User)
+def test_resource_object_put_request__fails_when_missing_required_field(
+    user_data_client, user_schema
+):
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
     # user_data_client misses 'id' and 'meta'
     expected_issues = {"body": {"id": {"_errors": [{"code": 5}]}}}
 
@@ -663,8 +693,8 @@ def test_resource_object_put_request__fails_when_missing_required_field(user_dat
     assert issues.to_dict() == expected_issues
 
 
-def test_correct_resource_object_put_response_passes_validation(user_data_server):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=User)
+def test_correct_resource_object_put_response_passes_validation(user_data_server, user_schema):
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -678,8 +708,8 @@ def test_correct_resource_object_put_response_passes_validation(user_data_server
     assert issues.to_dict(msg=True) == {}
 
 
-def test_data_for_resource_object_put_request_can_be_deserialized(user_data_client):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=User)
+def test_data_for_resource_object_put_request_can_be_deserialized(user_data_client, user_schema):
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
 
     data = validator.request_schema.deserialize(user_data_client)
 
@@ -687,8 +717,8 @@ def test_data_for_resource_object_put_request_can_be_deserialized(user_data_clie
     assert data.get("groups") is Missing  # 'groups' are read-only, so ignored
 
 
-def test_data_for_resource_object_put_response_can_be_serialized(user_data_server):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=User)
+def test_data_for_resource_object_put_response_can_be_serialized(user_data_server, user_schema):
+    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -696,8 +726,8 @@ def test_data_for_resource_object_put_response_can_be_serialized(user_data_serve
     assert "groups" in data
 
 
-def test_correct_resource_type_post_response_passes_validation(user_data_server):
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+def test_correct_resource_type_post_response_passes_validation(user_data_server, user_schema):
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=201,
@@ -711,9 +741,9 @@ def test_correct_resource_type_post_response_passes_validation(user_data_server)
     assert issues.to_dict(msg=True) == {}
 
 
-def test_resource_type_post_request_data_can_be_deserialized(user_data_client):
+def test_resource_type_post_request_data_can_be_deserialized(user_data_client, user_schema):
     user_data_client["id"] = "1234"
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
 
     data = validator.request_schema.deserialize(user_data_client)
 
@@ -721,7 +751,7 @@ def test_resource_type_post_request_data_can_be_deserialized(user_data_client):
     assert data.get("groups") is Missing  # groups are read-only
 
 
-def test_resource_type_post_response_data_can_be_serialized(user_data_server):
+def test_resource_type_post_response_data_can_be_serialized(user_data_server, user_schema):
     DateTime.set_serializer(datetime.isoformat)
 
     user_data_server["meta"]["created"] = datetime.fromisoformat(
@@ -730,7 +760,7 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server):
     user_data_server["meta"]["lastModified"] = datetime.fromisoformat(
         user_data_server["meta"]["lastModified"]
     )
-    validator = ResourcesPOST(CONFIG, resource_schema=User)
+    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -744,16 +774,17 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server):
 
 
 @pytest.mark.parametrize(
-    "validator",
+    "validator_cls",
     (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-        SearchRequestPOST(CONFIG, resource_schemas=[User]),
+        ResourcesGET,
+        ServerRootResourcesGET,
+        SearchRequestPOST,
     ),
 )
-def test_correct_list_response_passes_validation(validator, list_user_data):
+def test_correct_list_response_passes_validation(validator_cls, list_user_data, user_schema):
     list_user_data["Resources"][0].pop("name")
     list_user_data["Resources"][1].pop("name")
+    validator = validator_cls(resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -771,14 +802,14 @@ def test_correct_list_response_passes_validation(validator, list_user_data):
 
 
 @pytest.mark.parametrize(
-    "validator",
+    "validator_cls",
     (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-        SearchRequestPOST(CONFIG, resource_schemas=[User]),
+        ResourcesGET,
+        ServerRootResourcesGET,
+        SearchRequestPOST,
     ),
 )
-def test_attributes_existence_is_validated_in_list_response(validator):
+def test_attributes_existence_is_validated_in_list_response(validator_cls, user_schema):
     expected_issues = {
         "body": {
             "schemas": {
@@ -787,6 +818,7 @@ def test_attributes_existence_is_validated_in_list_response(validator):
             "totalResults": {"_errors": [{"code": 5}]},
         }
     }
+    validator = validator_cls(resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -797,14 +829,14 @@ def test_attributes_existence_is_validated_in_list_response(validator):
 
 
 @pytest.mark.parametrize(
-    "validator",
+    "validator_cls",
     (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-        SearchRequestPOST(CONFIG, resource_schemas=[User]),
+        ResourcesGET,
+        ServerRootResourcesGET,
+        SearchRequestPOST,
     ),
 )
-def test_attributes_presence_is_validated_in_resources_in_list_response(validator):
+def test_attributes_presence_is_validated_in_resources_in_list_response(validator_cls, user_schema):
     expected_issues = {
         "body": {
             "Resources": {
@@ -816,11 +848,12 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
             },
         }
     }
+    validator = validator_cls(resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
             "totalResults": 1,
             "Resources": [{}],
         },
@@ -830,20 +863,23 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
 
 
 @pytest.mark.parametrize(
-    "validator",
+    "validator_cls",
     (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-        SearchRequestPOST(CONFIG, resource_schemas=[User]),
+        ResourcesGET,
+        ServerRootResourcesGET,
+        SearchRequestPOST,
     ),
 )
-def test_start_index_consistency_is_not_validated_if_bad_type(validator, list_user_data):
+def test_start_index_consistency_is_not_validated_if_bad_type(
+    validator_cls, list_user_data, user_schema
+):
     list_user_data["startIndex"] = "9"
     expected_issues = {
         "body": {
             "startIndex": {"_errors": [{"code": 2}]},
         }
     }
+    validator = validator_cls(resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -855,20 +891,24 @@ def test_start_index_consistency_is_not_validated_if_bad_type(validator, list_us
 
 
 @pytest.mark.parametrize(
-    "validator",
+    "validator_cls",
     (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-        SearchRequestPOST(CONFIG, resource_schemas=[User]),
+        ResourcesGET,
+        ServerRootResourcesGET,
+        SearchRequestPOST,
     ),
 )
-def test_resources_are_not_validated_for_pagination_if_bad_type(validator, list_user_data):
+def test_resources_are_not_validated_for_pagination_if_bad_type(
+    validator_cls, list_user_data, user_schema
+):
     expected_issues = {
         "body": {
             "Resources": {"_errors": [{"code": 2}]},
         }
     }
     list_user_data["Resources"] = {}
+    validator = validator_cls(resource_schema=user_schema)
+
     issues = validator.validate_response(
         status_code=200,
         body=list_user_data,
@@ -879,15 +919,15 @@ def test_resources_are_not_validated_for_pagination_if_bad_type(validator, list_
 
 
 @pytest.mark.parametrize(
-    "validator",
+    "validator_cls",
     (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-        SearchRequestPOST(CONFIG, resource_schemas=[User]),
+        ResourcesGET,
+        ServerRootResourcesGET,
+        SearchRequestPOST,
     ),
 )
 def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resources_has_issues(
-    validator, list_user_data
+    validator_cls, list_user_data, user_schema
 ):
     list_user_data["Resources"].append(list_user_data["Resources"][0])
     list_user_data["Resources"][0]["id"] = "z"
@@ -895,6 +935,7 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
     list_user_data["Resources"][2]["id"] = "a"
     list_user_data["itemsPerPage"] = 3
     list_user_data["totalResults"] = 3
+    validator = validator_cls(resource_schema=user_schema)
 
     # no issue about resource with "z" id in body
     # no issue about bad sorting
@@ -915,22 +956,23 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
 
 
 @pytest.mark.parametrize(
-    "validator",
+    "validator_cls",
     (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-        SearchRequestPOST(CONFIG, resource_schemas=[User]),
+        ResourcesGET,
+        ServerRootResourcesGET,
+        SearchRequestPOST,
     ),
 )
-def test_resources_response_data_can_be_serialized(validator, list_user_data):
+def test_resources_response_data_can_be_serialized(validator_cls, list_user_data, user_schema):
+    validator = validator_cls(resource_schema=user_schema)
     data = validator.response_schema.serialize(list_user_data)
 
     for resource in data["Resources"]:
         assert "password" not in resource
 
 
-def test_correct_search_request_passes_validation():
-    validator = SearchRequestPOST(CONFIG, resource_schemas=[User])
+def test_correct_search_request_passes_validation(user_schema):
+    validator = SearchRequestPOST(CONFIG, resource_schema=[user_schema])
 
     issues = validator.validate_request(
         body={
@@ -946,8 +988,8 @@ def test_correct_search_request_passes_validation():
     assert issues.to_dict(msg=True) == {}
 
 
-def test_search_request_validation_fails_if_attributes_and_exclude_attributes_provided():
-    validator = SearchRequestPOST(CONFIG, resource_schemas=[User])
+def test_search_request_validation_fails_if_attributes_and_exclude_attributes_provided(user_schema):
+    validator = SearchRequestPOST(CONFIG, resource_schema=[user_schema])
     expected_issues = {
         "body": {
             "attributes": {"_errors": [{"code": 11}]},
@@ -965,11 +1007,11 @@ def test_search_request_validation_fails_if_attributes_and_exclude_attributes_pr
     assert issues.to_dict() == expected_issues
 
 
-def test_correct_remove_operations_pass_validation():
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
+def test_correct_remove_operations_pass_validation(fake_schema):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
             "Operations": [
                 {
                     "op": "remove",
@@ -999,11 +1041,11 @@ def test_correct_remove_operations_pass_validation():
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_correct_add_and_replace_operations_pass_validation(op):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
+def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
             "Operations": [
                 {
                     "op": op,
@@ -1041,13 +1083,13 @@ def test_correct_add_and_replace_operations_pass_validation(op):
     assert issues.to_dict(msg=True) == {}
 
 
-def test_attr_presence_in_value_is_not_validated_if_bad_operations():
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
+def test_attr_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"0": {"path": {"_errors": [{"code": 17}]}}}}}
 
     issues = validator.validate_request(
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
             "Operations": [
                 {
                     "op": "add",
@@ -1061,22 +1103,25 @@ def test_attr_presence_in_value_is_not_validated_if_bad_operations():
     assert issues.to_dict() == expected_issues
 
 
-def test_attr_presence_in_value_is_not_validated_if_bad_path():
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
+def test_attr_presence_in_value_is_not_validated_if_bad_path(fake_schema):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
 
     issues = validator.validate_request(
-        body={"schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"], "Operations": "123"}
+        body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "Operations": "123",
+        }
     )
 
     assert issues.to_dict() == expected_issues
 
 
-def test_resource_object_patch_request_data_can_be_deserialized():
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=SchemaForTests)
+def test_resource_object_patch_request_data_can_be_deserialized(fake_schema):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     data = validator.request_schema.deserialize(
         {
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
             "Operations": [
                 {
                     "op": "add",
@@ -1103,8 +1148,10 @@ def test_resource_object_patch_request_data_can_be_deserialized():
     assert data.get("Operations")[2].get("value") is Missing
 
 
-def test_resource_object_patch_response_validation_fails_if_204_but_attributes_requested():
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=User)
+def test_resource_object_patch_response_validation_fails_if_204_but_attributes_requested(
+    user_schema,
+):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=204,
@@ -1117,8 +1164,10 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
     assert issues.to_dict() == {"status": {"_errors": [{"code": 19}]}}
 
 
-def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attributes_requested():
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=User)
+def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attributes_requested(
+    user_schema,
+):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=204,
@@ -1129,8 +1178,10 @@ def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attrib
     assert issues.to_dict(msg=True) == {}
 
 
-def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data(user_data_server):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=User)
+def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data(
+    user_data_server, user_schema
+):
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1143,9 +1194,9 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data
 
 
 def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_attributes(
-    user_data_server,
+    user_data_server, user_schema
 ):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=User)
+    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1166,11 +1217,13 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
     assert issues.to_dict(msg=True) == {}
 
 
-def test_runtime_error_is_raised_if_patch_not_supported_and_resource_object_patch_object_created():
+def test_runtime_error_is_raised_if_patch_not_supported_and_resource_object_patch_object_created(
+    user_schema,
+):
     with pytest.raises(RuntimeError):
         ResourceObjectPATCH(
             config=create_service_provider_config(patch={"supported": False}),
-            resource_schema=User,
+            resource_schema=user_schema,
         )
 
 
@@ -1205,20 +1258,22 @@ def test_not_implemented_error_is_raised_if_accessing_response_schema_for_delete
         print(validator.response_schema)
 
 
-def test_runtime_error_is_raised_if_bulk_ops_not_supported_and_bulk_operations_instance_created():
+def test_runtime_error_is_raised_if_bulk_ops_not_supported_and_bulk_operations_instance_created(
+    user_schema,
+):
     with pytest.raises(RuntimeError):
         BulkOperations(
             config=create_service_provider_config(bulk={"supported": False}),
-            resource_schemas=[User],
+            resource_schemas=[user_schema],
         )
 
 
-def test_bulk_operations_data_not_validated_if_bad_operations_type():
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_data_not_validated_if_bad_operations_type(user_schema):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
         "failOnErrors": 1,
         "Operations": "abc",
     }
@@ -1228,8 +1283,8 @@ def test_bulk_operations_data_not_validated_if_bad_operations_type():
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_data_not_validated_if_bad_path_or_method():
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_data_not_validated_if_bad_path_or_method(user_schema):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
     expected_issues = {
         "body": {
             "Operations": {
@@ -1239,7 +1294,7 @@ def test_bulk_operations_data_not_validated_if_bad_path_or_method():
         }
     }
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
         "failOnErrors": 1,
         "Operations": [
             {
@@ -1262,11 +1317,11 @@ def test_bulk_operations_data_not_validated_if_bad_path_or_method():
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_data_not_validated_if_bad_resource_name():
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_data_not_validated_if_bad_resource_name(user_schema):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
     expected_issues = {"body": {"Operations": {"0": {"path": {"_errors": [{"code": 25}]}}}}}
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
         "failOnErrors": 1,
         "Operations": [
             {
@@ -1284,22 +1339,22 @@ def test_bulk_operations_data_not_validated_if_bad_resource_name():
 
 
 def test_bulk_operations_request_is_valid_if_correct_data(
-    bulk_request_serialized, bulk_request_deserialized
+    bulk_request_serialized, bulk_request_deserialized, user_schema
 ) -> None:
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
 
     issues = validator.validate_request(body=bulk_request_serialized)
 
     assert issues.to_dict(msg=True) == {}
 
 
-def test_bulk_operations_request_validation_fails_for_bad_data():
+def test_bulk_operations_request_validation_fails_for_bad_data(user_schema):
     validator = BulkOperations(
         config=create_service_provider_config(
             patch={"supported": True},
             bulk={"max_operations": 2, "max_payload_size": 1024, "supported": True},
         ),
-        resource_schemas=[User],
+        resource_schemas=[user_schema],
     )
     expected_issues = {
         "body": {
@@ -1330,7 +1385,7 @@ def test_bulk_operations_request_validation_fails_for_bad_data():
         }
     }
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
         "failOnErrors": 1,
         "Operations": [
             {
@@ -1356,7 +1411,7 @@ def test_bulk_operations_request_validation_fails_for_bad_data():
                 "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
                 "version": 123,
                 "data": {
-                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
                     "Operations": [
                         {"op": "remove", "path": "bad^attr"},
                         {"op": "kill", "path": "userName", "value": "Dave"},
@@ -1376,8 +1431,8 @@ def test_bulk_operations_request_validation_fails_for_bad_data():
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_response_is_valid_if_correct_data(user_data_server):
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_response_is_valid_if_correct_data(user_data_server, user_schema):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
 
     user_1 = deepcopy(user_data_server)
     user_1["id"] = "92b725cd-9465-4e7d-8c16-01f8e146b87a"
@@ -1395,7 +1450,7 @@ def test_bulk_operations_response_is_valid_if_correct_data(user_data_server):
     user_3["meta"]["version"] = 'W/"huJj29dMNgu3WXPD"'
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a",
@@ -1433,8 +1488,10 @@ def test_bulk_operations_response_is_valid_if_correct_data(user_data_server):
     assert validator.response_schema.serialize(data)
 
 
-def test_bulk_operations_response_validation_fails_for_incorrect_data(user_data_server):
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_response_validation_fails_for_incorrect_data(
+    user_data_server, user_schema
+):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
 
     user_1 = deepcopy(user_data_server)
     user_1["id"] = "92b725cd-9465-4e7d-8c16-01f8e146b87a"
@@ -1472,7 +1529,7 @@ def test_bulk_operations_response_validation_fails_for_incorrect_data(user_data_
     }
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/82b725cd-9465-4e7d-8c16-01f8e146b87b",
@@ -1508,18 +1565,23 @@ def test_bulk_operations_response_validation_fails_for_incorrect_data(user_data_
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_response_operations_not_validated_further_if_bad_type(user_data_server):
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_response_operations_not_validated_further_if_bad_type(
+    user_data_server, user_schema
+):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
-    data = {"schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"], "Operations": "123"}
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
+        "Operations": "123",
+    }
 
     issues = validator.validate_response(body=data, status_code=200, fail_on_errors=2)
 
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_responses_are_not_validated_if_bad_location_or_method():
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_responses_are_not_validated_if_bad_location_or_method(user_schema):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
     expected_issues = {
         "body": {
             "Operations": {
@@ -1530,7 +1592,7 @@ def test_bulk_operations_responses_are_not_validated_if_bad_location_or_method()
     }
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a",
@@ -1557,13 +1619,15 @@ def test_bulk_operations_responses_are_not_validated_if_bad_location_or_method()
     assert issues.to_dict() == expected_issues
 
 
-def test_bulk_operations_response_validation_fails_if_too_many_failed_operations(user_data_server):
-    validator = BulkOperations(CONFIG, resource_schemas=[User])
+def test_bulk_operations_response_validation_fails_if_too_many_failed_operations(
+    user_data_server, user_schema
+):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
 
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 27}]}}}
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
         "Operations": [
             {
                 "method": "POST",
@@ -1596,7 +1660,7 @@ def test_bulk_operations_response_validation_fails_if_too_many_failed_operations
 
 def test_service_provider_configuration_is_validated():
     validator = ResourceObjectGET(
-        CONFIG, resource_schema=service_provider_config.ServiceProviderConfig
+        CONFIG, resource_schema=service_provider_config.ServiceProviderConfigSchema()
     )
     input_ = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"],
@@ -1645,8 +1709,8 @@ def test_service_provider_configuration_is_validated():
     assert issues.to_dict(msg=True) == {}
 
 
-def test_group_output_is_validated_correctly(group_data_server):
-    validator = ResourceObjectGET(CONFIG, resource_schema=Group)
+def test_group_output_is_validated_correctly(group_data_server, group_schema):
+    validator = ResourceObjectGET(CONFIG, resource_schema=group_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1660,14 +1724,15 @@ def test_group_output_is_validated_correctly(group_data_server):
     assert issues.to_dict(msg=True) == {}
 
 
-def test_schemas_output_can_be_validated():
-    validator = SchemasGET(CONFIG)
+def test_schemas_output_can_be_validated(user_schema, group_schema):
+    schema = SchemaSchema()
+    validator = ResourcesGET(CONFIG, resource_schema=schema)
     body = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
         "totalResults": 2,
         "itemsPerPage": 2,
         "startIndex": 1,
-        "Resources": [Schema.get_repr(User), Schema.get_repr(Group)],
+        "Resources": [schema.get_repr(user_schema), schema.get_repr(group_schema)],
     }
 
     issues = validator.validate_response(status_code=200, body=body)
@@ -1675,12 +1740,13 @@ def test_schemas_output_can_be_validated():
     assert issues.to_dict(msg=True) == {}
 
 
-def test_schema_response_can_be_validated():
-    validator = ResourceObjectGET(CONFIG, resource_schema=Schema)
+def test_schema_response_can_be_validated(user_schema):
+    schema = SchemaSchema()
+    validator = ResourceObjectGET(CONFIG, resource_schema=schema)
 
     issues = validator.validate_response(
         status_code=200,
-        body=Schema.get_repr(User, version='W/"3694e05e9dff591"'),
+        body=schema.get_repr(user_schema, version='W/"3694e05e9dff591"'),
         headers={
             "ETag": 'W/"3694e05e9dff591"',
         },
@@ -1690,7 +1756,7 @@ def test_schema_response_can_be_validated():
 
 
 def test_resource_type_response_can_be_validated():
-    validator = ResourceObjectGET(CONFIG, resource_schema=ResourceType)
+    validator = ResourceObjectGET(CONFIG, resource_schema=ResourceTypeSchema())
     body = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
         "id": "User",
@@ -1723,12 +1789,12 @@ def test_resource_type_response_can_be_validated():
 
 
 def test_resource_types_response_can_be_validated():
-    validator = ResourceTypesGET(CONFIG)
+    validator = ResourcesGET(CONFIG, resource_schema=ResourceTypeSchema())
     body = {
         "totalResults": 2,
         "itemsPerPage": 2,
         "startIndex": 1,
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
         "Resources": [
             {
                 "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
@@ -1972,10 +2038,10 @@ def test_can_validate_sorting(sorter, checker, expected):
     assert can_validate_sorting(sorter, checker) == expected
 
 
-def test_bulk_request_with_bulk_ids_is_validated():
-    validator = BulkOperations(CONFIG, resource_schemas=[User, Group])
+def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):
+    validator = BulkOperations(CONFIG, resource_schemas=[user_schema, group_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
         "Operations": [
             {
                 "method": "POST",

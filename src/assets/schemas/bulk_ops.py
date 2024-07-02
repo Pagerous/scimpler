@@ -6,7 +6,7 @@ from typing import Any, Optional
 from src.assets.schemas.error import ErrorSchema
 from src.container import Missing, SCIMData
 from src.data.attrs import Complex, ExternalReference, Integer, String, Unknown
-from src.data.schemas import BaseSchema
+from src.data.schemas import AttrFilter, BaseSchema
 from src.error import ValidationError, ValidationIssues
 
 _RESOURCE_TYPE_REGEX = re.compile(r"/\w+")
@@ -82,35 +82,41 @@ def deserialize_request_operations(value: list[SCIMData]) -> list[SCIMData]:
     return value
 
 
-class BulkRequest(BaseSchema):
-    def __init__(self, sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]]):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:BulkRequest",
-            attrs=[
-                Integer("failOnErrors"),
-                Complex(
-                    name="Operations",
+class BulkRequestSchema(BaseSchema):
+    default_attrs = [
+        Integer("failOnErrors"),
+        Complex(
+            name="Operations",
+            required=True,
+            multi_valued=True,
+            validators=[validate_request_operations],
+            deserializer=deserialize_request_operations,
+            sub_attributes=[
+                String(
+                    name="method",
                     required=True,
-                    multi_valued=True,
-                    validators=[validate_request_operations],
-                    deserializer=deserialize_request_operations,
-                    sub_attributes=[
-                        String(
-                            name="method",
-                            required=True,
-                            canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
-                            restrict_canonical_values=True,
-                        ),
-                        String("bulkId"),
-                        String("version"),
-                        String(
-                            name="path",
-                            required=True,
-                        ),
-                        Unknown("data"),
-                    ],
+                    canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
+                    restrict_canonical_values=True,
                 ),
+                String("bulkId"),
+                String("version"),
+                String(
+                    name="path",
+                    required=True,
+                ),
+                Unknown("data"),
             ],
+        ),
+    ]
+
+    def __init__(
+        self,
+        sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]],
+        attr_filter: Optional[AttrFilter] = None,
+    ):
+        super().__init__(
+            schema="urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema",
+            attr_filter=attr_filter,
         )
         self._sub_schemas = sub_schemas
 
@@ -203,39 +209,42 @@ def _validate_status(value: Any) -> ValidationIssues:
     return issues
 
 
-class BulkResponse(BaseSchema):
+class BulkResponseSchema(BaseSchema):
+    default_attrs = [
+        Complex(
+            sub_attributes=[
+                String(
+                    name="method",
+                    required=True,
+                    canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
+                    restrict_canonical_values=True,
+                ),
+                String("bulkId"),
+                String("version"),
+                ExternalReference("location"),
+                String(
+                    name="status",
+                    required=True,
+                    validators=[_validate_status],
+                ),
+                Unknown("response"),
+            ],
+            name="Operations",
+            required=True,
+            multi_valued=True,
+            validators=[validate_response_operations],
+        )
+    ]
+
     def __init__(
         self,
         sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]],
         error_schema: ErrorSchema,
+        attr_filter: Optional[AttrFilter] = None,
     ):
         super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:BulkResponse",
-            attrs=[
-                Complex(
-                    sub_attributes=[
-                        String(
-                            name="method",
-                            required=True,
-                            canonical_values=["GET", "POST", "PATCH", "PUT", "DELETE"],
-                            restrict_canonical_values=True,
-                        ),
-                        String("bulkId"),
-                        String("version"),
-                        ExternalReference("location"),
-                        String(
-                            name="status",
-                            required=True,
-                            validators=[_validate_status],
-                        ),
-                        Unknown("response"),
-                    ],
-                    name="Operations",
-                    required=True,
-                    multi_valued=True,
-                    validators=[validate_response_operations],
-                )
-            ],
+            schema="urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema",
+            attr_filter=attr_filter,
         )
         self._sub_schemas = sub_schemas
         self._error_schema = error_schema

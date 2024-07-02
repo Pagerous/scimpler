@@ -3,9 +3,10 @@ from datetime import datetime
 
 import pytest
 
-from src.assets.schemas import User
 from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
 from src.data.attrs import (
+    AttrFilter,
+    AttributeMutability,
     AttributeUniqueness,
     Binary,
     Boolean,
@@ -609,23 +610,50 @@ def test_validators_are_not_run_further_if_one_of_them_forces_proceeding_to_stop
     assert attr.validate("abc").to_dict() == {"_errors": [{"code": 4}]}
 
 
-def test_complex_sub_attributes_data_can_be_filtered():
+def test_complex_sub_attributes_data_can_be_filtered(user_schema):
+    attr = Complex(
+        name="manager",
+        description=(
+            "The User's manager.  A complex type that "
+            "optionally allows service providers to represent organizational "
+            "hierarchy by referencing the 'id' attribute of another User."
+        ),
+        sub_attributes=[
+            String(
+                name="value",
+                description="The id of the SCIM resource representing the User's manager.",
+                required=True,
+            ),
+            SCIMReference(
+                name="$ref",
+                description="The URI of the SCIM resource representing the User's manager",
+                reference_types=["User"],
+                required=True,
+            ),
+            String(
+                name="displayName",
+                description="The displayName of the User's manager.",
+                mutability=AttributeMutability.READ_ONLY,
+            ),
+        ],
+    )
+
     data = [{"value": "10", "displayName": "John Doe"}, {"value": "20", "displayName": "Karen"}]
     expected = [{"displayName": "John Doe"}, {"displayName": "Karen"}]
 
-    actual = User.attrs.get("manager").filter(data, lambda a: a.mutability == "readOnly")
+    actual = attr.filter(data, attr_filter=AttrFilter(filter_=lambda a: a.mutability == "readOnly"))
 
     assert actual == expected
 
 
-def test_type_error_is_raised_if_accessing_sub_attr_of_non_complex_attr():
+def test_type_error_is_raised_if_accessing_sub_attr_of_non_complex_attr(user_schema):
     with pytest.raises(AttributeError, match=r"attribute 'username\.formatted' does not exist"):
-        print(User.attrs.username__formatted)
+        print(user_schema.attrs.username__formatted)
 
 
-def test_attribute_error_is_raised_if_accessing_non_existent_sub_attr_of_complex_attr():
+def test_attribute_error_is_raised_if_accessing_non_existent_sub_attr_of_complex_attr(user_schema):
     with pytest.raises(AttributeError, match="attribute 'name.official' does not exist"):
-        print(User.attrs.name__official)
+        print(user_schema.attrs.name__official)
 
 
 def test_attribute_global_deserializer_can_be_registered_and_used():
@@ -707,46 +735,46 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
     (
         (
             "id",
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                attr="id",
+            (
+                "urn:ietf:params:scim:schemas:core:2.0:User",
+                "id",
             ),
         ),
         (
             "name__formatted",
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                attr="name",
-                sub_attr="formatted",
+            (
+                "urn:ietf:params:scim:schemas:core:2.0:User",
+                "name",
+                "formatted",
             ),
         ),
         (
             "emails__type",
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                attr="emails",
-                sub_attr="type",
+            (
+                "urn:ietf:params:scim:schemas:core:2.0:User",
+                "emails",
+                "type",
             ),
         ),
         (
             "manager",
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                attr="manager",
+            (
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "manager",
             ),
         ),
         (
             "manager__displayName",
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-                attr="manager",
-                sub_attr="displayName",
+            (
+                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+                "manager",
+                "displayName",
             ),
         ),
     ),
 )
-def test_attr_rep_can_be_retrieved_from_bounded_attr_reps(input_, expected):
-    assert getattr(User.attrs, input_, None) == expected
+def test_attr_rep_can_be_retrieved_from_bounded_attr_reps(input_, expected, user_schema):
+    assert getattr(user_schema.attrs, input_, None) == BoundedAttrRep(*expected)
 
 
 @pytest.mark.parametrize(
@@ -768,8 +796,8 @@ def test_attr_rep_can_be_retrieved_from_bounded_attr_reps(input_, expected):
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
     ),
 )
-def test_attr_can_be_retrieved_from_bounded_attr_reps(input_):
-    assert User.attrs.get(input_) is not None
+def test_attr_can_be_retrieved_from_bounded_attr_reps(input_, user_schema):
+    assert user_schema.attrs.get(input_) is not None
 
 
 @pytest.mark.parametrize(
@@ -782,8 +810,8 @@ def test_attr_can_be_retrieved_from_bounded_attr_reps(input_):
         "urn:ietf:params:scim:schemas:core:2.0:User:manager",
     ),
 )
-def test_attr_is_not_retrieved_if_bad_input(input_):
-    assert User.attrs.get(input_) is None
+def test_attr_is_not_retrieved_if_bad_input(input_, user_schema):
+    assert user_schema.attrs.get(input_) is None
 
 
 def test_attr_rep_is_hashable():

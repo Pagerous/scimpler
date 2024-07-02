@@ -4,7 +4,6 @@ from datetime import datetime
 import marshmallow
 import pytest
 
-from src.assets.schemas import Group, User
 from src.container import AttrRep, SCIMData
 from src.data.filter import Filter
 from src.data.patch_path import PatchPath
@@ -63,7 +62,7 @@ def group_deserialized(group_data_server):
 
 def get_bulk_data(user_1, user_2, group):
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a",
@@ -133,7 +132,7 @@ def bulk_response_serialized(user_data_server, group_data_server):
 @pytest.fixture
 def user_patch_serialized():
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "add",
@@ -218,8 +217,8 @@ def user_patch_deserialized(user_patch_serialized: dict):
     return SCIMData(deserialized)
 
 
-def test_user_response_can_be_dumped(user_deserialized, user_data_server):
-    validator = ResourceObjectGET(resource_schema=User)
+def test_user_response_can_be_dumped(user_deserialized, user_data_server, user_schema):
+    validator = ResourceObjectGET(resource_schema=user_schema)
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(user_deserialized)
@@ -227,8 +226,8 @@ def test_user_response_can_be_dumped(user_deserialized, user_data_server):
     assert dumped == user_data_server
 
 
-def test_user_response_can_be_loaded(user_deserialized, user_data_server):
-    validator = ResourceObjectGET(resource_schema=User)
+def test_user_response_can_be_loaded(user_deserialized, user_data_server, user_schema):
+    validator = ResourceObjectGET(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -239,8 +238,10 @@ def test_user_response_can_be_loaded(user_deserialized, user_data_server):
     assert loaded == user_deserialized
 
 
-def test_attr_names_are_case_insensitive_when_loading_data(user_deserialized, user_data_server):
-    validator = ResourceObjectGET(resource_schema=User)
+def test_attr_names_are_case_insensitive_when_loading_data(
+    user_deserialized, user_data_server, user_schema
+):
+    validator = ResourceObjectGET(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -253,9 +254,9 @@ def test_attr_names_are_case_insensitive_when_loading_data(user_deserialized, us
     assert loaded == user_deserialized
 
 
-def test_user_response_loading_fails_if_validation_error(user_data_server):
+def test_user_response_loading_fails_if_validation_error(user_data_server, user_schema):
     user_data_server["id"] = 123
-    validator = ResourceObjectGET(resource_schema=User)
+    validator = ResourceObjectGET(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -265,9 +266,9 @@ def test_user_response_loading_fails_if_validation_error(user_data_server):
         schema_cls().load(user_data_server)
 
 
-def test_user_response_can_be_validated(user_data_server):
+def test_user_response_can_be_validated(user_data_server, user_schema):
     user_data_server["id"] = 123
-    validator = ResourceObjectGET(resource_schema=User)
+    validator = ResourceObjectGET(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -278,8 +279,8 @@ def test_user_response_can_be_validated(user_data_server):
     assert issues == {"body": {"id": ["bad type, expecting 'string'"]}}
 
 
-def test_list_response_can_be_dumped(list_data, list_data_deserialized):
-    validator = ServerRootResourcesGET(resource_schemas=[User, Group])
+def test_list_response_can_be_dumped(list_data, list_data_deserialized, user_schema, group_schema):
+    validator = ServerRootResourcesGET(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(list_data_deserialized)
@@ -287,8 +288,8 @@ def test_list_response_can_be_dumped(list_data, list_data_deserialized):
     assert dumped == list_data
 
 
-def test_list_response_can_be_loaded(list_data, list_data_deserialized):
-    validator = ServerRootResourcesGET(resource_schemas=[User, Group])
+def test_list_response_can_be_loaded(list_data, list_data_deserialized, user_schema, group_schema):
+    validator = ServerRootResourcesGET(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     loaded = schema_cls().load(list_data)
@@ -296,10 +297,10 @@ def test_list_response_can_be_loaded(list_data, list_data_deserialized):
     assert loaded == list_data_deserialized
 
 
-def test_list_response_loading_fails_if_validation_error(list_data):
+def test_list_response_loading_fails_if_validation_error(list_data, user_schema, group_schema):
     list_data["Resources"][1]["id"] = 123
     list_data["Resources"][2]["meta"]["created"] = "123"
-    validator = ServerRootResourcesGET(resource_schemas=[User, Group])
+    validator = ServerRootResourcesGET(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     with pytest.raises(
@@ -308,10 +309,10 @@ def test_list_response_loading_fails_if_validation_error(list_data):
         schema_cls().load(list_data)
 
 
-def test_list_response_can_be_validated(list_data):
+def test_list_response_can_be_validated(list_data, user_schema, group_schema):
     list_data["Resources"][1]["id"] = 123
     list_data["Resources"][2]["meta"]["created"] = "123"
-    validator = ServerRootResourcesGET(resource_schemas=[User, Group])
+    validator = ServerRootResourcesGET(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
     expected_issues = {
         "body": {
@@ -327,8 +328,10 @@ def test_list_response_can_be_validated(list_data):
     assert issues == expected_issues
 
 
-def test_bulk_response_can_be_dumped(bulk_response_deserialized, bulk_response_serialized):
-    validator = BulkOperations(resource_schemas=[User, Group])
+def test_bulk_response_can_be_dumped(
+    bulk_response_deserialized, bulk_response_serialized, user_schema, group_schema
+):
+    validator = BulkOperations(resource_schemas=[user_schema, group_schema])
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(bulk_response_deserialized)
@@ -336,8 +339,10 @@ def test_bulk_response_can_be_dumped(bulk_response_deserialized, bulk_response_s
     assert dumped == bulk_response_serialized
 
 
-def test_bulk_response_can_be_loaded(bulk_response_deserialized, bulk_response_serialized):
-    validator = BulkOperations(resource_schemas=[User, Group])
+def test_bulk_response_can_be_loaded(
+    bulk_response_deserialized, bulk_response_serialized, user_schema, group_schema
+):
+    validator = BulkOperations(resource_schemas=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     loaded = schema_cls().load(bulk_response_serialized)
@@ -345,12 +350,12 @@ def test_bulk_response_can_be_loaded(bulk_response_deserialized, bulk_response_s
     assert loaded.to_dict() == bulk_response_deserialized.to_dict()
 
 
-def test_bulk_response_can_be_validated(bulk_response_serialized: dict):
+def test_bulk_response_can_be_validated(bulk_response_serialized: dict, user_schema, group_schema):
     bulk_response_serialized["Operations"][0]["status"] = "200"
     bulk_response_serialized["Operations"][1]["response"]["name"]["formatted"] = 123
     bulk_response_serialized["Operations"][2]["status"] = "601"
     bulk_response_serialized["Operations"][3]["response"]["members"][1]["type"] = "BadMemberType"
-    validator = BulkOperations(resource_schemas=[User, Group])
+    validator = BulkOperations(resource_schemas=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
     expected_issues = {
         "body": {
@@ -375,8 +380,10 @@ def test_bulk_response_can_be_validated(bulk_response_serialized: dict):
     assert issues == expected_issues
 
 
-def test_resource_patch_request_can_be_dumped(user_patch_serialized, user_patch_deserialized):
-    validator = ResourceObjectPATCH(resource_schema=User)
+def test_resource_patch_request_can_be_dumped(
+    user_patch_serialized, user_patch_deserialized, user_schema
+):
+    validator = ResourceObjectPATCH(resource_schema=user_schema)
     schema_cls = create_request_schema(validator)
 
     dumped = schema_cls().dump(user_patch_deserialized)
@@ -384,8 +391,10 @@ def test_resource_patch_request_can_be_dumped(user_patch_serialized, user_patch_
     assert dumped == user_patch_serialized
 
 
-def test_resource_patch_request_can_be_loaded(user_patch_serialized, user_patch_deserialized):
-    validator = ResourceObjectPATCH(resource_schema=User)
+def test_resource_patch_request_can_be_loaded(
+    user_patch_serialized, user_patch_deserialized, user_schema
+):
+    validator = ResourceObjectPATCH(resource_schema=user_schema)
     schema_cls = create_request_schema(validator)
 
     loaded = schema_cls().load(user_patch_serialized)
@@ -393,8 +402,8 @@ def test_resource_patch_request_can_be_loaded(user_patch_serialized, user_patch_
     assert loaded == user_patch_deserialized
 
 
-def test_resource_patch_request_can_be_validated(user_patch_serialized):
-    validator = ResourceObjectPATCH(resource_schema=User)
+def test_resource_patch_request_can_be_validated(user_patch_serialized, user_schema):
+    validator = ResourceObjectPATCH(resource_schema=user_schema)
     schema_cls = create_request_schema(validator)
     user_patch_serialized["Operations"][0]["value"]["displayName"] = "John Doe"
     user_patch_serialized["Operations"][1]["path"] = "bad^attr"
@@ -416,8 +425,10 @@ def test_resource_patch_request_can_be_validated(user_patch_serialized):
     assert issues == expected_issues
 
 
-def test_bulk_request_can_be_dumped(bulk_request_deserialized, bulk_request_serialized):
-    validator = BulkOperations(resource_schemas=[User, Group])
+def test_bulk_request_can_be_dumped(
+    bulk_request_deserialized, bulk_request_serialized, user_schema, group_schema
+):
+    validator = BulkOperations(resource_schemas=[user_schema, group_schema])
     schema_cls = create_request_schema(validator)
 
     dumped = schema_cls().dump(bulk_request_deserialized)
@@ -425,8 +436,10 @@ def test_bulk_request_can_be_dumped(bulk_request_deserialized, bulk_request_seri
     assert dumped == bulk_request_serialized
 
 
-def test_bulk_request_can_be_loaded(bulk_request_deserialized, bulk_request_serialized):
-    validator = BulkOperations(resource_schemas=[User, Group])
+def test_bulk_request_can_be_loaded(
+    bulk_request_deserialized, bulk_request_serialized, user_schema, group_schema
+):
+    validator = BulkOperations(resource_schemas=[user_schema, group_schema])
     schema_cls = create_request_schema(validator)
 
     loaded = schema_cls().load(bulk_request_serialized)
@@ -434,8 +447,8 @@ def test_bulk_request_can_be_loaded(bulk_request_deserialized, bulk_request_seri
     assert loaded == bulk_request_deserialized
 
 
-def test_bulk_request_can_be_validated(bulk_request_serialized):
-    validator = BulkOperations(resource_schemas=[User, Group])
+def test_bulk_request_can_be_validated(bulk_request_serialized, user_schema, group_schema):
+    validator = BulkOperations(resource_schemas=[user_schema, group_schema])
     schema_cls = create_request_schema(validator)
     bulk_request_serialized["Operations"][0]["data"]["schemas"].append("unknown:schema")
     bulk_request_serialized["Operations"][1]["data"]["userName"] = 123
@@ -457,8 +470,10 @@ def test_bulk_request_can_be_validated(bulk_request_serialized):
     assert issues == expected_issues
 
 
-def test_search_request_can_be_dumped(search_request_serialized, search_request_deserialized):
-    validator = SearchRequestPOST(resource_schemas=[User, Group])
+def test_search_request_can_be_dumped(
+    search_request_serialized, search_request_deserialized, user_schema, group_schema
+):
+    validator = SearchRequestPOST(resource_schema=[user_schema, group_schema])
     schema_cls = create_request_schema(validator)
 
     dumped = schema_cls().dump(search_request_deserialized)
@@ -466,8 +481,10 @@ def test_search_request_can_be_dumped(search_request_serialized, search_request_
     assert dumped == search_request_serialized
 
 
-def test_search_request_can_be_loaded(search_request_serialized, search_request_deserialized):
-    validator = SearchRequestPOST(resource_schemas=[User, Group])
+def test_search_request_can_be_loaded(
+    search_request_serialized, search_request_deserialized, user_schema, group_schema
+):
+    validator = SearchRequestPOST(resource_schema=[user_schema, group_schema])
     schema_cls = create_request_schema(validator)
 
     loaded = schema_cls().load(search_request_serialized)

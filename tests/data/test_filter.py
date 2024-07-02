@@ -2,7 +2,6 @@ import re
 
 import pytest
 
-from src.assets.schemas import User
 from src.container import AttrRep, AttrRepFactory, BoundedAttrRep
 from src.data.filter import Filter
 from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
@@ -2443,7 +2442,7 @@ def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, exp
     assert filter_.to_dict() == expected
 
 
-def test_binary_operator_can_be_registered():
+def test_binary_operator_can_be_registered(user_schema):
     class Regex(BinaryAttributeOperator):
         SUPPORTED_SCIM_TYPES = {"string"}
         SUPPORTED_TYPES = {str}
@@ -2457,11 +2456,11 @@ def test_binary_operator_can_be_registered():
 
     filter_ = Filter.deserialize("userName re 'super\\d{4}user'")
 
-    assert filter_({"userName": "super4132user"}, User)
-    assert not filter_({"userName": "super413user"}, User)
+    assert filter_({"userName": "super4132user"}, user_schema)
+    assert not filter_({"userName": "super413user"}, user_schema)
 
 
-def test_unary_operator_can_be_registered():
+def test_unary_operator_can_be_registered(user_schema):
     class IsNice(UnaryAttributeOperator):
         SUPPORTED_SCIM_TYPES = {"string"}
         SUPPORTED_TYPES = {str}
@@ -2475,8 +2474,8 @@ def test_unary_operator_can_be_registered():
 
     filter_ = Filter.deserialize("userName isNice")
 
-    assert filter_({"userName": "Nice"}, User)
-    assert not filter_({"userName": "NotNice"}, User)
+    assert filter_({"userName": "Nice"}, user_schema)
+    assert not filter_({"userName": "NotNice"}, user_schema)
 
 
 def test_attr_reps_do_not_contain_duplicates():
@@ -2496,25 +2495,33 @@ def test_attr_reps_are_not_returned_for_filters_with_bad_attributes():
     assert filter_.attr_reps == []
 
 
-def test_filter_can_be_applied_on_multivalued_complex_attribute_if_no_sub_attr_specified():
+def test_filter_can_be_applied_on_multivalued_complex_attribute_if_no_sub_attr_specified(
+    user_schema,
+):
     filter_ = Filter.deserialize("emails co 'example.com'")
 
-    assert filter_({"emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, User)
-    assert not filter_({"emails": [{"value": "a@bad.com"}]}, User)
+    assert filter_({"emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, user_schema)
+    assert not filter_({"emails": [{"value": "a@bad.com"}]}, user_schema)
 
 
-def test_filter_can_be_applied_on_multivalued_complex_attribute_if_value_sub_attr_specified():
+def test_filter_can_be_applied_on_multivalued_complex_attribute_if_value_sub_attr_specified(
+    user_schema,
+):
     filter_ = Filter.deserialize("emails.value co 'example.com'")
 
-    assert filter_({"emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, User)
-    assert not filter_({"emails": [{"value": "a@bad.com"}]}, User)
+    assert filter_({"emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, user_schema)
+    assert not filter_({"emails": [{"value": "a@bad.com"}]}, user_schema)
 
 
-def test_filter_can_be_applied_on_multivalued_complex_attribute_if_other_sub_attr_specified():
+def test_filter_can_be_applied_on_multivalued_complex_attribute_if_other_sub_attr_specified(
+    user_schema,
+):
     filter_ = Filter.deserialize("emails.display co 'example.com'")
 
-    assert filter_({"emails": [{"display": "a@bad.com"}, {"display": "a@example.com"}]}, User)
-    assert not filter_({"emails": [{"display": "a@bad.com"}]}, User)
+    assert filter_(
+        {"emails": [{"display": "a@bad.com"}, {"display": "a@example.com"}]}, user_schema
+    )
+    assert not filter_({"emails": [{"display": "a@bad.com"}]}, user_schema)
 
 
 def test_unknown_expression_error_is_returned_if_any_component_is_not_recognized():
@@ -2551,9 +2558,10 @@ def test_simple_filter_can_be_serialized():
     assert serialized == "userName eq 'test'"
 
 
-def test_filter_with_logical_operator_can_be_applied():
+def test_filter_with_logical_operator_can_be_applied(user_schema):
     filter_ = Filter.deserialize("userName ew 'ek' and emails co 'example.com'")
 
     assert filter_(
-        {"userName": "Arek", "emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]}, User
+        {"userName": "Arek", "emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]},
+        user_schema,
     )

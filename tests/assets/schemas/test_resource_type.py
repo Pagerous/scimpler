@@ -1,10 +1,9 @@
-from src.assets.schemas import User
-from src.assets.schemas.resource_type import ResourceType
+from src.assets.schemas.resource_type import ResourceTypeSchema
 from src.data.attr_presence import AttrPresenceConfig
 
 
 def test_resource_type_schema_is_validated():
-    schema = ResourceType
+    schema = ResourceTypeSchema()
     input_ = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
         "id": "User",
@@ -27,7 +26,7 @@ def test_resource_type_schema_is_validated():
     assert schema.validate(input_, AttrPresenceConfig("RESPONSE")).to_dict(msg=True) == {}
 
 
-def test_resource_type_representation_can_be_generated():
+def test_resource_type_representation_can_be_generated(user_schema):
     expected = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
         "id": "User",
@@ -44,6 +43,6 @@ def test_resource_type_representation_can_be_generated():
         "meta": {"location": "/ResourceTypes/User", "resourceType": "ResourceType"},
     }
 
-    actual = ResourceType.get_repr(User)
+    actual = ResourceTypeSchema().get_repr(user_schema)
 
     assert actual == expected

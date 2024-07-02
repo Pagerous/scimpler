@@ -1,6 +1,5 @@
 import pytest
 
-from src.assets.schemas.user import User
 from src.container import AttrRep
 from src.data.attr_presence import (
     AttrPresenceConfig,
@@ -9,7 +8,7 @@ from src.data.attr_presence import (
 )
 
 
-def test_presence_validation_fails_if_returned_attribute_that_never_should_be_returned():
+def test_presence_validation_fails_if_returned_attribute_that_never_should_be_returned(user_schema):
     expected = {
         "_errors": [
             {
@@ -19,7 +18,7 @@ def test_presence_validation_fails_if_returned_attribute_that_never_should_be_re
     }
 
     issues = validate_presence(
-        attr=User.attrs.get("password"),
+        attr=user_schema.attrs.get("password"),
         value="1234",
         direction="RESPONSE",
     )
@@ -27,9 +26,9 @@ def test_presence_validation_fails_if_returned_attribute_that_never_should_be_re
     assert issues.to_dict() == expected
 
 
-def test_restricted_attributes_can_be_sent_with_request():
+def test_restricted_attributes_can_be_sent_with_request(user_schema):
     issues = validate_presence(
-        attr=User.attrs.get("password"),
+        attr=user_schema.attrs.get("password"),
         value="1234",
         direction="REQUEST",
     )
@@ -37,11 +36,13 @@ def test_restricted_attributes_can_be_sent_with_request():
     assert issues.to_dict(msg=True) == {}
 
 
-def test_presence_validation_fails_on_attr_which_should_not_be_included_if_not_necessary():
+def test_presence_validation_fails_on_attr_which_should_not_be_included_if_not_necessary(
+    user_schema,
+):
     expected = {"_errors": [{"code": 7}]}
 
     issues = validate_presence(
-        attr=User.attrs.get("name"),
+        attr=user_schema.attrs.get("name"),
         value={"givenName": "Arkadiusz", "familyName": "Pajor"},
         direction="RESPONSE",
         inclusivity=DataInclusivity.EXCLUDE,
@@ -50,7 +51,9 @@ def test_presence_validation_fails_on_attr_which_should_not_be_included_if_not_n
     assert issues.to_dict() == expected
 
 
-def test_presence_validation_fails_if_not_provided_attribute_that_always_should_be_returned():
+def test_presence_validation_fails_if_not_provided_attribute_that_always_should_be_returned(
+    user_schema,
+):
     expected = {
         "_errors": [
             {
@@ -60,7 +63,7 @@ def test_presence_validation_fails_if_not_provided_attribute_that_always_should_
     }
 
     issues = validate_presence(
-        attr=User.attrs.get("id"),
+        attr=user_schema.attrs.get("id"),
         value=None,
         direction="RESPONSE",
     )
@@ -68,9 +71,9 @@ def test_presence_validation_fails_if_not_provided_attribute_that_always_should_
     assert issues.to_dict() == expected
 
 
-def test_presence_validation_passes_if_not_provided_requested_optional_attribute():
+def test_presence_validation_passes_if_not_provided_requested_optional_attribute(user_schema):
     issues = validate_presence(
-        attr=User.attrs.get("name.familyName"),
+        attr=user_schema.attrs.get("name.familyName"),
         value=None,
         direction="RESPONSE",
         inclusivity=DataInclusivity.INCLUDE,
@@ -79,11 +82,11 @@ def test_presence_validation_passes_if_not_provided_requested_optional_attribute
     assert issues.to_dict(msg=True) == {}
 
 
-def test_specifying_attribute_issued_by_service_provider_causes_validation_failure():
+def test_specifying_attribute_issued_by_service_provider_causes_validation_failure(user_schema):
     expected_issues = {"_errors": [{"code": 6}]}
 
     issues = validate_presence(
-        attr=User.attrs.get("id"),
+        attr=user_schema.attrs.get("id"),
         value="should-not-be-provided",
         direction="REQUEST",
     )

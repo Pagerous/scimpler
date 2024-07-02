@@ -1,14 +1,11 @@
-from src.assets.schemas.search_request import (
-    SearchRequest,
-    create_search_request_schema,
-)
+from src.assets.schemas.search_request import SearchRequestSchema
 from src.config import create_service_provider_config
 from src.container import AttrRep
 from src.data.filter import Filter
 
 
 def test_search_request_attrs_are_deserialized():
-    schema = SearchRequest()
+    schema = SearchRequestSchema()
 
     data = schema.deserialize({"attributes": ["userName", "name"]})
 
@@ -16,7 +13,7 @@ def test_search_request_attrs_are_deserialized():
 
 
 def test_search_request_sorting_deserialized():
-    schema = SearchRequest()
+    schema = SearchRequestSchema()
 
     data = schema.deserialize({"sortBy": "name.familyName", "sortOrder": "descending"})
 
@@ -25,7 +22,7 @@ def test_search_request_sorting_deserialized():
 
 
 def test_full_search_request_is_deserialized():
-    schema = SearchRequest()
+    schema = SearchRequestSchema()
 
     data = schema.deserialize(
         {
@@ -47,7 +44,7 @@ def test_full_search_request_is_deserialized():
 
 
 def test_search_request_schema_can_exclude_filter_and_sorting():
-    schema = create_search_request_schema(
+    schema = SearchRequestSchema.from_config(
         config=create_service_provider_config(
             filter_={"supported": False},
             sort={"supported": False},
@@ -60,7 +57,7 @@ def test_search_request_schema_can_exclude_filter_and_sorting():
 
 
 def test_search_request_schema_can_include_filter_and_sorting():
-    schema = create_search_request_schema(
+    schema = SearchRequestSchema.from_config(
         config=create_service_provider_config(
             filter_={"supported": True, "max_results": 100},
             sort={"supported": True},

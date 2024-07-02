@@ -1,13 +1,17 @@
-from src.data.attrs import AttributeMutability, Complex, SCIMReference, String
-from src.data.schemas import ResourceSchema
+from typing import Optional
 
-Group = ResourceSchema(
-    schema="urn:ietf:params:scim:schemas:core:2.0:Group",
-    name="Group",
-    plural_name="Groups",
-    endpoint="/Groups",
-    description="Group",
-    attrs=[
+from src.data.attrs import (
+    Attribute,
+    AttributeMutability,
+    Complex,
+    SCIMReference,
+    String,
+)
+from src.data.schemas import AttrFilter, ResourceSchema
+
+
+class GroupSchema(ResourceSchema):
+    default_attrs: list[Attribute] = [
         String(
             name="displayName",
             description="A human-readable name for the Group.",
@@ -41,5 +45,14 @@ Group = ResourceSchema(
                 ),
             ],
         ),
-    ],
-)
+    ]
+
+    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+        super().__init__(
+            schema="urn:ietf:params:scim:schemas:core:2.0:Group",
+            name="Group",
+            plural_name="Groups",
+            endpoint="/Groups",
+            description="Group",
+            attr_filter=attr_filter,
+        )

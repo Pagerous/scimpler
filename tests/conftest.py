@@ -1,13 +1,15 @@
 from copy import deepcopy
+from typing import Optional
 
 import pytest
 
 from src import registry
-from src.assets.schemas import Group, User
-from src.assets.schemas.user import EnterpriseUserExtension
+from src.assets.schemas import GroupSchema, UserSchema
+from src.assets.schemas.user import EnterpriseUserSchemaExtension
 from src.config import create_service_provider_config
 from src.container import SCIMData
 from src.data.attrs import (
+    AttrFilter,
     Binary,
     Boolean,
     Complex,
@@ -23,12 +25,104 @@ from src.data.patch_path import PatchPath
 from src.data.schemas import ResourceSchema
 
 
-@pytest.fixture(scope="session", autouse=True)
-def register_schemas():
-    User.extend(EnterpriseUserExtension, required=True)
-    registry.register_resource_schema(User)
-    registry.register_resource_schema(Group)
-    registry.register_resource_schema(SchemaForTests)
+class FakeSchema(ResourceSchema):
+    default_attrs = [
+        Integer("int"),
+        String("str"),
+        String("str_cs", case_exact=True),
+        String("str_mv", multi_valued=True),
+        String("str_cs_mv", case_exact=True, multi_valued=True),
+        Boolean("bool"),
+        DateTime("datetime"),
+        Decimal("decimal"),
+        Binary("binary"),
+        ExternalReference("external_ref"),
+        URIReference("uri_ref"),
+        SCIMReference("scim_ref", reference_types=["FakeSchema"]),
+        Complex(
+            "c",
+            sub_attributes=[String("value")],
+        ),
+        Complex(
+            "c_mv",
+            sub_attributes=[String("value", multi_valued=True)],
+            multi_valued=True,
+        ),
+        Complex(
+            "c2",
+            sub_attributes=[String("str"), Integer("int"), Boolean("bool", required=True)],
+        ),
+        Complex(
+            "c2_mv",
+            sub_attributes=[
+                String("str"),
+                Integer("int"),
+                Boolean("bool", required=True),
+            ],
+            multi_valued=True,
+        ),
+        String("userName", case_exact=True),
+        Integer("title"),
+    ]
+
+    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+        super().__init__(
+            schema="schema:for:tests",
+            name="FakeSchema",
+            plural_name="SchemasForTests",
+            endpoint="/SchemasForTests",
+            attr_filter=attr_filter,
+        )
+
+
+_user_schema = UserSchema()
+_group_schema = GroupSchema()
+_enterprise_extension = EnterpriseUserSchemaExtension()
+_fake_schema = FakeSchema()
+
+
+@pytest.fixture(scope="session")
+def user_schema() -> UserSchema:
+    return _user_schema
+
+
+@pytest.fixture(scope="session")
+def group_schema() -> GroupSchema:
+    return _group_schema
+
+
+@pytest.fixture(scope="session")
+def enterprise_extension() -> EnterpriseUserSchemaExtension:
+    return _enterprise_extension
+
+
+@pytest.fixture(scope="session")
+def fake_schema() -> "FakeSchema":
+    return _fake_schema
+
+
+@pytest.fixture(scope="session")
+def schema(request, user_schema, group_schema, fake_schema):
+    if request.param is None:
+        return None
+
+    if request.param == "user_schema":
+        return user_schema
+
+    if request.param == "group_schema":
+        return group_schema
+
+    if request.param == "fake_schema":
+        return fake_schema
+
+    raise ValueError("unknown schema")
+
+
+def pytest_sessionstart(session):
+    _user_schema.extend(_enterprise_extension, required=True)
+    registry.register_resource_schema(_user_schema)
+    registry.register_resource_schema(_group_schema)
+    registry.register_resource_schema(_fake_schema)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -205,7 +299,7 @@ def list_user_data(user_data_server):
         "2"
     )
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
         "totalResults": 2,
         "startIndex": 1,
         "itemsPerPage": 2,
@@ -260,7 +354,7 @@ def error_data():
 @pytest.fixture
 def bulk_request_serialized():
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
         "failOnErrors": 1,
         "Operations": [
             {
@@ -293,7 +387,7 @@ def bulk_request_serialized():
                 "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
                 "version": 'W"edac3253e2c0ef2"',
                 "data": {
-                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
                     "Operations": [
                         {"op": "remove", "path": "nickName"},
                         {"op": "add", "path": "userName", "value": "Dave"},
@@ -347,52 +441,6 @@ def group_data_server():
             "version": 'W/"3694e05e9dff594"',
         },
     }
-
-
-SchemaForTests = ResourceSchema(
-    schema="schema:for:tests",
-    name="SchemaForTests",
-    plural_name="SchemasForTests",
-    endpoint="/SchemasForTests",
-    attrs=[
-        Integer("int"),
-        String("str"),
-        String("str_cs", case_exact=True),
-        String("str_mv", multi_valued=True),
-        String("str_cs_mv", case_exact=True, multi_valued=True),
-        Boolean("bool"),
-        DateTime("datetime"),
-        Decimal("decimal"),
-        Binary("binary"),
-        ExternalReference("external_ref"),
-        URIReference("uri_ref"),
-        SCIMReference("scim_ref", reference_types=["SchemaForTests"]),
-        Complex(
-            "c",
-            sub_attributes=[String("value")],
-        ),
-        Complex(
-            "c_mv",
-            sub_attributes=[String("value", multi_valued=True)],
-            multi_valued=True,
-        ),
-        Complex(
-            "c2",
-            sub_attributes=[String("str"), Integer("int"), Boolean("bool", required=True)],
-        ),
-        Complex(
-            "c2_mv",
-            sub_attributes=[
-                String("str"),
-                Integer("int"),
-                Boolean("bool", required=True),
-            ],
-            multi_valued=True,
-        ),
-        String("userName", case_exact=True),
-        Integer("title"),
-    ],
-)
 
 
 CONFIG = create_service_provider_config(

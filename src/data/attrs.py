@@ -14,6 +14,7 @@ from typing import (
     Iterator,
     MutableMapping,
     Optional,
+    TypeVar,
     Union,
 )
 from urllib.parse import urlparse
@@ -37,6 +38,76 @@ from src.registry import resources
 
 if TYPE_CHECKING:
     from src.data.patch_path import PatchPath
+
+
+TAttrFilterInput = TypeVar(
+    "TAttrFilterInput", bound=Union[tuple[Union[AttrName, AttrRep], "Attribute"], "Attribute"]
+)
+
+
+class AttrFilter:
+    def __init__(
+        self,
+        attr_names: Optional[Iterable[str]] = None,
+        include: Optional[bool] = None,
+        filter_: Optional[Callable[["Attribute"], bool]] = None,
+    ):
+        if attr_names and include is None:
+            raise ValueError("'include' must be specified if 'attr_names' is provided")
+
+        # stores attr names specified directly, e.g. 'emails'
+        # will be here if specified as 'emails' and not 'emails.type'
+        self._direct_top_level: set[AttrName] = set()
+        from collections import defaultdict
+
+        self._complex_sub_attrs: dict[AttrName, set[AttrName]] = defaultdict(set)
+        if attr_names is not None:
+            for attr_name in attr_names:
+                parts = attr_name.split(".", 1)
+                attr_name = AttrName(parts[0])
+                if len(parts) == 1:
+                    self._direct_top_level.add(attr_name)
+                else:
+                    self._complex_sub_attrs[attr_name].add(AttrName(parts[1]))
+        self._include = include
+        self._filter = filter_
+
+    def __call__(self, attrs: Iterable[TAttrFilterInput]) -> list[TAttrFilterInput]:
+        filtered = []
+        for item in attrs:
+            identity = None
+            if isinstance(item, Attribute):
+                attr = item
+            else:
+                identity = item[0]
+                attr = item[1]
+
+            if self._include is False and attr.name in self._direct_top_level:
+                continue
+
+            if isinstance(attr, Complex):
+                attr = attr.clone(
+                    AttrFilter(
+                        attr_names=self._complex_sub_attrs[attr.name],
+                        include=self._include,
+                        filter_=self._filter,
+                    )
+                )
+                # means no sub-attributes, so no need for complex attr at all
+                if len(list(attr.attrs)) == 0:
+                    continue
+            else:
+                if self._filter and not self._filter(attr):
+                    continue
+
+                if self._include is True and attr.name not in self._direct_top_level:
+                    continue
+
+            if identity is None:
+                filtered.append(attr)
+            else:
+                filtered.append((identity, attr))
+        return filtered
 
 
 class AttributeMutability(str, Enum):
@@ -565,7 +636,7 @@ class Complex(Attribute):
     def filter(
         self,
         data: Union[MutableMapping, Iterable[MutableMapping]],
-        attr_filter: Callable[[Attribute], bool],
+        attr_filter: AttrFilter,
     ) -> Union[MutableMapping, Iterable[MutableMapping]]:
         if isinstance(data, MutableMapping):
             return self._filter(SCIMData(data), attr_filter)
@@ -574,15 +645,15 @@ class Complex(Attribute):
     def _filter(
         self,
         data: SCIMData,
-        attr_filter: Callable[[Attribute], bool],
+        attr_filter: AttrFilter,
     ) -> SCIMData:
         filtered = SCIMData()
-        for name, attr in self.attrs:
-            if attr_filter(attr) and (value := data.get(name)) is not Missing:
+        for name, attr in attr_filter(self.attrs):
+            if (value := data.get(name)) is not Missing:
                 filtered.set(name, value)
         return filtered
 
-    def clone(self, attr_filter: Callable[["Attribute"], bool]) -> "Complex":
+    def clone(self, attr_filter: AttrFilter) -> "Complex":
         cloned = copy(self)
         cloned._sub_attributes = self._sub_attributes.clone(attr_filter)
         return cloned
@@ -671,10 +742,8 @@ class Attrs:
             attr_name = attr_name.attr
         return self._attrs.get(AttrName(attr_name))
 
-    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "Attrs":
-        cloned = Attrs()
-        cloned._attrs = {key: attr for key, attr in self._attrs.items() if attr_filter(attr)}
-        return cloned
+    def clone(self, attr_filter: AttrFilter) -> "Attrs":
+        return Attrs(attr_filter(self._attrs.values()))
 
 
 class BoundedAttrs:
@@ -764,13 +833,13 @@ class BoundedAttrs:
             self._attrs[attr_rep] = attr
         self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
 
-    def clone(self, attr_filter: Callable[[Attribute], bool]) -> "BoundedAttrs":
+    def clone(self, attr_filter: AttrFilter) -> "BoundedAttrs":
         cloned = BoundedAttrs(
             schema=self._schema,
-            attrs=(
-                attr.clone(attr_filter=attr_filter) if isinstance(attr, Complex) else attr
+            attrs=attr_filter(
+                attr
                 for attr_rep, attr in self._attrs.items()
-                if attr_rep.schema not in self._extensions and attr_filter(attr)
+                if attr_rep.schema not in self._extensions
             ),
             common_attrs=self._common_attrs,
         )

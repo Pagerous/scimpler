@@ -1,5 +1,8 @@
 import functools
+from collections.abc import MutableMapping
 from typing import Any, Generic, Optional, Sequence, TypeVar, Union, cast
+
+from typing_extensions import Self
 
 from src.container import AttrRep, Missing, SCIMData
 from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
@@ -63,6 +66,15 @@ class Sorter(Generic[TAttrRep]):
     @property
     def asc(self) -> bool:
         return self._asc
+
+    @classmethod
+    def from_data(cls, data: MutableMapping) -> Optional[Self]:
+        if sort_by := data.get("sortBy"):
+            return cls(
+                attr_rep=sort_by,
+                asc=data.get("sortOrder") == "ascending",
+            )
+        return None
 
     def __call__(
         self,

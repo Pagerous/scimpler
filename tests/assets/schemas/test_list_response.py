@@ -1,6 +1,6 @@
 import pytest
 
-from src.assets.schemas import group, list_response, user
+from src.assets.schemas import list_response
 from src.container import AttrRep, SCIMData
 from src.data.attr_presence import AttrPresenceConfig
 
@@ -28,8 +28,8 @@ def test_validate_items_per_page_consistency__succeeds_if_correct_data(list_user
     assert issues.to_dict(msg=True) == {}
 
 
-def test_resources_validation_fails_if_bad_type(list_user_data):
-    schema = list_response.ListResponse([user.User])
+def test_resources_validation_fails_if_bad_type(list_user_data, user_schema):
+    schema = list_response.ListResponseSchema([user_schema])
     list_user_data["Resources"][0]["userName"] = 123
     list_user_data["Resources"][1]["userName"] = 123
 
@@ -45,8 +45,8 @@ def test_resources_validation_fails_if_bad_type(list_user_data):
     assert issues.to_dict() == expected_issues
 
 
-def test_resources_validation_succeeds_for_correct_data(list_user_data):
-    schema = list_response.ListResponse([user.User])
+def test_resources_validation_succeeds_for_correct_data(list_user_data, user_schema):
+    schema = list_response.ListResponseSchema([user_schema])
     # below fields should be filtered-out
     list_user_data["unexpected"] = 123
     list_user_data["Resources"][0]["unexpected"] = 123
@@ -57,8 +57,10 @@ def test_resources_validation_succeeds_for_correct_data(list_user_data):
     assert issues.to_dict(msg=True) == {}
 
 
-def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(list_user_data):
-    schema = list_response.ListResponse([user.User])
+def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(
+    list_user_data, user_schema
+):
+    schema = list_response.ListResponseSchema([user_schema])
     list_user_data["Resources"][0] = []
     list_user_data["Resources"][1]["userName"] = 123
     list_user_data["itemsPerPage"] = "incorrect"
@@ -75,8 +77,10 @@ def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(list
     assert issues.to_dict() == expected
 
 
-def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data):
-    schema = list_response.ListResponse([user.User, group.Group])
+def test_resources_validation_fails_if_unknown_schema_in_resource(
+    list_user_data, user_schema, group_schema
+):
+    schema = list_response.ListResponseSchema([user_schema, group_schema])
     list_user_data["Resources"][0]["schemas"] = ["totally:unknown:schema"]
     expected = {
         "Resources": {
@@ -90,7 +94,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data
 
 
 @pytest.mark.parametrize(
-    ("data", "expected"),
+    ("data", "schema"),
     (
         (
             [
@@ -101,7 +105,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data
                     }
                 )
             ],
-            [user.User],
+            "user_schema",
         ),
         (
             [
@@ -112,7 +116,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data
                     }
                 )
             ],
-            [None],
+            None,
         ),
         (
             [
@@ -122,7 +126,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data
                     }
                 )
             ],
-            [None],
+            None,
         ),
         (
             [
@@ -135,20 +139,21 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(list_user_data
                     }
                 )
             ],
-            [None],
+            None,
         ),
     ),
+    indirect=["schema"],
 )
-def test_get_schema_for_resources(data, expected):
-    schema = list_response.ListResponse([user.User, user.User])
+def test_get_schema_for_resources(data, schema, user_schema):
+    list_schema = list_response.ListResponseSchema([user_schema, user_schema])
 
-    actual = schema.get_schemas(data)
+    actual = list_schema.get_schemas(data)[0]
 
-    assert isinstance(actual, type(expected))
+    assert isinstance(actual, type(schema))
 
 
 @pytest.mark.parametrize(
-    ("data", "expected"),
+    ("data",),
     (
         (
             [
@@ -159,7 +164,6 @@ def test_get_schema_for_resources(data, expected):
                     }
                 )
             ],
-            [user.User],
         ),
         (
             [
@@ -169,7 +173,6 @@ def test_get_schema_for_resources(data, expected):
                     }
                 )
             ],
-            [user.User],
         ),
         (
             [
@@ -179,7 +182,6 @@ def test_get_schema_for_resources(data, expected):
                     }
                 )
             ],
-            [user.User],
         ),
         (
             [
@@ -192,27 +194,26 @@ def test_get_schema_for_resources(data, expected):
                     }
                 )
             ],
-            [user.User],
         ),
     ),
 )
-def test_get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(data, expected):
-    schema = list_response.ListResponse([user.User])
+def test_get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(data, user_schema):
+    list_schema = list_response.ListResponseSchema([user_schema])
 
-    actual = schema.get_schemas(data)
+    actual = list_schema.get_schemas(data)[0]
 
-    assert isinstance(actual, type(expected))
+    assert actual is user_schema
 
 
-def test_list_response_can_be_serialized(user_data_client):
-    schema = list_response.ListResponse(resource_schemas=[user.User])
+def test_list_response_can_be_serialized(user_data_client, user_schema):
+    schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
         "totalResults": 3,
         "Resources": [
-            user.User.deserialize(user_data_client),
-            user.User.deserialize(user_data_client),
-            user.User.deserialize(user_data_client),
+            user_schema.deserialize(user_data_client),
+            user_schema.deserialize(user_data_client),
+            user_schema.deserialize(user_data_client),
         ],
     }
     expected_data = {
@@ -226,10 +227,10 @@ def test_list_response_can_be_serialized(user_data_client):
     assert serialized == expected_data
 
 
-def test_list_response_with_missing_resources_can_be_serialized(user_data_client):
-    schema = list_response.ListResponse(resource_schemas=[user.User])
+def test_list_response_with_missing_resources_can_be_serialized(user_data_client, user_schema):
+    schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
         "totalResults": 3,
     }
 
@@ -238,10 +239,10 @@ def test_list_response_with_missing_resources_can_be_serialized(user_data_client
     assert serialized == data
 
 
-def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client):
-    schema = list_response.ListResponse(resource_schemas=[user.User])
+def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client, user_schema):
+    schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
         "totalResults": 3,
         "Resources": ["bad_type", ["also_bad_type"]],
     }
@@ -256,10 +257,10 @@ def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client):
     assert serialized == expected_data
 
 
-def test_bad_resources_type_is_validated(user_data_client):
-    schema = list_response.ListResponse(resource_schemas=[user.User])
+def test_bad_resources_type_is_validated(user_data_client, user_schema):
+    schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
         "totalResults": 3,
         "Resources": "foo",
     }
@@ -270,8 +271,10 @@ def test_bad_resources_type_is_validated(user_data_client):
     assert issues.to_dict() == expected_issues
 
 
-def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schemas():
-    schema = list_response.ListResponse(resource_schemas=[user.User, group.Group])
+def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schemas(
+    user_schema, group_schema
+):
+    schema = list_response.ListResponseSchema(resource_schemas=[user_schema, group_schema])
 
     schemas = schema.get_schemas([{"userName": "some_user"}])
 
@@ -279,8 +282,10 @@ def test_no_schema_is_inferred_for_resource_with_no_schemas_field_and_many_schem
     assert schemas[0] is None
 
 
-def test_no_schema_is_inferred_for_resource_with_unknown_schemas_and_many_schemas():
-    schema = list_response.ListResponse(resource_schemas=[user.User, group.Group])
+def test_no_schema_is_inferred_for_resource_with_unknown_schemas_and_many_schemas(
+    user_schema, group_schema
+):
+    schema = list_response.ListResponseSchema(resource_schemas=[user_schema, group_schema])
 
     schemas = schema.get_schemas([{"schemas": ["unknown:schema"], "userName": "some_user"}])
 
@@ -289,7 +294,7 @@ def test_no_schema_is_inferred_for_resource_with_unknown_schemas_and_many_schema
 
 
 def test_validate_resources_attribute_presence__fails_if_requested_attribute_not_excluded(
-    list_user_data,
+    list_user_data, user_schema
 ):
     expected = {
         "Resources": {
@@ -314,7 +319,7 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
         }
     }
 
-    issues = list_response.ListResponse([user.User]).validate(
+    issues = list_response.ListResponseSchema([user_schema]).validate(
         list_user_data,
         resource_presence_config=AttrPresenceConfig(
             direction="RESPONSE",

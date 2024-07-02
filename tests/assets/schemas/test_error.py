@@ -1,6 +1,6 @@
 import pytest
 
-from src.assets.schemas import Error
+from src.assets.schemas import ErrorSchema
 from src.data.attr_presence import AttrPresenceConfig
 
 
@@ -14,6 +14,6 @@ from src.data.attr_presence import AttrPresenceConfig
     ),
 )
 def test_error_status_is_validated(value, expected_issues):
-    issues = Error.validate({"status": value}, AttrPresenceConfig("RESPONSE"))
+    issues = ErrorSchema().validate({"status": value}, AttrPresenceConfig("RESPONSE"))
 
     assert issues.get(location=["status"]).to_dict() == expected_issues

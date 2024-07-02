@@ -1,4 +1,7 @@
+from typing import Optional
+
 from src.data.attrs import (
+    Attribute,
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
@@ -9,13 +12,11 @@ from src.data.attrs import (
     Integer,
     String,
 )
-from src.data.schemas import BaseResourceSchema, bulk_id_validator
+from src.data.schemas import AttrFilter, BaseResourceSchema, bulk_id_validator
 
-ServiceProviderConfig = BaseResourceSchema(
-    schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
-    name="ServiceProviderConfig",
-    endpoint="/ServiceProviderConfig",
-    attrs=[
+
+class ServiceProviderConfigSchema(BaseResourceSchema):
+    default_attrs: list[Attribute] = [
         String(
             name="id",
             required=False,
@@ -208,5 +209,12 @@ ServiceProviderConfig = BaseResourceSchema(
                 ),
             ],
         ),
-    ],
-)
+    ]
+
+    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+        super().__init__(
+            schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
+            name="ServiceProviderConfig",
+            endpoint="/ServiceProviderConfig",
+            attr_filter=attr_filter,
+        )

@@ -2,8 +2,8 @@ from typing import Any, Optional, Sequence, Union
 
 from src.container import Invalid, Missing, SCIMData
 from src.data.attr_presence import AttrPresenceConfig
-from src.data.attrs import Integer, Unknown
-from src.data.schemas import BaseResourceSchema, BaseSchema
+from src.data.attrs import Attribute, Integer, Unknown
+from src.data.schemas import AttrFilter, BaseResourceSchema, BaseSchema
 from src.error import ValidationError, ValidationIssues
 
 
@@ -20,20 +20,26 @@ def _validate_resources_type(value) -> ValidationIssues:
     return issues
 
 
-class ListResponse(BaseSchema):
-    def __init__(self, resource_schemas: Sequence[BaseResourceSchema]):
+class ListResponseSchema(BaseSchema):
+    default_attrs: list[Attribute] = [
+        Integer("totalResults", required=True),
+        Integer("startIndex"),
+        Integer("itemsPerPage"),
+        Unknown(
+            name="Resources",
+            multi_valued=True,
+            validators=[_validate_resources_type],
+        ),
+    ]
+
+    def __init__(
+        self,
+        resource_schemas: Sequence[BaseResourceSchema],
+        attr_filter: Optional[AttrFilter] = None,
+    ):
         super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:ListResponse",
-            attrs=[
-                Integer("totalResults", required=True),
-                Integer("startIndex"),
-                Integer("itemsPerPage"),
-                Unknown(
-                    name="Resources",
-                    multi_valued=True,
-                    validators=[_validate_resources_type],
-                ),
-            ],
+            schema="urn:ietf:params:scim:api:messages:2.0:ListResponseSchema",
+            attr_filter=attr_filter,
         )
         self._contained_schemas = list(resource_schemas)
 

@@ -5,7 +5,7 @@ from src.container import Invalid, Missing, MissingType, SCIMData
 from src.data.attr_presence import validate_presence
 from src.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
 from src.data.patch_path import PatchPath
-from src.data.schemas import BaseSchema, ResourceSchema
+from src.data.schemas import AttrFilter, BaseSchema, ResourceSchema
 from src.error import ValidationError, ValidationIssues
 
 
@@ -31,33 +31,35 @@ def _validate_operations(value: list[SCIMData]) -> ValidationIssues:
     return issues
 
 
-class PatchOp(BaseSchema):
-    def __init__(self, resource_schema: ResourceSchema):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:PatchOp",
-            attrs=[
-                Complex(
-                    name="Operations",
+class PatchOpSchema(BaseSchema):
+    default_attrs: list[Attribute] = [
+        Complex(
+            name="Operations",
+            required=True,
+            multi_valued=True,
+            validators=[_validate_operations],
+            sub_attributes=[
+                String(
+                    "op",
+                    canonical_values=["add", "remove", "replace"],
+                    restrict_canonical_values=True,
                     required=True,
-                    multi_valued=True,
-                    validators=[_validate_operations],
-                    sub_attributes=[
-                        String(
-                            "op",
-                            canonical_values=["add", "remove", "replace"],
-                            restrict_canonical_values=True,
-                            required=True,
-                        ),
-                        String(
-                            "path",
-                            validators=[PatchPath.validate],
-                            deserializer=PatchPath.deserialize,
-                            serializer=lambda path: path.serialize(),
-                        ),
-                        Unknown("value"),
-                    ],
-                )
+                ),
+                String(
+                    "path",
+                    validators=[PatchPath.validate],
+                    deserializer=PatchPath.deserialize,
+                    serializer=lambda path: path.serialize(),
+                ),
+                Unknown("value"),
             ],
+        )
+    ]
+
+    def __init__(self, resource_schema: ResourceSchema, attr_filter: Optional[AttrFilter] = None):
+        super().__init__(
+            schema="urn:ietf:params:scim:api:messages:2.0:PatchOpSchema",
+            attr_filter=attr_filter,
         )
         self._resource_schema = resource_schema
 
@@ -247,7 +249,7 @@ class PatchOp(BaseSchema):
 
         if not updating_multivalued_items and can_validate_presence:
             issues.merge(
-                PatchOp._validate_complex_sub_attrs_presence(attr, attr_value),
+                PatchOpSchema._validate_complex_sub_attrs_presence(attr, attr_value),
             )
         return issues
 
@@ -354,13 +356,3 @@ class PatchOp(BaseSchema):
         method: str,
     ) -> Any:
         return getattr(self.get_value_schema(path, value), method)(value)
-
-
-def validate_operation_path(schema: ResourceSchema, path: PatchPath) -> ValidationIssues:
-    issues = ValidationIssues()
-    if schema.attrs.get_by_path(path) is None:
-        issues.add_error(
-            issue=ValidationError.unknown_modification_target(),
-            proceed=False,
-        )
-    return issues

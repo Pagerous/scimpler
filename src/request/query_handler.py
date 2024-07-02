@@ -2,9 +2,10 @@ import abc
 from typing import Any, MutableMapping, Optional
 
 from src import registry
-from src.assets.schemas.search_request import create_search_request_schema, SearchRequest
+from src.assets.schemas.search_request import SearchRequestSchema
 from src.config import ServiceProviderConfig
 from src.container import SCIMData
+from src.data.attrs import AttrFilter
 from src.error import ValidationError, ValidationIssues
 
 
@@ -14,7 +15,7 @@ class QueryHandler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def schema(self) -> SearchRequest:
+    def schema(self) -> SearchRequestSchema:
         """Docs placeholder."""
 
     def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:
@@ -50,12 +51,12 @@ class QueryHandler(abc.ABC):
 class GenericQueryHandler(QueryHandler, abc.ABC):
     def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
         super().__init__(config)
-        self._schema = SearchRequest().clone(
-            lambda attr: str(attr.name) in {"attributes", "excludeAttributes"}
+        self._schema = SearchRequestSchema(
+            attr_filter=AttrFilter(attr_names={"attributes", "excludeAttributes"}, include=True)
         )
 
     @property
-    def schema(self) -> SearchRequest:
+    def schema(self) -> SearchRequestSchema:
         return self._schema
 
 
@@ -78,10 +79,10 @@ class ResourceObjectPATCH(GenericQueryHandler):
 class ServerRootResourcesGET(QueryHandler):
     def __init__(self, config: ServiceProviderConfig):
         super().__init__(config)
-        self._schema = create_search_request_schema(self.config)
+        self._schema = SearchRequestSchema.from_config(self.config)
 
     @property
-    def schema(self) -> SearchRequest:
+    def schema(self) -> SearchRequestSchema:
         return self._schema
 
 
@@ -92,10 +93,10 @@ class ResourcesGET(ServerRootResourcesGET):
 class _ServiceProviderConfig(QueryHandler):
     def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
         super().__init__(config)
-        self._schema = SearchRequest().clone(lambda _: False)
+        self._schema = SearchRequestSchema(attr_filter=AttrFilter(filter_=lambda _: False))
 
     @property
-    def schema(self) -> SearchRequest:
+    def schema(self) -> SearchRequestSchema:
         return self._schema
 
     def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:

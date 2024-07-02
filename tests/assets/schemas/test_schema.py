@@ -1,5 +1,4 @@
-from src.assets.schemas import User
-from src.assets.schemas.schema import Schema, attributes
+from src.assets.schemas.schema import SchemaSchema, attributes
 from src.container import SCIMData
 
 
@@ -140,22 +139,23 @@ def test_validation_fails_if_missing_case_exact_for_string_attr():
     assert issues.to_dict() == expected_issues
 
 
-def test_resource_schema_representation_can_be_generated():
-    output = Schema.get_repr(User)
+def test_resource_schema_representation_can_be_generated(user_schema):
+    output = SchemaSchema().get_repr(user_schema)
 
     for attr in output["attributes"]:
         assert attr["name"] not in ["id", "meta", "externalId"]
 
 
-def test_schema_extension_representation_can_be_generated():
-    output = Schema.get_repr(User.get_extension("EnterpriseUser"))
+def test_schema_extension_representation_can_be_generated(user_schema):
+    output = SchemaSchema().get_repr(user_schema.get_extension("EnterpriseUser"))
 
     assert output
 
 
-def test_schema_data_can_be_serialized():
-    data = Schema.get_repr(User)
+def test_schema_data_can_be_serialized(user_schema):
+    schema = SchemaSchema()
+    data = schema.get_repr(user_schema)
 
-    serialized = Schema.serialize(data)
+    serialized = schema.serialize(data)
 
     assert serialized == data

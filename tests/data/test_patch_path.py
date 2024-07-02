@@ -1,12 +1,10 @@
 import pytest
 
-from src.assets.schemas import User
 from src.container import AttrName, AttrRep
 from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.patch_path import PatchPath
 from src.data.schemas import BaseSchema
-from tests.conftest import SchemaForTests
 
 
 @pytest.mark.parametrize(
@@ -177,12 +175,14 @@ def test_patch_path_object_construction_fails_if_broken_constraints(kwargs):
         ('emails[value eq "ims[type eq "work"]"]', 'ims[type eq "work"]'),
     ),
 )
-def test_complex_filter_string_values_can_contain_anything(path, expected_filter_value):
+def test_complex_filter_string_values_can_contain_anything(
+    path, expected_filter_value, user_schema
+):
     issues = PatchPath.validate(path)
     assert issues.to_dict(msg=True) == {}
 
     deserialized = PatchPath.deserialize(path)
-    assert deserialized({"value": expected_filter_value}, User)
+    assert deserialized({"value": expected_filter_value}, user_schema)
 
 
 @pytest.mark.parametrize(
@@ -191,58 +191,59 @@ def test_complex_filter_string_values_can_contain_anything(path, expected_filter
         (
             PatchPath.deserialize("name.formatted"),
             "John Doe",
-            User,
+            "user_schema",
             True,
         ),
         (
             PatchPath.deserialize("emails[type eq 'work']"),
             {"type": "work", "value": "my@example.com"},
-            User,
+            "user_schema",
             True,
         ),
         (
             PatchPath.deserialize("emails[type eq 'work']"),
             42,
-            User,
+            "user_schema",
             False,
         ),
         (
             PatchPath.deserialize("emails[type eq 'work']"),
             {"type": "home", "value": "my@example.com"},
-            User,
+            "user_schema",
             False,
         ),
         (
             PatchPath.deserialize("emails[type eq 'work'].display"),
             "MY@EXAMPLE.COM",
-            User,
+            "user_schema",
             False,
         ),
         (
             PatchPath.deserialize("str_mv[value sw 'a']"),
             "abc",
-            SchemaForTests,
+            "fake_schema",
             True,
         ),
         (
             PatchPath.deserialize("str_mv[value sw 'a']"),
             "cba",
-            SchemaForTests,
+            "fake_schema",
             False,
         ),
         (
             PatchPath.deserialize("str_mv[value sw 'a' or value ew 'a']"),
             "cba",
-            SchemaForTests,
+            "fake_schema",
             True,
         ),
         (
             PatchPath.deserialize("str_mv[value sw 'a']"),
             {"bad": "value"},
-            SchemaForTests,
+            "fake_schema",
             False,
         ),
     ),
+    indirect=["schema"],
 )
 def test_check_if_data_matches_path(path, data, schema: BaseSchema, expected):
     actual = path(data, schema)
@@ -315,8 +316,8 @@ def test_patch_path_can_be_compared(path_1, path_2, expected):
     assert (path_1 == path_2) is expected
 
 
-def test_calling_path_for_non_existing_attr_fails():
+def test_calling_path_for_non_existing_attr_fails(user_schema):
     path = PatchPath.deserialize("non_existing.attr")
 
     with pytest.raises(ValueError, match="path does not indicate any attribute"):
-        path("whatever", User)
+        path("whatever", user_schema)

@@ -4,7 +4,12 @@ from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 
 import marshmallow
 
-from src.assets.schemas import BulkRequest, BulkResponse, ListResponse, PatchOp
+from src.assets.schemas import (
+    BulkRequestSchema,
+    BulkResponseSchema,
+    ListResponseSchema,
+    PatchOpSchema,
+)
 from src.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMData
 from src.data import attrs
 from src.data.attrs import Attribute
@@ -155,7 +160,7 @@ def _validate_request(data: MutableMapping[str, Any], request_validator: Callabl
 
 
 def _get_list_response_processors(
-    scimple_schema: ListResponse,
+    scimple_schema: ListResponseSchema,
     processors: Processors,
     response_context_provider: Optional[ResponseContextProvider],
 ):
@@ -185,7 +190,9 @@ def _get_list_response_processors(
 
         def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
             if response_context_provider is None:
-                raise ContextError("response context must be provided when loading ListResponse")
+                raise ContextError(
+                    "response context must be provided when loading ListResponseSchema"
+                )
             _validate_response(data, validator, response_context_provider())
             return deserialize(data)
     else:
@@ -261,7 +268,7 @@ def _get_resource_processors(
 
 
 def _get_patch_op_processors(
-    scimple_schema: PatchOp, processors: Processors
+    scimple_schema: PatchOpSchema, processors: Processors
 ) -> dict[str, Callable]:
     processors_ = {}
 
@@ -320,7 +327,7 @@ def _get_patch_op_processors(
 
 
 def _get_bulk_response_processors(
-    scimple_schema: BulkResponse,
+    scimple_schema: BulkResponseSchema,
     processors: Processors,
     response_context_provider: Optional[ResponseContextProvider],
 ) -> dict[str, Callable]:
@@ -351,7 +358,7 @@ def _get_bulk_response_processors(
 
         def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
             if response_context_provider is None:
-                raise ContextError("context must be provided when loading BulkResponse")
+                raise ContextError("context must be provided when loading BulkResponseSchema")
             _validate_response(data, validator, response_context_provider())
             return deserialize(data)
     else:
@@ -379,7 +386,7 @@ def _get_bulk_response_processors(
 
 
 def _get_bulk_request_processors(
-    scimple_schema: BulkRequest, processors: Processors
+    scimple_schema: BulkRequestSchema, processors: Processors
 ) -> dict[str, Callable]:
     processors_ = {}
 
@@ -522,7 +529,7 @@ def _include_processing_in_schema(
     processors: Processors,
     response_context_provider: Optional[ResponseContextProvider],
 ) -> type[marshmallow.Schema]:
-    if isinstance(scimple_schema, ListResponse):
+    if isinstance(scimple_schema, ListResponseSchema):
         processors_ = _get_list_response_processors(
             scimple_schema=scimple_schema,
             processors=processors,
@@ -534,18 +541,18 @@ def _include_processing_in_schema(
             processors=processors,
             response_context_provider=response_context_provider,
         )
-    elif isinstance(scimple_schema, BulkResponse):
+    elif isinstance(scimple_schema, BulkResponseSchema):
         processors_ = _get_bulk_response_processors(
             scimple_schema=scimple_schema,
             processors=processors,
             response_context_provider=response_context_provider,
         )
-    elif isinstance(scimple_schema, BulkRequest):
+    elif isinstance(scimple_schema, BulkRequestSchema):
         processors_ = _get_bulk_request_processors(
             scimple_schema=scimple_schema,
             processors=processors,
         )
-    elif isinstance(scimple_schema, PatchOp):
+    elif isinstance(scimple_schema, PatchOpSchema):
         processors_ = _get_patch_op_processors(
             scimple_schema=scimple_schema,
             processors=processors,
@@ -576,7 +583,10 @@ def _create_schema(
     context_provider: Optional[ContextProvider],
 ) -> type[marshmallow.Schema]:
     if isinstance(scimple_schema, BaseSchema):
-        if isinstance(scimple_schema, ListResponse) and len(scimple_schema.contained_schemas) == 1:
+        if (
+            isinstance(scimple_schema, ListResponseSchema)
+            and len(scimple_schema.contained_schemas) == 1
+        ):
             fields = _get_fields(
                 scimple_schema.attrs,
                 field_by_attr_rep={

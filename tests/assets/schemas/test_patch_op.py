@@ -1,6 +1,6 @@
 import pytest
 
-from src.assets.schemas import User, patch_op, user
+from src.assets.schemas.patch_op import PatchOpSchema
 from src.container import AttrName, AttrRep, Invalid, SCIMData
 from src.data.attr_presence import AttrPresenceConfig
 from src.data.attrs import AttributeMutability, String
@@ -8,7 +8,6 @@ from src.data.filter import Filter
 from src.data.operator import ComplexAttributeOperator, Equal
 from src.data.patch_path import PatchPath
 from src.data.schemas import ResourceSchema, SchemaExtension
-from tests.conftest import SchemaForTests
 
 
 @pytest.mark.parametrize(
@@ -37,131 +36,17 @@ from tests.conftest import SchemaForTests
         ),
     ),
 )
-def test_validate_patch_operations(value, expected_issues):
-    issues = patch_op.PatchOp(User).attrs.get("operations").validate(value)
-
-    assert issues.to_dict() == expected_issues
-
-
-@pytest.mark.parametrize(
-    ("path", "expected_issues"),
-    (
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="nonexisting"),
-                sub_attr_name=None,
-                filter_=None,
-            ),
-            {"_errors": [{"code": 28}]},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="non"),
-                sub_attr_name=AttrName("existing"),
-                filter_=None,
-            ),
-            {"_errors": [{"code": 28}]},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="emails"),
-                sub_attr_name=None,
-                filter_=Filter(
-                    ComplexAttributeOperator(
-                        attr_rep=AttrRep(attr="emails"),
-                        sub_operator=Equal(
-                            attr_rep=AttrRep(attr="nonexisting"),
-                            value="whatever",
-                        ),
-                    )
-                ),
-            ),
-            {},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="emails"),
-                sub_attr_name=AttrName("nonexisting"),
-                filter_=Filter(
-                    ComplexAttributeOperator(
-                        attr_rep=AttrRep(attr="emails"),
-                        sub_operator=Equal(attr_rep=AttrRep(attr="type"), value="whatever"),
-                    ),
-                ),
-            ),
-            {"_errors": [{"code": 28}]},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="name"),
-                sub_attr_name=None,
-                filter_=Filter(
-                    ComplexAttributeOperator(
-                        attr_rep=AttrRep(attr="name"),
-                        sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="whatever"),
-                    ),
-                ),
-            ),
-            {"_errors": [{"code": 28}]},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="emails"),
-                sub_attr_name=AttrName("value"),
-                filter_=Filter(
-                    ComplexAttributeOperator(
-                        attr_rep=AttrRep(attr="emails"),
-                        sub_operator=Equal(
-                            attr_rep=AttrRep(attr="type"),
-                            value="work",
-                        ),
-                    ),
-                ),
-            ),
-            {},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="emails"),
-                sub_attr_name=None,
-                filter_=Filter(
-                    ComplexAttributeOperator(
-                        attr_rep=AttrRep(attr="emails"),
-                        sub_operator=Equal(attr_rep=AttrRep(attr="type"), value="work"),
-                    )
-                ),
-            ),
-            {},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="name"),
-                sub_attr_name=AttrName("familyName"),
-                filter_=None,
-            ),
-            {},
-        ),
-        (
-            PatchPath(
-                attr_rep=AttrRep(attr="name"),
-                sub_attr_name=None,
-                filter_=None,
-            ),
-            {},
-        ),
-    ),
-)
-def test_validate_operation_path(path, expected_issues):
-    issues = patch_op.validate_operation_path(schema=user.User, path=path)
+def test_validate_patch_operations(value, expected_issues, user_schema):
+    issues = PatchOpSchema(user_schema).attrs.get("operations").validate(value)
 
     assert issues.to_dict() == expected_issues
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op):
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op, user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": op,
@@ -183,7 +68,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": op,
@@ -210,10 +95,10 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_data(op):
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_data(op, user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": op,
@@ -254,10 +139,12 @@ def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_da
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_readonly(op):
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_readonly(
+    op, user_schema
+):
+    schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": op,
@@ -335,11 +222,11 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
     ),
 )
 def test_validate_add_and_replace_operation__fails_for_incorrect_data(
-    op, path, input_value, expected_value, expected_value_issues
+    op, path, input_value, expected_value, expected_value_issues, user_schema
 ):
-    schema = patch_op.PatchOp(resource_schema=user.User)
+    schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": op,
@@ -438,11 +325,11 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
     ),
 )
 def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
-    op, path, expected_path, value, expected_value
+    op, path, expected_path, value, expected_value, user_schema
 ):
-    schema = patch_op.PatchOp(resource_schema=user.User)
+    schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": op,
@@ -474,10 +361,10 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
         ('groups[type eq "direct"].value', "admins"),
     ),
 )
-def test_add_operation__fails_if_attribute_is_readonly(op, path, value):
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_add_operation__fails_if_attribute_is_readonly(op, path, value, user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": op,
@@ -503,10 +390,10 @@ def test_add_operation__fails_if_attribute_is_readonly(op, path, value):
         "emails[type eq 'work'].value",
     ),
 )
-def test_remove_operation__succeeds_if_correct_path(path):
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_remove_operation__succeeds_if_correct_path(path, user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "remove",
@@ -515,7 +402,7 @@ def test_remove_operation__succeeds_if_correct_path(path):
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
@@ -525,11 +412,11 @@ def test_remove_operation__succeeds_if_correct_path(path):
     assert actual_data.to_dict() == expected_data
 
 
-def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribute():
-    schema = patch_op.PatchOp(resource_schema=SchemaForTests)
+def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribute(fake_schema):
+    schema = PatchOpSchema(resource_schema=fake_schema)
     path = "str_mv[value sw 'a']"
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "remove",
@@ -538,7 +425,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
@@ -549,27 +436,28 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
 
 
 @pytest.mark.parametrize(
-    ("path", "expected_path_issue_codes", "resource_schema"),
+    ("path", "expected_path_issue_codes", "schema"),
     (
-        ("id", [{"code": 29}, {"code": 30}], user.User),
-        ("userName", [{"code": 30}], user.User),
+        ("id", [{"code": 29}, {"code": 30}], "user_schema"),
+        ("userName", [{"code": 30}], "user_schema"),
         (
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
             [{"code": 29}],
-            user.User,
+            "user_schema",
         ),
-        ("meta", [{"code": 29}], user.User),
-        ("groups", [{"code": 29}], user.User),
-        ('groups[type eq "direct"].value', [{"code": 29}], user.User),
-        ("c2_mv[int eq 1].bool", [{"code": 30}], SchemaForTests),
+        ("meta", [{"code": 29}], "user_schema"),
+        ("groups", [{"code": 29}], "user_schema"),
+        ('groups[type eq "direct"].value', [{"code": 29}], "user_schema"),
+        ("c2_mv[int eq 1].bool", [{"code": 30}], "fake_schema"),
     ),
+    indirect=["schema"],
 )
 def test_remove_operation__fails_if_attribute_is_readonly_or_required(
-    path, expected_path_issue_codes, resource_schema: ResourceSchema
+    path, expected_path_issue_codes, schema: ResourceSchema
 ):
-    schema = patch_op.PatchOp(resource_schema)
+    patch_schema = PatchOpSchema(schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "remove",
@@ -578,17 +466,20 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
     expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
 
-    assert schema.validate(input_data, AttrPresenceConfig("REQUEST")).to_dict() == expected_issues
-    assert schema.deserialize(input_data).to_dict() == expected_data
+    assert (
+        patch_schema.validate(input_data, AttrPresenceConfig("REQUEST")).to_dict()
+        == expected_issues
+    )
+    assert patch_schema.deserialize(input_data).to_dict() == expected_data
 
 
-def test_validate_empty_body():
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_validate_empty_body(user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
     expected_issues = {
         "schemas": {"_errors": [{"code": 5}]},
         "Operations": {"_errors": [{"code": 5}]},
@@ -599,10 +490,10 @@ def test_validate_empty_body():
     assert issues.to_dict() == expected_issues
 
 
-def test_value_is_removed_if_remove_operation_during_deserialization():
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_value_is_removed_if_remove_operation_during_deserialization(user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "add",
@@ -623,10 +514,10 @@ def test_value_is_removed_if_remove_operation_during_deserialization():
     assert "value" not in deserialized.get("Operations")[1].to_dict()
 
 
-def test_operation_value_is_not_validated_if_bad_path():
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_operation_value_is_not_validated_if_bad_path(user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "add",
@@ -658,10 +549,12 @@ def test_operation_value_is_not_validated_if_bad_path():
     assert issues.to_dict() == expected_issues
 
 
-def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_extension():
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_extension(
+    user_schema,
+):
+    schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "add",
@@ -695,16 +588,19 @@ def test_operation_value_is_validated_against_mutability_for_attribute_in_extens
         schema="my:custom:schema",
         name="MyResource",
     )
+
+    class MyExtension(SchemaExtension):
+        default_attrs = [String(name="my_attr", mutability=AttributeMutability.READ_ONLY)]
+
     my_resource.extend(
-        extension=SchemaExtension(
+        extension=MyExtension(
             schema="my:custom:schema:extension",
             name="MyResourceExtension",
-            attrs=[String(name="my_attr", mutability=AttributeMutability.READ_ONLY)],
         )
     )
-    schema = patch_op.PatchOp(resource_schema=my_resource)
+    schema = PatchOpSchema(resource_schema=my_resource)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "add",
@@ -725,10 +621,12 @@ def test_operation_value_is_validated_against_mutability_for_attribute_in_extens
     assert issues.to_dict() == expected_issues
 
 
-def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_extension_with_path():
-    schema = patch_op.PatchOp(resource_schema=user.User)
+def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_extension_with_path(
+    user_schema,
+):
+    schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
         "Operations": [
             {
                 "op": "add",
@@ -752,8 +650,10 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_items(op):
-    schema = patch_op.PatchOp(SchemaForTests)
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_items(
+    op, fake_schema
+):
+    schema = PatchOpSchema(fake_schema)
     expected_issues = {
         "Operations": {
             "0": {
@@ -767,7 +667,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
 
     issues = schema.validate(
         data={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
             "Operations": [
                 {
                     "op": op,
@@ -786,8 +686,10 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_attr(op):
-    schema = patch_op.PatchOp(SchemaForTests)
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_attr(
+    op, fake_schema
+):
+    schema = PatchOpSchema(fake_schema)
 
     expected_issues = {
         "Operations": {
@@ -804,7 +706,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
 
     issues = schema.validate(
         data={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
             "Operations": [
                 {
                     "op": op,
@@ -824,14 +726,14 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op):
-    schema = patch_op.PatchOp(SchemaForTests)
+def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op, fake_schema):
+    schema = PatchOpSchema(fake_schema)
 
     expected_issues = {"Operations": {"0": {"value": {"c2": {"bool": {"_errors": [{"code": 5}]}}}}}}
 
     issues = schema.validate(
         data={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
             "Operations": [
                 {
                     "op": op,
@@ -846,13 +748,13 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op
     assert issues.to_dict() == expected_issues
 
 
-def test_patch_op_deserialization_fails_if_bad_target():
-    schema = patch_op.PatchOp(User)
+def test_patch_op_deserialization_fails_if_bad_target(user_schema):
+    schema = PatchOpSchema(user_schema)
 
     with pytest.raises(ValueError, match="target indicated by path .* does not exist"):
         schema.deserialize(
             data={
-                "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
                 "Operations": [{"op": "add", "path": "name.nonExisting", "value": "whatever"}],
             }
         )

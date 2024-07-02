@@ -2,7 +2,6 @@ from datetime import datetime
 
 import pytest
 
-from src.assets.schemas import User
 from src.container import AttrRep, SCIMData
 from src.data.attrs import Attribute, Complex, DateTime, String
 from src.data.operator import (
@@ -21,7 +20,6 @@ from src.data.operator import (
     Present,
     StartsWith,
 )
-from tests.conftest import SchemaForTests
 
 
 @pytest.mark.parametrize(
@@ -97,10 +95,10 @@ from tests.conftest import SchemaForTests
         ),
     ),
 )
-def test_equal_operator(value, operator_value, attr_rep, expected):
+def test_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = Equal(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
@@ -178,10 +176,10 @@ def test_equal_operator(value, operator_value, attr_rep, expected):
         ),
     ),
 )
-def test_not_equal_operator(value, operator_value, attr_rep, expected):
+def test_not_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = NotEqual(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
@@ -209,10 +207,10 @@ def test_not_equal_operator(value, operator_value, attr_rep, expected):
         (3.141, 3.14, AttrRep(attr="decimal"), True),
     ),
 )
-def test_greater_than_operator(value, operator_value, attr_rep, expected):
+def test_greater_than_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = GreaterThan(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
@@ -249,10 +247,10 @@ def test_greater_than_operator(value, operator_value, attr_rep, expected):
         (3.141, 3.14, AttrRep(attr="decimal"), True),
     ),
 )
-def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expected):
+def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = GreaterThanOrEqual(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
@@ -280,10 +278,10 @@ def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expecte
         (3.14, 3.141, AttrRep(attr="decimal"), True),
     ),
 )
-def test_lesser_than_operator(value, operator_value, attr_rep, expected):
+def test_lesser_than_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = LesserThan(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
@@ -320,37 +318,37 @@ def test_lesser_than_operator(value, operator_value, attr_rep, expected):
         (3.141, 3.14, AttrRep(attr="decimal"), False),
     ),
 )
-def test_lesser_than_or_equal_operator(value, operator_value, attr_rep, expected):
+def test_lesser_than_or_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = LesserThanOrEqual(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
 
-def test_binary_operator_does_not_match_if_non_matching_attribute_type():
+def test_binary_operator_does_not_match_if_non_matching_attribute_type(fake_schema):
     attr_rep = AttrRep(attr="int")
     operator = Equal(attr_rep, "1")
 
-    match = operator.match(SCIMData({attr_rep: 1}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: 1}), fake_schema)
 
     assert not match
 
 
-def test_binary_operator_does_not_match_if_attr_missing_in_schema():
+def test_binary_operator_does_not_match_if_attr_missing_in_schema(fake_schema):
     attr_rep = AttrRep(attr="other_int")
     operator = Equal(AttrRep(attr="other_int"), 1)
 
-    match = operator.match(SCIMData({attr_rep: 1}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: 1}), fake_schema)
 
     assert not match
 
 
-def test_binary_operator_does_not_match_if_not_supported_scim_type():
+def test_binary_operator_does_not_match_if_not_supported_scim_type(fake_schema):
     attr_rep = AttrRep(attr="scim_ref")
     operator = GreaterThan(AttrRep(attr="scim_ref"), chr(0))
 
-    match = operator.match(SCIMData({attr_rep: "Users"}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: "Users"}), fake_schema)
 
     assert not match
 
@@ -369,11 +367,11 @@ def test_binary_operator_does_not_match_if_not_supported_scim_type():
         (StartsWith, True),
     ),
 )
-def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expected):
+def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expected, fake_schema):
     attr_rep = AttrRep(attr="str")
     operator = operator_cls(attr_rep, "A")
 
-    actual = operator.match(SCIMData({attr_rep: "a"}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: "a"}), fake_schema)
 
     assert actual == expected
 
@@ -387,11 +385,11 @@ def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expect
         ("ab", "abc", False),
     ),
 )
-def test_contains_operator(value, operator_value, expected):
+def test_contains_operator(value, operator_value, expected, fake_schema):
     attr_rep = AttrRep(attr="str_cs")
     operator = Contains(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
@@ -406,11 +404,11 @@ def test_contains_operator(value, operator_value, expected):
         ("ab", "", False),
     ),
 )
-def test_starts_with_operator(value, operator_value, expected):
+def test_starts_with_operator(value, operator_value, expected, fake_schema):
     attr_rep = AttrRep(attr="str_cs")
     operator = StartsWith(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
@@ -425,29 +423,29 @@ def test_starts_with_operator(value, operator_value, expected):
         ("ab", "", False),
     ),
 )
-def test_ends_with_operator(value, operator_value, expected):
+def test_ends_with_operator(value, operator_value, expected, fake_schema):
     attr_rep = AttrRep(attr="str_cs")
     operator = EndsWith(attr_rep, operator_value)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
 
-def test_multi_value_attribute_is_matched_if_one_of_values_match():
+def test_multi_value_attribute_is_matched_if_one_of_values_match(fake_schema):
     attr_rep = AttrRep(attr="str_cs_mv")
     operator = Equal(AttrRep(attr="str_cs_mv"), "abc")
 
-    match = operator.match(SCIMData({attr_rep: ["b", "c", "ab", "abc", "ca"]}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: ["b", "c", "ab", "abc", "ca"]}), fake_schema)
 
     assert match
 
 
-def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_match():
+def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_match(fake_schema):
     attr_rep = AttrRep(attr="str_mv")
     operator = Equal(attr_rep, "abc")
 
-    match = operator.match(SCIMData({attr_rep: ["b", "c", "ab", "ABc", "ca"]}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: ["b", "c", "ab", "ABc", "ca"]}), fake_schema)
 
     assert match
 
@@ -505,33 +503,33 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
         ),
     ),
 )
-def test_present_operator(value, attr_rep, expected):
+def test_present_operator(value, attr_rep, expected, fake_schema):
     operator = Present(attr_rep)
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
 
-def test_complex_attribute_matches_binary_operator_if_one_of_values_matches():
+def test_complex_attribute_matches_binary_operator_if_one_of_values_matches(fake_schema):
     attr_rep = AttrRep(attr="c_mv")
     operator = StartsWith(attr_rep, "abc")
 
     match = operator.match(
         SCIMData({attr_rep: [{"value": "a"}, {"value": "bac"}, {"value": "abcd"}]}),
-        SchemaForTests,
+        fake_schema,
     )
 
     assert match
 
 
-def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches():
+def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_matches(fake_schema):
     attr_rep = AttrRep(attr="c_mv")
     operator = StartsWith(attr_rep, "abc")
 
     match = operator.match(
         SCIMData({attr_rep: [{"value": "a"}, {"value": "bac"}, {"value": "bcdd"}]}),
-        SchemaForTests,
+        fake_schema,
     )
 
     assert not match
@@ -544,7 +542,7 @@ def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_m
         ("b", False),
     ),
 )
-def test_and_operator_matches(str_cs_value, expected):
+def test_and_operator_matches(str_cs_value, expected, fake_schema):
     operator = And(
         Equal(AttrRep(attr="int"), 1),
         And(
@@ -567,7 +565,7 @@ def test_and_operator_matches(str_cs_value, expected):
                 "str_cs": str_cs_value,
             }
         ),
-        SchemaForTests,
+        fake_schema,
     )
 
     assert actual == expected
@@ -580,7 +578,7 @@ def test_and_operator_matches(str_cs_value, expected):
         ("b", False),
     ),
 )
-def test_or_operator_matches(str_cs_value, expected):
+def test_or_operator_matches(str_cs_value, expected, fake_schema):
     operator = Or(
         Equal(AttrRep(attr="int"), 1),
         And(
@@ -603,13 +601,13 @@ def test_or_operator_matches(str_cs_value, expected):
                 "str_cs": str_cs_value,
             }
         ),
-        SchemaForTests,
+        fake_schema,
     )
 
     assert actual == expected
 
 
-def test_complex_attribute_operator_matches_all_complex_sub_attrs():
+def test_complex_attribute_operator_matches_all_complex_sub_attrs(fake_schema):
     attr_rep = AttrRep(attr="c2")
     operator = ComplexAttributeOperator(
         attr_rep,
@@ -621,13 +619,13 @@ def test_complex_attribute_operator_matches_all_complex_sub_attrs():
     )
 
     match = operator.match(
-        SCIMData({attr_rep: {"str": "admin", "int": 19, "bool": False}}), SchemaForTests
+        SCIMData({attr_rep: {"str": "admin", "int": 19, "bool": False}}), fake_schema
     )
 
     assert match
 
 
-def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
+def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs(fake_schema):
     operator = ComplexAttributeOperator(
         attr_rep=AttrRep(attr="c2"),
         sub_operator=Or(
@@ -637,12 +635,12 @@ def test_complex_attribute_operator_does_not_match_all_complex_sub_attrs():
         ),
     )
 
-    match = operator.match(SCIMData({"str": "user", "int": 18, "bool": True}), SchemaForTests)
+    match = operator.match(SCIMData({"str": "user", "int": 18, "bool": True}), fake_schema)
 
     assert not match
 
 
-def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr():
+def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(fake_schema):
     attr_rep = AttrRep(attr="c2_mv")
     operator = ComplexAttributeOperator(
         attr_rep,
@@ -663,13 +661,13 @@ def test_complex_attr_op_matches_some_of_sub_attrs_of_multi_valued_complex_attr(
                 ]
             }
         ),
-        SchemaForTests,
+        fake_schema,
     )
 
     assert match
 
 
-def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
+def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(fake_schema):
     attr_rep = AttrRep(attr="c2_mv")
     operator = ComplexAttributeOperator(
         attr_rep,
@@ -690,7 +688,7 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
                 ],
             }
         ),
-        SchemaForTests,
+        fake_schema,
     )
 
     assert not match
@@ -729,83 +727,85 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs():
         ),
     ),
 )
-def test_attribute_operator_matches_single_complex_sub_attr(value, is_multivalued, expected):
+def test_attribute_operator_matches_single_complex_sub_attr(
+    value, is_multivalued, expected, fake_schema
+):
     attr_rep = AttrRep(attr="c2_mv") if is_multivalued else AttrRep(attr="c2")
     operator = ComplexAttributeOperator(
         attr_rep=attr_rep,
         sub_operator=Equal(AttrRep(attr="str"), "admin"),
     )
 
-    actual = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    actual = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert actual == expected
 
 
-def test_binary_op_does_not_match_if_no_value_provided():
+def test_binary_op_does_not_match_if_no_value_provided(fake_schema):
     operator = Equal(AttrRep(attr="str"), "abc")
 
-    match = operator.match(None, SchemaForTests)
+    match = operator.match(None, fake_schema)
 
     assert not match
 
 
-def test_complex_op_does_not_matches_if_sub_attribute_not_provided():
+def test_complex_op_does_not_matches_if_sub_attribute_not_provided(fake_schema):
     operator = ComplexAttributeOperator(
         attr_rep=AttrRep(attr="c"),
         sub_operator=Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMData({}), SchemaForTests)
+    match = operator.match(SCIMData({}), fake_schema)
 
     assert not match
 
 
-def test_or_op_does_not_match_if_no_sub_attr_matched():
+def test_or_op_does_not_match_if_no_sub_attr_matched(fake_schema):
     operator = Or(
         Equal(AttrRep(attr="int"), 1),
         Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMData({"int": 2}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 2}), fake_schema)
 
     assert not match
 
 
-def test_or_op_matches_if_any_sub_attr_matched():
+def test_or_op_matches_if_any_sub_attr_matched(fake_schema):
     operator = Or(
         Equal(AttrRep(attr="int"), 1),
         Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMData({"int": 1}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 1}), fake_schema)
 
     assert match
 
 
-def test_and_op_does_not_match_if_any_sub_attr_is_without_data():
+def test_and_op_does_not_match_if_any_sub_attr_is_without_data(fake_schema):
     operator = And(
         Equal(AttrRep(attr="int"), 1),
         Equal(AttrRep(attr="str"), "abc"),
     )
     value = {"int": 1}  # value for this attr is correct, but missing 'str'
 
-    match = operator.match(SCIMData(value), SchemaForTests)
+    match = operator.match(SCIMData(value), fake_schema)
 
     assert not match
 
 
-def test_and_op_does_not_match_if_any_sub_attr_does_not_match():
+def test_and_op_does_not_match_if_any_sub_attr_does_not_match(fake_schema):
     operator = And(
         Equal(AttrRep(attr="int"), 1),
         Equal(AttrRep(attr="str"), "abc"),
     )
 
-    match = operator.match(SCIMData({"int": 1, "str": "cba"}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 1, "str": "cba"}), fake_schema)
 
     assert not match
 
 
-def test_not_op_matches_if_missing_value_in_logical_sub_op():
+def test_not_op_matches_if_missing_value_in_logical_sub_op(fake_schema):
     operator = Not(
         Or(
             Equal(AttrRep(attr="int"), 1),
@@ -813,91 +813,91 @@ def test_not_op_matches_if_missing_value_in_logical_sub_op():
         ),
     )
 
-    match = operator.match(SCIMData({"int": 2}), SchemaForTests)
+    match = operator.match(SCIMData({"int": 2}), fake_schema)
 
     assert match
 
 
-def test_not_op_matches_for_missing_value_in_attr_sub_op():
+def test_not_op_matches_for_missing_value_in_attr_sub_op(fake_schema):
     operator = Not(Equal(AttrRep(attr="int"), 1))
 
-    match = operator.match(SCIMData({}), SchemaForTests)
+    match = operator.match(SCIMData({}), fake_schema)
 
     assert match
 
 
-def test_not_op_matches_if_op_attr_not_in_attrs():
+def test_not_op_matches_if_op_attr_not_in_attrs(fake_schema):
     operator = Not(Equal(AttrRep(attr="other_attr"), 1))
 
-    match = operator.match(SCIMData({"other_attr": 2}), SchemaForTests)
+    match = operator.match(SCIMData({"other_attr": 2}), fake_schema)
 
     assert match
 
 
-def test_not_op_matches_if_no_data_for_pr_sub_op():
+def test_not_op_matches_if_no_data_for_pr_sub_op(fake_schema):
     operator = Not(Present(AttrRep(attr="int")))
 
-    match = operator.match(SCIMData({}), SchemaForTests)
+    match = operator.match(SCIMData({}), fake_schema)
 
     assert match
 
 
 @pytest.mark.parametrize(("value", "expected"), ((1.0, True), (2.0, False)))
-def test_binary_attributes_allows_to_compare_int_with_decimal(value, expected):
+def test_binary_attributes_allows_to_compare_int_with_decimal(value, expected, fake_schema):
     attr_rep = AttrRep(attr="decimal")
     operator = Equal(attr_rep, 1)
 
-    match = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert bool(match) is expected
 
 
 @pytest.mark.parametrize(("value", "expected"), ((1, True), (2, False)))
-def test_binary_attributes_allows_to_compare_decimal_with_int(value, expected):
+def test_binary_attributes_allows_to_compare_decimal_with_int(value, expected, fake_schema):
     attr_rep = AttrRep(attr="int")
     operator = Equal(attr_rep, 1.0)
 
-    match = operator.match(SCIMData({attr_rep: value}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: value}), fake_schema)
 
     assert bool(match) is expected
 
 
-def test_complex_op_can_be_used_with_logical_op():
+def test_complex_op_can_be_used_with_logical_op(fake_schema):
     attr_rep = AttrRep(attr="c2")
     operator = ComplexAttributeOperator(
         attr_rep,
         sub_operator=And(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
-    match = operator.match(SCIMData({attr_rep: {"int": 1, "str": "abc"}}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: {"int": 1, "str": "abc"}}), fake_schema)
 
     assert match
 
 
-def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches():
+def test_complex_op_used_with_or_op_matches_if_at_least_one_sub_attr_matches(fake_schema):
     attr_rep = AttrRep(attr="c2")
     operator = ComplexAttributeOperator(
         attr_rep,
         sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
-    match = operator.match(SCIMData({attr_rep: {"int": 1}}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: {"int": 1}}), fake_schema)
 
     assert match
 
 
-def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided():
+def test_complex_op_used_with_or_op_does_not_match_if_no_values_provided(fake_schema):
     operator = ComplexAttributeOperator(
         attr_rep=AttrRep(attr="c2"),
         sub_operator=Or(Equal(AttrRep(attr="int"), 1), Equal(AttrRep(attr="str"), "abc")),
     )
 
-    match = operator.match(SCIMData({}), SchemaForTests)
+    match = operator.match(SCIMData({}), fake_schema)
 
     assert not match
 
 
-def test_multivalued_complex_op_can_be_used_with_logical_op():
+def test_multivalued_complex_op_can_be_used_with_logical_op(fake_schema):
     attr_rep = AttrRep(attr="c2_mv")
     operator = ComplexAttributeOperator(
         attr_rep,
@@ -914,38 +914,38 @@ def test_multivalued_complex_op_can_be_used_with_logical_op():
                 ]
             }
         ),
-        SchemaForTests,
+        fake_schema,
     )
 
     assert match
 
 
-def test_operator_values_are_converted_if_deserializer_registered():
+def test_operator_values_are_converted_if_deserializer_registered(fake_schema):
     DateTime.set_deserializer(datetime.fromisoformat)
     attr_rep = AttrRep(attr="datetime")
     operator = GreaterThan(attr_rep, value="2024-04-29T18:14:15.189594")
 
-    match = operator.match(SCIMData({attr_rep: datetime.now()}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: datetime.now()}), fake_schema)
 
     assert match
 
     DateTime.set_deserializer(str)
 
 
-def test_value_is_not_matched_if_bad_input_value_type():
+def test_value_is_not_matched_if_bad_input_value_type(fake_schema):
     attr_rep = AttrRep(attr="str")
     operator = GreaterThan(attr_rep, value="abc")
 
-    match = operator.match(SCIMData({attr_rep: 1}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: 1}), fake_schema)
 
     assert not match
 
 
-def test_value_is_not_matched_if_bad_operator_value_type():
+def test_value_is_not_matched_if_bad_operator_value_type(fake_schema):
     attr_rep = AttrRep(attr="str")
     operator = GreaterThan(attr_rep, value=1)
 
-    match = operator.match(SCIMData({attr_rep: "abc"}), SchemaForTests)
+    match = operator.match(SCIMData({attr_rep: "abc"}), fake_schema)
 
     assert not match
 
@@ -976,61 +976,61 @@ def test_matching_unary_operator_fails_if_attr_multivalued_but_value_is_not_list
     assert op.match(SCIMData({"complex": {"attr": "I'm here!"}}), complex_attr) is False
 
 
-def test_binary_operator_does_not_match_complex_attr_if_no_value_sub_attr():
+def test_binary_operator_does_not_match_complex_attr_if_no_value_sub_attr(fake_schema):
     attr_rep = AttrRep(attr="c2")
     op = Equal(attr_rep, value="test")
 
-    # c2 has no 'value' sub-attr in 'SchemaForTests'
-    match = op.match(SCIMData({attr_rep: [{"value": "test"}]}), SchemaForTests)
+    # c2 has no 'value' sub-attr in 'fake_schema'
+    match = op.match(SCIMData({attr_rep: [{"value": "test"}]}), fake_schema)
 
     assert match is False
 
 
-def test_binary_operator_does_not_match_complex_attr_if_not_multivalued():
+def test_binary_operator_does_not_match_complex_attr_if_not_multivalued(fake_schema):
     attr_rep = AttrRep(attr="c")
     op = Equal(attr_rep, value="test")
 
-    # c is not multivalued in 'SchemaForTests'
-    match = op.match(SCIMData({attr_rep: {"value": "test"}}), SchemaForTests)
+    # c is not multivalued in 'fake_schema'
+    match = op.match(SCIMData({attr_rep: {"value": "test"}}), fake_schema)
 
     assert match is False
 
 
-def test_complex_operator_does_not_match_if_no_attr_in_schema():
+def test_complex_operator_does_not_match_if_no_attr_in_schema(user_schema):
     attr_rep = AttrRep(attr="non_existing")
     op = ComplexAttributeOperator(
         attr_rep=AttrRep(attr="non_existing"),
         sub_operator=Equal(attr_rep=AttrRep(attr="sub_attr"), value="test"),
     )
 
-    assert op.match(SCIMData({attr_rep: {"sub_attr": "test"}}), User) is False
+    assert op.match(SCIMData({attr_rep: {"sub_attr": "test"}}), user_schema) is False
 
 
-def test_complex_operator_does_not_match_if_attr_is_not_complex():
+def test_complex_operator_does_not_match_if_attr_is_not_complex(user_schema):
     attr_rep = AttrRep(attr="userName")
     op = ComplexAttributeOperator(
         attr_rep,
         sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="test"),
     )
 
-    assert op.match(SCIMData({attr_rep: {"formatted": "test"}}), User) is False
+    assert op.match(SCIMData({attr_rep: {"formatted": "test"}}), user_schema) is False
 
 
-def test_complex_operator_does_not_match_if_provided_list_for_single_valued_attr():
+def test_complex_operator_does_not_match_if_provided_list_for_single_valued_attr(user_schema):
     attr_rep = AttrRep(attr="name")
     op = ComplexAttributeOperator(
         attr_rep,
         sub_operator=Equal(attr_rep=AttrRep(attr="formatted"), value="test"),
     )
 
-    assert op.match(SCIMData({attr_rep: [{"formatted": "test"}]}), User) is False
+    assert op.match(SCIMData({attr_rep: [{"formatted": "test"}]}), user_schema) is False
 
 
-def test_complex_operator_does_not_match_if_provided_mapping_for_multi_valued_attr():
+def test_complex_operator_does_not_match_if_provided_mapping_for_multi_valued_attr(user_schema):
     attr_rep = AttrRep(attr="emails")
     op = ComplexAttributeOperator(
         attr_rep,
         sub_operator=Equal(attr_rep=AttrRep(attr="value"), value="test@example.com"),
     )
 
-    assert op.match(SCIMData({attr_rep: {"value": "test@example.com"}}), User) is False
+    assert op.match(SCIMData({attr_rep: {"value": "test@example.com"}}), user_schema) is False

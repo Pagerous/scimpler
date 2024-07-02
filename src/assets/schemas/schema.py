@@ -10,7 +10,12 @@ from src.data.attrs import (
     String,
     Unknown,
 )
-from src.data.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
+from src.data.schemas import (
+    AttrFilter,
+    BaseResourceSchema,
+    ResourceSchema,
+    SchemaExtension,
+)
 from src.error import ValidationError, ValidationIssues, ValidationWarning
 
 
@@ -177,42 +182,44 @@ attributes = Complex(
 )
 
 
-class _Schema(BaseResourceSchema):
-    def __init__(self):
+class SchemaSchema(BaseResourceSchema):  # sorry for the name
+    default_attrs: list[Attribute] = [
+        String(
+            name="id",
+            description=(
+                "The unique URI of the schema. "
+                "When applicable, service providers MUST specify the URI."
+            ),
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="name",
+            description=(
+                "The schema's human-readable name.  When "
+                "applicable, service providers MUST specify the name e.g., 'User'."
+            ),
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        String(
+            name="description",
+            description=(
+                "The schema's human-readable description.  When "
+                "applicable, service providers MUST specify the description."
+            ),
+            mutability=AttributeMutability.READ_ONLY,
+            issuer=AttributeIssuer.SERVER,
+        ),
+        attributes,
+    ]
+
+    def __init__(self, attr_filter: Optional[AttrFilter] = None):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
             name="Schema",
             endpoint="/Schemas",
-            attrs=[
-                String(
-                    name="id",
-                    description=(
-                        "The unique URI of the schema. "
-                        "When applicable, service providers MUST specify the URI."
-                    ),
-                    mutability=AttributeMutability.READ_ONLY,
-                    issuer=AttributeIssuer.SERVER,
-                ),
-                String(
-                    name="name",
-                    description=(
-                        "The schema's human-readable name.  When "
-                        "applicable, service providers MUST specify the name e.g., 'User'."
-                    ),
-                    mutability=AttributeMutability.READ_ONLY,
-                    issuer=AttributeIssuer.SERVER,
-                ),
-                String(
-                    name="description",
-                    description=(
-                        "The schema's human-readable description.  When "
-                        "applicable, service providers MUST specify the description."
-                    ),
-                    mutability=AttributeMutability.READ_ONLY,
-                    issuer=AttributeIssuer.SERVER,
-                ),
-                attributes,
-            ],
+            attr_filter=attr_filter,
         )
 
     def get_repr(
@@ -238,6 +245,3 @@ class _Schema(BaseResourceSchema):
         if version:
             output["meta"]["version"] = version
         return output
-
-
-Schema = _Schema()
