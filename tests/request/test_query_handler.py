@@ -1,6 +1,7 @@
 import pytest
 
 from src.container import AttrRep
+from src.data.filter import Filter
 from src.request.query_handler import (
     ResourceObjectGET,
     ResourceObjectPATCH,
@@ -23,10 +24,7 @@ from tests.conftest import CONFIG
 def test_presence_config_is_deserialized_from_query_params(deserializer):
     deserialized = deserializer.deserialize(query_params={"attributes": ["name.familyName"]})
 
-    assert deserialized["presence_config"].attr_reps == [
-        AttrRep(attr="name", sub_attr="familyName")
-    ]
-    assert deserialized["presence_config"].include is True
+    assert deserialized.get("attributes") == [AttrRep(attr="name", sub_attr="familyName")]
 
 
 def test_server_root_resources_get_query_params_is_deserialized():
@@ -41,17 +39,9 @@ def test_server_root_resources_get_query_params_is_deserialized():
         }
     )
 
-    assert data["presence_config"].attr_reps == [
-        AttrRep(attr="userName"),
-        AttrRep(attr="name"),
-    ]
-    assert data["presence_config"].include is True
-    assert data["filter"].to_dict() == {
-        "op": "eq",
-        "attr": "userName",
-        "value": "bjensen",
-    }
-    assert data["sorter"].attr_rep == AttrRep(attr="name", sub_attr="familyName")
-    assert data["sorter"].asc is False
-    assert data["startIndex"] == 2
-    assert data["count"] == 10
+    assert data.get("attributes") == [AttrRep(attr="userName"), AttrRep(attr="name")]
+    assert data.get("filter") == Filter.deserialize("userName eq 'bjensen'")
+    assert data.get("sortBy") == AttrRep(attr="name", sub_attr="familyName")
+    assert data.get("sortOrder") == "descending"
+    assert data.get("startIndex") == 2
+    assert data.get("count") == 10

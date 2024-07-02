@@ -2,78 +2,76 @@ import abc
 from typing import Any, MutableMapping, Optional
 
 from src import registry
-from src.assets.schemas import search_request
-from src.assets.schemas.search_request import create_search_request_schema
+from src.assets.schemas.search_request import create_search_request_schema, SearchRequest
 from src.config import ServiceProviderConfig
-from src.container import Missing, SCIMData
-from src.data.attr_presence import AttrPresenceConfig
-from src.data.filter import Filter
-from src.data.sorter import Sorter
+from src.container import SCIMData
+from src.error import ValidationError, ValidationIssues
 
 
 class QueryHandler(abc.ABC):
     def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
         self.config = config or registry.service_provider_config
 
+    @property
     @abc.abstractmethod
-    def deserialize(
-        self, query_params: Optional[MutableMapping[str, Any]] = None
-    ) -> dict[str, Any]:
+    def schema(self) -> SearchRequest:
         """Docs placeholder."""
 
-    @abc.abstractmethod
-    def serialize(self, query_params: Optional[MutableMapping[str, Any]]) -> dict[str, Any]:
-        """Docs placeholder."""
-
-
-class _AttributesDeserializer(QueryHandler, abc.ABC):
-    def deserialize(
-        self, query_params: Optional[MutableMapping[str, Any]] = None
-    ) -> dict[str, Any]:
-        query_params = query_params or {}
-        deserialized = (
-            search_request.SearchRequest()
-            .deserialize(
-                SCIMData(
-                    {
-                        "attributes": query_params.pop("attributes", Missing),
-                        "excludeAttributes": query_params.pop("excludeAttributes", Missing),
-                    }
-                )
-            )
-            .to_dict()
+    def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:
+        query_params = SCIMData(query_params or {})
+        query_params.set(
+            "schemas",
+            ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],
         )
-        deserialized.update(query_params)
-        return deserialized
+        return self.schema.validate(query_params)
 
-    def serialize(self, query_params: Optional[MutableMapping[str, Any]]) -> dict[str, Any]:
+    def deserialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> SCIMData:
         query_params = query_params or {}
-        presence_config = query_params.get("presence_config")
-        if not isinstance(presence_config, AttrPresenceConfig):
-            return {}
-        return _serialize_presence_config(presence_config)
+        attributes = query_params.get("attributes")
+        if isinstance(attributes, str):
+            attributes = [item.strip() for item in attributes.split(",")]
+            query_params["attributes"] = attributes
+        exclude_attributes = query_params.get("excludeAttributes")
+        if isinstance(exclude_attributes, str):
+            exclude_attributes = [item.strip() for item in exclude_attributes.split(",")]
+            query_params["excludeAttributes"] = exclude_attributes
+        return self.schema.deserialize(query_params)
+
+    def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> SCIMData:
+        query_params = query_params or {}
+        serialized = self.schema.serialize(query_params)
+        if attributes := query_params.get("attributes"):
+            serialized["attributes"] = ",".join(attributes)
+        if exclude_attributes := query_params.get("excludeAttributes"):
+            serialized["excludeAttributes"] = ",".join(exclude_attributes)
+        return serialized
 
 
-def _serialize_presence_config(presence_config: AttrPresenceConfig) -> dict[str, Any]:
-    serialized_attr_reps = ",".join(str(attr) for attr in presence_config.attr_reps)
-    if presence_config.include:
-        return {"attributes": serialized_attr_reps}
-    return {"excludeAttributes": serialized_attr_reps}
+class GenericQueryHandler(QueryHandler, abc.ABC):
+    def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
+        super().__init__(config)
+        self._schema = SearchRequest().clone(
+            lambda attr: str(attr.name) in {"attributes", "excludeAttributes"}
+        )
+
+    @property
+    def schema(self) -> SearchRequest:
+        return self._schema
 
 
-class ResourcesPOST(_AttributesDeserializer):
+class ResourcesPOST(GenericQueryHandler):
     pass
 
 
-class ResourceObjectGET(_AttributesDeserializer):
+class ResourceObjectGET(GenericQueryHandler):
     pass
 
 
-class ResourceObjectPUT(_AttributesDeserializer):
+class ResourceObjectPUT(GenericQueryHandler):
     pass
 
 
-class ResourceObjectPATCH(_AttributesDeserializer):
+class ResourceObjectPATCH(GenericQueryHandler):
     pass
 
 
@@ -82,50 +80,40 @@ class ServerRootResourcesGET(QueryHandler):
         super().__init__(config)
         self._schema = create_search_request_schema(self.config)
 
-    def deserialize(
-        self, query_params: Optional[MutableMapping[str, Any]] = None
-    ) -> dict[str, Any]:
-        query_params = query_params or {}
-        additional_params = SCIMData(query_params)
-
-        input_ = SCIMData(query_params)
-        for attr_rep, attr in self._schema.attrs:
-            additional_params.pop(attr_rep)
-
-        deserialized = self._schema.deserialize(input_).to_dict()
-        deserialized.update(additional_params.to_dict())
-        return deserialized
-
-    def serialize(self, query_params: Optional[MutableMapping[str, Any]]) -> dict[str, Any]:
-        query_params = query_params or {}
-        serialized = {}
-        presence_config = query_params.get("presence_config")
-        if isinstance(presence_config, AttrPresenceConfig):
-            serialized.update(_serialize_presence_config(presence_config))
-
-        filter_ = query_params.get("filter")
-        if isinstance(filter_, Filter):
-            if not self.config.filter.supported:
-                raise RuntimeError("service provider does not support filtering")
-            serialized["filter"] = filter_.serialize()
-
-        sorter = query_params.get("sorter")
-        if isinstance(sorter, Sorter):
-            if not self.config.sort.supported:
-                raise RuntimeError("service provider does not support sorting")
-            serialized["sortBy"] = str(sorter.attr_rep)
-            serialized["sortOrder"] = "ascending" if sorter.asc else "descending"
-
-        count = query_params.get("count")
-        if isinstance(count, int):
-            serialized["count"] = count
-
-        start_index = query_params.get("startIndex")
-        if isinstance(start_index, int):
-            serialized["startIndex"] = start_index
-
-        return serialized
+    @property
+    def schema(self) -> SearchRequest:
+        return self._schema
 
 
 class ResourcesGET(ServerRootResourcesGET):
+    pass
+
+
+class _ServiceProviderConfig(QueryHandler):
+    def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
+        super().__init__(config)
+        self._schema = SearchRequest().clone(lambda _: False)
+
+    @property
+    def schema(self) -> SearchRequest:
+        return self._schema
+
+    def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:
+        issues = ValidationIssues()
+        query_params = query_params or {}
+        if "filter" in query_params:
+            issues.add_error(
+                issue=ValidationError.not_supported(),
+                proceed=False,
+                location=["filter"],
+            )
+            return issues
+        return super().validate(query_params)
+
+
+class SchemasGET(_ServiceProviderConfig):
+    pass
+
+
+class ResourceTypesGET(_ServiceProviderConfig):
     pass

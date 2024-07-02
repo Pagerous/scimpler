@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Optional
 
 from src.config import ServiceProviderConfig
 from src.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMData
@@ -18,7 +18,11 @@ def validate_attr_reps(value: list[str]) -> ValidationIssues:
 
 
 def deserialize_attr_reps(value: list[str]) -> list[AttrRep]:
-    return [AttrRepFactory.deserialize(item) for item in value]
+    return [AttrRepFactory.deserialize(item.strip()) for item in value]
+
+
+def serialize_attr_reps(value: list[AttrRep]) -> list[str]:
+    return [str(item) for item in value]
 
 
 def _process_start_index(value: int) -> int:
@@ -43,22 +47,26 @@ class SearchRequest(BaseSchema):
                     multi_valued=True,
                     validators=[validate_attr_reps],
                     deserializer=deserialize_attr_reps,
+                    serializer=serialize_attr_reps,
                 ),
                 String(
                     name="excludeAttributes",
                     multi_valued=True,
                     validators=[validate_attr_reps],
                     deserializer=deserialize_attr_reps,
+                    serializer=serialize_attr_reps,
                 ),
                 String(
                     name="filter",
                     validators=[Filter.validate],
                     deserializer=Filter.deserialize,
+                    serializer=lambda f: f.serialize(),
                 ),
                 String(
                     name="sortBy",
                     validators=[AttrRepFactory.validate],
                     deserializer=AttrRepFactory.deserialize,
+                    serializer=lambda value: str(value),
                 ),
                 String(
                     name="sortOrder",
@@ -73,31 +81,10 @@ class SearchRequest(BaseSchema):
             ],
         )
 
-    def deserialize(self, data: Any) -> SCIMData:
-        data = super().deserialize(data)
-        to_include = data.pop(self.attrs.attributes)
-        to_exclude = data.pop(self.attrs.excludeattributes)
-        if to_include or to_exclude:
-            data.set(
-                "presence_config",
-                AttrPresenceConfig(
-                    "RESPONSE", attr_reps=to_include or to_exclude, include=bool(to_include)
-                ),
-            )
-        if sort_by_ := data.pop(self.attrs.sortby):
-            data.set(
-                "sorter",
-                Sorter(
-                    attr_rep=sort_by_,
-                    asc=data.pop(self.attrs.sortorder) == "ascending",
-                ),
-            )
-        return data
-
     def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
-        to_include = data.get(self.attrs.attributes)
-        to_exclude = data.get(self.attrs.excludeattributes)
+        to_include = data.get("attributes")
+        to_exclude = data.get("excludeAttributes")
         if to_include not in [None, Missing] and to_exclude not in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.can_not_be_used_together("attributes"),
@@ -110,6 +97,27 @@ class SearchRequest(BaseSchema):
                 location=["excludeAttributes"],
             )
         return issues
+
+
+def get_sorter(data: SCIMData) -> Optional[Sorter]:
+    if sort_by_ := data.get("sortBy"):
+        return Sorter(
+            attr_rep=sort_by_,
+            asc=data.get("sortOrder") == "ascending",
+        )
+    return None
+
+
+def get_presence_config(data: SCIMData) -> Optional[AttrPresenceConfig]:
+    to_include = data.get("attributes")
+    to_exclude = data.get("excludeAttributes")
+    if to_include or to_exclude:
+        return AttrPresenceConfig(
+            direction="RESPONSE",
+            attr_reps=to_include or to_exclude,
+            include=bool(to_include),
+        )
+    return None
 
 
 def create_search_request_schema(config: ServiceProviderConfig) -> SearchRequest:

@@ -34,13 +34,7 @@ class Validator(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         """Docs placeholder."""
 
     @abc.abstractmethod
@@ -64,13 +58,7 @@ class Error(Validator):
     def response_schema(self) -> error.ErrorSchema:
         return self._schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         raise NotImplementedError
 
     def validate_response(
@@ -227,25 +215,8 @@ class ResourceObjectGET(Validator):
     def response_schema(self) -> BaseResourceSchema:
         return self._response_schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        issues = ValidationIssues()
-        query_params = query_params or {}
-        issues.merge(
-            search_request.SearchRequest().validate(
-                {
-                    "attributes": query_params.get("attributes"),
-                    "excludeAttributes": query_params.get("excludeAttributes"),
-                }
-            ),
-            location=("query_params",),
-        )
-        return issues
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+        return ValidationIssues()
 
     def validate_response(
         self,
@@ -268,13 +239,7 @@ class ResourceObjectGET(Validator):
 
 
 class ServiceResourceObjectGET(ResourceObjectGET):
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
 
@@ -297,24 +262,8 @@ class ResourceObjectPUT(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         issues = ValidationIssues()
-        query_params = query_params or {}
-        issues.merge(
-            search_request.SearchRequest().validate(
-                {
-                    "attributes": query_params.get("attributes"),
-                    "excludeAttributes": query_params.get("excludeAttributes"),
-                }
-            ),
-            location=["query_params"],
-        )
         issues.merge(
             issues=self._schema.validate(
                 data=body or {},
@@ -374,27 +323,12 @@ class ResourcesPOST(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._response_schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         issues = ValidationIssues()
-        normalized, query_params = SCIMData(body or {}), query_params or {}
-        issues.merge(
-            search_request.SearchRequest().validate(
-                {
-                    "attributes": query_params.get("attributes"),
-                    "excludeAttributes": query_params.get("excludeAttributes"),
-                }
-            ),
-            location=("query_params",),
-        )
+        normalized = SCIMData(body or {})
         issues.merge(
             issues=self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
-            location=("body",),
+            location=["body"],
         )
         return issues
 
@@ -686,7 +620,6 @@ class ServerRootResourcesGET(Validator):
         resource_schemas: Sequence[BaseResourceSchema],
     ):
         super().__init__(config)
-        self._request_query_validation_schema = create_search_request_schema(self.config)
         self._response_validation_schema = list_response.ListResponse(resource_schemas)
         self._response_schema = list_response.ListResponse(
             [resource_schema.clone(_resource_output_filter) for resource_schema in resource_schemas]
@@ -696,20 +629,8 @@ class ServerRootResourcesGET(Validator):
     def response_schema(self) -> list_response.ListResponse:
         return self._response_schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
-        issues = ValidationIssues()
-        query_params = query_params or {}
-        issues.merge(
-            self._request_query_validation_schema.validate(query_params),
-            location=("query_params",),
-        )
-        return issues
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+        return ValidationIssues()
 
     def validate_response(
         self,
@@ -760,17 +681,11 @@ class SearchRequestPOST(Validator):
     def response_schema(self) -> list_response.ListResponse:
         return self._response_schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         issues = ValidationIssues()
         issues.merge(
             self._request_validation_schema.validate(SCIMData(body or {})),
-            location=("body",),
+            location=["body"],
         )
         return issues
 
@@ -816,24 +731,9 @@ class ResourceObjectPATCH(Validator):
     def response_schema(self) -> ResourceSchema:
         return self._response_schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         issues = ValidationIssues()
-        normalized, query_params = SCIMData(body or {}), query_params or {}
-        issues.merge(
-            search_request.SearchRequest().validate(
-                {
-                    "attributes": query_params.get("attributes"),
-                    "excludeAttributes": query_params.get("excludeAttributes"),
-                }
-            ),
-            location=("query_params",),
-        )
+        normalized = SCIMData(body or {})
         issues.merge(
             self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
             location=["body"],
@@ -877,13 +777,7 @@ class ResourceObjectPATCH(Validator):
 
 
 class ResourceObjectDELETE(Validator):
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
     def validate_response(
@@ -984,13 +878,7 @@ class BulkOperations(Validator):
     def response_schema(self) -> bulk_ops.BulkResponse:
         return self._response_schema
 
-    def validate_request(
-        self,
-        *,
-        body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
-    ) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         issues = ValidationIssues()
         body_location = ("body",)
         normalized = SCIMData(body or {})
@@ -1191,18 +1079,8 @@ class _ServiceProviderConfig(ResourcesGET):
         self,
         *,
         body: Optional[dict[str, Any]] = None,
-        query_params: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
     ) -> ValidationIssues:
-        issues = ValidationIssues()
-        query_params = query_params or {}
-        if "filter" in query_params:
-            issues.add_error(
-                issue=ValidationError.not_supported(),
-                proceed=False,
-                location=("query_params", "filter"),
-            )
-        return issues
+        return ValidationIssues()
 
 
 class SchemasGET(_ServiceProviderConfig):

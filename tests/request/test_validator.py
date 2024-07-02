@@ -436,14 +436,6 @@ def test_error_data_can_be_serialized(error_data):
     assert validator.response_schema.serialize(error_data) == error_data
 
 
-def test_correct_resource_object_get_request_passes_validation():
-    validator = ResourceObjectGET(CONFIG, resource_schema=User)
-
-    issues = validator.validate_request(body=None, query_params={"attributes": ["name.familyName"]})
-
-    assert issues.to_dict(msg=True) == {}
-
-
 def test_correct_resource_object_get_response_passes_validation(user_data_server):
     validator = ResourceObjectGET(CONFIG, resource_schema=User)
     user_data_server.pop("name")
@@ -595,7 +587,6 @@ def test_correct_resource_type_post_request_passes_validation(user_data_client):
 
     issues = validator.validate_request(
         body=user_data_client,
-        query_params={"attributes": ["name.familyName"]},
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -657,7 +648,6 @@ def test_correct_resource_object_put_request_passes_validation(user_data_client)
 
     issues = validator.validate_request(
         body=user_data_client,
-        query_params={"attributes": ["name.familyName"]},
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -929,33 +919,6 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
     (
         ResourcesGET(CONFIG, resource_schema=User),
         ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
-    ),
-)
-def test_resources_get_request_is_validated(validator, list_user_data):
-    expected_issues = {
-        "query_params": {
-            "filter": {"_errors": [{"code": 104}, {"code": 17}, {"code": 109}]},
-            "attributes": {"_errors": [{"code": 11}]},
-            "excludeAttributes": {"_errors": [{"code": 11}]},
-        }
-    }
-
-    issues = validator.validate_request(
-        query_params={
-            "filter": "totally^bad fi lter",
-            "attributes": ["userName"],
-            "excludeAttributes": ["name"],
-        }
-    )
-
-    assert issues.to_dict() == expected_issues
-
-
-@pytest.mark.parametrize(
-    "validator",
-    (
-        ResourcesGET(CONFIG, resource_schema=User),
-        ServerRootResourcesGET(CONFIG, resource_schemas=[User]),
         SearchRequestPOST(CONFIG, resource_schemas=[User]),
     ),
 )
@@ -964,27 +927,6 @@ def test_resources_response_data_can_be_serialized(validator, list_user_data):
 
     for resource in data["Resources"]:
         assert "password" not in resource
-
-
-def test_search_request_post_request_data_can_be_deserialized():
-    validator = SearchRequestPOST(CONFIG, resource_schemas=[User])
-
-    data = validator.request_schema.deserialize(
-        {
-            "attributes": ["userName", "name"],
-            "filter": 'userName eq "bjensen"',
-            "sortBy": "name.familyName",
-            "sortOrder": "descending",
-            "startIndex": 2,
-            "count": 10,
-        }
-    )
-
-    assert isinstance(data.get("filter"), Filter)
-    assert isinstance(data.get("sorter"), Sorter)
-    assert isinstance(data.get("presence_config"), AttrPresenceConfig)
-    assert data.get("count") == 10
-    assert data.get("startIndex") == 2
 
 
 def test_correct_search_request_passes_validation():
@@ -1251,7 +1193,7 @@ def test_resource_object_delete_response_validation_succeeds_if_status_204():
 def test_resource_object_delete_request_validation_does_nothing():
     validator = ResourceObjectDELETE(CONFIG)
 
-    issues = validator.validate_request(query_params={"weird": "stuff"})
+    issues = validator.validate_request()
 
     assert issues.to_dict(msg=True) == {}
 
@@ -1729,22 +1671,6 @@ def test_schemas_output_can_be_validated():
     }
 
     issues = validator.validate_response(status_code=200, body=body)
-
-    assert issues.to_dict(msg=True) == {}
-
-
-@pytest.mark.parametrize("validator", [SchemasGET(CONFIG), ResourceTypesGET(CONFIG)])
-def test_service_config_request_parsing_fails_if_requested_filtering(validator):
-    expected_issues = {"query_params": {"filter": {"_errors": [{"code": 31}]}}}
-
-    issues = validator.validate_request(query_params={"filter": 'description sw "Hello, World!"'})
-
-    assert issues.to_dict() == expected_issues
-
-
-@pytest.mark.parametrize("validator", [SchemasGET(CONFIG), ResourceTypesGET(CONFIG)])
-def test_service_config_request_parsing_succeeds_if_filtering_not_requested(validator):
-    issues = validator.validate_request(query_params={"anything": "else"})
 
     assert issues.to_dict(msg=True) == {}
 

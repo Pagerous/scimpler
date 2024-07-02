@@ -4,6 +4,7 @@ from src.assets.schemas.search_request import (
 )
 from src.config import create_service_provider_config
 from src.container import AttrRep
+from src.data.filter import Filter
 
 
 def test_search_request_attrs_are_deserialized():
@@ -11,8 +12,7 @@ def test_search_request_attrs_are_deserialized():
 
     data = schema.deserialize({"attributes": ["userName", "name"]})
 
-    assert data.get("presence_config").attr_reps == [AttrRep(attr="userName"), AttrRep(attr="name")]
-    assert data.get("presence_config").include is True
+    assert data.get("attributes") == [AttrRep(attr="userName"), AttrRep(attr="name")]
 
 
 def test_search_request_sorting_deserialized():
@@ -20,8 +20,8 @@ def test_search_request_sorting_deserialized():
 
     data = schema.deserialize({"sortBy": "name.familyName", "sortOrder": "descending"})
 
-    assert data.get("sorter").attr_rep == AttrRep(attr="name", sub_attr="familyName")
-    assert data.get("sorter").asc is False
+    assert data.get("sortBy") == AttrRep(attr="name", sub_attr="familyName")
+    assert data.get("sortOrder") == "descending"
 
 
 def test_full_search_request_is_deserialized():
@@ -38,18 +38,10 @@ def test_full_search_request_is_deserialized():
         }
     )
 
-    assert data.get("presence_config").attr_reps == [
-        AttrRep(attr="userName"),
-        AttrRep(attr="name"),
-    ]
-    assert data.get("presence_config").include is True
-    assert data.get("filter").to_dict() == {
-        "op": "eq",
-        "attr": "userName",
-        "value": "bjensen",
-    }
-    assert data.get("sorter").attr_rep == AttrRep(attr="name", sub_attr="familyName")
-    assert data.get("sorter").asc is False
+    assert data.get("attributes") == [AttrRep(attr="userName"), AttrRep(attr="name")]
+    assert data.get("filter") == Filter.deserialize("userName eq 'bjensen'")
+    assert data.get("sortBy") == AttrRep(attr="name", sub_attr="familyName")
+    assert data.get("sortOrder") == "descending"
     assert data.get("startIndex") == 1
     assert data.get("count") == 0
 
