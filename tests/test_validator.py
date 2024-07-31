@@ -14,7 +14,7 @@ from src.data.filter import Filter
 from src.data.operator import Present
 from src.data.patch_path import PatchPath
 from src.data.sorter import Sorter
-from src.request.validator import (
+from src.validator import (
     BulkOperations,
     Error,
     ResourceObjectDELETE,
@@ -1011,7 +1011,7 @@ def test_correct_remove_operations_pass_validation(fake_schema):
     validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
                     "op": "remove",
@@ -1045,7 +1045,7 @@ def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
     validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
                     "op": op,
@@ -1089,7 +1089,7 @@ def test_attr_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
 
     issues = validator.validate_request(
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
                     "op": "add",
@@ -1109,7 +1109,7 @@ def test_attr_presence_in_value_is_not_validated_if_bad_path(fake_schema):
 
     issues = validator.validate_request(
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": "123",
         }
     )
@@ -1121,7 +1121,7 @@ def test_resource_object_patch_request_data_can_be_deserialized(fake_schema):
     validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
     data = validator.request_schema.deserialize(
         {
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
                     "op": "add",
@@ -1411,7 +1411,7 @@ def test_bulk_operations_request_validation_fails_for_bad_data(user_schema):
                 "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
                 "version": 123,
                 "data": {
-                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
                     "Operations": [
                         {"op": "remove", "path": "bad^attr"},
                         {"op": "kill", "path": "userName", "value": "Dave"},

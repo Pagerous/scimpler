@@ -111,7 +111,7 @@ class Sorter(Generic[TAttrRep]):
         if not isinstance(value, str):
             return value
 
-        if str not in attr.BASE_TYPES:
+        if str not in attr.base_types():
             return self._default_value
 
         return StringKey(value, attr)

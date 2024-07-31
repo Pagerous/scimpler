@@ -387,7 +387,7 @@ def bulk_request_serialized():
                 "path": "/Users/5d8d29d3-342c-4b5f-8683-a3cb6763ffcc",
                 "version": 'W"edac3253e2c0ef2"',
                 "data": {
-                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
                     "Operations": [
                         {"op": "remove", "path": "nickName"},
                         {"op": "add", "path": "userName", "value": "Dave"},

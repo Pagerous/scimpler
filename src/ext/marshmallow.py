@@ -14,7 +14,7 @@ from src.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMData
 from src.data import attrs
 from src.data.attrs import Attribute
 from src.data.schemas import BaseSchema, ResourceSchema
-from src.request.validator import Validator
+from src.validator import Validator
 
 _marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
 

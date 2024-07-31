@@ -490,7 +490,7 @@ def test_complex_mv_attr_fails_if_multiple_primary_items():
 
     issues = attr.validate(
         [
-            SCIMData({"value": 1, "primary": True}),
+            SCIMData({"value": "bce", "primary": True}),
             SCIMData({"value": "abc", "primary": True}),
         ]
     )
@@ -504,8 +504,8 @@ def test_warning_is_returned_if_multiple_type_value_pairs():
 
     issues = attr.validate(
         [
-            SCIMData({"value": 1, "type": "work"}),
-            SCIMData({"value": 1, "type": "work"}),
+            SCIMData({"value": "abc", "type": "work"}),
+            SCIMData({"value": "abc", "type": "work"}),
         ]
     )
 
@@ -519,7 +519,7 @@ def test_invalid_items_dont_count_in_type_value_pairs():
     issues = attr.validate(
         [
             2,
-            SCIMData({"value": 1, "type": "work"}),
+            SCIMData({"value": "abc", "type": "work"}),
         ]
     )
 

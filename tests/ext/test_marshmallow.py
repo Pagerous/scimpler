@@ -13,7 +13,7 @@ from src.ext.marshmallow import (
     create_response_schema,
     initialize,
 )
-from src.request.validator import (
+from src.validator import (
     BulkOperations,
     ResourceObjectGET,
     ResourceObjectPATCH,
@@ -132,7 +132,7 @@ def bulk_response_serialized(user_data_server, group_data_server):
 @pytest.fixture
 def user_patch_serialized():
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "add",

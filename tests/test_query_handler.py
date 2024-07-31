@@ -2,7 +2,7 @@ import pytest
 
 from src.container import AttrRep
 from src.data.filter import Filter
-from src.request.query_handler import (
+from src.query_handler import (
     ResourceObjectGET,
     ResourceObjectPATCH,
     ResourceObjectPUT,

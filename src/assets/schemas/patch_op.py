@@ -58,7 +58,7 @@ class PatchOpSchema(BaseSchema):
 
     def __init__(self, resource_schema: ResourceSchema, attr_filter: Optional[AttrFilter] = None):
         super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:PatchOpSchema",
+            schema="urn:ietf:params:scim:api:messages:2.0:PatchOp",
             attr_filter=attr_filter,
         )
         self._resource_schema = resource_schema

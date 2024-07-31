@@ -46,7 +46,7 @@ def test_validate_patch_operations(value, expected_issues, user_schema):
 def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op, user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": op,
@@ -68,7 +68,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": op,
@@ -98,7 +98,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op
 def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_data(op, user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": op,
@@ -144,7 +144,7 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
 ):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": op,
@@ -226,7 +226,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
 ):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": op,
@@ -329,7 +329,7 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
 ):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": op,
@@ -364,7 +364,7 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
 def test_add_operation__fails_if_attribute_is_readonly(op, path, value, user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": op,
@@ -393,7 +393,7 @@ def test_add_operation__fails_if_attribute_is_readonly(op, path, value, user_sch
 def test_remove_operation__succeeds_if_correct_path(path, user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "remove",
@@ -402,7 +402,7 @@ def test_remove_operation__succeeds_if_correct_path(path, user_schema):
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
@@ -416,7 +416,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
     schema = PatchOpSchema(resource_schema=fake_schema)
     path = "str_mv[value sw 'a']"
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "remove",
@@ -425,7 +425,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
@@ -457,7 +457,7 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
 ):
     patch_schema = PatchOpSchema(schema)
     input_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "remove",
@@ -466,7 +466,7 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
         ],
     }
     expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
     expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
@@ -493,7 +493,7 @@ def test_validate_empty_body(user_schema):
 def test_value_is_removed_if_remove_operation_during_deserialization(user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "add",
@@ -517,7 +517,7 @@ def test_value_is_removed_if_remove_operation_during_deserialization(user_schema
 def test_operation_value_is_not_validated_if_bad_path(user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "add",
@@ -554,7 +554,7 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
 ):
     schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "add",
@@ -600,7 +600,7 @@ def test_operation_value_is_validated_against_mutability_for_attribute_in_extens
     )
     schema = PatchOpSchema(resource_schema=my_resource)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "add",
@@ -626,7 +626,7 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
 ):
     schema = PatchOpSchema(resource_schema=user_schema)
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [
             {
                 "op": "add",
@@ -667,7 +667,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
 
     issues = schema.validate(
         data={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
                     "op": op,
@@ -706,7 +706,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
 
     issues = schema.validate(
         data={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
                     "op": op,
@@ -733,7 +733,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op
 
     issues = schema.validate(
         data={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
             "Operations": [
                 {
                     "op": op,
@@ -754,7 +754,7 @@ def test_patch_op_deserialization_fails_if_bad_target(user_schema):
     with pytest.raises(ValueError, match="target indicated by path .* does not exist"):
         schema.deserialize(
             data={
-                "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOpSchema"],
+                "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
                 "Operations": [{"op": "add", "path": "name.nonExisting", "value": "whatever"}],
             }
         )
