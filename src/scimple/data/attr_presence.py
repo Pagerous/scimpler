@@ -2,9 +2,9 @@ from collections.abc import MutableMapping
 from enum import Enum
 from typing import Any, Collection, Literal, Optional, Union
 
-from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, Missing
-from src.data.attrs import Attribute, AttributeIssuer, AttributeReturn
-from src.error import ValidationError, ValidationIssues
+from scimple.container import AttrRep, AttrRepFactory, BoundedAttrRep, Missing
+from scimple.data.attrs import Attribute, AttributeIssuer, AttributeReturn
+from scimple.error import ValidationError, ValidationIssues
 
 
 class DataDirection(str, Enum):

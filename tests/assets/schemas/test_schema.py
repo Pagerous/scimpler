@@ -1,5 +1,5 @@
-from src.assets.schemas.schema import SchemaSchema, attributes
-from src.container import SCIMData
+from scimple.schemas.schema import SchemaSchema, attributes
+from scimple.container import SCIMData
 
 
 def test_validation_attributes_field_fails_for_bad_sub_attributes():

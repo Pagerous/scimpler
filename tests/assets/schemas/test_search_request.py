@@ -1,7 +1,7 @@
-from src.assets.schemas.search_request import SearchRequestSchema
-from src.config import create_service_provider_config
-from src.container import AttrRep
-from src.data.filter import Filter
+from scimple.schemas.search_request import SearchRequestSchema
+from scimple.config import create_service_provider_config
+from scimple.container import AttrRep
+from scimple.data.filter import Filter
 
 
 def test_search_request_attrs_are_deserialized():

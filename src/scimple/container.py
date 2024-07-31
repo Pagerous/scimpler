@@ -3,8 +3,8 @@ from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Optional, Union, cast
 
-from src.error import ValidationError, ValidationIssues
-from src.registry import schemas
+from scimple.error import ValidationError, ValidationIssues
+from scimple.registry import schemas
 
 _ATTR_NAME = re.compile(r"([a-zA-Z][\w$-]*|\$ref)")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")

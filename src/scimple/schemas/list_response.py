@@ -1,10 +1,10 @@
 from typing import Any, Optional, Sequence, Union
 
-from src.container import Invalid, Missing, SCIMData
-from src.data.attr_presence import AttrPresenceConfig
-from src.data.attrs import Attribute, Integer, Unknown
-from src.data.schemas import AttrFilter, BaseResourceSchema, BaseSchema
-from src.error import ValidationError, ValidationIssues
+from scimple.container import Invalid, Missing, SCIMData
+from scimple.data.attr_presence import AttrPresenceConfig
+from scimple.data.attrs import Attribute, Integer, Unknown
+from scimple.data.schemas import AttrFilter, BaseResourceSchema, BaseSchema
+from scimple.error import ValidationError, ValidationIssues
 
 
 def _validate_resources_type(value) -> ValidationIssues:

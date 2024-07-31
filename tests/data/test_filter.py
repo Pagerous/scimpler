@@ -2,10 +2,10 @@ import re
 
 import pytest
 
-from src.container import AttrRep, AttrRepFactory, BoundedAttrRep
-from src.data.filter import Filter
-from src.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
-from src.registry import register_binary_operator, register_unary_operator
+from scimple.container import AttrRep, AttrRepFactory, BoundedAttrRep
+from scimple.data.filter import Filter
+from scimple.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
+from scimple.registry import register_binary_operator, register_unary_operator
 
 
 @pytest.mark.parametrize(

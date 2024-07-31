@@ -1,12 +1,12 @@
 from copy import copy
 from typing import Any, Optional, Union, cast
 
-from src.container import Invalid, Missing, MissingType, SCIMData
-from src.data.attr_presence import validate_presence
-from src.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
-from src.data.patch_path import PatchPath
-from src.data.schemas import AttrFilter, BaseSchema, ResourceSchema
-from src.error import ValidationError, ValidationIssues
+from scimple.container import Invalid, Missing, MissingType, SCIMData
+from scimple.data.attr_presence import validate_presence
+from scimple.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
+from scimple.data.patch_path import PatchPath
+from scimple.data.schemas import AttrFilter, BaseSchema, ResourceSchema
+from scimple.error import ValidationError, ValidationIssues
 
 
 def _validate_operations(value: list[SCIMData]) -> ValidationIssues:

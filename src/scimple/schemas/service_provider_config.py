@@ -1,6 +1,6 @@
 from typing import Optional
 
-from src.data.attrs import (
+from scimple.data.attrs import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
@@ -12,7 +12,7 @@ from src.data.attrs import (
     Integer,
     String,
 )
-from src.data.schemas import AttrFilter, BaseResourceSchema, bulk_id_validator
+from scimple.data.schemas import AttrFilter, BaseResourceSchema, bulk_id_validator
 
 
 class ServiceProviderConfigSchema(BaseResourceSchema):

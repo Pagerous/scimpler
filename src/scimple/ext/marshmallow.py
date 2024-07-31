@@ -4,17 +4,17 @@ from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 
 import marshmallow
 
-from src.assets.schemas import (
+from scimple.schemas import (
     BulkRequestSchema,
     BulkResponseSchema,
     ListResponseSchema,
     PatchOpSchema,
 )
-from src.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMData
-from src.data import attrs
-from src.data.attrs import Attribute
-from src.data.schemas import BaseSchema, ResourceSchema
-from src.validator import Validator
+from scimple.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMData
+from scimple.data import attrs
+from scimple.data.attrs import Attribute
+from scimple.data.schemas import BaseSchema, ResourceSchema
+from scimple.validator import Validator
 
 _marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
 

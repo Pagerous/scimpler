@@ -12,11 +12,11 @@ from typing import (
     cast,
 )
 
-from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
-from src.data import operator as op
-from src.data.attrs import Complex
-from src.data.schemas import BaseSchema
-from src.data.utils import (
+from scimple.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
+from scimple.data import operator as op
+from scimple.data.attrs import Complex
+from scimple.data.schemas import BaseSchema
+from scimple.data.utils import (
     OP_REGEX,
     decode_placeholders,
     deserialize_comparison_value,
@@ -24,8 +24,8 @@ from src.data.utils import (
     encode_strings,
     get_placeholder,
 )
-from src.error import SCIMErrorType, ValidationError, ValidationIssues
-from src.registry import (
+from scimple.error import SCIMErrorType, ValidationError, ValidationIssues
+from scimple.registry import (
     binary_operators,
     register_binary_operator,
     register_unary_operator,

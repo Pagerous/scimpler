@@ -3,8 +3,8 @@ from datetime import datetime
 
 import pytest
 
-from src.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
-from src.data.attrs import (
+from scimple.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
+from scimple.data.attrs import (
     AttrFilter,
     AttributeMutability,
     AttributeUniqueness,
@@ -19,7 +19,7 @@ from src.data.attrs import (
     String,
     URIReference,
 )
-from src.error import ValidationError, ValidationIssues
+from scimple.error import ValidationError, ValidationIssues
 
 
 def test_validation_is_skipped_if_value_not_provided():

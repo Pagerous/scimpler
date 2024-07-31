@@ -1,12 +1,12 @@
 from typing import Optional
 
-from src import registry
-from src.config import ServiceProviderConfig
-from src.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMData
-from src.data.attrs import Attribute, Integer, String
-from src.data.filter import Filter
-from src.data.schemas import AttrFilter, BaseSchema
-from src.error import ValidationError, ValidationIssues
+from scimple import registry
+from scimple.config import ServiceProviderConfig
+from scimple.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMData
+from scimple.data.attrs import Attribute, Integer, String
+from scimple.data.filter import Filter
+from scimple.data.schemas import AttrFilter, BaseSchema
+from scimple.error import ValidationError, ValidationIssues
 
 
 def _validate_attr_reps(value: list[str]) -> ValidationIssues:

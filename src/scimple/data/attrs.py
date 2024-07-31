@@ -6,7 +6,6 @@ from copy import copy
 from datetime import datetime
 from enum import Enum
 from typing import (
-    final,
     TYPE_CHECKING,
     Any,
     Callable,
@@ -17,14 +16,15 @@ from typing import (
     Optional,
     TypeVar,
     Union,
+    final,
 )
 from urllib.parse import urlparse
 
 import precis_i18n.profile
 from precis_i18n import get_profile
 
-from src.constants import SCIMType
-from src.container import (
+from scimple.constants import SCIMType
+from scimple.container import (
     AttrName,
     AttrRep,
     AttrRepFactory,
@@ -34,11 +34,11 @@ from src.container import (
     SchemaURI,
     SCIMData,
 )
-from src.error import ValidationError, ValidationIssues, ValidationWarning
-from src.registry import resources
+from scimple.error import ValidationError, ValidationIssues, ValidationWarning
+from scimple.registry import resources
 
 if TYPE_CHECKING:
-    from src.data.patch_path import PatchPath
+    from scimple.data.patch_path import PatchPath
 
 
 TAttrFilterInput = TypeVar(
@@ -1105,6 +1105,7 @@ class BoundedAttrs:
         >>> for attr_rep, attr in bounded_attrs:
         >>>     print(attr_rep, attr)
     """
+
     def __init__(
         self,
         schema: SchemaURI,

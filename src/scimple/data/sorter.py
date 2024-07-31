@@ -4,9 +4,9 @@ from typing import Any, Generic, Optional, Sequence, TypeVar, Union, cast
 
 from typing_extensions import Self
 
-from src.container import AttrRep, Missing, SCIMData
-from src.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
-from src.data.schemas import BaseResourceSchema
+from scimple.container import AttrRep, Missing, SCIMData
+from scimple.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
+from scimple.data.schemas import BaseResourceSchema
 
 
 class AlwaysLastKey:

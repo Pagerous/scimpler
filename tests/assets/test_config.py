@@ -1,6 +1,6 @@
 import pytest
 
-from src.config import create_service_provider_config
+from scimple.config import create_service_provider_config
 
 
 def test_value_error_is_raised_if_options_not_specified_for_bulk_operation():

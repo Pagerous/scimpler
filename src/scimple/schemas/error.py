@@ -1,8 +1,8 @@
 from typing import Optional
 
-from src.data.attrs import Attribute, AttributeReturn, String
-from src.data.schemas import AttrFilter, BaseSchema
-from src.error import ValidationError, ValidationIssues
+from scimple.data.attrs import Attribute, AttributeReturn, String
+from scimple.data.schemas import AttrFilter, BaseSchema
+from scimple.error import ValidationError, ValidationIssues
 
 
 def validate_error_status(value: str) -> ValidationIssues:

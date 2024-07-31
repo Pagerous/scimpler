@@ -1,12 +1,12 @@
 import abc
 from typing import Any, MutableMapping, Optional
 
-from src import registry
-from src.assets.schemas.search_request import SearchRequestSchema
-from src.config import ServiceProviderConfig
-from src.container import SCIMData
-from src.data.attrs import AttrFilter
-from src.error import ValidationError, ValidationIssues
+from scimple import registry
+from scimple.schemas.search_request import SearchRequestSchema
+from scimple.config import ServiceProviderConfig
+from scimple.container import SCIMData
+from scimple.data.attrs import AttrFilter
+from scimple.error import ValidationError, ValidationIssues
 
 
 class QueryHandler(abc.ABC):

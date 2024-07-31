@@ -1,7 +1,7 @@
 from typing import Any, Iterator, Optional, Union, cast
 
-from src.container import BoundedAttrRep, Missing, SCIMData
-from src.data.attrs import (
+from scimple.container import BoundedAttrRep, Missing, SCIMData
+from scimple.data.attrs import (
     Attribute,
     AttributeIssuer,
     AttributeMutability,
@@ -10,13 +10,13 @@ from src.data.attrs import (
     String,
     Unknown,
 )
-from src.data.schemas import (
+from scimple.data.schemas import (
     AttrFilter,
     BaseResourceSchema,
     ResourceSchema,
     SchemaExtension,
 )
-from src.error import ValidationError, ValidationIssues, ValidationWarning
+from scimple.error import ValidationError, ValidationIssues, ValidationWarning
 
 
 def validate_attributes(value: list[SCIMData]) -> ValidationIssues:

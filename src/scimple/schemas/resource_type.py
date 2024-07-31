@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from src.data.attrs import (
+from scimple.data.attrs import (
     AttributeIssuer,
     AttributeMutability,
     Boolean,
@@ -8,7 +8,7 @@ from src.data.attrs import (
     String,
     URIReference,
 )
-from src.data.schemas import AttrFilter, BaseResourceSchema, ResourceSchema
+from scimple.data.schemas import AttrFilter, BaseResourceSchema, ResourceSchema
 
 
 class ResourceTypeSchema(BaseResourceSchema):

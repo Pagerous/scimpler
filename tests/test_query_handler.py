@@ -1,8 +1,8 @@
 import pytest
 
-from src.container import AttrRep
-from src.data.filter import Filter
-from src.query_handler import (
+from scimple.container import AttrRep
+from scimple.data.filter import Filter
+from scimple.query_handler import (
     ResourceObjectGET,
     ResourceObjectPATCH,
     ResourceObjectPUT,

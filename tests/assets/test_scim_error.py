@@ -1,4 +1,4 @@
-from src.assets.scim_error import create_error
+from scimple.error import create_error
 
 
 def test_full_scim_error_can_be_created():

@@ -1,7 +1,7 @@
 import pytest
 
-from src.assets.schemas import ErrorSchema
-from src.data.attr_presence import AttrPresenceConfig
+from scimple.schemas import ErrorSchema
+from scimple.data.attr_presence import AttrPresenceConfig
 
 
 @pytest.mark.parametrize(

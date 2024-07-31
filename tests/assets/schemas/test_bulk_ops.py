@@ -1,8 +1,8 @@
 import pytest
 
-from src.assets.schemas import ErrorSchema
-from src.assets.schemas.bulk_ops import BulkRequestSchema, BulkResponseSchema
-from src.container import SCIMData
+from scimple.schemas import ErrorSchema
+from scimple.schemas.bulk_ops import BulkRequestSchema, BulkResponseSchema
+from scimple.container import SCIMData
 
 
 def test_validation_bulk_request_operation_fails_if_no_method():

@@ -2,9 +2,9 @@ from datetime import datetime
 
 import pytest
 
-from src.container import AttrRep, SCIMData
-from src.data.attrs import Attribute, Complex, DateTime, String
-from src.data.operator import (
+from scimple.container import AttrRep, SCIMData
+from scimple.data.attrs import Attribute, Complex, DateTime, String
+from scimple.data.operator import (
     And,
     ComplexAttributeOperator,
     Contains,

@@ -1,6 +1,13 @@
 import pytest
 
-from src.container import AttrRep, BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMData
+from scimple.container import (
+    AttrRep,
+    BoundedAttrRep,
+    Invalid,
+    Missing,
+    SchemaURI,
+    SCIMData,
+)
 
 
 @pytest.mark.parametrize(

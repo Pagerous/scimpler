@@ -1,13 +1,13 @@
 import pytest
 
-from src.assets.schemas.patch_op import PatchOpSchema
-from src.container import AttrName, AttrRep, Invalid, SCIMData
-from src.data.attr_presence import AttrPresenceConfig
-from src.data.attrs import AttributeMutability, String
-from src.data.filter import Filter
-from src.data.operator import ComplexAttributeOperator, Equal
-from src.data.patch_path import PatchPath
-from src.data.schemas import ResourceSchema, SchemaExtension
+from scimple.container import AttrName, AttrRep, Invalid, SCIMData
+from scimple.data.attr_presence import AttrPresenceConfig
+from scimple.data.attrs import AttributeMutability, String
+from scimple.data.filter import Filter
+from scimple.data.operator import ComplexAttributeOperator, Equal
+from scimple.data.patch_path import PatchPath
+from scimple.data.schemas import ResourceSchema, SchemaExtension
+from scimple.schemas.patch_op import PatchOpSchema
 
 
 @pytest.mark.parametrize(

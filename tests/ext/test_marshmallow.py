@@ -4,16 +4,16 @@ from datetime import datetime
 import marshmallow
 import pytest
 
-from src.container import AttrRep, SCIMData
-from src.data.filter import Filter
-from src.data.patch_path import PatchPath
-from src.ext.marshmallow import (
+from scimple.container import AttrRep, SCIMData
+from scimple.data.filter import Filter
+from scimple.data.patch_path import PatchPath
+from scimple.ext.marshmallow import (
     ResponseContext,
     create_request_schema,
     create_response_schema,
     initialize,
 )
-from src.validator import (
+from scimple.validator import (
     BulkOperations,
     ResourceObjectGET,
     ResourceObjectPATCH,

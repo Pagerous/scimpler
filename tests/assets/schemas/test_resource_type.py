@@ -1,5 +1,5 @@
-from src.assets.schemas.resource_type import ResourceTypeSchema
-from src.data.attr_presence import AttrPresenceConfig
+from scimple.schemas.resource_type import ResourceTypeSchema
+from scimple.data.attr_presence import AttrPresenceConfig
 
 
 def test_resource_type_schema_is_validated():
