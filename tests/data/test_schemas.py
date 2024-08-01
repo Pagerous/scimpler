@@ -262,7 +262,7 @@ def test_same_extension_can_not_be_registered_twice(user_schema, enterprise_exte
 
 def test_warning_is_raised_if_adding_extension_with_the_same_attr_name():
     class MyResource(ResourceSchema):
-        default_attrs = [String(name="attr")]
+        base_attrs = [String(name="attr")]
 
     class MyExtension(SchemaExtension):
         default_attrs = [Integer(name="attr")]
@@ -605,7 +605,7 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
 
 def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_has_value_none():
     class MyResource(ResourceSchema):
-        default_attrs = [
+        base_attrs = [
             Complex(
                 name="super_complex",
                 multi_valued=True,

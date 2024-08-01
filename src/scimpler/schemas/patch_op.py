@@ -5,7 +5,7 @@ from scimpler.container import Invalid, Missing, MissingType, SCIMData
 from scimpler.data.attr_presence import validate_presence
 from scimpler.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
 from scimpler.data.patch_path import PatchPath
-from scimpler.data.schemas import AttrFilter, BaseSchema, ResourceSchema
+from scimpler.data.schemas import BaseSchema, ResourceSchema
 from scimpler.error import ValidationError, ValidationIssues
 
 
@@ -32,7 +32,7 @@ def _validate_operations(value: list[SCIMData]) -> ValidationIssues:
 
 
 class PatchOpSchema(BaseSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         Complex(
             name="Operations",
             required=True,
@@ -56,11 +56,8 @@ class PatchOpSchema(BaseSchema):
         )
     ]
 
-    def __init__(self, resource_schema: ResourceSchema, attr_filter: Optional[AttrFilter] = None):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:PatchOp",
-            attr_filter=attr_filter,
-        )
+    def __init__(self, resource_schema: ResourceSchema):
+        super().__init__(schema="urn:ietf:params:scim:api:messages:2.0:PatchOp")
         self._resource_schema = resource_schema
 
     @property

@@ -37,7 +37,7 @@ def _process_count(value: int) -> int:
 
 
 class SearchRequestSchema(BaseSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         String(
             name="attributes",
             multi_valued=True,

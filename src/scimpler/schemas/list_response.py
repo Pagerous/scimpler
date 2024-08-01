@@ -3,7 +3,7 @@ from typing import Any, Optional, Sequence, Union
 from scimpler.container import Invalid, Missing, SCIMData
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import Attribute, Integer, Unknown
-from scimpler.data.schemas import AttrFilter, BaseResourceSchema, BaseSchema
+from scimpler.data.schemas import BaseResourceSchema, BaseSchema
 from scimpler.error import ValidationError, ValidationIssues
 
 
@@ -21,7 +21,7 @@ def _validate_resources_type(value) -> ValidationIssues:
 
 
 class ListResponseSchema(BaseSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         Integer("totalResults", required=True),
         Integer("startIndex"),
         Integer("itemsPerPage"),
@@ -32,14 +32,9 @@ class ListResponseSchema(BaseSchema):
         ),
     ]
 
-    def __init__(
-        self,
-        resource_schemas: Sequence[BaseResourceSchema],
-        attr_filter: Optional[AttrFilter] = None,
-    ):
+    def __init__(self, resource_schemas: Sequence[BaseResourceSchema]):
         super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:ListResponseSchema",
-            attr_filter=attr_filter,
+            schema="urn:ietf:params:scim:api:messages:2.0:ListResponse",
         )
         self._contained_schemas = list(resource_schemas)
 

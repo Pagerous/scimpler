@@ -112,7 +112,7 @@ def _process_ims_value(value: str) -> str:
 
 
 class UserSchema(ResourceSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         String(
             name="userName",
             description=(

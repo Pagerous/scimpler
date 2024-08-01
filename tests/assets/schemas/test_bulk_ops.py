@@ -1,8 +1,8 @@
 import pytest
 
+from scimpler.container import SCIMData
 from scimpler.schemas import ErrorSchema
 from scimpler.schemas.bulk_ops import BulkRequestSchema, BulkResponseSchema
-from scimpler.container import SCIMData
 
 
 def test_validation_bulk_request_operation_fails_if_no_method():

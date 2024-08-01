@@ -62,7 +62,7 @@ def group_deserialized(group_data_server):
 
 def get_bulk_data(user_1, user_2, group):
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a",

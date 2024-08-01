@@ -3,9 +3,6 @@ from datetime import datetime
 
 import pytest
 
-from scimpler.schemas import service_provider_config
-from scimpler.schemas.resource_type import ResourceTypeSchema
-from scimpler.schemas.schema import SchemaSchema
 from scimpler.config import create_service_provider_config
 from scimpler.container import AttrRep, BoundedAttrRep, Missing
 from scimpler.data.attr_presence import AttrPresenceConfig
@@ -14,6 +11,9 @@ from scimpler.data.filter import Filter
 from scimpler.data.operator import Present
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.sorter import Sorter
+from scimpler.schemas import service_provider_config
+from scimpler.schemas.resource_type import ResourceTypeSchema
+from scimpler.schemas.schema import SchemaSchema
 from scimpler.validator import (
     BulkOperations,
     Error,
@@ -853,7 +853,7 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
     issues = validator.validate_response(
         status_code=200,
         body={
-            "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
             "totalResults": 1,
             "Resources": [{}],
         },
@@ -1273,7 +1273,7 @@ def test_bulk_operations_data_not_validated_if_bad_operations_type(user_schema):
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "failOnErrors": 1,
         "Operations": "abc",
     }
@@ -1294,7 +1294,7 @@ def test_bulk_operations_data_not_validated_if_bad_path_or_method(user_schema):
         }
     }
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "failOnErrors": 1,
         "Operations": [
             {
@@ -1321,7 +1321,7 @@ def test_bulk_operations_data_not_validated_if_bad_resource_name(user_schema):
     validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
     expected_issues = {"body": {"Operations": {"0": {"path": {"_errors": [{"code": 25}]}}}}}
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "failOnErrors": 1,
         "Operations": [
             {
@@ -1385,7 +1385,7 @@ def test_bulk_operations_request_validation_fails_for_bad_data(user_schema):
         }
     }
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "failOnErrors": 1,
         "Operations": [
             {
@@ -1450,7 +1450,7 @@ def test_bulk_operations_response_is_valid_if_correct_data(user_data_server, use
     user_3["meta"]["version"] = 'W/"huJj29dMNgu3WXPD"'
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a",
@@ -1529,7 +1529,7 @@ def test_bulk_operations_response_validation_fails_for_incorrect_data(
     }
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/82b725cd-9465-4e7d-8c16-01f8e146b87b",
@@ -1571,7 +1571,7 @@ def test_bulk_operations_response_operations_not_validated_further_if_bad_type(
     validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
         "Operations": "123",
     }
 
@@ -1592,7 +1592,7 @@ def test_bulk_operations_responses_are_not_validated_if_bad_location_or_method(u
     }
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
         "Operations": [
             {
                 "location": "https://example.com/v2/Users/92b725cd-9465-4e7d-8c16-01f8e146b87a",
@@ -1627,7 +1627,7 @@ def test_bulk_operations_response_validation_fails_if_too_many_failed_operations
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 27}]}}}
 
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
         "Operations": [
             {
                 "method": "POST",
@@ -1728,7 +1728,7 @@ def test_schemas_output_can_be_validated(user_schema, group_schema):
     schema = SchemaSchema()
     validator = ResourcesGET(CONFIG, resource_schema=schema)
     body = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 2,
         "itemsPerPage": 2,
         "startIndex": 1,
@@ -1794,7 +1794,7 @@ def test_resource_types_response_can_be_validated():
         "totalResults": 2,
         "itemsPerPage": 2,
         "startIndex": 1,
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "Resources": [
             {
                 "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
@@ -2041,7 +2041,7 @@ def test_can_validate_sorting(sorter, checker, expected):
 def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):
     validator = BulkOperations(CONFIG, resource_schemas=[user_schema, group_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "Operations": [
             {
                 "method": "POST",

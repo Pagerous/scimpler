@@ -11,7 +11,7 @@ from scimpler.data.schemas import AttrFilter, ResourceSchema
 
 
 class GroupSchema(ResourceSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         String(
             name="displayName",
             description="A human-readable name for the Group.",

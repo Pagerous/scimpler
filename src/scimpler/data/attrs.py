@@ -59,7 +59,6 @@ class AttrFilter:
         # stores attr names specified directly, e.g. 'emails'
         # will be here if specified as 'emails' and not 'emails.type'
         self._direct_top_level: set[AttrName] = set()
-        from collections import defaultdict
 
         self._complex_sub_attrs: dict[AttrName, set[AttrName]] = defaultdict(set)
         if attr_names is not None:
@@ -73,7 +72,11 @@ class AttrFilter:
         self._include = include
         self._filter = filter_
 
-    def __call__(self, attrs: Iterable[TAttrFilterInput]) -> list[TAttrFilterInput]:
+    def __call__(
+        self,
+        attrs: Iterable[TAttrFilterInput],
+        include_required: bool = False,
+    ) -> list[TAttrFilterInput]:
         filtered = []
         for item in attrs:
             identity = None
@@ -84,7 +87,11 @@ class AttrFilter:
             else:
                 attr = item
 
-            if self._include is False and attr.name in self._direct_top_level:
+            if (
+                self._include is False
+                and attr.name in self._direct_top_level
+                and not (include_required and attr.required)
+            ):
                 continue
 
             if isinstance(attr, Complex):
@@ -99,11 +106,12 @@ class AttrFilter:
                 if len(list(attr.attrs)) == 0:
                     continue
             else:
-                if self._filter and not self._filter(attr):
-                    continue
+                if not (include_required and attr.required):
+                    if self._filter and not self._filter(attr):
+                        continue
 
-                if self._include is True and attr.name not in self._direct_top_level:
-                    continue
+                    if self._include is True and attr.name not in self._direct_top_level:
+                        continue
 
             if identity is None:
                 filtered.append(attr)
@@ -934,7 +942,7 @@ class Complex(Attribute):
                 filtered.set(name, value)
         return filtered
 
-    def clone(self, attr_filter: AttrFilter) -> "Complex":
+    def clone(self, attr_filter: AttrFilter, include_required: bool = False) -> "Complex":
         """
         Clones the complex attribute. All sub-attributes that do not match a provided
         attribute filter are not included in the clone.
@@ -942,6 +950,8 @@ class Complex(Attribute):
         Args:
             attr_filter: Attribute filter, used to determine which sub-attributes
                 should be included in the clone
+            include_required: Indicates whether required sub-attributes should be included,
+                regardless the filter
 
         Returns:
             Cloned complex attribute
@@ -1064,7 +1074,7 @@ class Attrs:
             attr_name = attr_name.attr
         return self._attrs.get(AttrName(attr_name))
 
-    def clone(self, attr_filter: AttrFilter) -> "Attrs":
+    def clone(self, attr_filter: AttrFilter, include_required: bool = False) -> "Attrs":
         """
         Clones `Attrs` according to a provided attribute filter. All attributes, including
         sub-attributes of complex attributes, are subject of filtration.
@@ -1072,11 +1082,13 @@ class Attrs:
         Args:
             attr_filter: Attribute filter, used to determine which attributes and sub-attributes
                 should be included in the clone
+            include_required: Indicates whether required sub-attributes should be included,
+                regardless the filter
 
         Returns:
             Cloned `Attrs` with inner attributes, optionally filtered by `attr_filter`.
         """
-        return Attrs(attr_filter(self._attrs.values()))
+        return Attrs(attr_filter(self._attrs.values(), include_required=include_required))
 
 
 class BoundedAttrs:
@@ -1237,7 +1249,7 @@ class BoundedAttrs:
             self._attrs[attr_rep] = attr
         self._bounded_complex_sub_attrs.update(attrs._bounded_complex_sub_attrs)
 
-    def clone(self, attr_filter: AttrFilter) -> "BoundedAttrs":
+    def clone(self, attr_filter: AttrFilter, include_required: bool = False) -> "BoundedAttrs":
         """
         Clones `BoundedAttrs` according to a provided attribute filter. All attributes, including
         sub-attributes of complex attributes, are subject of filtration. Extensions are filtered
@@ -1246,6 +1258,8 @@ class BoundedAttrs:
         Args:
             attr_filter: Attribute filter, used to determine which attributes and sub-attributes
                 should be included in the clone
+            include_required: Indicates whether required sub-attributes should be included,
+                regardless the filter
 
         Returns:
             Cloned `BoundedAttrs` with inner attributes, optionally filtered by `attr_filter`.
@@ -1253,16 +1267,19 @@ class BoundedAttrs:
         cloned = BoundedAttrs(
             schema=self._schema,
             attrs=attr_filter(
-                attr
-                for attr_rep, attr in self._attrs.items()
-                if attr_rep.schema not in self._extensions
+                attrs=(
+                    attr
+                    for attr_rep, attr in self._attrs.items()
+                    if attr_rep.schema not in self._extensions
+                ),
+                include_required=include_required,
             ),
             common_attrs=self._common_attrs,
         )
         for schema, attrs in self._extensions.items():
             cloned.extend(
                 schema=schema,
-                attrs=attrs.clone(attr_filter),
+                attrs=attrs.clone(attr_filter, include_required=include_required),
             )
         return cloned
 

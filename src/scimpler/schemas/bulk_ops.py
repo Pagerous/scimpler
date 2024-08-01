@@ -3,11 +3,11 @@ from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any, Optional
 
-from scimpler.schemas.error import ErrorSchema
 from scimpler.container import Missing, SCIMData
 from scimpler.data.attrs import Complex, ExternalReference, Integer, String, Unknown
 from scimpler.data.schemas import AttrFilter, BaseSchema
 from scimpler.error import ValidationError, ValidationIssues
+from scimpler.schemas.error import ErrorSchema
 
 _RESOURCE_TYPE_REGEX = re.compile(r"/\w+")
 _RESOURCE_OBJECT_REGEX = re.compile(r"/\w+/.*")
@@ -83,7 +83,7 @@ def deserialize_request_operations(value: list[SCIMData]) -> list[SCIMData]:
 
 
 class BulkRequestSchema(BaseSchema):
-    default_attrs = [
+    base_attrs = [
         Integer("failOnErrors"),
         Complex(
             name="Operations",
@@ -115,7 +115,7 @@ class BulkRequestSchema(BaseSchema):
         attr_filter: Optional[AttrFilter] = None,
     ):
         super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema",
+            schema="urn:ietf:params:scim:api:messages:2.0:BulkRequest",
             attr_filter=attr_filter,
         )
         self._sub_schemas = sub_schemas
@@ -210,7 +210,7 @@ def _validate_status(value: Any) -> ValidationIssues:
 
 
 class BulkResponseSchema(BaseSchema):
-    default_attrs = [
+    base_attrs = [
         Complex(
             sub_attributes=[
                 String(
@@ -243,7 +243,7 @@ class BulkResponseSchema(BaseSchema):
         attr_filter: Optional[AttrFilter] = None,
     ):
         super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:BulkResponseSchema",
+            schema="urn:ietf:params:scim:api:messages:2.0:BulkResponse",
             attr_filter=attr_filter,
         )
         self._sub_schemas = sub_schemas

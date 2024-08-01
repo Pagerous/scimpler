@@ -1,7 +1,7 @@
-from scimpler.schemas.search_request import SearchRequestSchema
 from scimpler.config import create_service_provider_config
 from scimpler.container import AttrRep
 from scimpler.data.filter import Filter
+from scimpler.schemas.search_request import SearchRequestSchema
 
 
 def test_search_request_attrs_are_deserialized():

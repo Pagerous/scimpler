@@ -1,7 +1,5 @@
-from typing import Optional
-
 from scimpler.data.attrs import Attribute, AttributeReturn, String
-from scimpler.data.schemas import AttrFilter, BaseSchema
+from scimpler.data.schemas import BaseSchema
 from scimpler.error import ValidationError, ValidationIssues
 
 
@@ -24,7 +22,7 @@ def validate_error_status(value: str) -> ValidationIssues:
 
 
 class ErrorSchema(BaseSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         String(
             name="status",
             required=True,
@@ -54,8 +52,5 @@ class ErrorSchema(BaseSchema):
         ),
     ]
 
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:Error",
-            attr_filter=attr_filter,
-        )
+    def __init__(self):
+        super().__init__(schema="urn:ietf:params:scim:api:messages:2.0:Error")

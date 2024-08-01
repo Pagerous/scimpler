@@ -2,11 +2,11 @@ import abc
 from typing import Any, MutableMapping, Optional
 
 from scimpler import registry
-from scimpler.schemas.search_request import SearchRequestSchema
 from scimpler.config import ServiceProviderConfig
 from scimpler.container import SCIMData
 from scimpler.data.attrs import AttrFilter
 from scimpler.error import ValidationError, ValidationIssues
+from scimpler.schemas.search_request import SearchRequestSchema
 
 
 class QueryHandler(abc.ABC):

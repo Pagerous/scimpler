@@ -26,7 +26,7 @@ from scimpler.schemas.user import EnterpriseUserSchemaExtension
 
 
 class FakeSchema(ResourceSchema):
-    default_attrs = [
+    base_attrs = [
         Integer("int"),
         String("str"),
         String("str_cs", case_exact=True),
@@ -299,7 +299,7 @@ def list_user_data(user_data_server):
         "2"
     )
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 2,
         "startIndex": 1,
         "itemsPerPage": 2,
@@ -354,7 +354,7 @@ def error_data():
 @pytest.fixture
 def bulk_request_serialized():
     return {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequestSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
         "failOnErrors": 1,
         "Operations": [
             {

@@ -1,7 +1,7 @@
 import pytest
 
-from scimpler.schemas import ErrorSchema
 from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.schemas import ErrorSchema
 
 
 @pytest.mark.parametrize(

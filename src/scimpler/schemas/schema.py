@@ -10,12 +10,7 @@ from scimpler.data.attrs import (
     String,
     Unknown,
 )
-from scimpler.data.schemas import (
-    AttrFilter,
-    BaseResourceSchema,
-    ResourceSchema,
-    SchemaExtension,
-)
+from scimpler.data.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 
@@ -183,7 +178,7 @@ attributes = Complex(
 
 
 class SchemaSchema(BaseResourceSchema):  # sorry for the name
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         String(
             name="id",
             description=(
@@ -214,12 +209,11 @@ class SchemaSchema(BaseResourceSchema):  # sorry for the name
         attributes,
     ]
 
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+    def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
             name="Schema",
             endpoint="/Schemas",
-            attr_filter=attr_filter,
         )
 
     def get_repr(

@@ -1,5 +1,5 @@
-from scimpler.schemas.schema import SchemaSchema, attributes
 from scimpler.container import SCIMData
+from scimpler.schemas.schema import SchemaSchema, attributes
 
 
 def test_validation_attributes_field_fails_for_bad_sub_attributes():

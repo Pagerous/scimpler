@@ -1,5 +1,3 @@
-from typing import Optional
-
 from scimpler.data.attrs import (
     Attribute,
     AttributeIssuer,
@@ -12,11 +10,11 @@ from scimpler.data.attrs import (
     Integer,
     String,
 )
-from scimpler.data.schemas import AttrFilter, BaseResourceSchema, bulk_id_validator
+from scimpler.data.schemas import BaseResourceSchema, bulk_id_validator
 
 
 class ServiceProviderConfigSchema(BaseResourceSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         String(
             name="id",
             required=False,
@@ -211,10 +209,9 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
         ),
     ]
 
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+    def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
             name="ServiceProviderConfig",
             endpoint="/ServiceProviderConfig",
-            attr_filter=attr_filter,
         )

@@ -1,5 +1,5 @@
-from scimpler.schemas.resource_type import ResourceTypeSchema
 from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.schemas.resource_type import ResourceTypeSchema
 
 
 def test_resource_type_schema_is_validated():

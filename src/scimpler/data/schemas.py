@@ -39,7 +39,7 @@ def bulk_id_validator(value) -> ValidationIssues:
 
 
 class BaseSchema:
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         URIReference(
             name="schemas",
             required=True,
@@ -60,7 +60,7 @@ class BaseSchema:
         attrs = self._get_attrs()
         self._attrs = BoundedAttrs(
             schema=schema,
-            attrs=attr_filter(attrs) if attr_filter else attrs,
+            attrs=attr_filter(attrs, include_required=True) if attr_filter else attrs,
             common_attrs=list(common_attrs or []) + ["schemas"],
         )
         self._schema = schema
@@ -80,8 +80,8 @@ class BaseSchema:
     def _get_attrs(self) -> list[Attribute]:
         attrs = []
         for cls in reversed(self.__class__.mro()):
-            if issubclass(cls, BaseSchema) and "default_attrs" in cls.__dict__:
-                attrs.extend(getattr(cls, "default_attrs"))
+            if issubclass(cls, BaseSchema) and "base_attrs" in cls.__dict__:
+                attrs.extend(getattr(cls, "base_attrs"))
         return attrs
 
     def deserialize(self, data: MutableMapping[str, Any]) -> SCIMData:
@@ -393,7 +393,7 @@ def validate_resource_type_consistency(
 
 
 class BaseResourceSchema(BaseSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         Complex(
             name="meta",
             issuer=AttributeIssuer.SERVER,
@@ -449,7 +449,7 @@ class BaseResourceSchema(BaseSchema):
 
 
 class ResourceSchema(BaseResourceSchema):
-    default_attrs: list[Attribute] = [
+    base_attrs: list[Attribute] = [
         String(
             name="id",
             required=True,
@@ -602,7 +602,11 @@ class SchemaExtension:
         register_schema(self._schema, True)
         self._attrs = BoundedAttrs(
             schema=self._schema,
-            attrs=attr_filter(self.default_attrs) if attr_filter else self.default_attrs,
+            attrs=(
+                attr_filter(self.default_attrs, include_required=True)
+                if attr_filter
+                else self.default_attrs
+            ),
         )
         self._name = name
         self._description = description

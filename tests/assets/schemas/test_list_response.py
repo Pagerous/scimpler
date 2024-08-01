@@ -1,8 +1,8 @@
 import pytest
 
-from scimpler.schemas import list_response
 from scimpler.container import AttrRep, SCIMData
 from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.schemas import list_response
 
 
 def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):
@@ -208,7 +208,7 @@ def test_get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(
 def test_list_response_can_be_serialized(user_data_client, user_schema):
     schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
         "Resources": [
             user_schema.deserialize(user_data_client),
@@ -230,7 +230,7 @@ def test_list_response_can_be_serialized(user_data_client, user_schema):
 def test_list_response_with_missing_resources_can_be_serialized(user_data_client, user_schema):
     schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
     }
 
@@ -242,7 +242,7 @@ def test_list_response_with_missing_resources_can_be_serialized(user_data_client
 def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client, user_schema):
     schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
         "Resources": ["bad_type", ["also_bad_type"]],
     }
@@ -260,7 +260,7 @@ def test_bad_resources_type_is_serialized_as_empty_dict(user_data_client, user_s
 def test_bad_resources_type_is_validated(user_data_client, user_schema):
     schema = list_response.ListResponseSchema(resource_schemas=[user_schema])
     data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponseSchema"],
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 3,
         "Resources": "foo",
     }

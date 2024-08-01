@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from scimpler.data.attrs import (
     AttributeIssuer,
@@ -8,11 +8,11 @@ from scimpler.data.attrs import (
     String,
     URIReference,
 )
-from scimpler.data.schemas import AttrFilter, BaseResourceSchema, ResourceSchema
+from scimpler.data.schemas import BaseResourceSchema, ResourceSchema
 
 
 class ResourceTypeSchema(BaseResourceSchema):
-    default_attrs = [
+    base_attrs = [
         String(
             name="id",
             description=(
@@ -89,12 +89,11 @@ class ResourceTypeSchema(BaseResourceSchema):
         ),
     ]
 
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+    def __init__(self):
         super().__init__(
             schema="urn:ietf:params:scim:schemas:core:2.0:ResourceType",
             name="ResourceType",
             endpoint="/ResourceTypes",
-            attr_filter=attr_filter,
         )
 
     def get_repr(self, schema: ResourceSchema) -> dict[str, Any]:
