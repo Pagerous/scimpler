@@ -32,6 +32,7 @@ def _validate_operations(value: list[SCIMData]) -> ValidationIssues:
 
 
 class PatchOpSchema(BaseSchema):
+    schema = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
     base_attrs: list[Attribute] = [
         Complex(
             name="Operations",
@@ -57,7 +58,7 @@ class PatchOpSchema(BaseSchema):
     ]
 
     def __init__(self, resource_schema: ResourceSchema):
-        super().__init__(schema="urn:ietf:params:scim:api:messages:2.0:PatchOp")
+        super().__init__()
         self._resource_schema = resource_schema
 
     @property

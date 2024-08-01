@@ -584,20 +584,17 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
 
 
 def test_operation_value_is_validated_against_mutability_for_attribute_in_extension():
-    my_resource = ResourceSchema(
-        schema="my:custom:schema",
-        name="MyResource",
-    )
+    class MyResourceSchema(ResourceSchema):
+        schema = "my:custom:schema"
+        name = "MyResource"
 
     class MyExtension(SchemaExtension):
-        default_attrs = [String(name="my_attr", mutability=AttributeMutability.READ_ONLY)]
+        schema = "my:custom:schema:extension"
+        name = "MyResourceExtension"
+        base_attrs = [String(name="my_attr", mutability=AttributeMutability.READ_ONLY)]
 
-    my_resource.extend(
-        extension=MyExtension(
-            schema="my:custom:schema:extension",
-            name="MyResourceExtension",
-        )
-    )
+    my_resource = MyResourceSchema()
+    my_resource.extend(MyExtension())
     schema = PatchOpSchema(resource_schema=my_resource)
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],

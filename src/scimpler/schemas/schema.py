@@ -178,6 +178,9 @@ attributes = Complex(
 
 
 class SchemaSchema(BaseResourceSchema):  # sorry for the name
+    schema = "urn:ietf:params:scim:schemas:core:2.0:Schema"
+    name = "Schema"
+    endpoint = "/Schemas"
     base_attrs: list[Attribute] = [
         String(
             name="id",
@@ -208,13 +211,6 @@ class SchemaSchema(BaseResourceSchema):  # sorry for the name
         ),
         attributes,
     ]
-
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:Schema",
-            name="Schema",
-            endpoint="/Schemas",
-        )
 
     def get_repr(
         self,

@@ -14,6 +14,7 @@ from scimpler.data.attrs import (
     String,
     URIReference,
 )
+from scimpler.data.filter import Filter
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "URIReference",
     "ResourceSchema",
     "SchemaExtension",
+    "Filter",
 ]

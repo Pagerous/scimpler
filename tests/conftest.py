@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import Optional
 
 import pytest
 
@@ -7,7 +6,6 @@ from scimpler import registry
 from scimpler.config import create_service_provider_config
 from scimpler.container import SCIMData
 from scimpler.data.attrs import (
-    AttrFilter,
     Binary,
     Boolean,
     Complex,
@@ -26,6 +24,10 @@ from scimpler.schemas.user import EnterpriseUserSchemaExtension
 
 
 class FakeSchema(ResourceSchema):
+    schema = "schema:for:tests"
+    name = "FakeSchema"
+    plural_name = "SchemasForTests"
+    endpoint = "/SchemasForTests"
     base_attrs = [
         Integer("int"),
         String("str"),
@@ -64,15 +66,6 @@ class FakeSchema(ResourceSchema):
         String("userName", case_exact=True),
         Integer("title"),
     ]
-
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        super().__init__(
-            schema="schema:for:tests",
-            name="FakeSchema",
-            plural_name="SchemasForTests",
-            endpoint="/SchemasForTests",
-            attr_filter=attr_filter,
-        )
 
 
 _user_schema = UserSchema()

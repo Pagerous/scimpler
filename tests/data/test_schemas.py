@@ -18,25 +18,24 @@ from scimpler.warning import ScimpleUserWarning
 
 @pytest.fixture
 def schema_with_extensions() -> Generator[ResourceSchema, None, None]:
-    schema = ResourceSchema(
-        schema="my:schema",
-        name="MyResource",
-    )
+    class MyResourceSchema(ResourceSchema):
+        schema = "my:schema"
+        name = "MyResource"
+
+    schema = MyResourceSchema()
 
     class Extension1(SchemaExtension):
-        default_attrs = [Complex("complex", sub_attributes=[Integer("value", required=True)])]
+        schema = "my:schema:extension"
+        name = "MyExtension"
+        base_attrs = [Complex("complex", sub_attributes=[Integer("value", required=True)])]
 
     class Extension2(SchemaExtension):
-        default_attrs = [Complex("complex", sub_attributes=[Integer("value", required=True)])]
+        schema = "my:schema:other_extension"
+        name = "MyOtherExtension"
+        base_attrs = [Complex("complex", sub_attributes=[Integer("value", required=True)])]
 
-    extension_1 = Extension1(
-        schema="my:schema:extension",
-        name="MyExtension",
-    )
-    extension_2 = Extension2(
-        schema="my:schema:other_extension",
-        name="MyOtherExtension",
-    )
+    extension_1 = Extension1()
+    extension_2 = Extension2()
     schema.extend(extension_1, False)
     schema.extend(extension_2, False)
     register_resource_schema(schema)
@@ -164,10 +163,18 @@ def test_validate_resource_type_consistency__succeeds_if_consistency():
 
 
 def test_adding_same_schema_extension_to_resource_fails():
-    schema = ResourceSchema(schema="my:schema", name="MyResource")
-    extension = SchemaExtension(schema="my:schema:extension", name="MyExtension")
-    schema.extend(extension)
+    class MyResourceSchema(ResourceSchema):
+        schema = "my:schema"
+        name = "MyResource"
 
+    class MyExtension(SchemaExtension):
+        schema = "my:schema:extension"
+        name = "MyExtension"
+
+    schema = MyResourceSchema()
+    extension = MyExtension()
+
+    schema.extend(extension)
     with pytest.raises(
         ValueError,
         match="schema 'my:schema:extension' already in 'MyResource' resource",
@@ -241,9 +248,12 @@ def test_invalid_schemas_items_are_detected(user_data_client, user_schema):
 
 
 def test_endpoint_can_be_changed_for_base_resource_schema():
-    schema = BaseResourceSchema(
-        schema="base:resource:schema", name="BaseResource", endpoint="/BaseResource"
-    )
+    class MyBaseResourceSchema(BaseResourceSchema):
+        schema = "base:resource:schema"
+        name = "BaseResource"
+        endpoint = "/BaseResource"
+
+    schema = MyBaseResourceSchema()
 
     schema.endpoint = "/BaseResourceDifferentEndpoint"
 
@@ -262,13 +272,17 @@ def test_same_extension_can_not_be_registered_twice(user_schema, enterprise_exte
 
 def test_warning_is_raised_if_adding_extension_with_the_same_attr_name():
     class MyResource(ResourceSchema):
+        schema = "my:schema"
+        name = "MyResource"
         base_attrs = [String(name="attr")]
 
     class MyExtension(SchemaExtension):
-        default_attrs = [Integer(name="attr")]
+        schema = "my:schema:extension"
+        name = "MyExtension"
+        base_attrs = [Integer(name="attr")]
 
-    resource_schema = MyResource(schema="my:schema", name="MyResource")
-    extension = MyExtension(schema="my:schema:extension", name="MyExtension")
+    resource_schema = MyResource()
+    extension = MyExtension()
 
     with pytest.warns(ScimpleUserWarning):
         resource_schema.extend(extension)
@@ -571,11 +585,17 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
 
 
 def test_presence_validation_fails_if_missing_required_field_from_required_extension():
-    class MyExtension(SchemaExtension):
-        default_attrs = [Integer("age", required=True)]
+    class MyResource(ResourceSchema):
+        schema = "my:schema"
+        name = "MyResource"
 
-    schema = ResourceSchema(schema="my:schema", name="MyResource")
-    extension = MyExtension(schema="my:schema:extension", name="MyExtension")
+    class MyExtension(SchemaExtension):
+        schema = "my:schema:extension"
+        name = "MyExtension"
+        base_attrs = [Integer("age", required=True)]
+
+    schema = MyResource()
+    extension = MyExtension()
     schema.extend(extension, required=True)
     expected_issues = {"my:schema:extension": {"age": {"_errors": [{"code": 5}]}}}
 
@@ -588,11 +608,17 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
 
 
 def test_presence_validation_succeeds_if_missing_required_field_from_non_required_extension():
-    class MyExtension(SchemaExtension):
-        default_attrs = [Integer("age", required=True)]
+    class MyResource(ResourceSchema):
+        schema = "my:schema"
+        name = "MyResource"
 
-    schema = ResourceSchema(schema="my:schema", name="MyResource")
-    extension = MyExtension(schema="my:schema:extension", name="MyExtension")
+    class MyExtension(SchemaExtension):
+        schema = "my:schema:extension"
+        name = "MyExtension"
+        base_attrs = [Integer("age", required=True)]
+
+    schema = MyResource()
+    extension = MyExtension()
     schema.extend(extension, required=False)
 
     issues = schema.validate(
@@ -605,6 +631,8 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
 
 def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_has_value_none():
     class MyResource(ResourceSchema):
+        schema = "my:schema"
+        name = "MyResource"
         base_attrs = [
             Complex(
                 name="super_complex",
@@ -617,7 +645,7 @@ def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_
             )
         ]
 
-    my_resource = MyResource(schema="my:schema", name="MyResource")
+    my_resource = MyResource()
     data = SCIMData(
         {
             "schemas": ["my:schema"],
@@ -708,18 +736,21 @@ def test_presence_validation_passes_if_provided_same_attr_from_different_schema_
 
 
 def test_registering_different_extensions_but_with_the_same_name_fails():
-    schema = ResourceSchema(
-        schema="my:schema",
-        name="MyResource",
-    )
-    extension_1 = SchemaExtension(
-        schema="my:schema:extension",
-        name="MyExtension",
-    )
-    extension_2 = SchemaExtension(
-        schema="my:schema:other_extension",
-        name="MyExtension",  # same name
-    )
+    class MyResourceSchema(ResourceSchema):
+        schema = "my:schema"
+        name = "MyResource"
+
+    class Extension1(SchemaExtension):
+        schema = "my:schema:extension"
+        name = "MyExtension"
+
+    class Extension2(SchemaExtension):
+        schema = "my:schema:other_extension"
+        name = "MyExtension"  # same name
+
+    schema = MyResourceSchema()
+    extension_1 = Extension1()
+    extension_2 = Extension2()
     schema.extend(extension_1)
 
     with pytest.raises(RuntimeError, match="extension 'MyExtension' already in resource"):

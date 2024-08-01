@@ -1,6 +1,6 @@
 import warnings
 from copy import copy
-from typing import Any, Iterable, MutableMapping, Optional
+from typing import Any, Iterable, MutableMapping, Optional, cast
 
 from typing_extensions import Self
 
@@ -39,6 +39,7 @@ def bulk_id_validator(value) -> ValidationIssues:
 
 
 class BaseSchema:
+    schema: str | SchemaURI
     base_attrs: list[Attribute] = [
         URIReference(
             name="schemas",
@@ -51,19 +52,17 @@ class BaseSchema:
 
     def __init__(
         self,
-        schema: str,
         attr_filter: Optional[AttrFilter] = None,
         common_attrs: Optional[Iterable[str]] = None,
     ):
-        schema = SchemaURI(schema)
-        register_schema(schema)
+        self.schema = SchemaURI(self.schema)
+        register_schema(self.schema)
         attrs = self._get_attrs()
         self._attrs = BoundedAttrs(
-            schema=schema,
+            schema=self.schema,
             attrs=attr_filter(attrs, include_required=True) if attr_filter else attrs,
             common_attrs=list(common_attrs or []) + ["schemas"],
         )
-        self._schema = schema
 
     @property
     def attrs(self) -> BoundedAttrs:
@@ -71,11 +70,7 @@ class BaseSchema:
 
     @property
     def schemas(self) -> list[str]:
-        return [self._schema]
-
-    @property
-    def schema(self) -> SchemaURI:
-        return self._schema
+        return [self.schema]
 
     def _get_attrs(self) -> list[Attribute]:
         attrs = []
@@ -393,6 +388,8 @@ def validate_resource_type_consistency(
 
 
 class BaseResourceSchema(BaseSchema):
+    name: str
+    endpoint: Optional[str] = None
     base_attrs: list[Attribute] = [
         Complex(
             name="meta",
@@ -430,25 +427,14 @@ class BaseResourceSchema(BaseSchema):
         )
     ]
 
-    def __init__(self, name: str, endpoint: str = "", **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._name = name
-        self._endpoint = endpoint or f"/{self._name}"
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def endpoint(self) -> str:
-        return self._endpoint
-
-    @endpoint.setter
-    def endpoint(self, value) -> None:
-        self._endpoint = value
+        self.endpoint = self.endpoint or f"/{self.name}"
 
 
 class ResourceSchema(BaseResourceSchema):
+    plural_name: str
+    description: str = ""
     base_attrs: list[Attribute] = [
         String(
             name="id",
@@ -467,38 +453,13 @@ class ResourceSchema(BaseResourceSchema):
         ),
     ]
 
-    def __init__(
-        self,
-        schema: str | SchemaURI,
-        name: str,
-        plural_name: Optional[str] = None,
-        description: str = "",
-        endpoint: Optional[str] = None,
-        attr_filter: Optional[AttrFilter] = None,
-    ):
+    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+        self.schema = SchemaURI(self.schema)
+        self.plural_name = self.plural_name or self.name
+        self.endpoint = self.endpoint or f"/{self.plural_name}"
         self._common_attrs = ["id", "externalid", "meta"]
-        super().__init__(
-            name=name,
-            schema=schema,
-            attr_filter=attr_filter,
-            common_attrs=self._common_attrs,
-        )
+        super().__init__(attr_filter=attr_filter, common_attrs=self._common_attrs)
         self._schema_extensions: dict[str, dict] = {}
-        self._plural_name = plural_name or name
-        self._endpoint = endpoint or f"/{self._plural_name}"
-        self._description = description
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def description(self) -> str:
-        return self._description
-
-    @property
-    def plural_name(self) -> str:
-        return self._plural_name
 
     @property
     def schemas(self) -> list[str]:
@@ -540,7 +501,7 @@ class ResourceSchema(BaseResourceSchema):
                     category=ScimpleUserWarning,
                 )
         self._attrs.extend(
-            schema=extension.schema,
+            schema=cast(SchemaURI, extension.schema),
             attrs=extension.attrs,
         )
 
@@ -589,39 +550,22 @@ class ResourceSchema(BaseResourceSchema):
 
 
 class SchemaExtension:
-    default_attrs: list[Attribute] = []
+    schema: str | SchemaURI
+    name: str
+    description: str = ""
+    base_attrs: list[Attribute] = []
 
-    def __init__(
-        self,
-        schema: str,
-        name: str,
-        description: str = "",
-        attr_filter: Optional[AttrFilter] = None,
-    ):
-        self._schema = SchemaURI(schema)
-        register_schema(self._schema, True)
+    def __init__(self, attr_filter: Optional[AttrFilter] = None):
+        self.schema = SchemaURI(self.schema)
+        register_schema(self.schema, True)
         self._attrs = BoundedAttrs(
-            schema=self._schema,
+            schema=self.schema,
             attrs=(
-                attr_filter(self.default_attrs, include_required=True)
+                attr_filter(self.base_attrs, include_required=True)
                 if attr_filter
-                else self.default_attrs
+                else self.base_attrs
             ),
         )
-        self._name = name
-        self._description = description
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def description(self) -> str:
-        return self._description
-
-    @property
-    def schema(self) -> SchemaURI:
-        return self._schema
 
     @property
     def attrs(self) -> BoundedAttrs:

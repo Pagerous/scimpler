@@ -1,5 +1,3 @@
-from typing import Optional
-
 from scimpler.data.attrs import (
     Attribute,
     AttributeMutability,
@@ -7,10 +5,15 @@ from scimpler.data.attrs import (
     SCIMReference,
     String,
 )
-from scimpler.data.schemas import AttrFilter, ResourceSchema
+from scimpler.data.schemas import ResourceSchema
 
 
 class GroupSchema(ResourceSchema):
+    schema = "urn:ietf:params:scim:schemas:core:2.0:Group"
+    name = "Group"
+    plural_name = "Groups"
+    endpoint = "/Groups"
+    description = "Group"
     base_attrs: list[Attribute] = [
         String(
             name="displayName",
@@ -46,13 +49,3 @@ class GroupSchema(ResourceSchema):
             ],
         ),
     ]
-
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:Group",
-            name="Group",
-            plural_name="Groups",
-            endpoint="/Groups",
-            description="Group",
-            attr_filter=attr_filter,
-        )

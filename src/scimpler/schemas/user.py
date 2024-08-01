@@ -1,6 +1,5 @@
 import re
 import zoneinfo
-from typing import Optional
 
 import iso3166
 import phonenumbers
@@ -20,7 +19,7 @@ from scimpler.data.attrs import (
     String,
     URIReference,
 )
-from scimpler.data.schemas import AttrFilter, ResourceSchema, SchemaExtension
+from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 _ACCEPT_LANGUAGE_REGEX = re.compile(
@@ -112,6 +111,11 @@ def _process_ims_value(value: str) -> str:
 
 
 class UserSchema(ResourceSchema):
+    schema = "urn:ietf:params:scim:schemas:core:2.0:User"
+    name = "User"
+    plural_name = "Users"
+    description = "User Account"
+    endpoint = "/Users"
     base_attrs: list[Attribute] = [
         String(
             name="userName",
@@ -579,16 +583,6 @@ class UserSchema(ResourceSchema):
         ),
     ]
 
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:User",
-            name="User",
-            plural_name="Users",
-            description="User Account",
-            endpoint="/Users",
-            attr_filter=attr_filter,
-        )
-
     def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = super()._validate(data)
         username = data.get("userName")
@@ -602,7 +596,9 @@ class UserSchema(ResourceSchema):
 
 
 class EnterpriseUserSchemaExtension(SchemaExtension):
-    default_attrs: list[Attribute] = [
+    schema = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"
+    name = "EnterpriseUser"
+    base_attrs: list[Attribute] = [
         String(
             name="employeeNumber",
             description=(
@@ -654,10 +650,3 @@ class EnterpriseUserSchemaExtension(SchemaExtension):
             ],
         ),
     ]
-
-    def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
-            name="EnterpriseUser",
-            attr_filter=attr_filter,
-        )

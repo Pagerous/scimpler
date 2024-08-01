@@ -37,6 +37,7 @@ def _process_count(value: int) -> int:
 
 
 class SearchRequestSchema(BaseSchema):
+    schema = "urn:ietf:params:scim:api:messages:2.0:SearchRequest"
     base_attrs: list[Attribute] = [
         String(
             name="attributes",
@@ -77,10 +78,7 @@ class SearchRequestSchema(BaseSchema):
     ]
 
     def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:SearchRequest",
-            attr_filter=attr_filter,
-        )
+        super().__init__(attr_filter=attr_filter)
 
     @classmethod
     def from_config(cls, config: Optional[ServiceProviderConfig] = None) -> "SearchRequestSchema":

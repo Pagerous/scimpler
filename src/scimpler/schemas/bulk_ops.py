@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from scimpler.container import Missing, SCIMData
 from scimpler.data.attrs import Complex, ExternalReference, Integer, String, Unknown
-from scimpler.data.schemas import AttrFilter, BaseSchema
+from scimpler.data.schemas import BaseSchema
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.schemas.error import ErrorSchema
 
@@ -83,6 +83,7 @@ def deserialize_request_operations(value: list[SCIMData]) -> list[SCIMData]:
 
 
 class BulkRequestSchema(BaseSchema):
+    schema = "urn:ietf:params:scim:api:messages:2.0:BulkRequest"
     base_attrs = [
         Integer("failOnErrors"),
         Complex(
@@ -112,12 +113,8 @@ class BulkRequestSchema(BaseSchema):
     def __init__(
         self,
         sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]],
-        attr_filter: Optional[AttrFilter] = None,
     ):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:BulkRequest",
-            attr_filter=attr_filter,
-        )
+        super().__init__()
         self._sub_schemas = sub_schemas
 
     def _deserialize(self, data: SCIMData) -> SCIMData:
@@ -210,6 +207,7 @@ def _validate_status(value: Any) -> ValidationIssues:
 
 
 class BulkResponseSchema(BaseSchema):
+    schema = "urn:ietf:params:scim:api:messages:2.0:BulkResponse"
     base_attrs = [
         Complex(
             sub_attributes=[
@@ -240,12 +238,8 @@ class BulkResponseSchema(BaseSchema):
         self,
         sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]],
         error_schema: ErrorSchema,
-        attr_filter: Optional[AttrFilter] = None,
     ):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:BulkResponse",
-            attr_filter=attr_filter,
-        )
+        super().__init__()
         self._sub_schemas = sub_schemas
         self._error_schema = error_schema
 

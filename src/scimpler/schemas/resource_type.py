@@ -12,6 +12,9 @@ from scimpler.data.schemas import BaseResourceSchema, ResourceSchema
 
 
 class ResourceTypeSchema(BaseResourceSchema):
+    schema = "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
+    name = "ResourceType"
+    endpoint = "/ResourceTypes"
     base_attrs = [
         String(
             name="id",
@@ -88,13 +91,6 @@ class ResourceTypeSchema(BaseResourceSchema):
             ],
         ),
     ]
-
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:ResourceType",
-            name="ResourceType",
-            endpoint="/ResourceTypes",
-        )
 
     def get_repr(self, schema: ResourceSchema) -> dict[str, Any]:
         return {

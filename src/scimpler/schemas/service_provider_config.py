@@ -14,6 +14,9 @@ from scimpler.data.schemas import BaseResourceSchema, bulk_id_validator
 
 
 class ServiceProviderConfigSchema(BaseResourceSchema):
+    schema = "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"
+    name = "ServiceProviderConfig"
+    endpoint = "/ServiceProviderConfig"
     base_attrs: list[Attribute] = [
         String(
             name="id",
@@ -208,10 +211,3 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             ],
         ),
     ]
-
-    def __init__(self):
-        super().__init__(
-            schema="urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig",
-            name="ServiceProviderConfig",
-            endpoint="/ServiceProviderConfig",
-        )

@@ -21,6 +21,7 @@ def _validate_resources_type(value) -> ValidationIssues:
 
 
 class ListResponseSchema(BaseSchema):
+    schema = "urn:ietf:params:scim:api:messages:2.0:ListResponse"
     base_attrs: list[Attribute] = [
         Integer("totalResults", required=True),
         Integer("startIndex"),
@@ -33,9 +34,7 @@ class ListResponseSchema(BaseSchema):
     ]
 
     def __init__(self, resource_schemas: Sequence[BaseResourceSchema]):
-        super().__init__(
-            schema="urn:ietf:params:scim:api:messages:2.0:ListResponse",
-        )
+        super().__init__()
         self._contained_schemas = list(resource_schemas)
 
     @property

@@ -22,6 +22,7 @@ def validate_error_status(value: str) -> ValidationIssues:
 
 
 class ErrorSchema(BaseSchema):
+    schema = "urn:ietf:params:scim:api:messages:2.0:Error"
     base_attrs: list[Attribute] = [
         String(
             name="status",
@@ -53,4 +54,4 @@ class ErrorSchema(BaseSchema):
     ]
 
     def __init__(self):
-        super().__init__(schema="urn:ietf:params:scim:api:messages:2.0:Error")
+        super().__init__()
