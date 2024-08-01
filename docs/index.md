@@ -16,6 +16,20 @@ and [RFC-7644](https://www.rfc-editor.org/rfc/rfc7644).
 - Stateless data validation
 - Optional integration with [marshmallow](https://marshmallow.readthedocs.io/en/stable/) schemas
 
+# Installation
+
+Use **pip** to install `scimpler`.
+
+```
+pip install scimpler
+```
+
+If you want to integrate with marshmallow, install `scimpler` with optional dependencies.
+
+```
+pip install "scimpler[marshmallow]"
+```
+
 # Examples
 ## User resource POST request validation
 
@@ -48,7 +62,7 @@ Output
 ## Filter deserialization
 
 ```python
-from scimpler import Filter
+from scimpler.data import Filter
 
 filter_ = Filter.deserialize(
     "emails[type eq 'work' and value co '@example.com'] "
