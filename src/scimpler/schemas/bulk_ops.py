@@ -3,11 +3,11 @@ from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any, Optional
 
-from scimple.schemas.error import ErrorSchema
-from scimple.container import Missing, SCIMData
-from scimple.data.attrs import Complex, ExternalReference, Integer, String, Unknown
-from scimple.data.schemas import AttrFilter, BaseSchema
-from scimple.error import ValidationError, ValidationIssues
+from scimpler.schemas.error import ErrorSchema
+from scimpler.container import Missing, SCIMData
+from scimpler.data.attrs import Complex, ExternalReference, Integer, String, Unknown
+from scimpler.data.schemas import AttrFilter, BaseSchema
+from scimpler.error import ValidationError, ValidationIssues
 
 _RESOURCE_TYPE_REGEX = re.compile(r"/\w+")
 _RESOURCE_OBJECT_REGEX = re.compile(r"/\w+/.*")

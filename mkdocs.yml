@@ -1,7 +1,12 @@
-site_name: scimple
+site_name: scimpler
+site_description: simpler SCIM integrations
+site_author: Arkadiusz Pajor
+repo_url: https://github.com/Pagerous/scimple
+repo_name: scimpler
 nav:
-  - Home: index.md
-  - About: about.md
+  - Introduction: index.md
+  - User's Guide: users_guide.md
+  - API Reference: api_reference.md
 theme: material
 plugins:
   - search
@@ -11,3 +16,12 @@ plugins:
         python:
           options:
             docstring_style: google
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences

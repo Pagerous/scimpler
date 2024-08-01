@@ -1,6 +1,6 @@
 import pytest
 
-from scimple.error import ValidationError, ValidationIssues, ValidationWarning
+from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 
 @pytest.fixture

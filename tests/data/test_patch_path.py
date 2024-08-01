@@ -1,10 +1,10 @@
 import pytest
 
-from scimple.container import AttrName, AttrRep
-from scimple.data.filter import Filter
-from scimple.data.operator import ComplexAttributeOperator, Equal
-from scimple.data.patch_path import PatchPath
-from scimple.data.schemas import BaseSchema
+from scimpler.container import AttrName, AttrRep
+from scimpler.data.filter import Filter
+from scimpler.data.operator import ComplexAttributeOperator, Equal
+from scimpler.data.patch_path import PatchPath
+from scimpler.data.schemas import BaseSchema
 
 
 @pytest.mark.parametrize(

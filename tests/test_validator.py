@@ -3,18 +3,18 @@ from datetime import datetime
 
 import pytest
 
-from scimple.schemas import service_provider_config
-from scimple.schemas.resource_type import ResourceTypeSchema
-from scimple.schemas.schema import SchemaSchema
-from scimple.config import create_service_provider_config
-from scimple.container import AttrRep, BoundedAttrRep, Missing
-from scimple.data.attr_presence import AttrPresenceConfig
-from scimple.data.attrs import DateTime
-from scimple.data.filter import Filter
-from scimple.data.operator import Present
-from scimple.data.patch_path import PatchPath
-from scimple.data.sorter import Sorter
-from scimple.validator import (
+from scimpler.schemas import service_provider_config
+from scimpler.schemas.resource_type import ResourceTypeSchema
+from scimpler.schemas.schema import SchemaSchema
+from scimpler.config import create_service_provider_config
+from scimpler.container import AttrRep, BoundedAttrRep, Missing
+from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attrs import DateTime
+from scimpler.data.filter import Filter
+from scimpler.data.operator import Present
+from scimpler.data.patch_path import PatchPath
+from scimpler.data.sorter import Sorter
+from scimpler.validator import (
     BulkOperations,
     Error,
     ResourceObjectDELETE,

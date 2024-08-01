@@ -1,13 +1,13 @@
 from typing import Optional
 
-from scimple.data.attrs import (
+from scimpler.data.attrs import (
     Attribute,
     AttributeMutability,
     Complex,
     SCIMReference,
     String,
 )
-from scimple.data.schemas import AttrFilter, ResourceSchema
+from scimpler.data.schemas import AttrFilter, ResourceSchema
 
 
 class GroupSchema(ResourceSchema):

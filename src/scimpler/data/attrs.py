@@ -23,8 +23,8 @@ from urllib.parse import urlparse
 import precis_i18n.profile
 from precis_i18n import get_profile
 
-from scimple.constants import SCIMType
-from scimple.container import (
+from scimpler.constants import SCIMType
+from scimpler.container import (
     AttrName,
     AttrRep,
     AttrRepFactory,
@@ -34,11 +34,11 @@ from scimple.container import (
     SchemaURI,
     SCIMData,
 )
-from scimple.error import ValidationError, ValidationIssues, ValidationWarning
-from scimple.registry import resources
+from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
+from scimpler.registry import resources
 
 if TYPE_CHECKING:
-    from scimple.data.patch_path import PatchPath
+    from scimpler.data.patch_path import PatchPath
 
 
 TAttrFilterInput = TypeVar(

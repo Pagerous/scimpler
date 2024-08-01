@@ -6,8 +6,8 @@ import iso3166
 import phonenumbers
 import precis_i18n
 
-from scimple.container import SCIMData
-from scimple.data.attrs import (
+from scimpler.container import SCIMData
+from scimpler.data.attrs import (
     Attribute,
     AttributeMutability,
     AttributeReturn,
@@ -20,8 +20,8 @@ from scimple.data.attrs import (
     String,
     URIReference,
 )
-from scimple.data.schemas import AttrFilter, ResourceSchema, SchemaExtension
-from scimple.error import ValidationError, ValidationIssues, ValidationWarning
+from scimpler.data.schemas import AttrFilter, ResourceSchema, SchemaExtension
+from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 _ACCEPT_LANGUAGE_REGEX = re.compile(
     r"\s*([a-z]{2})(?:-[A-Z]{2})?(?:\s*;q=([0-9]\.[0-9]))?(?:\s*,|$)"

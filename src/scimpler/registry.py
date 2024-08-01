@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING, Any, Callable
 
-from scimple.config import ServiceProviderConfig, create_service_provider_config
+from scimpler.config import ServiceProviderConfig, create_service_provider_config
 
 if TYPE_CHECKING:
-    from scimple.container import SchemaURI
-    from scimple.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
-    from scimple.data.schemas import ResourceSchema
+    from scimpler.container import SchemaURI
+    from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
+    from scimpler.data.schemas import ResourceSchema
 
 
 resources: dict[str, "ResourceSchema"] = {}

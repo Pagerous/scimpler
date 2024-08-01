@@ -3,10 +3,10 @@ from typing import Optional
 
 import pytest
 
-from scimple import registry
-from scimple.config import create_service_provider_config
-from scimple.container import SCIMData
-from scimple.data.attrs import (
+from scimpler import registry
+from scimpler.config import create_service_provider_config
+from scimpler.container import SCIMData
+from scimpler.data.attrs import (
     AttrFilter,
     Binary,
     Boolean,
@@ -19,10 +19,10 @@ from scimple.data.attrs import (
     String,
     URIReference,
 )
-from scimple.data.patch_path import PatchPath
-from scimple.data.schemas import ResourceSchema
-from scimple.schemas import GroupSchema, UserSchema
-from scimple.schemas.user import EnterpriseUserSchemaExtension
+from scimpler.data.patch_path import PatchPath
+from scimpler.data.schemas import ResourceSchema
+from scimpler.schemas import GroupSchema, UserSchema
+from scimpler.schemas.user import EnterpriseUserSchemaExtension
 
 
 class FakeSchema(ResourceSchema):

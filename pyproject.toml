@@ -1,12 +1,12 @@
 [tool.poetry]
-name = "scimple"
+name = "scimpler"
 version = "0.1.0"
 description = ""
 authors = ["Arkadiusz Pajor <arkadiuszpajor97@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 marshmallow = {version = "^3.21.1", optional = true}
 precis-i18n = "^1.1.0"
 phonenumbers = "^8.13.35"
@@ -22,7 +22,7 @@ isort = "^5.12.0"
 pytest-cov = "^4.1.0"
 mypy = "^1.10.0"
 ruff = "^0.4.8"
-ipython = "^8.25.0"
+ipython = "^8.18.1"
 
 [tool.pytest.ini_options]
 pythonpath = "src"

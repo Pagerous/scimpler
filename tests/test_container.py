@@ -1,6 +1,6 @@
 import pytest
 
-from scimple.container import (
+from scimpler.container import (
     AttrRep,
     BoundedAttrRep,
     Invalid,

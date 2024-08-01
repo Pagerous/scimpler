@@ -1,7 +1,7 @@
 import pytest
 
-from scimple.data.operator import Equal, Present
-from scimple.registry import (
+from scimpler.data.operator import Equal, Present
+from scimpler.registry import (
     register_binary_operator,
     register_resource_schema,
     register_unary_operator,

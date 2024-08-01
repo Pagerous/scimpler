@@ -1,8 +1,8 @@
 import abc
 from typing import Any, Optional, Sequence, Union, cast
 
-from scimple import registry
-from scimple.schemas import (
+from scimpler import registry
+from scimpler.schemas import (
     BulkRequestSchema,
     BulkResponseSchema,
     ErrorSchema,
@@ -10,19 +10,19 @@ from scimple.schemas import (
     PatchOpSchema,
     SearchRequestSchema,
 )
-from scimple.config import ServiceProviderConfig
-from scimple.container import AttrRep, BoundedAttrRep, Missing, SCIMData
-from scimple.data.attr_presence import AttrPresenceConfig
-from scimple.data.attrs import (
+from scimpler.config import ServiceProviderConfig
+from scimpler.container import AttrRep, BoundedAttrRep, Missing, SCIMData
+from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attrs import (
     AttrFilter,
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
 )
-from scimple.data.filter import Filter
-from scimple.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
-from scimple.data.sorter import Sorter
-from scimple.error import ValidationError, ValidationIssues, ValidationWarning
+from scimpler.data.filter import Filter
+from scimpler.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
+from scimpler.data.sorter import Sorter
+from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 
 class Validator(abc.ABC):

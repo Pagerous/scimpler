@@ -3,17 +3,17 @@ from typing import Generator
 
 import pytest
 
-from scimple.container import AttrRep, BoundedAttrRep, SCIMData
-from scimple.data.attr_presence import AttrPresenceConfig
-from scimple.data.attrs import AttrFilter, Boolean, Complex, Integer, String
-from scimple.data.schemas import (
+from scimpler.container import AttrRep, BoundedAttrRep, SCIMData
+from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attrs import AttrFilter, Boolean, Complex, Integer, String
+from scimpler.data.schemas import (
     BaseResourceSchema,
     ResourceSchema,
     SchemaExtension,
     validate_resource_type_consistency,
 )
-from scimple.registry import register_resource_schema, resources, schemas
-from scimple.warning import ScimpleUserWarning
+from scimpler.registry import register_resource_schema, resources, schemas
+from scimpler.warning import ScimpleUserWarning
 
 
 @pytest.fixture

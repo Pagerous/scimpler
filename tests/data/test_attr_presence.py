@@ -1,7 +1,7 @@
 import pytest
 
-from scimple.container import AttrRep
-from scimple.data.attr_presence import (
+from scimpler.container import AttrRep
+from scimpler.data.attr_presence import (
     AttrPresenceConfig,
     DataInclusivity,
     validate_presence,

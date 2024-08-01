@@ -1,4 +1,4 @@
-from scimple.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_presence import AttrPresenceConfig
 
 
 def test_bad_preferred_langauge_is_validated(user_data_client, user_schema):

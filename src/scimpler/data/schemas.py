@@ -4,13 +4,13 @@ from typing import Any, Iterable, MutableMapping, Optional
 
 from typing_extensions import Self
 
-from scimple.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMData
-from scimple.data.attr_presence import (
+from scimpler.container import BoundedAttrRep, Invalid, Missing, SchemaURI, SCIMData
+from scimpler.data.attr_presence import (
     AttrPresenceConfig,
     DataInclusivity,
     validate_presence,
 )
-from scimple.data.attrs import (
+from scimpler.data.attrs import (
     AttrFilter,
     Attribute,
     AttributeIssuer,
@@ -23,9 +23,9 @@ from scimple.data.attrs import (
     String,
     URIReference,
 )
-from scimple.error import ValidationError, ValidationIssues
-from scimple.registry import register_schema
-from scimple.warning import ScimpleUserWarning
+from scimpler.error import ValidationError, ValidationIssues
+from scimpler.registry import register_schema
+from scimpler.warning import ScimpleUserWarning
 
 
 def bulk_id_validator(value) -> ValidationIssues:

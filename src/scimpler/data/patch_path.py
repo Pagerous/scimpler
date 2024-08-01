@@ -1,19 +1,19 @@
 from copy import copy
 from typing import Any, Generic, Optional, TypeVar
 
-from scimple.container import (
+from scimpler.container import (
     AttrName,
     AttrRep,
     AttrRepFactory,
     BoundedAttrRep,
     SCIMData,
 )
-from scimple.data.attrs import Complex
-from scimple.data.filter import Filter
-from scimple.data.operator import ComplexAttributeOperator
-from scimple.data.schemas import BaseSchema
-from scimple.data.utils import decode_placeholders, encode_strings
-from scimple.error import SCIMErrorType, ValidationError, ValidationIssues
+from scimpler.data.attrs import Complex
+from scimpler.data.filter import Filter
+from scimpler.data.operator import ComplexAttributeOperator
+from scimpler.data.schemas import BaseSchema
+from scimpler.data.utils import decode_placeholders, encode_strings
+from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
 
 TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
 

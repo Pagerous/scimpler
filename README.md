@@ -1,1 +1,1 @@
-# Scimple - SCIM 2.0 made simple.
+# Scimpler - SCIM 2.0 made simpler.

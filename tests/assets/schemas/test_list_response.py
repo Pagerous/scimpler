@@ -1,8 +1,8 @@
 import pytest
 
-from scimple.schemas import list_response
-from scimple.container import AttrRep, SCIMData
-from scimple.data.attr_presence import AttrPresenceConfig
+from scimpler.schemas import list_response
+from scimpler.container import AttrRep, SCIMData
+from scimpler.data.attr_presence import AttrPresenceConfig
 
 
 def test_validate_items_per_page_consistency__fails_if_not_matching_resources(list_user_data):

@@ -1,8 +1,8 @@
 import pytest
 
-from scimple.container import AttrRep, SCIMData
-from scimple.data.attrs import SCIMReference, String
-from scimple.data.sorter import AlwaysLastKey, Sorter, StringKey
+from scimpler.container import AttrRep, SCIMData
+from scimpler.data.attrs import SCIMReference, String
+from scimpler.data.sorter import AlwaysLastKey, Sorter, StringKey
 
 
 def test_items_are_sorted_according_to_attr_value(user_schema):

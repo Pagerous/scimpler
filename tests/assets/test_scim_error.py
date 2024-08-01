@@ -1,4 +1,4 @@
-from scimple.error import create_error
+from scimpler.error import create_error
 
 
 def test_full_scim_error_can_be_created():
