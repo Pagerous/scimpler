@@ -849,7 +849,11 @@ _default_sub_attrs = [
         mutability=AttributeMutability.IMMUTABLE,
     ),
     String("type"),
-    Boolean("primary"),
+    Boolean(
+        "primary",
+        serializer=lambda value: value or False,
+        deserializer=lambda value: value or False,
+    ),
     URIReference("$ref"),
 ]
 
