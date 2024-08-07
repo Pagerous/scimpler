@@ -472,9 +472,9 @@ class ResourceSchema(BaseResourceSchema):
 
     def __init__(self, attr_filter: Optional[AttrFilter] = None):
         self.schema = SchemaURI(self.schema)
-        self.plural_name = self.plural_name or self.name
+        self.plural_name = getattr(self, "plural_name", self.name)
         self.endpoint = self.endpoint or f"/{self.plural_name}"
-        self._common_attrs = ["id", "externalid", "meta"]
+        self._common_attrs = ["id", "externalId", "meta"]
         super().__init__(attr_filter=attr_filter, common_attrs=self._common_attrs)
         self._schema_extensions: dict[str, dict] = {}
 
@@ -547,7 +547,7 @@ class ResourceSchema(BaseResourceSchema):
         known_schemas = [item.lower() for item in self.schemas]
         provided_schemas = [item.lower() for item in provided_schemas if item is not Invalid]
         reported_missing = set()
-        for k, v in data.to_dict().items():
+        for k, v in data.items():
             k_lower = k.lower()
             if k_lower in known_schemas and k_lower not in provided_schemas:
                 issues.add_error(

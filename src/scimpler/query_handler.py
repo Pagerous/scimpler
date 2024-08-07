@@ -27,7 +27,7 @@ class QueryHandler(abc.ABC):
         return self.schema.validate(query_params)
 
     def deserialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> SCIMData:
-        query_params = query_params or {}
+        query_params = SCIMData(query_params or {})
         attributes = query_params.get("attributes")
         if isinstance(attributes, str):
             attributes = [item.strip() for item in attributes.split(",")]
@@ -36,16 +36,18 @@ class QueryHandler(abc.ABC):
         if isinstance(exclude_attributes, str):
             exclude_attributes = [item.strip() for item in exclude_attributes.split(",")]
             query_params["excludeAttributes"] = exclude_attributes
-        return self.schema.deserialize(query_params)
+        query_params.update(self.schema.deserialize(query_params))
+        return query_params
 
     def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> SCIMData:
-        query_params = query_params or {}
+        query_params = SCIMData(query_params or {})
         serialized = self.schema.serialize(query_params)
         if attributes := query_params.get("attributes"):
             serialized["attributes"] = ",".join(attributes)
         if exclude_attributes := query_params.get("excludeAttributes"):
             serialized["excludeAttributes"] = ",".join(exclude_attributes)
-        return serialized
+        query_params.update(serialized)
+        return query_params
 
 
 class GenericQueryHandler(QueryHandler, abc.ABC):
