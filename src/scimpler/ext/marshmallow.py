@@ -568,6 +568,9 @@ def _include_processing_in_schema(
             response_context_provider=response_context_provider,
         )
 
+    if not isinstance(scimple_schema, Attribute):
+        processors_["include_schema_data"] = scimple_schema.include_schema_data
+
     processors_["get_attribute"] = lambda _, obj, key, default: obj.get(key, default)
     class_ = type(
         type(scimple_schema).__name__,

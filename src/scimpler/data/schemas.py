@@ -379,6 +379,9 @@ class BaseSchema:
     ) -> bool:
         return True
 
+    def include_schema_data(self, data: MutableMapping) -> None:
+        data["schemas"] = [self.schema]
+
 
 def validate_resource_type_consistency(
     resource_type: str,
@@ -437,6 +440,13 @@ class BaseResourceSchema(BaseSchema):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.endpoint = self.endpoint or f"/{self.name}"
+
+    def include_schema_data(self, data: MutableMapping) -> None:
+        super().include_schema_data(data)
+        if "meta" in data:
+            data["meta"]["resourceType"] = self.name
+        else:
+            data["meta"] = {"resourceType": self.name}
 
 
 class ResourceSchema(BaseResourceSchema):
@@ -559,6 +569,14 @@ class ResourceSchema(BaseResourceSchema):
             return False
         return True
 
+    def include_schema_data(self, data: MutableMapping) -> None:
+        super().include_schema_data(data)
+        for extension, extension_attrs in self.attrs.extensions.items():
+            for attr_rep, _ in extension_attrs:
+                if attr_rep in data:
+                    data["schemas"].append(str(extension))
+                    break
+
 
 class SchemaExtension:
     schema: str | SchemaURI
@@ -571,11 +589,7 @@ class SchemaExtension:
         register_schema(self.schema, True)
         self._attrs = BoundedAttrs(
             schema=self.schema,
-            attrs=(
-                attr_filter(self.base_attrs, include_required=True)
-                if attr_filter
-                else self.base_attrs
-            ),
+            attrs=(attr_filter(self.base_attrs) if attr_filter else self.base_attrs),
         )
 
     @property
