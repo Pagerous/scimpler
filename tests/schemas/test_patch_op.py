@@ -43,8 +43,10 @@ def test_validate_patch_operations(value, expected_issues, user_schema):
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
-def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(op, user_schema):
-    schema = PatchOpSchema(resource_schema=user_schema)
+def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(
+    op, user_client_schema
+):
+    schema = PatchOpSchema(resource_schema=user_client_schema)
     input_data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [

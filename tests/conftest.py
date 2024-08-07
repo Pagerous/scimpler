@@ -6,6 +6,8 @@ from scimpler import registry
 from scimpler.config import create_service_provider_config
 from scimpler.container import SCIMData
 from scimpler.data.attrs import (
+    AttrFilter,
+    AttributeIssuer,
     Binary,
     Boolean,
     Complex,
@@ -77,6 +79,11 @@ _fake_schema = FakeSchema()
 @pytest.fixture(scope="session")
 def user_schema() -> UserSchema:
     return _user_schema
+
+
+@pytest.fixture(scope="session")
+def user_client_schema(user_schema) -> UserSchema:
+    return user_schema.clone(AttrFilter(filter_=lambda attr: attr.issuer != AttributeIssuer.SERVER))
 
 
 @pytest.fixture(scope="session")
@@ -357,7 +364,6 @@ def bulk_request_serialized():
                 "data": {
                     "schemas": [
                         "urn:ietf:params:scim:schemas:core:2.0:User",
-                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                     ],
                     "userName": "Alice",
                 },
@@ -369,7 +375,6 @@ def bulk_request_serialized():
                 "data": {
                     "schemas": [
                         "urn:ietf:params:scim:schemas:core:2.0:User",
-                        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
                     ],
                     "id": "b7c14771-226c-4d05-8860-134711653041",
                     "userName": "Bob",

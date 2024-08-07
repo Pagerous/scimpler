@@ -48,14 +48,14 @@ def schema_with_extensions() -> Generator[ResourceSchema, None, None]:
     schemas.pop("my:schema:other_extension")
 
 
-def test_correct_user_data_can_be_deserialized(user_data_client, user_schema):
+def test_correct_user_data_can_be_deserialized(user_data_client, user_client_schema):
     expected_data = deepcopy(user_data_client)
     user_data_client["unexpected"] = 123
 
-    data = user_schema.deserialize(user_data_client)
+    data = user_client_schema.deserialize(user_data_client)
 
-    assert data.to_dict() == expected_data
-    assert "unexpected" not in data.to_dict()
+    assert data == expected_data
+    assert "unexpected" not in data
 
 
 def test_validation_fails_if_bad_types(user_data_client, user_schema):
@@ -187,7 +187,7 @@ def test_schema_can_be_cloned_with_attr_filter_specified(user_schema):
         attr_filter=AttrFilter(filter_=lambda attr: attr.name in ["id", "userName"])
     )
 
-    assert len(list(schema.attrs)) == 2
+    assert len(list(schema.attrs)) == 3  # 'schemas' is always included
 
 
 def test_data_can_be_filtered_according_to_attr_filter(user_data_client, user_schema):

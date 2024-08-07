@@ -315,11 +315,8 @@ class ResourcesPOST(Validator):
         self._request_schema = resource_schema.clone(
             attr_filter=AttrFilter(
                 filter_=lambda attr: (
-                    (
-                        attr.mutability != AttributeMutability.READ_ONLY
-                        and attr.issuer != AttributeIssuer.SERVER
-                    )
-                    or attr.name == "schemas"
+                    attr.mutability != AttributeMutability.READ_ONLY
+                    and attr.issuer != AttributeIssuer.SERVER
                 )
             )
         )

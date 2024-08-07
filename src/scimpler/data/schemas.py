@@ -58,9 +58,16 @@ class BaseSchema:
         self.schema = SchemaURI(self.schema)
         register_schema(self.schema)
         attrs = self._get_attrs()
+        filtered_attrs = attr_filter(attrs) if attr_filter else attrs
+        for attr in filtered_attrs:
+            if attr.name == "schemas":
+                break
+        else:
+            filtered_attrs.insert(0, BaseSchema.base_attrs[0])
+
         self._attrs = BoundedAttrs(
             schema=self.schema,
-            attrs=attr_filter(attrs, include_required=True) if attr_filter else attrs,
+            attrs=filtered_attrs,
             common_attrs=list(common_attrs or []) + ["schemas"],
         )
 
@@ -134,7 +141,7 @@ class BaseSchema:
 
     def clone(self, attr_filter: AttrFilter) -> Self:
         cloned = copy(self)
-        cloned._attrs = self._attrs.clone(attr_filter)
+        cloned._attrs = self._attrs.clone(attr_filter, ignore_filter=["schemas"])
         return cloned
 
     def _validate_schemas_field(self, data):
@@ -507,7 +514,11 @@ class ResourceSchema(BaseResourceSchema):
 
     def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
-        resource_type = data.get(self.attrs.meta__resourcetype)
+        resource_type_rep = getattr(self.attrs, "meta__resourcetype", None)
+        # it means that schema doesn't contain 'meta.resourceType'
+        if resource_type_rep is None:
+            return issues
+        resource_type = data.get(resource_type_rep)
         if resource_type not in [Missing, Invalid]:
             issues.merge(
                 validate_resource_type_consistency(
