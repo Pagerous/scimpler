@@ -391,7 +391,11 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
             Binary("binary"),
             {"_errors": [{"code": 3, "context": {"expected": "base64"}}]},
         ),
-        ("abc", Binary("binary"), {"_errors": [{"code": 3, "context": {"expected": "base64"}}]}),
+        (
+            "abc",
+            Binary("binary", omit_padding=False),
+            {"_errors": [{"code": 3, "context": {"expected": "base64"}}]},
+        ),
         (
             123,
             DateTime("datetime"),

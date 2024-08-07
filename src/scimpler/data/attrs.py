@@ -638,9 +638,31 @@ class Binary(AttributeWithCaseExact):
     case-sensitive, since they are represented by base64-encoded strings.
     """
 
-    def __init__(self, name: Union[str, AttrName], **kwargs):
+    def __init__(
+        self,
+        name: Union[str, AttrName],
+        *,
+        url_safe: bool = False,
+        omit_padding: bool = True,
+        **kwargs,
+    ):
         kwargs["case_exact"] = True
         super().__init__(name=name, **kwargs)
+        self._url_safe = url_safe
+        if self._url_safe:
+            self._decoder = base64.urlsafe_b64decode
+        else:
+            self._decoder = base64.b64decode
+        self._omit_padding = omit_padding
+
+    def __eq__(self, other):
+        if not isinstance(other, Binary):
+            return False
+        return (
+            super().__eq__(other)
+            and self._url_safe == other._url_safe
+            and self._omit_padding == other._omit_padding
+        )
 
     @classmethod
     def scim_type(cls) -> SCIMType:
@@ -657,17 +679,19 @@ class Binary(AttributeWithCaseExact):
         issues.merge(self._validate_encoding(value))
         return issues
 
-    @staticmethod
-    def _validate_encoding(value: Any) -> ValidationIssues:
+    def _validate_encoding(self, value: Any) -> ValidationIssues:
         issues = ValidationIssues()
-        if len(value) % 4 != 0:
-            issues.add_error(
-                issue=ValidationError.bad_encoding("base64"),
-                proceed=False,
-            )
-            return issues
+        if (padding := len(value) % 4) != 0:
+            if self._omit_padding:
+                value += "=" * (4 - padding)
+            else:
+                issues.add_error(
+                    issue=ValidationError.bad_encoding("base64"),
+                    proceed=False,
+                )
+                return issues
         try:
-            base64.b64decode(value, validate=True)
+            self._decoder(value)
         except binascii.Error:
             issues.add_error(
                 issue=ValidationError.bad_encoding("base64"),
