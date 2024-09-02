@@ -1,3 +1,4 @@
+from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import (
     AttrFilter,
     Attribute,
@@ -19,6 +20,7 @@ from scimpler.data.schemas import ResourceSchema, SchemaExtension
 
 __all__ = [
     "AttrFilter",
+    "AttrPresenceConfig",
     "Attribute",
     "Attrs",
     "Binary",

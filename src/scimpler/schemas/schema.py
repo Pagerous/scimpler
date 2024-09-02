@@ -177,7 +177,7 @@ attributes = Complex(
 )
 
 
-class SchemaSchema(BaseResourceSchema):  # sorry for the name
+class SchemaDefinitionSchema(BaseResourceSchema):
     schema = "urn:ietf:params:scim:schemas:core:2.0:Schema"
     name = "Schema"
     endpoint = "/Schemas"

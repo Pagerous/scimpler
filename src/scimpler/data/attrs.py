@@ -276,6 +276,13 @@ class Attribute(abc.ABC):
         """
         return bool(self._deserializer or self._serializer)
 
+    @property
+    def custom_validators(self) -> list[_AttributeValidator]:
+        """
+        List of custom validators of the attribute, ran if built-in validation succeeds.
+        """
+        return self._validators
+
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._name})"
 
@@ -291,7 +298,7 @@ class Attribute(abc.ABC):
                 self._multi_valued == other._multi_valued,
                 self._mutability == other._mutability,
                 self._returned == other._returned,
-                self._validators == other._validators,
+                self.custom_validators == other.custom_validators,
                 self._deserializer == other._deserializer,
                 self._serializer == other._serializer,
                 self._validate_canonical_values == other._validate_canonical_values,

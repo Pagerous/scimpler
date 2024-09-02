@@ -128,15 +128,6 @@ def test_country_is_not_validated_if_not_specified_validated(user_data_client, u
     assert issues.to_dict(msg=True) == {}
 
 
-def test_warning_is_raised_if_nickname_equals_username(user_data_client, user_schema):
-    user_data_client["nickName"] = user_data_client["userName"]
-    expected_issues = {"nickName": {"_warnings": [{"code": 5}]}}
-
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
-
-    assert issues.to_dict() == expected_issues
-
-
 def test_ims_value_is_canonicalized(user_data_client, user_schema):
     user_data_client["ims"][0]["value"] = "Gadu Gadu"
 

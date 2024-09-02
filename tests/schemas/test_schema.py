@@ -1,5 +1,5 @@
 from scimpler.container import SCIMData
-from scimpler.schemas.schema import SchemaSchema, attributes
+from scimpler.schemas.schema import SchemaDefinitionSchema, attributes
 
 
 def test_validation_attributes_field_fails_for_bad_sub_attributes():
@@ -140,20 +140,20 @@ def test_validation_fails_if_missing_case_exact_for_string_attr():
 
 
 def test_resource_schema_representation_can_be_generated(user_schema):
-    output = SchemaSchema().get_repr(user_schema)
+    output = SchemaDefinitionSchema().get_repr(user_schema)
 
     for attr in output["attributes"]:
         assert attr["name"] not in ["id", "meta", "externalId"]
 
 
 def test_schema_extension_representation_can_be_generated(user_schema):
-    output = SchemaSchema().get_repr(user_schema.get_extension("EnterpriseUser"))
+    output = SchemaDefinitionSchema().get_repr(user_schema.get_extension("EnterpriseUser"))
 
     assert output
 
 
 def test_schema_data_can_be_serialized(user_schema):
-    schema = SchemaSchema()
+    schema = SchemaDefinitionSchema()
     data = schema.get_repr(user_schema)
 
     serialized = schema.serialize(data)
