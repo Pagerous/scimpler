@@ -13,7 +13,6 @@ Check below topics to learn more about `scimpler`!
 [Schema definition](users_guide.md#schema-definition)<br>
 [Data validation](users_guide.md#data-validation)
 
----
 
 ## Schema definition
 
@@ -98,8 +97,137 @@ vehicle_schema.extend(vehicle_extension)
 
 Every schema provides three main functionalities: data **validation**, **deserialization**, and **serialization**.
 
----
 
 ## Data validation
 
-Placeholder
+All built-in schemas incorporate validation rules described in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643)
+that does not require state (syntax and semantics validation). Check [SCIM compliance](compliance.md) for details.
+
+Below example presents schema-level data validation.
+
+```python
+from scimpler.schemas import UserSchema
+
+user = UserSchema()
+data = {
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    "username": "Pagerous",
+    "id": 42,
+}
+
+issues = user.validate(data)
+```
+
+`BaseSchema.validate` returns `scimpler.error.ValidationIssues` always. It contains validation
+errors and validation warnings. Call `ValidationIssues.to_dict`, to have nice overview of the issues.
+
+```python
+>>> print(issues.to_dict())
+{"id": {"_errors": [{"code": 2}]}}
+```
+
+
+Every validation error and warning has [code](issue-codes.md). To see a message, pass `message` argument.
+
+```python
+>>> print(issues.to_dict(msg=True))
+{"id": {"_errors": [{"code": 2, "message": "bad type, expecting 'string'"}]}}
+```
+
+It is also possible to validate data for every API message schema.
+
+```python
+from scimpler.schemas import ListResponseSchema, UserSchema, GroupSchema
+
+list_response = ListResponseSchema(
+    resource_schemas=[UserSchema(), GroupSchema()]
+)
+data = {
+    "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+    "totalResults": 2,
+    "startIndex": 1,
+    "itemsPerPage": 2,
+    "Resources": [
+        {
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+            "username": "Pagerous",
+            "id": 42,
+        },
+        {
+            "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
+            "displayName": "scimplerUsers",
+            "members": [
+                {
+                    "value": 42,
+                    "type": "GitHubUser",
+                }
+            ]
+        }
+    ],
+}
+
+issues = list_response.validate(data)
+```
+
+```python
+>>> print(issues.to_dict(message=True))
+{
+  "Resources": {
+    "0": {
+      "id": {
+        "_errors": [
+          {
+            "code": 2,
+            "error": "bad type, expecting 'string'"
+          }
+        ]
+      }
+    },
+    "1": {
+      "id": {
+        "_errors": [
+          {
+            "code": 5,
+            "error": 'missing'
+          }
+        ]
+      },
+      "members": {
+        "0": {
+          "value": {
+            "_errors": [
+              {
+                "code": 2,
+                "error": "bad type, expecting 'string'"
+              }
+            ]
+          },
+          "type": {
+            "_errors": [
+              {
+                "code": 9,
+                "error": "must be one of: ['user', 'group']"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+!!! info
+    By default, schema-level validation is performed out of SCIM request / response context, and some
+    rules are not checked. To enable request-specific or response-specific validation, pass
+    **presence_config** parameter to `BaseSchema.validate`.
+
+    ```python
+    from scimpler.data import AttrPresenceConfig
+    from scimpler.schemas import UserSchema
+    
+
+    user = UserSchema()
+    data = {...}
+    issues = user.validate(data, presence_config=AttrPresenceConfig("RESPONSE"))
+    ```
