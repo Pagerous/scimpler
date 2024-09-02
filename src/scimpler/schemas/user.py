@@ -5,7 +5,6 @@ import iso3166
 import phonenumbers
 import precis_i18n
 
-from scimpler.container import SCIMData
 from scimpler.data.attrs import (
     Attribute,
     AttributeMutability,
@@ -27,7 +26,7 @@ _ACCEPT_LANGUAGE_REGEX = re.compile(
 )
 
 
-def _validate_preferred_language(value: str) -> ValidationIssues:
+def validate_preferred_language(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     if _ACCEPT_LANGUAGE_REGEX.fullmatch(value) is None:
         issues.add_error(
@@ -48,7 +47,7 @@ _LANGUAGE_TAG_REGEX = re.compile(
 )
 
 
-def _validate_locale(value: str) -> ValidationIssues:
+def validate_locale(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     if _LANGUAGE_TAG_REGEX.fullmatch(value) is None:
         issues.add_error(
@@ -58,7 +57,7 @@ def _validate_locale(value: str) -> ValidationIssues:
     return issues
 
 
-def _validate_timezone(value: str) -> ValidationIssues:
+def validate_timezone(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     try:
         zoneinfo.ZoneInfo(value)
@@ -80,7 +79,7 @@ _EMAIL_REGEX = re.compile(
 )
 
 
-def _validate_email(value: str) -> ValidationIssues:
+def validate_email(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     if _EMAIL_REGEX.fullmatch(value) is None:
         issues.add_error(
@@ -90,7 +89,7 @@ def _validate_email(value: str) -> ValidationIssues:
     return issues
 
 
-def _validate_phone_number(value: str) -> ValidationIssues:
+def validate_phone_number(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     try:
         phonenumbers.parse(value, _check_region=False)
@@ -99,14 +98,14 @@ def _validate_phone_number(value: str) -> ValidationIssues:
     return issues
 
 
-def _validate_country(value: str) -> ValidationIssues:
+def validate_country(value: str) -> ValidationIssues:
     issues = ValidationIssues()
     if iso3166.countries_by_alpha2.get(value) is None:
         issues.add_error(issue=ValidationError.bad_value_content(), proceed=True)
     return issues
 
 
-def _process_ims_value(value: str) -> str:
+def process_ims_value(value: str) -> str:
     return re.sub(r"\s", "", value.lower())
 
 
@@ -234,7 +233,7 @@ class UserSchema(ResourceSchema):
                 "spoken language.  Generally used for selecting a localized user "
                 "interface; e.g., 'en_US' specifies the language English and country US."
             ),
-            validators=[_validate_preferred_language],
+            validators=[validate_preferred_language],
         ),
         String(
             name="locale",
@@ -243,7 +242,7 @@ class UserSchema(ResourceSchema):
                 "for purposes of localizing items such as currency, date time format, or "
                 "numerical representations."
             ),
-            validators=[_validate_locale],
+            validators=[validate_locale],
         ),
         String(
             name="timezone",
@@ -251,7 +250,7 @@ class UserSchema(ResourceSchema):
                 "The User's time zone in the 'Olson' time zone "
                 "database format, e.g., 'America/Los_Angeles'."
             ),
-            validators=[_validate_timezone],
+            validators=[validate_timezone],
         ),
         Boolean(
             name="active",
@@ -285,7 +284,7 @@ class UserSchema(ResourceSchema):
                         "'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'. "
                         "Canonical type values of 'work', 'home', and 'other'."
                     ),
-                    validators=[_validate_email],
+                    validators=[validate_email],
                 ),
                 String(
                     name="display",
@@ -323,7 +322,7 @@ class UserSchema(ResourceSchema):
                 String(
                     name="value",
                     description="Phone number of the User.",
-                    validators=[_validate_phone_number],
+                    validators=[validate_phone_number],
                 ),
                 String(
                     name="type",
@@ -356,8 +355,8 @@ class UserSchema(ResourceSchema):
                 String(
                     name="value",
                     description="Instant messaging addresses for the User.",
-                    deserializer=_process_ims_value,
-                    serializer=_process_ims_value,
+                    deserializer=process_ims_value,
+                    serializer=process_ims_value,
                 ),
                 String(
                     name="type",
@@ -451,7 +450,7 @@ class UserSchema(ResourceSchema):
                 String(
                     name="country",
                     description="The country name component.",
-                    validators=[_validate_country],
+                    validators=[validate_country],
                 ),
                 String(
                     name="type",
@@ -582,17 +581,6 @@ class UserSchema(ResourceSchema):
             ],
         ),
     ]
-
-    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
-        issues = super()._validate(data)
-        username = data.get("userName")
-        nickname = data.get("nickName")
-        if username and nickname and username == nickname:
-            issues.add_warning(
-                issue=ValidationWarning.should_not_equal_to("'userName' attribute"),
-                location=("nickName",),
-            )
-        return issues
 
 
 class EnterpriseUserSchemaExtension(SchemaExtension):

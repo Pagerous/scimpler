@@ -13,7 +13,7 @@ from scimpler.data.patch_path import PatchPath
 from scimpler.data.sorter import Sorter
 from scimpler.schemas import service_provider_config
 from scimpler.schemas.resource_type import ResourceTypeSchema
-from scimpler.schemas.schema import SchemaSchema
+from scimpler.schemas.schema import SchemaDefinitionSchema
 from scimpler.validator import (
     BulkOperations,
     Error,
@@ -988,19 +988,21 @@ def test_correct_search_request_passes_validation(user_schema):
     assert issues.to_dict(msg=True) == {}
 
 
-def test_search_request_validation_fails_if_attributes_and_exclude_attributes_provided(user_schema):
+def test_search_request_validation_fails_if_attributes_and_excluded_attributes_provided(
+    user_schema,
+):
     validator = SearchRequestPOST(CONFIG, resource_schema=[user_schema])
     expected_issues = {
         "body": {
             "attributes": {"_errors": [{"code": 11}]},
-            "excludeAttributes": {"_errors": [{"code": 11}]},
+            "excludedAttributes": {"_errors": [{"code": 11}]},
         }
     }
 
     issues = validator.validate_request(
         body={
             "attributes": ["userName"],
-            "excludeAttributes": ["name"],
+            "excludedAttributes": ["name"],
         }
     )
 
@@ -1725,7 +1727,7 @@ def test_group_output_is_validated_correctly(group_data_server, group_schema):
 
 
 def test_schemas_output_can_be_validated(user_schema, group_schema):
-    schema = SchemaSchema()
+    schema = SchemaDefinitionSchema()
     validator = ResourcesGET(CONFIG, resource_schema=schema)
     body = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
@@ -1741,7 +1743,7 @@ def test_schemas_output_can_be_validated(user_schema, group_schema):
 
 
 def test_schema_response_can_be_validated(user_schema):
-    schema = SchemaSchema()
+    schema = SchemaDefinitionSchema()
     validator = ResourceObjectGET(CONFIG, resource_schema=schema)
 
     issues = validator.validate_response(

@@ -74,7 +74,7 @@ class AttrPresenceConfig:
     @classmethod
     def from_data(cls, data: MutableMapping) -> Optional["AttrPresenceConfig"]:
         to_include = data.get("attributes")
-        to_exclude = data.get("excludeAttributes")
+        to_exclude = data.get("excludedAttributes")
         if to_include or to_exclude:
             return AttrPresenceConfig(
                 direction="RESPONSE",
@@ -117,6 +117,7 @@ def validate_presence(
 
     if (
         attr.required
+        # issued by the server, so skipping for data from client
         and not (
             direction == DataDirection.REQUEST
             and attr.issuer == AttributeIssuer.SERVER

@@ -7,6 +7,7 @@ nav:
   - Introduction: index.md
   - User's Guide: users_guide.md
   - API Reference: api_reference.md
+  - Compliance: compliance.md
 theme: material
 plugins:
   - search
@@ -18,12 +19,18 @@ plugins:
             docstring_style: google
 
 markdown_extensions:
+  - attr_list
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
       pygments_lang_class: true
   - admonition
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
   - pymdownx.superfences
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

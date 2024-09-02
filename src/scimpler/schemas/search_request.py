@@ -47,7 +47,7 @@ class SearchRequestSchema(BaseSchema):
             serializer=_serialize_attr_reps,
         ),
         String(
-            name="excludeAttributes",
+            name="excludedAttributes",
             multi_valued=True,
             validators=[_validate_attr_reps],
             deserializer=_deserialize_attr_reps,
@@ -94,7 +94,7 @@ class SearchRequestSchema(BaseSchema):
     def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         to_include = data.get("attributes")
-        to_exclude = data.get("excludeAttributes")
+        to_exclude = data.get("excludedAttributes")
         if to_include not in [None, Missing] and to_exclude not in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.can_not_be_used_together("attributes"),
@@ -102,8 +102,8 @@ class SearchRequestSchema(BaseSchema):
                 location=["attributes"],
             )
             issues.add_error(
-                issue=ValidationError.can_not_be_used_together("excludeAttributes"),
+                issue=ValidationError.can_not_be_used_together("excludedAttributes"),
                 proceed=False,
-                location=["excludeAttributes"],
+                location=["excludedAttributes"],
             )
         return issues

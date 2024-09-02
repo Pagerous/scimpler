@@ -32,10 +32,10 @@ class QueryHandler(abc.ABC):
         if isinstance(attributes, str):
             attributes = [item.strip() for item in attributes.split(",")]
             query_params["attributes"] = attributes
-        exclude_attributes = query_params.get("excludeAttributes")
-        if isinstance(exclude_attributes, str):
-            exclude_attributes = [item.strip() for item in exclude_attributes.split(",")]
-            query_params["excludeAttributes"] = exclude_attributes
+        excluded_attributes = query_params.get("excludedAttributes")
+        if isinstance(excluded_attributes, str):
+            excluded_attributes = [item.strip() for item in excluded_attributes.split(",")]
+            query_params["excludedAttributes"] = excluded_attributes
         query_params.update(self.schema.deserialize(query_params))
         return query_params
 
@@ -44,8 +44,8 @@ class QueryHandler(abc.ABC):
         serialized = self.schema.serialize(query_params)
         if attributes := query_params.get("attributes"):
             serialized["attributes"] = ",".join(attributes)
-        if exclude_attributes := query_params.get("excludeAttributes"):
-            serialized["excludeAttributes"] = ",".join(exclude_attributes)
+        if excluded_attributes := query_params.get("excludedAttributes"):
+            serialized["excludedAttributes"] = ",".join(excluded_attributes)
         query_params.update(serialized)
         return query_params
 
@@ -54,7 +54,7 @@ class GenericQueryHandler(QueryHandler, abc.ABC):
     def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
         super().__init__(config)
         self._schema = SearchRequestSchema(
-            attr_filter=AttrFilter(attr_names={"attributes", "excludeAttributes"}, include=True)
+            attr_filter=AttrFilter(attr_names={"attributes", "excludedAttributes"}, include=True)
         )
 
     @property
