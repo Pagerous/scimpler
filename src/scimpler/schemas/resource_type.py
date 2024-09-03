@@ -6,7 +6,7 @@ from scimpler.data.attrs import (
     Boolean,
     Complex,
     String,
-    URIReference,
+    UriReference,
 )
 from scimpler.data.schemas import BaseResourceSchema, ResourceSchema
 
@@ -44,7 +44,7 @@ class ResourceTypeSchema(BaseResourceSchema):
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVER,
         ),
-        URIReference(
+        UriReference(
             name="endpoint",
             description=(
                 "The resource type's HTTP-addressable "
@@ -66,7 +66,7 @@ class ResourceTypeSchema(BaseResourceSchema):
             multi_valued=True,
             description="A list of URIs of the resource type's schema extensions.",
             sub_attributes=[
-                URIReference(
+                UriReference(
                     name="schema",
                     description="The URI of a schema extension.",
                     mutability=AttributeMutability.READ_ONLY,

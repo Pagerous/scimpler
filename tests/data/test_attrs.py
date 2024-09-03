@@ -15,9 +15,9 @@ from scimpler.data.attrs import (
     Decimal,
     ExternalReference,
     Integer,
-    SCIMReference,
+    ScimReference,
     String,
-    URIReference,
+    UriReference,
 )
 from scimpler.error import ValidationError, ValidationIssues
 
@@ -321,7 +321,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
         ),
         (
             123,
-            URIReference("uri"),
+            UriReference("uri"),
             {
                 "_errors": [
                     {
@@ -333,7 +333,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
         ),
         (
             123,
-            SCIMReference("scim", reference_types=["Users"]),
+            ScimReference("scim", reference_types=["Users"]),
             {
                 "_errors": [
                     {
@@ -345,7 +345,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
         ),
         (
             "/Groups/123",
-            SCIMReference("scim", reference_types=["User"]),
+            ScimReference("scim", reference_types=["User"]),
             {
                 "_errors": [
                     {
@@ -458,11 +458,11 @@ def test_validate_bad_type(input_value, attr, expected_issues):
         ),
         (
             "any:unique:resource:identifier",
-            URIReference("uri"),
+            UriReference("uri"),
         ),
         (
             "/Users/123",
-            SCIMReference("scim", reference_types=["User"]),
+            ScimReference("scim", reference_types=["User"]),
         ),
         (
             "https://www.example.com/absolute/url",
@@ -568,19 +568,19 @@ def test_string_attributes_can_be_compared():
 
 
 def test_reference_attributes_can_be_compared():
-    str_1 = SCIMReference(
+    str_1 = ScimReference(
         name="ref",
         required=True,
         multi_valued=False,
         reference_types=["User"],
     )
-    str_2 = SCIMReference(
+    str_2 = ScimReference(
         name="ref",
         required=True,
         multi_valued=False,
         reference_types=["User"],
     )
-    str_3 = SCIMReference(
+    str_3 = ScimReference(
         name="ref2",
         required=True,
         multi_valued=False,
@@ -625,7 +625,7 @@ def test_complex_sub_attributes_data_can_be_filtered(user_schema):
                 description="The id of the SCIM resource representing the User's manager.",
                 required=True,
             ),
-            SCIMReference(
+            ScimReference(
                 name="$ref",
                 description="The URI of the SCIM resource representing the User's manager",
                 reference_types=["User"],

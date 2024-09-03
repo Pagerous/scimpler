@@ -1143,7 +1143,7 @@ class ExternalReference(Reference):
 
 
 @final
-class URIReference(Reference):
+class UriReference(Reference):
     """
     Represents URI **reference**.
     """
@@ -1203,7 +1203,7 @@ class URIReference(Reference):
 
 
 @final
-class SCIMReference(Reference):
+class ScimReference(Reference):
     """
     Represents SCIM **reference**.
     """
@@ -1291,7 +1291,7 @@ _default_sub_attrs = [
         serializer=lambda value: value or False,
         deserializer=lambda value: value or False,
     ),
-    URIReference("$ref"),
+    UriReference("$ref"),
 ]
 
 
@@ -1356,7 +1356,7 @@ class Complex(Attribute):
                 ),
                 String("type"),
                 Boolean("primary"),
-                URIReference("$ref"),
+                UriReference("$ref"),
             ]
             if multi_valued
             else []

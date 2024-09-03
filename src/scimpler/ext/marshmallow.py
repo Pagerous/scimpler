@@ -69,8 +69,8 @@ def initialize(
         attrs.DateTime: marshmallow.fields.DateTime,
         attrs.Binary: marshmallow.fields.String,
         attrs.ExternalReference: marshmallow.fields.String,
-        attrs.URIReference: marshmallow.fields.String,
-        attrs.SCIMReference: marshmallow.fields.String,
+        attrs.UriReference: marshmallow.fields.String,
+        attrs.ScimReference: marshmallow.fields.String,
         attrs.String: marshmallow.fields.String,
     }
     if fields_by_attrs is not None:

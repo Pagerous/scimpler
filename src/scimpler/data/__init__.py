@@ -11,9 +11,9 @@ from scimpler.data.attrs import (
     Decimal,
     ExternalReference,
     Integer,
-    SCIMReference,
+    ScimReference,
     String,
-    URIReference,
+    UriReference,
 )
 from scimpler.data.filter import Filter
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
@@ -31,9 +31,9 @@ __all__ = [
     "Decimal",
     "ExternalReference",
     "Integer",
-    "SCIMReference",
+    "ScimReference",
     "String",
-    "URIReference",
+    "UriReference",
     "ResourceSchema",
     "SchemaExtension",
     "Filter",

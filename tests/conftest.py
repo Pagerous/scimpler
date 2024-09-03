@@ -15,9 +15,9 @@ from scimpler.data.attrs import (
     Decimal,
     ExternalReference,
     Integer,
-    SCIMReference,
+    ScimReference,
     String,
-    URIReference,
+    UriReference,
 )
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema
@@ -41,8 +41,8 @@ class FakeSchema(ResourceSchema):
         Decimal("decimal"),
         Binary("binary"),
         ExternalReference("external_ref"),
-        URIReference("uri_ref"),
-        SCIMReference("scim_ref", reference_types=["FakeSchema"]),
+        UriReference("uri_ref"),
+        ScimReference("scim_ref", reference_types=["FakeSchema"]),
         Complex(
             "c",
             sub_attributes=[String("value")],

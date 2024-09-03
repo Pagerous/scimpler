@@ -16,9 +16,9 @@ nav:
           - Decimal: api_reference/scimpler_data/decimal.md
           - ExternalReference: api_reference/scimpler_data/external_reference.md
           - Integer: api_reference/scimpler_data/integer.md
-          - SCIMReference: api_reference/scimpler_data/scim_reference.md
+          - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
-          - URIReference: api_reference/scimpler_data/uri_reference.md
+          - UriReference: api_reference/scimpler_data/uri_reference.md
 
   - Compliance: compliance.md
 theme: material

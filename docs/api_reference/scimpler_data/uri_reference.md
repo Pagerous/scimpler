@@ -1,1 +1,1 @@
-::: scimpler.data.attrs.URIReference
+::: scimpler.data.attrs.UriReference

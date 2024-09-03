@@ -14,9 +14,9 @@ from scimpler.data.attrs import (
     Boolean,
     Complex,
     ExternalReference,
-    SCIMReference,
+    ScimReference,
     String,
-    URIReference,
+    UriReference,
 )
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
@@ -476,7 +476,7 @@ class UserSchema(ResourceSchema):
                     description="The identifier of the User's group.",
                     mutability=AttributeMutability.READ_ONLY,
                 ),
-                URIReference(
+                UriReference(
                     name="$ref",
                     description=(
                         "The URI of the corresponding 'Group' "
@@ -624,7 +624,7 @@ class EnterpriseUserSchemaExtension(SchemaExtension):
                     description="The id of the SCIM resource representing the User's manager.",
                     required=True,
                 ),
-                SCIMReference(
+                ScimReference(
                     name="$ref",
                     description="The URI of the SCIM resource representing the User's manager",
                     reference_types=["User"],

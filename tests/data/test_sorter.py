@@ -1,7 +1,7 @@
 import pytest
 
 from scimpler.container import AttrRep, SCIMData
-from scimpler.data.attrs import SCIMReference, String
+from scimpler.data.attrs import ScimReference, String
 from scimpler.data.sorter import AlwaysLastKey, Sorter, StringKey
 
 
@@ -244,8 +244,8 @@ def test_comparing_string_key_to_string_raises_type_error():
 
 
 def test_string_keys_with_non_string_underlying_attributes_can_be_compared():
-    key_1 = StringKey("/Users/1", SCIMReference(name="attr", reference_types=["User"]))
-    key_2 = StringKey("/Users/2", SCIMReference(name="attr", reference_types=["User"]))
+    key_1 = StringKey("/Users/1", ScimReference(name="attr", reference_types=["User"]))
+    key_2 = StringKey("/Users/2", ScimReference(name="attr", reference_types=["User"]))
 
     assert key_1 < key_2
 

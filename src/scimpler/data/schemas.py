@@ -21,7 +21,7 @@ from scimpler.data.attrs import (
     Complex,
     DateTime,
     String,
-    URIReference,
+    UriReference,
 )
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.registry import register_schema
@@ -49,7 +49,7 @@ class SchemaMeta(type):
 class BaseSchema(metaclass=SchemaMeta):
     schema: str | SchemaURI
     base_attrs: list[Attribute] = [
-        URIReference(
+        UriReference(
             name="schemas",
             required=True,
             multi_valued=True,
@@ -428,7 +428,7 @@ class BaseResourceSchema(BaseSchema):
                     issuer=AttributeIssuer.SERVER,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
-                URIReference(
+                UriReference(
                     name="location",
                     issuer=AttributeIssuer.SERVER,
                     mutability=AttributeMutability.READ_ONLY,

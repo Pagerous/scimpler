@@ -2,7 +2,7 @@ from scimpler.data.attrs import (
     Attribute,
     AttributeMutability,
     Complex,
-    SCIMReference,
+    ScimReference,
     String,
 )
 from scimpler.data.schemas import ResourceSchema
@@ -30,7 +30,7 @@ class GroupSchema(ResourceSchema):
                     description="Identifier of the member of this Group.",
                     mutability=AttributeMutability.IMMUTABLE,
                 ),
-                SCIMReference(
+                ScimReference(
                     name="$ref",
                     description=(
                         "The URI corresponding to a SCIM resource "
