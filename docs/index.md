@@ -118,4 +118,4 @@ Output
 }
 ```
 
-See [User's Guide](users_guide.md) for detailed features description. Want to know more? Check [API Reference](api_reference.md). 
+See [User's Guide](users_guide.md) for detailed features description. Want to know more? Check API Reference. 

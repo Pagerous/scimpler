@@ -6,7 +6,20 @@ repo_name: scimpler
 nav:
   - Introduction: index.md
   - User's Guide: users_guide.md
-  - API Reference: api_reference.md
+  - API Reference:
+      - scimpler.data:
+          - AttrFilter: api_reference/scimpler_data/attr_filter.md
+          - Binary: api_reference/scimpler_data/binary.md
+          - Boolean: api_reference/scimpler_data/boolean.md
+          - Complex: api_reference/scimpler_data/complex.md
+          - DateTime: api_reference/scimpler_data/datetime.md
+          - Decimal: api_reference/scimpler_data/decimal.md
+          - ExternalReference: api_reference/scimpler_data/external_reference.md
+          - Integer: api_reference/scimpler_data/integer.md
+          - SCIMReference: api_reference/scimpler_data/scim_reference.md
+          - String: api_reference/scimpler_data/string.md
+          - URIReference: api_reference/scimpler_data/uri_reference.md
+
   - Compliance: compliance.md
 theme: material
 plugins:
@@ -15,8 +28,22 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          paths: [src]
           options:
             docstring_style: google
+            show_root_toc_entry: false
+            show_category_heading: true
+            show_labels: true
+            show_bases: false
+            handler: python
+            docstring_section_style: spacy
+            show_signature: true
+            signature_crossrefs: true
+            relative_crossrefs: true
+            scoped_crossrefs: true
+            inherited_members: true
+            parameter_headings: true
+            merge_init_into_class: true
 
 markdown_extensions:
   - attr_list
@@ -29,7 +56,6 @@ markdown_extensions:
       custom_checkbox: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
   - pymdownx.superfences
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji

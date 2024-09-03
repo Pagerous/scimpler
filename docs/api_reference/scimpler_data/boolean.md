@@ -1,0 +1,2 @@
+::: scimpler.data.attrs.Boolean
+

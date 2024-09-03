@@ -1,6 +1,6 @@
 from collections.abc import MutableMapping
 from enum import Enum
-from typing import Any, Collection, Literal, Optional, Union
+from typing import Any, Collection, Optional, Union
 
 from scimpler.container import AttrRep, AttrRepFactory, BoundedAttrRep, Missing
 from scimpler.data.attrs import Attribute, AttributeIssuer, AttributeReturn
@@ -18,28 +18,30 @@ class DataInclusivity(str, Enum):
 
 
 _AttrRep = Union[str, AttrRep, BoundedAttrRep]
-_DataDirectionLiteral = Literal["REQUEST", "RESPONSE"]
-_DataInclusivityLiteral = Literal["INCLUDE", "EXCLUDE"]
 
 
 class AttrPresenceConfig:
+    """
+    Checks attributes presence according to the data flow direction, attribute properties,
+    and specified inclusion / exclusion.
+
+    Args:
+        direction: The direction of the data flow, can be either "REQUEST" or "RESPONSE"
+        attr_reps: Specifies which attributes should be included or excluded from the data. The
+            `include` parameter must be specified together.
+        include: If set to True, it means the attributes should be included. Excluded otherwise.
+            Has no effect if `attr_reps` is not provided.
+        ignore_issuer: Specifies for which attributes the attribute issuer  should be ignored
+            when making presence checks
+    """
+
     def __init__(
         self,
-        direction: Union[_DataDirectionLiteral, DataDirection],
+        direction: Union[str, DataDirection],
         attr_reps: Optional[Collection[_AttrRep]] = None,
         include: Optional[bool] = None,
         ignore_issuer: Optional[Collection[_AttrRep]] = None,
     ):
-        """
-        Checks attributes presence according to the data flow direction,
-        attribute properties, and specified inclusion / exclusion.
-
-        :param attr_reps: specifies which attributes should be included or excluded from the data.
-        :param include: if set to True, it means the attributes should be included.
-            Excluded otherwise.
-        :param ignore_issuer: specifies for which attributes the attribute issuer configuration
-            should be ignored when making presence checks.
-        """
         self._direction = DataDirection(direction)
         self._attr_reps = [
             AttrRepFactory.deserialize(attr_rep) if isinstance(attr_rep, str) else attr_rep
@@ -87,11 +89,14 @@ class AttrPresenceConfig:
 def validate_presence(
     attr: Attribute,
     value: Any,
-    direction: Union[_DataDirectionLiteral, DataDirection],
+    direction: Union[str, DataDirection],
     ignore_issuer: bool = False,
-    inclusivity: Optional[Union[_DataInclusivityLiteral, DataInclusivity]] = None,
+    inclusivity: Optional[Union[str, DataInclusivity]] = None,
     required_by_schema: bool = True,
 ) -> ValidationIssues:
+    if inclusivity:
+        inclusivity = DataInclusivity(inclusivity)
+    direction = DataDirection(direction)
     issues = ValidationIssues()
     if value not in [None, "", [], Missing]:
         if direction == DataDirection.REQUEST:

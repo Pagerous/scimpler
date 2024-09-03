@@ -1,4 +1,4 @@
-`scimpler` provides functionalities that can be used both on Service Provider
+from scimpler.data import ResourceSchema`scimpler` provides functionalities that can be used both on Service Provider
 and Provisioning client sides. It is agnostic to any existing web frameworks,
 so it probably will not work out of the box in your case. However, most of the hard work has already been
 done for you. **SCIM 2.0** protocol exactly specifies how the entities may, should, and
@@ -8,7 +8,7 @@ ready to use.
 `scimpler`, among many features, enables SCIM schema definition and _stateless_ validation. This means
 that any requirement specified by the protocol that requires _state_ is not checked by the library.
 
-Check below topics to learn more about `scimpler`!
+Check below topics to learn more about `scimpler`.
 
 [Schema definition](users_guide.md#schema-definition)<br>
 [Data validation](users_guide.md#data-validation)
@@ -16,13 +16,13 @@ Check below topics to learn more about `scimpler`!
 
 ## Schema definition
 
-`scimpler` provides all schemas specified by the protocol, and some of them can be adjusted for a
+`scimpler` provides all schemas specified by the standard, and some of them can be adjusted for a
 particular needs.
 
 **Resource schemas and extensions**
 
 - urn:ietf:params:scim:schemas:core:2.0:User
-- urn:ietf:params:scim:schemas:extension:enterprise:2.0:User
+- urn:ietf:params:scim:schemas:extension:Enterprise:2.0:User
 - urn:ietf:params:scim:schemas:core:2.0:Group
 - urn:ietf:params:scim:schemas:core:2.0:ResourceType
 - urn:ietf:params:scim:schemas:core:2.0:Schema
@@ -64,7 +64,7 @@ user_schema.extend(enterprise_extension, required=True)
 
 !!! info
     
-    Required attributes and sub-attributes (like `id` or `schemas` in resources) are included anyway.
+    Required attributes and sub-attributes (like `id` or `schemas` in resources) are included regardless the filter.
 
 To define custom schema or schema extension, one must inherit from `scimpler.data.ResourceSchema`
 or `scimpler.data.SchemaExtension`, respectively.
@@ -95,13 +95,37 @@ vehicle_extension = VehicleExtension()
 vehicle_schema.extend(vehicle_extension)
 ```
 
+`User` and `Group` resource schemas can differ more than just attribute selection in your case.
+You can ignore included resource schema definitions and redefine them on your own, e.g. to make
+some attribute required, even if it is optional as per RFC-7643.
+
+```python
+from scimpler.data import Attribute, ResourceSchema
+
+class UserSchema(ResourceSchema):
+    schema = "urn:ietf:params:scim:schemas:core:2.0:User"
+    name = "User"
+    plural_name = "Users"
+    description = "User Account"
+    endpoint = "/Users"
+    base_attrs: list[Attribute] = [...]
+```
+
+!!! warning
+    Redefining built-in resource schema removes all validations, pre-, and post-processing, 
+    associated with the resource type.
+
+!!! info
+    All provided validators for `User` attributes can be imported from `scimpler.schemas.user`.
+
+
 Every schema provides three main functionalities: data **validation**, **deserialization**, and **serialization**.
 
 
 ## Data validation
 
-All built-in schemas incorporate validation rules described in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643)
-that does not require state (syntax and semantics validation). Check [SCIM compliance](compliance.md) for details.
+All built-in schemas incorporate validation rules described in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643).
+Check [SCIM compliance](compliance.md) for details.
 
 Below example presents schema-level data validation.
 
@@ -118,7 +142,7 @@ data = {
 issues = user.validate(data)
 ```
 
-`BaseSchema.validate` returns `scimpler.error.ValidationIssues` always. It contains validation
+`validate` returns `scimpler.error.ValidationIssues` always. It contains validation
 errors and validation warnings. Call `ValidationIssues.to_dict`, to have nice overview of the issues.
 
 ```python
@@ -220,7 +244,7 @@ issues = list_response.validate(data)
 !!! info
     By default, schema-level validation is performed out of SCIM request / response context, and some
     rules are not checked. To enable request-specific or response-specific validation, pass
-    **presence_config** parameter to `BaseSchema.validate`.
+    **presence_config** parameter to `validate` method.
 
     ```python
     from scimpler.data import AttrPresenceConfig
@@ -231,3 +255,16 @@ issues = list_response.validate(data)
     data = {...}
     issues = user.validate(data, presence_config=AttrPresenceConfig("RESPONSE"))
     ```
+
+## Data deserialization and serialization
+
+## Working with data
+
+## Filtering
+
+## Sorting
+
+## Request and response validation
+
+## Integrations
+### marshmallow

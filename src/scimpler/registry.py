@@ -19,6 +19,8 @@ def register_resource_schema(resource_schema: "ResourceSchema"):
 
 
 def register_schema(schema: "SchemaURI", extension: bool = False):
+    if schema.lower().startswith("urn:ietf:params:scim:api:messages:2.0:") and schema in schemas:
+        raise RuntimeError("schemas for SCIM API messages can not be overridden")
     schemas[schema] = extension
 
 

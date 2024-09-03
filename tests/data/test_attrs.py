@@ -572,21 +572,18 @@ def test_reference_attributes_can_be_compared():
         name="ref",
         required=True,
         multi_valued=False,
-        case_exact=True,
         reference_types=["User"],
     )
     str_2 = SCIMReference(
         name="ref",
         required=True,
         multi_valued=False,
-        case_exact=True,
         reference_types=["User"],
     )
     str_3 = SCIMReference(
         name="ref2",
         required=True,
         multi_valued=False,
-        case_exact=True,
         reference_types=["User"],
     )
 

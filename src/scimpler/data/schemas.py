@@ -38,7 +38,15 @@ def bulk_id_validator(value) -> ValidationIssues:
     return issues
 
 
-class BaseSchema:
+class SchemaMeta(type):
+    def __init__(cls, name, bases, dct):
+        super().__init__(name, bases, dct)
+        if hasattr(cls, "schema"):
+            cls.schema = SchemaURI(cls.schema)
+            register_schema(SchemaURI(cls.schema))
+
+
+class BaseSchema(metaclass=SchemaMeta):
     schema: str | SchemaURI
     base_attrs: list[Attribute] = [
         URIReference(
@@ -55,8 +63,6 @@ class BaseSchema:
         attr_filter: Optional[AttrFilter] = None,
         common_attrs: Optional[Iterable[str]] = None,
     ):
-        self.schema = SchemaURI(self.schema)
-        register_schema(self.schema)
         attrs = self._get_attrs()
         filtered_attrs = attr_filter(attrs) if attr_filter else attrs
         for attr in filtered_attrs:
@@ -66,7 +72,7 @@ class BaseSchema:
             filtered_attrs.insert(0, BaseSchema.base_attrs[0])
 
         self._attrs = BoundedAttrs(
-            schema=self.schema,
+            schema=cast(SchemaURI, self.schema),
             attrs=filtered_attrs,
             common_attrs=list(common_attrs or []) + ["schemas"],
         )
@@ -76,8 +82,8 @@ class BaseSchema:
         return self._attrs
 
     @property
-    def schemas(self) -> list[str]:
-        return [self.schema]
+    def schemas(self) -> list[SchemaURI]:
+        return [cast(SchemaURI, self.schema)]
 
     def _get_attrs(self) -> list[Attribute]:
         attrs = []
@@ -471,7 +477,6 @@ class ResourceSchema(BaseResourceSchema):
     ]
 
     def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        self.schema = SchemaURI(self.schema)
         self.plural_name = getattr(self, "plural_name", self.name)
         self.endpoint = self.endpoint or f"/{self.plural_name}"
         self._common_attrs = ["id", "externalId", "meta"]
@@ -479,8 +484,8 @@ class ResourceSchema(BaseResourceSchema):
         self._schema_extensions: dict[str, dict] = {}
 
     @property
-    def schemas(self) -> list[str]:
-        return [self.schema] + [
+    def schemas(self) -> list[SchemaURI]:
+        return [cast(SchemaURI, self.schema)] + [
             extension["extension"].schema for extension in self._schema_extensions.values()
         ]
 
