@@ -23,6 +23,23 @@ nav:
           - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
           - UriReference: api_reference/scimpler_data/uri_reference.md
+      - scimpler.data.operator:
+          - And: api_reference/scimpler_data_operator/and.md
+          - BinaryAttributeOperator: api_reference/scimpler_data_operator/binary_attribute_operator.md
+          - ComplexAttributeOperator: api_reference/scimpler_data_operator/complex_attribute_operator.md
+          - Contains: api_reference/scimpler_data_operator/contains.md
+          - EndsWith: api_reference/scimpler_data_operator/ends_with.md
+          - Equal: api_reference/scimpler_data_operator/equal.md
+          - GreaterThan: api_reference/scimpler_data_operator/greater_than.md
+          - GreaterThanOrEqual: api_reference/scimpler_data_operator/greater_than_or_equal.md
+          - LesserThan: api_reference/scimpler_data_operator/lesser_than.md
+          - LesserThanOrEqual: api_reference/scimpler_data_operator/lesser_than_or_equal.md
+          - Not: api_reference/scimpler_data_operator/not.md
+          - NotEqual: api_reference/scimpler_data_operator/not_equal.md
+          - Or: api_reference/scimpler_data_operator/or.md
+          - Present: api_reference/scimpler_data_operator/present.md
+          - StartsWith: api_reference/scimpler_data_operator/starts_with.md
+          - UnaryAttributeOperator: api_reference/scimpler_data_operator/unary_attribute_operator.md
 
   - Compliance: compliance.md
 theme: material
