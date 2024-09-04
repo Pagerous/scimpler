@@ -1,1 +1,1 @@
-::: scimpler.data.attrs.Integer
+::: scimpler.data.Integer

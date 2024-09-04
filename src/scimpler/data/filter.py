@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import (
     Any,
     Generic,
+    Iterable,
     MutableMapping,
     Optional,
     Type,
@@ -41,13 +42,7 @@ GROUP_OPERATOR_REGEX = re.compile(r"\((?:[^()]|\([^()]*\))*\)", flags=re.DOTALL)
 _AllowedOperandValues: TypeAlias = Union[str, bool, int, float, None]
 
 
-_DeserializedOperator: TypeAlias = Union[
-    op.AttributeOperator,
-    op.LogicalOperator,
-    op.ComplexAttributeOperator,
-]
-
-TOperator = TypeVar("TOperator", bound=_DeserializedOperator)
+TOperator = TypeVar("TOperator", bound=op.Operator)
 
 
 @dataclass
@@ -63,21 +58,41 @@ class _ValidatedGroupOperator:
 
 
 class Filter(Generic[TOperator]):
+    """
+    Data filter supporting SCIM and custom operators.
+
+    Args:
+        operator: Underlying filter operator, used for data filtering.
+
+    Examples:
+        >>> username_filter = Filter.deserialize("userName eq 'Pagerous'")
+        >>> username_filter({"userName": "Pagerous"})
+        True
+        >>> username_filter({"userName": "NotPagerous"})
+        False
+    """
+
     def __init__(self, operator: TOperator):
         self._operator = operator
 
     @property
-    def attr_reps(self):
+    def attr_reps(self) -> list[AttrRep]:
+        """
+        List of bounded and unbounded attribute representations
+        included in the filter. Useful to determine if there is
+        enough data to use filter, since no data means no match
+        (except for `not pr` operator).
+        """
         return self._get_attr_reps(self._operator)
 
     @staticmethod
-    def _get_attr_reps(operator):
+    def _get_attr_reps(operator) -> list[AttrRep]:
         reps = []
 
         def get_sub_attr_name(sub_rep_):
             return sub_rep_.sub_attr if sub_rep_.is_sub_attr else sub_rep_.attr
 
-        def extend_reps(reps_):
+        def extend_reps(reps_: Iterable[AttrRep]):
             for rep_ in reps_:
                 if rep_ not in reps:
                     reps.append(rep_)
@@ -86,6 +101,7 @@ class Filter(Generic[TOperator]):
             reps.append(operator.attr_rep)
         elif isinstance(operator, op.ComplexAttributeOperator):
             rep = operator.attr_rep
+            sub_reps: Iterable[Union[AttrRep, BoundedAttrRep]]
             if isinstance(rep, BoundedAttrRep):
                 sub_reps = [
                     BoundedAttrRep(
@@ -108,10 +124,22 @@ class Filter(Generic[TOperator]):
 
     @property
     def operator(self) -> TOperator:
+        """
+        Underlying filter operator, used for data filtering.
+        """
         return self._operator
 
     @classmethod
     def validate(cls, filter_exp: str) -> ValidationIssues:
+        """
+        Validates the filter expression syntax, according to RFC-7644.
+
+        Args:
+            filter_exp: Filter expression to validate.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         filter_exp, placeholders = encode_strings(filter_exp)
         bracket_open_index = None
@@ -422,6 +450,9 @@ class Filter(Generic[TOperator]):
         return issues
 
     def serialize(self) -> str:
+        """
+        Serializes `Filter` to string filter expression.
+        """
         output = self._serialize(self._operator)
         if output.startswith("(") and output.endswith(")"):
             output = output[1:-1]
@@ -451,6 +482,18 @@ class Filter(Generic[TOperator]):
 
     @classmethod
     def deserialize(cls, filter_exp: str) -> "Filter":
+        """
+        Deserializes the filter expression.
+
+        Args:
+            filter_exp: filter expression to be deserialized.
+
+        Raises:
+            ValueError: If provided filter expression is invalid.
+
+        Returns:
+            Deserialized filter.
+        """
         try:
             return cls._deserialize(filter_exp)
         except Exception as e:
@@ -483,7 +526,7 @@ class Filter(Generic[TOperator]):
     @staticmethod
     def _deserialize_operator(
         exp: str, placeholders: dict[str, Any], in_complex_group: bool
-    ) -> _DeserializedOperator:
+    ) -> op.Operator:
         for match in GROUP_OPERATOR_REGEX.finditer(exp):
             sub_op_exp = match.group(0)
             deserialized_op = Filter._deserialize_operator(
@@ -499,7 +542,7 @@ class Filter(Generic[TOperator]):
     @staticmethod
     def _deserialize_op_or_exp(
         exp: str, placeholders: dict[str, Any], in_complex_group: bool
-    ) -> _DeserializedOperator:
+    ) -> op.Operator:
         or_operands = Filter._split_exp_to_logical_operands(
             exp=exp,
             regexp=OR_LOGICAL_OPERATOR_SPLIT_REGEX,
@@ -518,12 +561,12 @@ class Filter(Generic[TOperator]):
         exp: str,
         placeholders: dict[str, Any],
         in_complex_group: bool,
-    ) -> _DeserializedOperator:
+    ) -> op.Operator:
         and_operands = Filter._split_exp_to_logical_operands(
             exp=exp,
             regexp=AND_LOGICAL_OPERATOR_SPLIT_REGEX,
         )
-        deserialized_and_operands: list[_DeserializedOperator] = []
+        deserialized_and_operands: list[op.Operator] = []
         for and_operand in and_operands:
             match = NOT_LOGICAL_OPERATOR_REGEX.match(and_operand)
             if match:
@@ -569,7 +612,7 @@ class Filter(Generic[TOperator]):
         exp: str,
         placeholders: dict[str, Any],
         in_complex_group: bool,
-    ) -> _DeserializedOperator:
+    ) -> op.Operator:
         exp = exp.strip()
         if (placeholder := deserialize_placeholder(exp)) and (
             sub_or_complex := placeholders.get(placeholder)
@@ -601,6 +644,17 @@ class Filter(Generic[TOperator]):
         data: MutableMapping[str, Any],
         schema_or_complex: Union[BaseSchema, Complex],
     ) -> bool:
+        """
+        Matches the data against the filter.
+
+        Args:
+            data: Data to be matched.
+            schema_or_complex: Schema or `Complex` attribute, which describes
+                the provided data.
+
+        Returns:
+            Flag indicating whether the data matches the filter.
+        """
         return self._operator.match(SCIMData(data), schema_or_complex)
 
     def __eq__(self, other) -> bool:
@@ -608,7 +662,10 @@ class Filter(Generic[TOperator]):
             return False
         return SCIMData(self.to_dict()) == SCIMData(other.to_dict())
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """
+        Convert the filter to a dictionary.
+        """
         return self._to_dict(self._operator)
 
     @staticmethod

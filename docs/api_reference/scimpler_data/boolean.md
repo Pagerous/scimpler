@@ -1,2 +1,2 @@
-::: scimpler.data.attrs.Boolean
+::: scimpler.data.Boolean
 

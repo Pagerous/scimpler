@@ -1,1 +1,1 @@
-::: scimpler.data.attrs.ScimReference
+::: scimpler.data.ScimReference

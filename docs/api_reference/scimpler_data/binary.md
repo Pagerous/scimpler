@@ -1,1 +1,1 @@
-::: scimpler.data.attrs.Binary
+::: scimpler.data.Binary

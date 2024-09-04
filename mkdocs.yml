@@ -9,12 +9,16 @@ nav:
   - API Reference:
       - scimpler.data:
           - AttrFilter: api_reference/scimpler_data/attr_filter.md
+          - AttrPresenceConfig: api_reference/scimpler_data/attr_presence_config.md
+          - Attrs: api_reference/scimpler_data/attrs.md
           - Binary: api_reference/scimpler_data/binary.md
           - Boolean: api_reference/scimpler_data/boolean.md
+          - BoundedAttrs: api_reference/scimpler_data/bounded_attrs.md
           - Complex: api_reference/scimpler_data/complex.md
           - DateTime: api_reference/scimpler_data/datetime.md
           - Decimal: api_reference/scimpler_data/decimal.md
           - ExternalReference: api_reference/scimpler_data/external_reference.md
+          - Filter: api_reference/scimpler_data/filter.md
           - Integer: api_reference/scimpler_data/integer.md
           - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
@@ -31,10 +35,12 @@ plugins:
           paths: [src]
           options:
             docstring_style: google
-            show_root_toc_entry: false
+            show_root_toc_entry: True
+            show_root_heading: false
+            show_root_full_path: true
             show_category_heading: true
             show_labels: true
-            show_bases: false
+            show_bases: true
             handler: python
             docstring_section_style: spacy
             show_signature: true

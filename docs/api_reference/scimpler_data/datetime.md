@@ -1,1 +1,1 @@
-::: scimpler.data.attrs.DateTime
+::: scimpler.data.DateTime

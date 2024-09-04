@@ -32,11 +32,15 @@ class PatchPath(Generic[TAttrRep]):
         else:
             raise ValueError("'attr_rep' must not be a sub attribute")
 
-        if filter_ is not None and filter_.operator.attr_rep != attr_rep:
-            raise ValueError(
-                f"provided filter is configured for {filter_.operator.attr_rep!r}, "
-                f"but {attr_rep!r} is required"
-            )
+        if filter_ is not None:
+            if not isinstance(filter_.operator, ComplexAttributeOperator):
+                raise ValueError("'filter_' must consist of 'ComplexAttributeOperator'")
+
+            if filter_.operator.attr_rep != attr_rep:
+                raise ValueError(
+                    f"provided filter is configured for {filter_.operator.attr_rep!r}, "
+                    f"but {attr_rep!r} is required"
+                )
 
         self._attr_rep = attr_rep
 

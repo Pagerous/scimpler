@@ -17,13 +17,10 @@ class DataInclusivity(str, Enum):
     EXCLUDE = "EXCLUDE"
 
 
-_AttrRep = Union[str, AttrRep, BoundedAttrRep]
-
-
 class AttrPresenceConfig:
     """
-    Checks attributes presence according to the data flow direction, attribute properties,
-    and specified inclusion / exclusion.
+    Configuration for attribute presence, according to the data flow direction,
+    attribute properties, and specified inclusion / exclusion.
 
     Args:
         direction: The direction of the data flow, can be either "REQUEST" or "RESPONSE"
@@ -38,9 +35,9 @@ class AttrPresenceConfig:
     def __init__(
         self,
         direction: Union[str, DataDirection],
-        attr_reps: Optional[Collection[_AttrRep]] = None,
+        attr_reps: Optional[Collection[Union[str, AttrRep, BoundedAttrRep]]] = None,
         include: Optional[bool] = None,
-        ignore_issuer: Optional[Collection[_AttrRep]] = None,
+        ignore_issuer: Optional[Collection[Union[str, AttrRep, BoundedAttrRep]]] = None,
     ):
         self._direction = DataDirection(direction)
         self._attr_reps = [

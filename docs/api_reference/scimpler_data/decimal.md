@@ -1,1 +1,1 @@
-::: scimpler.data.attrs.Decimal
+::: scimpler.data.Decimal

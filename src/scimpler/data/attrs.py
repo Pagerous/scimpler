@@ -1539,6 +1539,10 @@ class Attrs:
     """
 
     def __init__(self, attrs: Optional[Iterable[Attribute]] = None):
+        """
+        Args:
+            attrs: The iterable producing `Attribute` objects.
+        """
         self._attrs = {attr.name: attr for attr in (attrs or [])}
 
     def __iter__(self) -> Iterator[tuple[AttrName, Attribute]]:
@@ -1584,12 +1588,12 @@ class BoundedAttrs:
     Represents iterable collection of attributes bounded to a specific schema.
 
     Args:
-        schema: A SCIM schema attributes belong to
-        attrs: Attributes bound to the schema
+        schema: A SCIM schema attributes belong to.
+        attrs: Attributes bound to the schema.
         common_attrs: Names of attributes that belong to the schema, but not exclusively.
             For example, `id`, `meta`, and `externalId` are such attributes, defined in every
             resource schema. Used to determine core attributes:
-            core attrs = all attrs - common attrs
+            core attrs = all attrs - common attrs.
 
     It is possible to iterate through the attributes stored in the instance.
 

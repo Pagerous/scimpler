@@ -1,1 +1,1 @@
-::: scimpler.data.attrs.ExternalReference
+::: scimpler.data.ExternalReference
