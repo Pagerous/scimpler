@@ -32,7 +32,7 @@ binary_operators: dict[str, type["BinaryAttributeOperator"]] = {}
 
 
 def register_unary_operator(operator: type["UnaryAttributeOperator"]):
-    op = operator.op().lower()
+    op = operator.op.lower()
 
     if op in unary_operators:
         raise RuntimeError(f"unary operator {op!r} already registered")
@@ -41,7 +41,7 @@ def register_unary_operator(operator: type["UnaryAttributeOperator"]):
 
 
 def register_binary_operator(operator: type["BinaryAttributeOperator"]):
-    op = operator.op().lower()
+    op = operator.op.lower()
     if op in binary_operators:
         raise RuntimeError(f"binary operator {op!r} already registered")
 

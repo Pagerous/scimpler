@@ -432,9 +432,9 @@ class Filter(Generic[TOperator]):
             if not issues.can_proceed():
                 return issues
 
-            if op_ and type(value) not in op_.supported_types():
+            if op_ and type(value) not in op_.supported_types:
                 issues.add_error(
-                    issue=ValidationError.non_compatible_operand(value, op_.op()),
+                    issue=ValidationError.non_compatible_operand(value, op_.op),
                     proceed=False,
                 )
 
@@ -461,7 +461,7 @@ class Filter(Generic[TOperator]):
     @staticmethod
     def _serialize(operator) -> str:
         if isinstance(operator, op.AttributeOperator):
-            output = f"{operator.attr_rep} {operator.op()}"
+            output = f"{operator.attr_rep} {operator.op}"
             if isinstance(operator, op.BinaryAttributeOperator):
                 output += f" {operator.value!r}"
             return output
@@ -470,10 +470,10 @@ class Filter(Generic[TOperator]):
             return f"{operator.attr_rep}[{Filter._serialize(operator.sub_operator)}]"
 
         if isinstance(operator, op.Not):
-            return f"{operator.op()} {Filter._serialize(operator.sub_operators[0])}"
+            return f"{operator.op} {Filter._serialize(operator.sub_operators[0])}"
 
         if isinstance(operator, (op.And, op.Or)):
-            output = f" {operator.op()} ".join(
+            output = f" {operator.op} ".join(
                 [Filter._serialize(sub_operator) for sub_operator in operator.sub_operators]
             )
             return f"({output})"
@@ -672,7 +672,7 @@ class Filter(Generic[TOperator]):
     def _to_dict(operator):
         if isinstance(operator, op.AttributeOperator):
             filter_dict = {
-                "op": operator.op(),
+                "op": operator.op,
                 "attr": str(operator.attr_rep),
             }
             if isinstance(operator, op.BinaryAttributeOperator):
@@ -688,13 +688,13 @@ class Filter(Generic[TOperator]):
 
         if isinstance(operator, op.Not):
             return {
-                "op": operator.op(),
+                "op": operator.op,
                 "sub_op": Filter._to_dict(operator.sub_operators[0]),
             }
 
         if isinstance(operator, (op.And, op.Or)):
             return {
-                "op": operator.op(),
+                "op": operator.op,
                 "sub_ops": [
                     Filter._to_dict(sub_operator) for sub_operator in operator.sub_operators
                 ],
