@@ -1,34 +1,54 @@
 import abc
 import operator
-from typing import Any, Callable, Generator, Generic, Optional, TypeVar, Union
+from typing import Any, Generator, Generic, Optional, TypeVar, Union
 
 from scimpler.container import AttrRep, Invalid, Missing, SCIMData
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
-from scimpler.data.schemas import BaseSchema
+from scimpler.data.schemas import ResourceSchema
 
-TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[BaseSchema, Complex])
+TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[ResourceSchema, Complex])
 
 
 class Operator(abc.ABC, Generic[TSchemaOrComplex]):
+    """
+    Base class for operators.
+    """
+
     @abc.abstractmethod
     def match(
         self,
         value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        """Docs placeholder."""
+        """
+        Tests a given `value` against the operator and returns `True`
+        if it matches, `False` otherwise.
+
+        Args:
+            value: The value to test.
+            schema_or_complex: Schema or `Complex` attribute that describes the value.
+
+        Returns:
+            Flag indicating whether the value matches the operator.
+        """
 
 
 class LogicalOperator(Operator, abc.ABC):
+    """
+    Base class for logical operators.
+    """
+    def __init__(self, *sub_operators: Operator):
+        self._sub_operators = list(sub_operators)
+
     @classmethod
     @abc.abstractmethod
     def op(cls) -> str:
-        """Docs placeholder."""
+        """Representation of the operator's type."""
 
     @property
-    @abc.abstractmethod
     def sub_operators(self) -> list[Operator]:
-        """Docs placeholder."""
+        """Sub-operators contained inside this operator."""
+        return self._sub_operators
 
     def _collect_matches(
         self,
@@ -40,14 +60,25 @@ class LogicalOperator(Operator, abc.ABC):
 
 
 class And(LogicalOperator):
-    def __init__(self, *sub_operators: Operator):
-        self._sub_operators = list(sub_operators)
-
+    """
+    Represents `and` SCIM operator. Matches if all sub-operators match.
+    """
     def match(
         self,
         value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
+        """
+        Tests a given `value` against the operator and returns `True`
+        if it matches, `False` otherwise.
+
+        Args:
+            value: The value to test.
+            schema_or_complex: Schema or `Complex` attribute that describes the value.
+
+        Returns:
+            Flag indicating whether the value matches the operator.
+        """
         value = value or SCIMData()
         for match in self._collect_matches(value, schema_or_complex):
             if not match:
@@ -64,14 +95,25 @@ class And(LogicalOperator):
 
 
 class Or(LogicalOperator):
-    def __init__(self, *sub_operators: Operator):
-        self._sub_operators = list(sub_operators)
-
+    """
+    Represents `or` SCIM operator. Matches if any of sub-operators match.
+    """
     def match(
         self,
         value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
+        """
+        Tests a given `value` against the operator and returns `True`
+        if it matches, `False` otherwise.
+
+        Args:
+            value: The value to test.
+            schema_or_complex: Schema or `Complex` attribute that describes the value.
+
+        Returns:
+            Flag indicating whether the value matches the operator.
+        """
         value = value or SCIMData()
         for match in self._collect_matches(value, schema_or_complex):
             if match:
@@ -82,60 +124,102 @@ class Or(LogicalOperator):
     def op(cls) -> str:
         return "or"
 
-    @property
-    def sub_operators(self) -> list[Operator]:
-        return self._sub_operators
-
 
 class Not(LogicalOperator):
+    """
+    Represents `not` SCIM operator. Matches if a sub-operator does not match.
+    """
     def __init__(self, sub_operator: Operator):
-        self._sub_operators = [sub_operator]
+        super().__init__(sub_operator)
 
     @classmethod
     def op(cls) -> str:
         return "not"
-
-    @property
-    def sub_operators(self) -> list[Operator]:
-        return self._sub_operators
 
     def match(
         self,
         value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
+        """
+        Tests a given `value` against the operator and returns `True`
+        if it matches, `False` otherwise.
+
+        Args:
+            value: The value to test.
+            schema_or_complex: Schema or `Complex` attribute that describes the value.
+
+        Returns:
+            Flag indicating whether the value matches the operator.
+        """
         return not next(self._collect_matches(value, schema_or_complex))
 
 
 class AttributeOperator(Operator, abc.ABC):
+    """
+    Base class for all operators that involve attributes directly.
+    """
     def __init__(self, attr_rep: AttrRep):
         self._attr_rep = attr_rep
 
     @classmethod
     @abc.abstractmethod
     def op(cls) -> str:
-        """Docs placeholder."""
+        """Returns representation of the operator's type."""
 
     @property
     def attr_rep(self) -> AttrRep:
         return self._attr_rep
 
+    @classmethod
+    @abc.abstractmethod
+    def supported_scim_types(cls) -> set[str]:
+        """
+        Returns a list of SCIM types supported by the operator.
+        """
+
+    @classmethod
+    @abc.abstractmethod
+    def supported_types(cls) -> set[type]:
+        """
+        Returns a list of Python types (e.g. str, int) supported by the operator
+        """
+
 
 class UnaryAttributeOperator(AttributeOperator, abc.ABC):
-    SUPPORTED_SCIM_TYPES: set[str]
-    SUPPORTED_TYPES: set[type]
-    OPERATOR: Callable[[Any], bool]
+    """
+    Base class for all unary operators.
+    """
+
+    @staticmethod
+    @abc.abstractmethod
+    def operator(value: Any) -> bool:
+        """
+        Operator's logic for matching values.
+        """
 
     def match(
         self,
         value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
+        """
+        Tests a given `value` against the operator and returns `True`
+        if it matches, `False` otherwise. If the `value` belongs to multi-valued
+        attribute, the whole `value` matches if one of its items matches.
+
+        Args:
+            value: The value to test.
+            schema_or_complex: Schema or `Complex` attribute that describes the value.
+
+        Returns:
+            Flag indicating whether the value matches the operator.
+        """
         attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None:
             return False
 
-        if attr.scim_type() not in self.SUPPORTED_SCIM_TYPES:
+        if attr.scim_type() not in self.supported_scim_types():
             return False
 
         if not value:
@@ -147,40 +231,48 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
             if isinstance(attr_value, list):
                 match = any(
                     [
-                        self.OPERATOR(item)
+                        self.operator(item)
                         for item in attr_value
-                        if type(item) in self.SUPPORTED_TYPES
+                        if type(item) in self.supported_types()
                     ]
                 )
             else:
                 match = False
         else:
-            match = self.OPERATOR(attr_value)
+            match = self.operator(attr_value)
 
         return match
 
 
-def _pr_operator(value):
-    if isinstance(value, dict):
-        return any([_pr_operator(val) for val in value.values()])
-    if isinstance(value, str):
-        return value != ""
-    return value not in [None, Missing]
-
-
 class Present(UnaryAttributeOperator):
-    SUPPORTED_SCIM_TYPES = {
-        "string",
-        "decimal",
-        "dateTime",
-        "reference",
-        "boolean",
-        "binary",
-        "integer",
-        "complex",
-    }
-    SUPPORTED_TYPES = {str, bool, int, dict, float, type(None)}
-    OPERATOR = staticmethod(_pr_operator)
+    """
+    Represents `pr` SCIM operator.
+    """
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {
+            "string",
+            "decimal",
+            "dateTime",
+            "reference",
+            "boolean",
+            "binary",
+            "integer",
+            "complex",
+        }
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, bool, int, dict, float, type(None)}
+
+    @staticmethod
+    def operator(value: Any) -> bool:
+        if isinstance(value, dict):
+            return any([Present.operator(val) for val in value.values()])
+        if isinstance(value, str):
+            return value != ""
+        return value not in [None, Missing]
 
     @classmethod
     def op(cls) -> str:
@@ -188,26 +280,42 @@ class Present(UnaryAttributeOperator):
 
 
 class BinaryAttributeOperator(AttributeOperator, abc.ABC):
-    SUPPORTED_SCIM_TYPES: set[str]
-    SUPPORTED_TYPES: set[type]
-    OPERATOR: Callable[[Any, Any], bool]
+    """
+    Base class for all binary operators.
+
+    Args:
+        attr_rep: A representation of an attribute which value should be
+            compared with the operator's value.
+        value: The operator's value (right operand), compared to the attribute's value
+            (left operand).
+    """
 
     def __init__(self, attr_rep: AttrRep, value: Any):
         super().__init__(attr_rep=attr_rep)
-        if type(value) not in self.SUPPORTED_TYPES:
+        if type(value) not in self.supported_types():
             raise TypeError(
-                f"unsupported value type {type(value).__name__!r} for {self.op!r} operator"
+                f"value type {type(value).__name__!r} is not supported by {self.op!r} operator"
             )
         self._value = value
 
     @property
     def value(self) -> Any:
+        """
+        The operator's value (right operand), compared to the attribute's value (left operand).
+        """
         return self._value
+
+    @staticmethod
+    @abc.abstractmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        """
+        Operator's logic for matching values.
+        """
 
     def _get_values_for_comparison(
         self, value: Any, attr: Attribute
     ) -> Optional[list[tuple[Any, Any]]]:
-        if attr.scim_type() not in self.SUPPORTED_SCIM_TYPES:
+        if attr.scim_type() not in self.supported_scim_types():
             return None
 
         op_value = self.value
@@ -252,6 +360,18 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
+        """
+        Tests a given `value` against the operator and returns `True`
+        if it matches, `False` otherwise. If the `value` belongs to multi-valued
+        attribute, the whole `value` matches if one of its items matches.
+
+        Args:
+            value: The value to test.
+            schema_or_complex: Schema or `Complex` attribute that describes the value.
+
+        Returns:
+            Flag indicating whether the value matches the operator.
+        """
         attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None:
             return False
@@ -268,7 +388,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         for attr_value, op_value in values:
             try:
-                if self.OPERATOR(attr_value, op_value):
+                if self.operator(attr_value, op_value):
                     return True
             except (AttributeError, TypeError):
                 pass
@@ -277,18 +397,30 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
 
 class Equal(BinaryAttributeOperator):
-    OPERATOR = operator.eq
-    SUPPORTED_SCIM_TYPES = {
-        "string",
-        "decimal",
-        "dateTime",
-        "reference",
-        "boolean",
-        "binary",
-        "integer",
-        "complex",
-    }
-    SUPPORTED_TYPES = {str, bool, int, float, type(None)}
+    """
+    Represents `eq` SCIM operator.
+    """
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {
+            "string",
+            "decimal",
+            "dateTime",
+            "reference",
+            "boolean",
+            "binary",
+            "integer",
+            "complex",
+        }
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, bool, int, float, type(None)}
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return operator.eq(attr_value, op_value)
 
     @classmethod
     def op(cls) -> str:
@@ -296,18 +428,30 @@ class Equal(BinaryAttributeOperator):
 
 
 class NotEqual(BinaryAttributeOperator):
-    OPERATOR = operator.ne
-    SUPPORTED_SCIM_TYPES = {
-        "string",
-        "decimal",
-        "dateTime",
-        "reference",
-        "boolean",
-        "binary",
-        "integer",
-        "complex",
-    }
-    SUPPORTED_TYPES = {str, bool, int, float, type(None)}
+    """
+    Represents `ne` SCIM operator.
+    """
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {
+            "string",
+            "decimal",
+            "dateTime",
+            "reference",
+            "boolean",
+            "binary",
+            "integer",
+            "complex",
+        }
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, bool, int, float, type(None)}
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return operator.ne(attr_value, op_value)
 
     @classmethod
     def op(cls) -> str:
@@ -315,9 +459,21 @@ class NotEqual(BinaryAttributeOperator):
 
 
 class Contains(BinaryAttributeOperator):
-    OPERATOR = operator.contains
-    SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
-    SUPPORTED_TYPES = {str, float}
+    """
+    Represents `co` SCIM operator.
+    """
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {"string", "reference", "complex"}
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, float}
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return operator.contains(attr_value, op_value)
 
     @classmethod
     def op(cls) -> str:
@@ -325,13 +481,21 @@ class Contains(BinaryAttributeOperator):
 
 
 class StartsWith(BinaryAttributeOperator):
+    """
+    Represents `sw` SCIM operator.
+    """
+
     @staticmethod
-    def _starts_with(val1: str, val2: str):
+    def operator(val1: str, val2: str):
         return val1.startswith(val2)
 
-    OPERATOR = _starts_with
-    SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
-    SUPPORTED_TYPES = {str, float}
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {"string", "reference", "complex"}
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, float}
 
     @classmethod
     def op(cls) -> str:
@@ -339,13 +503,21 @@ class StartsWith(BinaryAttributeOperator):
 
 
 class EndsWith(BinaryAttributeOperator):
+    """
+    Represents `ew` SCIM operator.
+    """
+
     @staticmethod
-    def _ends_with(val1: str, val2: str):
+    def operator(val1: str, val2: str):
         return val1.endswith(val2)
 
-    OPERATOR = _ends_with
-    SUPPORTED_SCIM_TYPES = {"string", "reference", "complex"}
-    SUPPORTED_TYPES = {str, float}
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {"string", "reference", "complex"}
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, float}
 
     @classmethod
     def op(cls) -> str:
@@ -353,9 +525,21 @@ class EndsWith(BinaryAttributeOperator):
 
 
 class GreaterThan(BinaryAttributeOperator):
-    OPERATOR = operator.gt
-    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
-    SUPPORTED_TYPES = {str, float, int}
+    """
+    Represents `gt` SCIM operator.
+    """
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {"string", "dateTime", "integer", "decimal", "complex"}
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, float, int}
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return operator.gt(attr_value, op_value)
 
     @classmethod
     def op(cls) -> str:
@@ -363,9 +547,21 @@ class GreaterThan(BinaryAttributeOperator):
 
 
 class GreaterThanOrEqual(BinaryAttributeOperator):
-    OPERATOR = operator.ge
-    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
-    SUPPORTED_TYPES = {str, float, int}
+    """
+    Represents `ge` SCIM operator.
+    """
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return operator.ge(attr_value, op_value)
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {"string", "dateTime", "integer", "decimal", "complex"}
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, float, int}
 
     @classmethod
     def op(cls) -> str:
@@ -373,9 +569,21 @@ class GreaterThanOrEqual(BinaryAttributeOperator):
 
 
 class LesserThan(BinaryAttributeOperator):
-    OPERATOR = operator.lt
-    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
-    SUPPORTED_TYPES = {str, float, int}
+    """
+    Represents `lt` SCIM operator.
+    """
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return operator.lt(attr_value, op_value)
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {"string", "dateTime", "integer", "decimal", "complex"}
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, float, int}
 
     @classmethod
     def op(cls) -> str:
@@ -383,35 +591,62 @@ class LesserThan(BinaryAttributeOperator):
 
 
 class LesserThanOrEqual(BinaryAttributeOperator):
-    OPERATOR = operator.le
-    SUPPORTED_SCIM_TYPES = {"string", "dateTime", "integer", "decimal", "complex"}
-    SUPPORTED_TYPES = {str, float, int}
+    """
+    Represents `le` SCIM operator.
+    """
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return operator.le(attr_value, op_value)
+
+    @classmethod
+    def supported_scim_types(cls) -> set[str]:
+        return {"string", "dateTime", "integer", "decimal", "complex"}
+
+    @classmethod
+    def supported_types(cls) -> set[type]:
+        return {str, float, int}
 
     @classmethod
     def op(cls) -> str:
         return "le"
 
 
-TComplexAttributeSubOperator = TypeVar(
-    "TComplexAttributeSubOperator", bound=Union[LogicalOperator, "AttributeOperator"]
+TLogicalOrAttributeOperator = TypeVar(
+    "TLogicalOrAttributeOperator", bound=Union[LogicalOperator, "AttributeOperator"]
 )
 
 
-class ComplexAttributeOperator(Operator, Generic[TComplexAttributeSubOperator]):
+class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
+    """
+    Represents complex attribute grouping operator. Can be used for single-valued and
+    multi-valued complex attributes.
+
+    Args:
+        attr_rep: A representation of a complex attribute which value should be matched.
+        sub_operator: A sub-operator used to test complex attribute sub-attribute values.
+    """
+
     def __init__(
         self,
         attr_rep: AttrRep,
-        sub_operator: TComplexAttributeSubOperator,
+        sub_operator: TLogicalOrAttributeOperator,
     ):
         self._attr_rep = attr_rep
         self._sub_operator = sub_operator
 
     @property
     def attr_rep(self) -> AttrRep:
+        """
+        The representation of a complex attribute which value should be matched.
+        """
         return self._attr_rep
 
     @property
-    def sub_operator(self) -> TComplexAttributeSubOperator:
+    def sub_operator(self) -> TLogicalOrAttributeOperator:
+        """
+        The sub-operator used to test complex attribute sub-attribute values.
+        """
         return self._sub_operator
 
     def match(
@@ -419,6 +654,18 @@ class ComplexAttributeOperator(Operator, Generic[TComplexAttributeSubOperator]):
         value: Optional[SCIMData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
+        """
+        Tests a given `value` against the operator and returns `True`
+        if it matches, `False` otherwise. If the `value` belongs to multi-valued
+        attribute, the whole `value` matches if one of its items matches.
+
+        Args:
+            value: The value to test.
+            schema_or_complex: Schema or `Complex` attribute that describes the value.
+
+        Returns:
+            Flag indicating whether the value matches the operator.
+        """
         attr = schema_or_complex.attrs.get(self._attr_rep)
         if attr is None or not value or not isinstance(attr, Complex):
             return False

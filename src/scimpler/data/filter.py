@@ -432,7 +432,7 @@ class Filter(Generic[TOperator]):
             if not issues.can_proceed():
                 return issues
 
-            if op_ and type(value) not in op_.SUPPORTED_TYPES:
+            if op_ and type(value) not in op_.supported_types():
                 issues.add_error(
                     issue=ValidationError.non_compatible_operand(value, op_.op()),
                     proceed=False,

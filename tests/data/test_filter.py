@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 import pytest
 
@@ -2444,9 +2445,17 @@ def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, exp
 
 def test_binary_operator_can_be_registered(user_schema):
     class Regex(BinaryAttributeOperator):
-        SUPPORTED_SCIM_TYPES = {"string"}
-        SUPPORTED_TYPES = {str}
-        OPERATOR = staticmethod(lambda attr_value, op_value: re.fullmatch(op_value, attr_value))
+        @classmethod
+        def supported_scim_types(cls) -> set[str]:
+            return {"string"}
+
+        @classmethod
+        def supported_types(cls) -> set[type]:
+            return {str}
+
+        @staticmethod
+        def operator(attr_value: Any, op_value: Any) -> bool:
+            return bool(re.fullmatch(op_value, attr_value))
 
         @classmethod
         def op(cls) -> str:
@@ -2462,9 +2471,17 @@ def test_binary_operator_can_be_registered(user_schema):
 
 def test_unary_operator_can_be_registered(user_schema):
     class IsNice(UnaryAttributeOperator):
-        SUPPORTED_SCIM_TYPES = {"string"}
-        SUPPORTED_TYPES = {str}
-        OPERATOR = staticmethod(lambda attr_value: attr_value == "Nice")
+        @classmethod
+        def supported_scim_types(cls) -> set[str]:
+            return {"string"}
+
+        @classmethod
+        def supported_types(cls) -> set[type]:
+            return {str}
+
+        @staticmethod
+        def operator(value: Any) -> bool:
+            return value == "Nice"
 
         @classmethod
         def op(cls) -> str:
