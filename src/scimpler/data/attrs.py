@@ -172,6 +172,8 @@ class Attribute(abc.ABC):
 
     _global_serializer: Optional[Callable[[Any], Any]] = None
     _global_deserializer: Optional[Callable[[Any], Any]] = None
+    scim_type: str
+    base_types: tuple[type, ...]
 
     def __init__(
         self,
@@ -222,16 +224,6 @@ class Attribute(abc.ABC):
         self._validators = validators or []
         self._deserializer = deserializer
         self._serializer = serializer
-
-    @classmethod
-    @abc.abstractmethod
-    def scim_type(cls) -> str:
-        """Returns name of a scim type of the attribute."""
-
-    @classmethod
-    @abc.abstractmethod
-    def base_types(cls) -> tuple[type, ...]:
-        """Returns Python types, supported by the specific `Attribute` subclass."""
 
     @classmethod
     def set_serializer(cls, serializer: Callable[[Any], Any]):
@@ -359,9 +351,9 @@ class Attribute(abc.ABC):
 
     def _validate_value_type(self, value: Any) -> ValidationIssues:
         issues = ValidationIssues()
-        if not isinstance(value, self.base_types()):
+        if not isinstance(value, self.base_types):
             issues.add_error(
-                issue=ValidationError.bad_type(self.scim_type()),
+                issue=ValidationError.bad_type(self.scim_type),
                 proceed=False,
             )
         return issues
@@ -451,11 +443,11 @@ class Attribute(abc.ABC):
         of the schema definition.
 
         Returns:
-            Representation of the attribute
+            Representation of the attribute.
         """
         output = {
             "name": self._name,
-            "type": str(self.scim_type()),
+            "type": str(self.scim_type),
             "multiValued": self._multi_valued,
             "description": self.description,
             "required": self.required,
@@ -499,10 +491,11 @@ class AttributeWithUniqueness(Attribute, abc.ABC):
 
     def to_dict(self) -> dict:
         """
-        Extend the output from `Attribute.to_dict` and add `uniqueness` property.
+        Converts the attribute to a dictionary. The contents meet the requirements
+        of the schema definition.
 
         Returns:
-            Extended representation of the attribute
+            Representation of the attribute
         """
         output = super().to_dict()
         output["uniqueness"] = self.uniqueness.value
@@ -542,10 +535,11 @@ class AttributeWithCaseExact(Attribute, abc.ABC):
 
     def to_dict(self) -> dict:
         """
-        Extend the output from `Attribute.to_dict` and add `case_exact` property.
+        Converts the attribute to a dictionary. The contents meet the requirements
+        of the schema definition.
 
         Returns:
-            Extended representation of the attribute
+            Representation of the attribute
         """
         output = super().to_dict()
         output["caseExact"] = self.case_exact
@@ -562,14 +556,6 @@ class Unknown(Attribute):
     used when representing resource schema.
     """
 
-    @classmethod
-    def scim_type(cls) -> str:
-        raise NotImplementedError("scim type for Unknown attribute is not determined")
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        raise NotImplementedError("base types for Unknown attribute are not determined")
-
     def _validate_value_type(self, value: Any) -> ValidationIssues:
         return ValidationIssues()
 
@@ -585,14 +571,8 @@ class Boolean(Attribute):
     """
     Represents **boolean** attribute.
     """
-
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.BOOLEAN
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return (bool,)
+    scim_type = SCIMType.BOOLEAN
+    base_types = (bool,)
 
 
 @final
@@ -600,6 +580,8 @@ class Decimal(AttributeWithUniqueness):
     """
     Represents **decimal** attribute.
     """
+    scim_type = SCIMType.DECIMAL
+    base_types = (float, int)
 
     def __init__(
         self,
@@ -655,14 +637,6 @@ class Decimal(AttributeWithUniqueness):
             deserializer=deserializer,
             serializer=serializer,
         )
-
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.DECIMAL
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return float, int
 
 
 @final
@@ -670,6 +644,8 @@ class Integer(AttributeWithUniqueness):
     """
     Represents **integer** attribute.
     """
+    scim_type = SCIMType.INTEGER
+    base_types = (int,)
 
     def __init__(
         self,
@@ -726,20 +702,14 @@ class Integer(AttributeWithUniqueness):
             serializer=serializer,
         )
 
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.INTEGER
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return (int,)
-
 
 @final
 class String(AttributeWithCaseExact, AttributeWithUniqueness):
     """
     Represents **string** attribute.
     """
+    scim_type = SCIMType.STRING
+    base_types = (str,)
 
     def __init__(
         self,
@@ -803,14 +773,6 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
         )
         self._precis = precis
 
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.STRING
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return (str,)
-
     @property
     def precis(self) -> precis_i18n.profile.Profile:
         """
@@ -825,6 +787,8 @@ class Binary(AttributeWithCaseExact):
     Represents **binary** attribute. Binary attributes are
     case-sensitive, since they are represented by base64-encoded strings.
     """
+    scim_type = SCIMType.BINARY
+    base_types = (str,)
 
     def __init__(
         self,
@@ -899,14 +863,6 @@ class Binary(AttributeWithCaseExact):
             and self._omit_padding == other._omit_padding
         )
 
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.BINARY
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return (str,)
-
     def _validate_value_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_value_type(value)
         if not issues.can_proceed():
@@ -944,6 +900,8 @@ class Reference(AttributeWithCaseExact, abc.ABC):
         reference_types: types of the references, supported by the attribute.
         **kwargs: The same keyword arguments base classes receive.
     """
+    scim_type = SCIMType.REFERENCE
+    base_types = (str,)
 
     def __init__(
         self, name: Union[str, AttrName], *, reference_types: Iterable[str], **kwargs: Any
@@ -951,14 +909,6 @@ class Reference(AttributeWithCaseExact, abc.ABC):
         kwargs["case_exact"] = True
         super().__init__(name=name, **kwargs)
         self._reference_types = list(reference_types)
-
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.REFERENCE
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return (str,)
 
     @property
     def reference_types(self) -> list[str]:
@@ -969,10 +919,11 @@ class Reference(AttributeWithCaseExact, abc.ABC):
 
     def to_dict(self) -> dict:
         """
-        Extend the output from `AttributeWithCaseExact.to_dict` and add reference types to it.`
+        Converts the attribute to a dictionary. The contents meet the requirements
+        of the schema definition.
 
         Returns:
-            Extended representation of the attribute
+            Representation of the attribute
         """
         output = super().to_dict()
         output["referenceTypes"] = self.reference_types
@@ -987,6 +938,8 @@ class DateTime(Attribute):
     """
     Represents **dateTime** attribute.
     """
+    scim_type = SCIMType.DATETIME
+    base_types = (str,)
 
     def __init__(
         self,
@@ -1039,14 +992,6 @@ class DateTime(Attribute):
             deserializer=deserializer,
             serializer=serializer,
         )
-
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.DATETIME
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return (str,)
 
     def _validate_value_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_value_type(value)
@@ -1300,6 +1245,8 @@ class Complex(Attribute):
     """
     Represents **complex** attribute.
     """
+    scim_type = SCIMType.COMPLEX
+    base_types = (MutableMapping,)
 
     def __init__(
         self,
@@ -1385,14 +1332,6 @@ class Complex(Attribute):
             deserializer=deserializer,
             serializer=serializer,
         )
-
-    @classmethod
-    def scim_type(cls) -> SCIMType:
-        return SCIMType.COMPLEX
-
-    @classmethod
-    def base_types(cls) -> tuple[type, ...]:
-        return (MutableMapping,)
 
     @property
     def attrs(self) -> "Attrs":
@@ -1488,10 +1427,11 @@ class Complex(Attribute):
 
     def to_dict(self) -> dict[str, Any]:
         """
-        Extend the output from `Attribute.to_dict` and add sub-attributes to it.`
+        Converts the attribute to a dictionary. The contents meet the requirements
+        of the schema definition.
 
         Returns:
-            Extended representation of the attribute
+            Representation of the attribute
         """
         output = super().to_dict()
         output["subAttributes"] = [sub_attr.to_dict() for _, sub_attr in self.attrs]

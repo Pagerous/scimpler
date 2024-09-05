@@ -959,13 +959,8 @@ def test_matching_unary_operator_fails_if_missing_attr():
 
 def test_matching_unary_operator_fails_if_attr_scim_type_is_not_supported():
     class CustomAttribute(Attribute):
-        @classmethod
-        def scim_type(cls) -> str:
-            return "dontYouEverDoThat"
-
-        @classmethod
-        def base_types(cls) -> tuple[type, ...]:
-            return (str,)
+        scim_type = "dontYouEverDoThat"
+        base_types = (str,)
 
     op = Present(attr_rep=AttrRep("attr"))
 

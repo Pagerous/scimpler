@@ -214,7 +214,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr is None:
             return False
 
-        if attr.scim_type() not in self.supported_scim_types:
+        if attr.scim_type not in self.supported_scim_types:
             return False
 
         if not value:
@@ -303,7 +303,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     def _get_values_for_comparison(
         self, value: Any, attr: Attribute
     ) -> Optional[list[tuple[Any, Any]]]:
-        if attr.scim_type() not in self.supported_scim_types:
+        if attr.scim_type not in self.supported_scim_types:
             return None
 
         op_value = self.value
@@ -321,7 +321,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         elif not isinstance(value, list):
             value = [value]
 
-        if isinstance(op_value, attr.base_types()):
+        if isinstance(op_value, attr.base_types):
             op_value = attr.deserialize(op_value)
 
         if isinstance(attr, AttributeWithCaseExact):
