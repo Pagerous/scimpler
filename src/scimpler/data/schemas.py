@@ -4,7 +4,6 @@ from typing import Any, Iterable, MutableMapping, Optional, cast
 
 from typing_extensions import Self
 
-from scimpler.container import Invalid, Missing, SCIMData
 from scimpler.data.attr_presence import (
     AttrPresenceConfig,
     DataInclusivity,
@@ -23,8 +22,9 @@ from scimpler.data.attrs import (
     String,
     UriReference,
 )
+from scimpler.data.identifiers import BoundedAttrRep, SchemaURI
+from scimpler.data.scim_data import Invalid, Missing, SCIMData
 from scimpler.error import ValidationError, ValidationIssues
-from scimpler.identifiers import BoundedAttrRep, SchemaURI
 from scimpler.registry import register_schema
 from scimpler.warning import ScimpleUserWarning
 

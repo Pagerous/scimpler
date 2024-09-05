@@ -4,8 +4,8 @@ from typing import Any
 import pytest
 
 from scimpler.data.filter import Filter
+from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
-from scimpler.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.registry import register_binary_operator, register_unary_operator
 
 

@@ -3,8 +3,8 @@ from typing import Any, MutableMapping, Optional
 
 from scimpler import registry
 from scimpler.config import ServiceProviderConfig
-from scimpler.container import SCIMData
 from scimpler.data.attrs import AttrFilter
+from scimpler.data.scim_data import SCIMData
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.schemas.search_request import SearchRequestSchema
 

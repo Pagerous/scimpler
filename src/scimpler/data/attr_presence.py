@@ -2,10 +2,10 @@ from collections.abc import MutableMapping
 from enum import Enum
 from typing import Any, Collection, Optional, Union
 
-from scimpler.container import Missing
 from scimpler.data.attrs import Attribute, AttributeIssuer, AttributeReturn
+from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
+from scimpler.data.scim_data import Missing
 from scimpler.error import ValidationError, ValidationIssues
-from scimpler.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 
 
 class DataDirection(str, Enum):

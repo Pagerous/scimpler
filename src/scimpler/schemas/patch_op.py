@@ -1,11 +1,11 @@
 from copy import copy
 from typing import Any, Optional, Union, cast
 
-from scimpler.container import Invalid, Missing, MissingType, SCIMData
 from scimpler.data.attr_presence import validate_presence
 from scimpler.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import BaseSchema, ResourceSchema
+from scimpler.data.scim_data import Invalid, Missing, MissingType, SCIMData
 from scimpler.error import ValidationError, ValidationIssues
 
 

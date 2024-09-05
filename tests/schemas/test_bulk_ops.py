@@ -1,6 +1,6 @@
 import pytest
 
-from scimpler.container import SCIMData
+from scimpler.data.scim_data import SCIMData
 from scimpler.schemas import ErrorSchema
 from scimpler.schemas.bulk_ops import BulkRequestSchema, BulkResponseSchema
 

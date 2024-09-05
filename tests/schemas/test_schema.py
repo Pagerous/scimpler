@@ -1,4 +1,4 @@
-from scimpler.container import SCIMData
+from scimpler.data.scim_data import SCIMData
 from scimpler.schemas.schema import SchemaDefinitionSchema, attributes
 
 

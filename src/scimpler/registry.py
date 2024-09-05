@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING, Any, Callable
 from scimpler.config import ServiceProviderConfig, create_service_provider_config
 
 if TYPE_CHECKING:
+    from scimpler.data.identifiers import SchemaURI
     from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
     from scimpler.data.schemas import ResourceSchema
-    from scimpler.identifiers import SchemaURI
 
 
 resources: dict[str, "ResourceSchema"] = {}

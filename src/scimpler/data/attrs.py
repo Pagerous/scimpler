@@ -24,15 +24,15 @@ import precis_i18n.profile
 from precis_i18n import get_profile
 
 from scimpler.constants import SCIMType
-from scimpler.container import Invalid, Missing, SCIMData
-from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
-from scimpler.identifiers import (
+from scimpler.data.identifiers import (
     AttrName,
     AttrRep,
     AttrRepFactory,
     BoundedAttrRep,
     SchemaURI,
 )
+from scimpler.data.scim_data import Invalid, Missing, SCIMData
+from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 from scimpler.registry import resources
 
 if TYPE_CHECKING:

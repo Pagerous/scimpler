@@ -3,16 +3,16 @@ from typing import Generator
 
 import pytest
 
-from scimpler.container import SCIMData
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import AttrFilter, Boolean, Complex, Integer, String
+from scimpler.data.identifiers import AttrRep, BoundedAttrRep
 from scimpler.data.schemas import (
     BaseResourceSchema,
     ResourceSchema,
     SchemaExtension,
     validate_resource_type_consistency,
 )
-from scimpler.identifiers import AttrRep, BoundedAttrRep
+from scimpler.data.scim_data import SCIMData
 from scimpler.registry import register_resource_schema, resources, schemas
 from scimpler.warning import ScimpleUserWarning
 

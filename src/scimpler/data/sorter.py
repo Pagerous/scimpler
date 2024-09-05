@@ -2,9 +2,9 @@ import functools
 from collections.abc import MutableMapping
 from typing import Any, Iterable, Optional, Sequence, Union
 
-from scimpler.container import AttrRep, Missing, SCIMData
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.schemas import BaseResourceSchema
+from scimpler.data.scim_data import AttrRep, Missing, SCIMData
 
 
 class AlwaysLastKey:

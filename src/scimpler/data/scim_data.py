@@ -2,7 +2,7 @@ from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Optional, Union
 
-from scimpler.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep, SchemaURI
+from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep, SchemaURI
 from scimpler.registry import schemas
 
 

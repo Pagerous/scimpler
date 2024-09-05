@@ -3,7 +3,6 @@ from typing import Any, Optional, Sequence, Union, cast
 
 from scimpler import registry
 from scimpler.config import ServiceProviderConfig
-from scimpler.container import Missing, SCIMData
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import (
     AttrFilter,
@@ -12,10 +11,11 @@ from scimpler.data.attrs import (
     AttributeReturn,
 )
 from scimpler.data.filter import Filter
+from scimpler.data.identifiers import AttrRep, BoundedAttrRep
 from scimpler.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
+from scimpler.data.scim_data import Missing, SCIMData
 from scimpler.data.sorter import Sorter
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
-from scimpler.identifiers import AttrRep, BoundedAttrRep
 from scimpler.schemas import (
     BulkRequestSchema,
     BulkResponseSchema,

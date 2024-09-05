@@ -4,7 +4,6 @@ import pytest
 
 from scimpler import registry
 from scimpler.config import create_service_provider_config
-from scimpler.container import SCIMData
 from scimpler.data.attrs import (
     AttrFilter,
     AttributeIssuer,
@@ -21,6 +20,7 @@ from scimpler.data.attrs import (
 )
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema
+from scimpler.data.scim_data import SCIMData
 from scimpler.schemas import GroupSchema, UserSchema
 from scimpler.schemas.user import EnterpriseUserSchemaExtension
 

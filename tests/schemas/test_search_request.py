@@ -1,6 +1,6 @@
 from scimpler.config import create_service_provider_config
 from scimpler.data.filter import Filter
-from scimpler.identifiers import AttrRep
+from scimpler.data.identifiers import AttrRep
 from scimpler.schemas.search_request import SearchRequestSchema
 
 

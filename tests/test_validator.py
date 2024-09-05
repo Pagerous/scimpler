@@ -4,14 +4,14 @@ from datetime import datetime
 import pytest
 
 from scimpler.config import create_service_provider_config
-from scimpler.container import Missing
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import DateTime
 from scimpler.data.filter import Filter
+from scimpler.data.identifiers import AttrRep, BoundedAttrRep
 from scimpler.data.operator import Present
 from scimpler.data.patch_path import PatchPath
+from scimpler.data.scim_data import Missing
 from scimpler.data.sorter import Sorter
-from scimpler.identifiers import AttrRep, BoundedAttrRep
 from scimpler.schemas import service_provider_config
 from scimpler.schemas.resource_type import ResourceTypeSchema
 from scimpler.schemas.schema import SchemaDefinitionSchema

@@ -2,10 +2,10 @@ import abc
 import operator
 from typing import Any, Generator, Generic, Optional, TypeVar, Union
 
-from scimpler.container import Invalid, Missing, SCIMData
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
+from scimpler.data.identifiers import AttrRep
 from scimpler.data.schemas import ResourceSchema
-from scimpler.identifiers import AttrRep
+from scimpler.data.scim_data import Invalid, Missing, SCIMData
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[ResourceSchema, Complex])
 

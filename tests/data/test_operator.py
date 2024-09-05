@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from scimpler.container import SCIMData
 from scimpler.data.attrs import Attribute, Complex, DateTime, String
+from scimpler.data.identifiers import AttrRep
 from scimpler.data.operator import (
     And,
     ComplexAttributeOperator,
@@ -20,7 +20,7 @@ from scimpler.data.operator import (
     Present,
     StartsWith,
 )
-from scimpler.identifiers import AttrRep
+from scimpler.data.scim_data import SCIMData
 
 
 @pytest.mark.parametrize(

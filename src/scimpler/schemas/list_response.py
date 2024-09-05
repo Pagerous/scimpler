@@ -1,9 +1,9 @@
 from typing import Any, Optional, Sequence, Union
 
-from scimpler.container import Invalid, Missing, SCIMData
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import Attribute, Integer, Unknown
 from scimpler.data.schemas import BaseResourceSchema, BaseSchema
+from scimpler.data.scim_data import Invalid, Missing, SCIMData
 from scimpler.error import ValidationError, ValidationIssues
 
 

@@ -3,9 +3,9 @@ from collections.abc import Mapping
 from copy import deepcopy
 from typing import Any, Optional
 
-from scimpler.container import Missing, SCIMData
 from scimpler.data.attrs import Complex, ExternalReference, Integer, String, Unknown
 from scimpler.data.schemas import BaseSchema
+from scimpler.data.scim_data import Missing, SCIMData
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.schemas.error import ErrorSchema
 
