@@ -9,10 +9,14 @@ nav:
   - API Reference:
       - scimpler.data:
           - AttrFilter: api_reference/scimpler_data/attr_filter.md
+          - AttrName: api_reference/scimpler_data/attr_name.md
           - AttrPresenceConfig: api_reference/scimpler_data/attr_presence_config.md
+          - AttrRep: api_reference/scimpler_data/attr_rep.md
+          - AttrRepFactory: api_reference/scimpler_data/attr_rep_factory.md
           - Attrs: api_reference/scimpler_data/attrs.md
           - Binary: api_reference/scimpler_data/binary.md
           - Boolean: api_reference/scimpler_data/boolean.md
+          - BoundedAttrRep: api_reference/scimpler_data/bounded_attr_rep.md
           - BoundedAttrs: api_reference/scimpler_data/bounded_attrs.md
           - Complex: api_reference/scimpler_data/complex.md
           - DateTime: api_reference/scimpler_data/datetime.md
@@ -23,6 +27,7 @@ nav:
           - PatchPath: api_reference/scimpler_data/patch_path.md
           - ResourceSchema: api_reference/scimpler_data/resource_schema.md
           - SchemaExtension: api_reference/scimpler_data/schema_extension.md
+          - SchemaUri: api_reference/scimpler_data/schema_uri.md
           - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
           - Sorter: api_reference/scimpler_data/sorter.md

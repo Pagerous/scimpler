@@ -12,6 +12,16 @@ _ATTR_REP = re.compile(
 
 
 class AttrName(str):
+    """
+    Represents unbounded attribute name. Must conform attribute name notation, as
+    specified in RFC-7643.
+
+    Attribute names are case-insensitive.
+
+    Raises:
+        ValueError: If the provided value is not valid attribute name.
+    """
+
     def __new__(cls, value: str) -> "AttrName":
         if not isinstance(value, AttrName) and not _ATTR_NAME.fullmatch(value):
             raise ValueError(f"{value!r} is not valid attr name")
@@ -27,6 +37,15 @@ class AttrName(str):
 
 
 class SchemaURI(str):
+    """
+    Represents schema URI.
+
+    Schema URIs are case-insensitive.
+
+    Raises:
+        ValueError: If the provided value is not valid schema URI.
+    """
+
     def __new__(cls, value: str) -> "SchemaURI":
         if not isinstance(value, SchemaURI) and not _URI_PREFIX.fullmatch(value + ":"):
             raise ValueError(f"{value!r} is not a valid schema URI")
@@ -42,7 +61,16 @@ class SchemaURI(str):
 
 
 class AttrRep:
+    """
+    Representation of an unbounded attribute or sub-attribute (no schema association).
+    """
+
     def __init__(self, attr: str, sub_attr: Optional[str] = None):
+        """
+        Args:
+            attr: The attribute name.
+            sub_attr: The sub-attribute name.
+        """
         attr = AttrName(attr)
         str_: str = attr
         if sub_attr is not None:
@@ -70,16 +98,28 @@ class AttrRep:
 
     @property
     def attr(self) -> AttrName:
+        """
+        The attribute name.
+        """
         return self._attr
 
     @property
     def sub_attr(self) -> AttrName:
+        """
+        The sub-attribute name.
+        Raises:
+            AttributeError: If `AttrRep` has no sub-attribute name assigned, meaning it represents
+                top-level attribute.
+        """
         if self._sub_attr is None:
             raise AttributeError(f"{self!r} has no sub-attribute")
         return self._sub_attr
 
     @property
     def is_sub_attr(self) -> bool:
+        """
+        Flag indicating whether `AttrRep` represents sub-attribute.
+        """
         return self._sub_attr is not None
 
     @property
@@ -90,12 +130,25 @@ class AttrRep:
 
 
 class BoundedAttrRep(AttrRep):
+    """
+    Representation of a bounded attribute or sub-attribute (with schema association).
+    """
+
     def __init__(
         self,
         schema: str,
         attr: str,
         sub_attr: Optional[str] = None,
     ):
+        """
+        Args:
+            schema: The schema URI to which the attribute or sub-attribute belongs.
+            attr: The attribute name.
+            sub_attr: The sub-attribute name.
+
+        Raises:
+            ValueError: If the provided `schema` is not recognized in the system registry.
+        """
         super().__init__(attr, sub_attr)
         schema = SchemaURI(schema)
         is_extension = schemas.get(schema)
@@ -118,10 +171,17 @@ class BoundedAttrRep(AttrRep):
 
     @property
     def schema(self) -> SchemaURI:
+        """
+        The schema URI to which the attribute or sub-attribute belongs.
+        """
         return self._schema
 
     @property
     def extension(self) -> bool:
+        """
+        Flag indicating whether the represented attribute or sub-attribute belongs to a
+        schema extension.
+        """
         return self._extension
 
     @property
@@ -130,8 +190,17 @@ class BoundedAttrRep(AttrRep):
 
 
 class AttrRepFactory:
+    """
+    Attribute representation factory. Able to validate string-based representations and
+    deserialize them to `AttrRep` or `BoundedAttrRep`.
+    """
+
     @classmethod
     def validate(cls, value: str) -> ValidationIssues:
+        """
+        Validates if the provided `value` is valid attribute representation and returns
+        validation issues.
+        """
         issues = ValidationIssues()
         match = _ATTR_REP.fullmatch(value)
         if match is not None:
@@ -147,10 +216,34 @@ class AttrRepFactory:
 
     @classmethod
     def deserialize(cls, value: str) -> Union[AttrRep, BoundedAttrRep]:
+        """
+        Deserializes the provided `value` to `AttrRep` or `BoundedAttrRep`.
+
+        Args:
+            value: The value to deserialize.
+
+        Raises:
+            ValueError: If the provided `value` is not valid attribute representation.
+
+        Returns:
+            Attribute representation. The type depends on the `value` content.
+
+        Examples:
+            >>> AttrRepFactory.deserialize("name.formatted")
+            "AttrRep(attr='name', sub_attr='formatted')"
+            >>> AttrRepFactory.deserialize(
+            >>>     "urn:ietf:params:scim:schemas:core:2.0:Group:members.type"
+            >>> )
+            "BoundedAttrRep(
+                schema='urn:ietf:params:scim:schemas:core:2.0:Group:members.type',
+                attr='members',
+                sub_attr='type'
+            )"
+        """
         try:
             return cls._deserialize(value)
-        except Exception as e:
-            raise ValueError(f"{value!r} is not valid attribute representation") from e
+        except Exception:
+            raise ValueError(f"{value!r} is not valid attribute representation")
 
     @classmethod
     def _deserialize(cls, value: str) -> Union[AttrRep, BoundedAttrRep]:
