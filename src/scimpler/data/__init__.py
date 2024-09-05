@@ -18,6 +18,7 @@ from scimpler.data.attrs import (
 from scimpler.data.filter import Filter
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.data.patch_path import PatchPath
+from scimpler.data.sorter import Sorter
 
 __all__ = [
     "AttrFilter",
@@ -39,4 +40,5 @@ __all__ = [
     "SchemaExtension",
     "Filter",
     "PatchPath",
+    "Sorter",
 ]

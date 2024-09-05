@@ -256,28 +256,6 @@ def test_empty_collection_can_be_passed_to_sorter(user_schema):
     assert sorter([], user_schema) == []
 
 
-def test_sorter_preserves_input_data_type__container(user_schema):
-    sorter = Sorter(attr_rep=AttrRep(attr="userName"), asc=True)
-    data = [SCIMData({"userName": "B"}), SCIMData({"userName": "A"})]
-    expected = [SCIMData({"userName": "A"}), SCIMData({"userName": "B"})]
-
-    actual = sorter(data, user_schema)
-
-    assert actual == expected
-    assert isinstance(actual[0], SCIMData)
-
-
-def test_sorter_preserves_input_data_type__dict(user_schema):
-    sorter = Sorter(attr_rep=AttrRep(attr="userName"), asc=True)
-    data = [{"userName": "B"}, {"userName": "A"}]
-    expected = [{"userName": "A"}, {"userName": "B"}]
-
-    actual = sorter(data, user_schema)
-
-    assert actual == expected
-    assert isinstance(actual[0], dict)
-
-
 def test_data_item_with_string_value_but_for_non_string_attr_is_ordered_last_if_ascending(
     fake_schema,
 ):

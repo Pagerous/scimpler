@@ -1,8 +1,6 @@
 import functools
 from collections.abc import MutableMapping
-from typing import Any, Generic, Optional, Sequence, TypeVar, Union, cast
-
-from typing_extensions import Self
+from typing import Any, Iterable, Optional, Sequence, Union
 
 from scimpler.container import AttrRep, Missing, SCIMData
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
@@ -49,44 +47,89 @@ class StringKey:
         return value.lower() < other_value.lower()
 
 
-TData = TypeVar("TData", bound=Union[list[SCIMData], list[dict[str, Any]]])
-TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
-
-
-class Sorter(Generic[TAttrRep]):
-    def __init__(self, attr_rep: TAttrRep, asc: bool = True):
+class Sorter:
+    """
+    Sorter implementing sorting logic, as specified in RFC-7644.
+    """
+    def __init__(self, attr_rep: AttrRep, asc: bool = True):
+        """
+        Args:
+            attr_rep: The representation of the attribute by which the data should be sorted.
+            asc: If set to `True`, it enables ascending sorting. Descending otherwise.
+        """
         self._attr_rep = attr_rep
         self._asc = asc
         self._default_value = AlwaysLastKey()
 
     @property
-    def attr_rep(self) -> TAttrRep:
+    def attr_rep(self) -> AttrRep:
+        """
+        The representation of the attribute by which the data should be sorted.
+        """
         return self._attr_rep
 
     @property
     def asc(self) -> bool:
+        """
+        If `True`, ascending sorting is enabled. Descending otherwise.
+        """
         return self._asc
-
-    @classmethod
-    def from_data(cls, data: MutableMapping) -> Optional[Self]:
-        if sort_by := data.get("sortBy"):
-            return cls(
-                attr_rep=sort_by,
-                asc=data.get("sortOrder") == "ascending",
-            )
-        return None
 
     def __call__(
         self,
-        data: TData,
+        data: Iterable[MutableMapping],
         schema: Union[BaseResourceSchema, Sequence[BaseResourceSchema]],
-    ) -> TData:
-        if not data:
-            return data
+    ) -> list[SCIMData]:
+        """
+        Sorts the provided data according to the sorter configuration and the provided schemas.
+        It is able to perform sorting of data items that belong to the same schema, or to different
+        schemas (e.g. `UserSchema` and `GroupSchema`).
+
+        Sorting is performed in line with value types semantics. For "string" attributes,
+        case-sensitivity and PRECIS profile is respected.
+
+        If the data item misses the attribute the data is sorted by, it is ordered last
+        (if ascending sorting).
+
+        A multi-valued complex attribute is sorted by the value of "primary" item, if it defines
+        `value` and `primary` attribtues. If `primary` is not defined, or it is not contained in
+        the data, the first `value` is used for sorting.
+
+        Args:
+            data: The data to sort.
+            schema: Schema or schemas that describe the data. If single schema is passed, it is
+                assumed all data described by the same schema. If passed multiple schemas,
+                for every data item must be provided corresponding schema.
+
+        Returns:
+            Sorted data.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>> from scimpler.container import AttrRep
+            >>>
+            >>> sorter = Sorter(attr_rep=AttrRep("userName"), asc=False)
+            >>> sorter(
+            >>>     [{"userName": "a_user"}, {"userName": "b_user"}], UserSchema()
+            >>> )
+            >>> [{"userName": "b_user"}, {"userName": "a_user"}]
+
+            >>> from scimpler.schemas import GroupSchema, UserSchema
+            >>> from scimpler.container import AttrRep
+            >>>
+            >>> group, user = GroupSchema(), UserSchema()
+            >>> sorter = Sorter(attr_rep=AttrRep("externalId"), asc=True)
+            >>> sorter(
+            >>>     [{"externalId": "2"}, {"externalId": "1"}, {"externalId": "3"}],
+            >>>     [user, group, user],
+            >>> )
+            >>> [{"externalId": "1"}, {"externalId": "2"}, {"externalId": "3"}]
+
+        """
         normalized = [SCIMData(item) for item in data]
-        if isinstance(data[0], dict):
-            return cast(TData, [item.to_dict() for item in self._sort(normalized, schema)])
-        return cast(TData, self._sort(normalized, schema))
+        if not normalized:
+            return normalized
+        return self._sort(normalized, schema)
 
     def _sort(
         self,

@@ -23,6 +23,7 @@ nav:
           - PatchPath: api_reference/scimpler_data/patch_path.md
           - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
+          - Sorter: api_reference/scimpler_data/sorter.md
           - UriReference: api_reference/scimpler_data/uri_reference.md
       - scimpler.data.operator:
           - And: api_reference/scimpler_data_operator/and.md

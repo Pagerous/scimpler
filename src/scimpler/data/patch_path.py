@@ -247,7 +247,6 @@ class PatchPath:
     def __call__(self, value: Any, schema: ResourceSchema) -> bool:
         """
         Returns the flag indicating whether the provided value matches value selection filter.
-        Paths without the filter evaluate to `True`.
 
         Args:
             value: The value to test against value selection filter.
@@ -259,6 +258,21 @@ class PatchPath:
 
         Returns:
             Flag indicating whether the provided value matches value selection filter.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>>
+            >>> path = PatchPath.deserialize("emails[type eq 'work']")
+            >>> path({"type": "work", "display": "user@example.com"}, UserSchema())
+            >>> True
+            >>> path({"type": "home", "display": "user@example.com"}, UserSchema())
+            >>> False
+
+            >>> path = PatchPath.deserialize("simpleAttr[value ge 42]")
+            >>> path(42, ...)  # assuming '...' is schema that contains 'simpleAttr'
+            >>> True
+            >>> path(41, ...)  # assuming '...' is schema that contains 'simpleAttr'
+            >>> False
         """
         attr = schema.attrs.get(self.attr_rep)
         if attr is None:
