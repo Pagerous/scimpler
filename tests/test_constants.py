@@ -1,4 +1,4 @@
-from scimpler.constants import SCIMType
+from scimpler.data.constants import SCIMType
 
 
 def test_scim_type_repr():

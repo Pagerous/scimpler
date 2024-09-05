@@ -23,7 +23,7 @@ from urllib.parse import urlparse
 import precis_i18n.profile
 from precis_i18n import get_profile
 
-from scimpler.constants import SCIMType
+from scimpler.data.constants import SCIMType
 from scimpler.data.identifiers import (
     AttrName,
     AttrRep,
