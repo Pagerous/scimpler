@@ -1,11 +1,11 @@
 import pytest
 
-from scimpler.container import AttrRep
 from scimpler.data.attr_presence import (
     AttrPresenceConfig,
     DataInclusivity,
     validate_presence,
 )
+from scimpler.identifiers import AttrRep
 
 
 def test_presence_validation_fails_if_returned_attribute_that_never_should_be_returned(user_schema):

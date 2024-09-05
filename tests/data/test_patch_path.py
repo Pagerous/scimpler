@@ -1,10 +1,10 @@
 import pytest
 
-from scimpler.container import AttrName, AttrRep
 from scimpler.data.filter import Filter
 from scimpler.data.operator import ComplexAttributeOperator, Equal
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema
+from scimpler.identifiers import AttrName, AttrRep
 
 
 @pytest.mark.parametrize(

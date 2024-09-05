@@ -1,7 +1,8 @@
 import pytest
 
-from scimpler.container import AttrRep, SCIMData
+from scimpler.container import SCIMData
 from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.identifiers import AttrRep
 from scimpler.schemas import list_response
 
 

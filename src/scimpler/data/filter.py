@@ -13,7 +13,7 @@ from typing import (
     cast,
 )
 
-from scimpler.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
+from scimpler.container import SCIMData
 from scimpler.data import operator as op
 from scimpler.data.attrs import Complex
 from scimpler.data.schemas import BaseSchema
@@ -26,6 +26,7 @@ from scimpler.data.utils import (
     get_placeholder,
 )
 from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
+from scimpler.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.registry import (
     binary_operators,
     register_binary_operator,

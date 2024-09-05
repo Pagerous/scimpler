@@ -107,7 +107,7 @@ class Sorter:
 
         Examples:
             >>> from scimpler.schemas import UserSchema
-            >>> from scimpler.container import AttrRep
+            >>> from scimpler.identifier import AttrRep
             >>>
             >>> sorter = Sorter(attr_rep=AttrRep("userName"), asc=False)
             >>> sorter(
@@ -116,7 +116,7 @@ class Sorter:
             >>> [{"userName": "b_user"}, {"userName": "a_user"}]
 
             >>> from scimpler.schemas import GroupSchema, UserSchema
-            >>> from scimpler.container import AttrRep
+            >>> from scimpler.identifier import AttrRep
             >>>
             >>> group, user = GroupSchema(), UserSchema()
             >>> sorter = Sorter(attr_rep=AttrRep("externalId"), asc=True)

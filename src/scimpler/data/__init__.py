@@ -16,8 +16,8 @@ from scimpler.data.attrs import (
     UriReference,
 )
 from scimpler.data.filter import Filter
-from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.data.patch_path import PatchPath
+from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.data.sorter import Sorter
 
 __all__ = [

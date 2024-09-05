@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from scimpler.container import AttrRep, AttrRepFactory, BoundedAttrRep, SCIMData
+from scimpler.container import SCIMData
 from scimpler.data.attrs import (
     AttrFilter,
     AttributeMutability,
@@ -20,6 +20,7 @@ from scimpler.data.attrs import (
     UriReference,
 )
 from scimpler.error import ValidationError, ValidationIssues
+from scimpler.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 
 
 def test_validation_is_skipped_if_value_not_provided():

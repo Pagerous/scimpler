@@ -1,19 +1,14 @@
 from copy import copy
 from typing import Any, MutableMapping, Optional
 
-from scimpler.container import (
-    AttrName,
-    AttrRep,
-    AttrRepFactory,
-    BoundedAttrRep,
-    SCIMData,
-)
+from scimpler.container import SCIMData
 from scimpler.data.attrs import Complex
 from scimpler.data.filter import Filter
 from scimpler.data.operator import ComplexAttributeOperator
 from scimpler.data.schemas import ResourceSchema
 from scimpler.data.utils import decode_placeholders, encode_strings
 from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
+from scimpler.identifiers import AttrName, AttrRep, AttrRepFactory, BoundedAttrRep
 
 
 class PatchPath:

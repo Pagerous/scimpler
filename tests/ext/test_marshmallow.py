@@ -4,7 +4,7 @@ from datetime import datetime
 import marshmallow
 import pytest
 
-from scimpler.container import AttrRep, SCIMData
+from scimpler.container import SCIMData
 from scimpler.data.filter import Filter
 from scimpler.data.patch_path import PatchPath
 from scimpler.ext.marshmallow import (
@@ -13,6 +13,7 @@ from scimpler.ext.marshmallow import (
     create_response_schema,
     initialize,
 )
+from scimpler.identifiers import AttrRep
 from scimpler.validator import (
     BulkOperations,
     ResourceObjectGET,

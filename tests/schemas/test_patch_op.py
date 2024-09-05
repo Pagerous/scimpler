@@ -1,12 +1,13 @@
 import pytest
 
-from scimpler.container import AttrName, AttrRep, Invalid, SCIMData
+from scimpler.container import Invalid, SCIMData
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import AttributeMutability, String
 from scimpler.data.filter import Filter
 from scimpler.data.operator import ComplexAttributeOperator, Equal
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
+from scimpler.identifiers import AttrName, AttrRep
 from scimpler.schemas.patch_op import PatchOpSchema
 
 

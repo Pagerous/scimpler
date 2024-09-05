@@ -4,10 +4,11 @@ from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 
 import marshmallow
 
-from scimpler.container import AttrName, AttrRep, BoundedAttrRep, Missing, SCIMData
+from scimpler.container import Missing, SCIMData
 from scimpler.data import attrs
 from scimpler.data.attrs import Attribute
 from scimpler.data.schemas import BaseSchema, ResourceSchema
+from scimpler.identifiers import AttrName, AttrRep, BoundedAttrRep
 from scimpler.schemas import (
     BulkRequestSchema,
     BulkResponseSchema,

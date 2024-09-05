@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytest
 
-from scimpler.container import AttrRep, SCIMData
+from scimpler.container import SCIMData
 from scimpler.data.attrs import Attribute, Complex, DateTime, String
 from scimpler.data.operator import (
     And,
@@ -20,6 +20,7 @@ from scimpler.data.operator import (
     Present,
     StartsWith,
 )
+from scimpler.identifiers import AttrRep
 
 
 @pytest.mark.parametrize(

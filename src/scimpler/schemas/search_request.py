@@ -2,11 +2,12 @@ from typing import Optional
 
 from scimpler import registry
 from scimpler.config import ServiceProviderConfig
-from scimpler.container import AttrName, AttrRep, AttrRepFactory, Missing, SCIMData
+from scimpler.container import Missing, SCIMData
 from scimpler.data.attrs import Attribute, Integer, String
 from scimpler.data.filter import Filter
 from scimpler.data.schemas import AttrFilter, BaseSchema
 from scimpler.error import ValidationError, ValidationIssues
+from scimpler.identifiers import AttrName, AttrRep, AttrRepFactory
 
 
 def _validate_attr_reps(value: list[str]) -> ValidationIssues:
