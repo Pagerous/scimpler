@@ -1851,24 +1851,25 @@ class BoundedAttrs:
 
         Returns: Attribute, if found, None otherwise.
         """
-        attr = self.get(path.attr_rep)
+        attr_rep = path.attr_rep
+        attr = self.get(attr_rep)
         if attr is None or (path.has_filter and not attr.multi_valued):
             return None
 
         if path.sub_attr_name is None:
             return attr
 
-        if isinstance(path.attr_rep, BoundedAttrRep):
+        if isinstance(attr_rep, BoundedAttrRep):
             return self.get(
                 BoundedAttrRep(
-                    schema=path.attr_rep.schema,
-                    attr=path.attr_rep.attr,
+                    schema=attr_rep.schema,
+                    attr=attr_rep.attr,
                     sub_attr=path.sub_attr_name,
                 )
             )
         return self.get(
             AttrRep(
-                attr=path.attr_rep.attr,
+                attr=attr_rep.attr,
                 sub_attr=path.sub_attr_name,
             )
         )

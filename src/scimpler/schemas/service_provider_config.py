@@ -10,7 +10,7 @@ from scimpler.data.attrs import (
     Integer,
     String,
 )
-from scimpler.data.schemas import BaseResourceSchema, bulk_id_validator
+from scimpler.data.schemas import BaseResourceSchema
 
 
 class ServiceProviderConfigSchema(BaseResourceSchema):
@@ -27,7 +27,6 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             mutability=AttributeMutability.READ_ONLY,
             returned=AttributeReturn.ALWAYS,
             uniqueness=AttributeUniqueness.SERVER,
-            validators=[bulk_id_validator],
         ),
         ExternalReference(
             name="documentationUri",

@@ -20,6 +20,7 @@ nav:
           - ExternalReference: api_reference/scimpler_data/external_reference.md
           - Filter: api_reference/scimpler_data/filter.md
           - Integer: api_reference/scimpler_data/integer.md
+          - PatchPath: api_reference/scimpler_data/patch_path.md
           - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
           - UriReference: api_reference/scimpler_data/uri_reference.md

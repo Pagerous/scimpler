@@ -28,7 +28,7 @@ from scimpler.registry import register_schema
 from scimpler.warning import ScimpleUserWarning
 
 
-def bulk_id_validator(value) -> ValidationIssues:
+def _bulk_id_validator(value) -> ValidationIssues:
     issues = ValidationIssues()
     if "bulkId" in value:
         issues.add_error(
@@ -467,7 +467,7 @@ class ResourceSchema(BaseResourceSchema):
             mutability=AttributeMutability.READ_ONLY,
             returned=AttributeReturn.ALWAYS,
             uniqueness=AttributeUniqueness.SERVER,
-            validators=[bulk_id_validator],
+            validators=[_bulk_id_validator],
         ),
         String(
             name="externalId",

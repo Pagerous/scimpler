@@ -4,7 +4,7 @@ from scimpler.container import AttrName, AttrRep
 from scimpler.data.filter import Filter
 from scimpler.data.operator import ComplexAttributeOperator, Equal
 from scimpler.data.patch_path import PatchPath
-from scimpler.data.schemas import BaseSchema
+from scimpler.data.schemas import ResourceSchema
 
 
 @pytest.mark.parametrize(
@@ -189,12 +189,6 @@ def test_complex_filter_string_values_can_contain_anything(
     ("path", "data", "schema", "expected"),
     (
         (
-            PatchPath.deserialize("name.formatted"),
-            "John Doe",
-            "user_schema",
-            True,
-        ),
-        (
             PatchPath.deserialize("emails[type eq 'work']"),
             {"type": "work", "value": "my@example.com"},
             "user_schema",
@@ -214,9 +208,9 @@ def test_complex_filter_string_values_can_contain_anything(
         ),
         (
             PatchPath.deserialize("emails[type eq 'work'].display"),
-            "MY@EXAMPLE.COM",
+            {"type": "work", "value": "my@example.com"},
             "user_schema",
-            False,
+            True,
         ),
         (
             PatchPath.deserialize("str_mv[value sw 'a']"),
@@ -245,7 +239,7 @@ def test_complex_filter_string_values_can_contain_anything(
     ),
     indirect=["schema"],
 )
-def test_check_if_data_matches_path(path, data, schema: BaseSchema, expected):
+def test_check_if_data_matches_path(path, data, schema: ResourceSchema, expected):
     actual = path(data, schema)
 
     assert actual is expected
@@ -319,5 +313,5 @@ def test_patch_path_can_be_compared(path_1, path_2, expected):
 def test_calling_path_for_non_existing_attr_fails(user_schema):
     path = PatchPath.deserialize("non_existing.attr")
 
-    with pytest.raises(ValueError, match="path does not indicate any attribute"):
+    with pytest.raises(ValueError, match="path does not target any attribute"):
         path("whatever", user_schema)

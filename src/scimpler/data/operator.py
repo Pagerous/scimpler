@@ -37,6 +37,7 @@ class LogicalOperator(Operator, abc.ABC):
     """
     Base class for logical operators.
     """
+
     op: str
 
     def __init__(self, *sub_operators: Operator):
@@ -64,6 +65,7 @@ class And(LogicalOperator):
     """
     Represents `and` SCIM operator. Matches if all sub-operators match.
     """
+
     op: str = "and"
 
     def match(
@@ -97,6 +99,7 @@ class Or(LogicalOperator):
     """
     Represents `or` SCIM operator. Matches if any of sub-operators match.
     """
+
     op: str = "or"
 
     def match(
@@ -126,6 +129,7 @@ class Not(LogicalOperator):
     """
     Represents `not` SCIM operator. Matches if a sub-operator does not match.
     """
+
     op = "not"
 
     def __init__(self, sub_operator: Operator):
@@ -156,6 +160,7 @@ class AttributeOperator(Operator, abc.ABC):
     Every subclass which is not an abstract must specify `op`,
     `supported_scim_types`, and `supported_types` class attributes.
     """
+
     op: str
     supported_scim_types: set[str]
     supported_types: set[type]

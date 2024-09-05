@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, MutableMapping, Optional
 
 from scimpler.container import (
     AttrName,
@@ -11,25 +11,39 @@ from scimpler.container import (
 from scimpler.data.attrs import Complex
 from scimpler.data.filter import Filter
 from scimpler.data.operator import ComplexAttributeOperator
-from scimpler.data.schemas import BaseSchema
+from scimpler.data.schemas import ResourceSchema
 from scimpler.data.utils import decode_placeholders, encode_strings
 from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
 
-TAttrRep = TypeVar("TAttrRep", bound=AttrRep)
 
+class PatchPath:
+    """
+    Target modification path, used in PATCH requests. Supports path syntax, as specified in
+    RFC-7644.
+    """
 
-class PatchPath(Generic[TAttrRep]):
     def __init__(
         self,
-        attr_rep: TAttrRep,
+        attr_rep: AttrRep,
         sub_attr_name: Optional[str],
         filter_: Optional[Filter[ComplexAttributeOperator]] = None,
     ):
-        try:
-            getattr(attr_rep, "sub_attr")
-        except AttributeError:
-            pass
-        else:
+        """
+        Args:
+            attr_rep: The representation of the attribute being targeted. Must not be
+                a sub-attribute representation.
+            sub_attr_name: The optional sub-attribute being targeted.
+            filter_: Value selection filter, used for multi-valued attributes. The only supported
+                operator is `ComplexAttributeOperator`. The attribute representation specified
+                in the filter itself must be the same as provided `attr_rep`.
+
+        Raises:
+            ValueError: When `attr_rep` is a sub-attribute representation.
+            ValueError: When `filter_` does not consist of `ComplexAttributeOperator`.
+            ValueError: When attribute representation specified in the filter's operator differs
+                from the `attr_rep`.
+        """
+        if attr_rep.is_sub_attr:
             raise ValueError("'attr_rep' must not be a sub attribute")
 
         if filter_ is not None:
@@ -43,44 +57,61 @@ class PatchPath(Generic[TAttrRep]):
                 )
 
         self._attr_rep = attr_rep
-
         if sub_attr_name is not None:
             sub_attr_name = AttrName(sub_attr_name)
         self._sub_attr_name = sub_attr_name
         self._filter = filter_
 
     @property
-    def attr_rep(self) -> TAttrRep:
+    def attr_rep(self) -> AttrRep:
+        """
+        The representation of the attribute being targeted.
+        """
         return self._attr_rep
 
     @property
     def sub_attr_name(self) -> Optional[AttrName]:
+        """
+        The sub-attribute being targeted, if any.
+        """
         return self._sub_attr_name
 
     @property
     def has_filter(self) -> bool:
+        """
+        Flag indicating whether the path contains the value selection filter.
+        """
         return self._filter is not None
 
     @classmethod
-    def validate(cls, path: str) -> ValidationIssues:
-        path, placeholders = encode_strings(path)
+    def validate(cls, path_exp: str) -> ValidationIssues:
+        """
+        Validates the provided path expression, according to RFC-7644.
+
+        Args:
+            path_exp: Path expression to validate.
+
+        Returns:
+            Validation issues.
+        """
+        path_exp, placeholders = encode_strings(path_exp)
         if (
-            path.count("[") > 1
-            or path.count("]") > 1
-            or ("[" in path and "]" not in path)
-            or ("]" in path and "[" not in path)
-            or ("[" in path and "]" in path and path.index("[") > path.index("]"))
+            path_exp.count("[") > 1
+            or path_exp.count("]") > 1
+            or ("[" in path_exp and "]" not in path_exp)
+            or ("]" in path_exp and "[" not in path_exp)
+            or ("[" in path_exp and "]" in path_exp and path_exp.index("[") > path_exp.index("]"))
         ):
             issues = ValidationIssues()
             issues.add_error(issue=ValidationError.bad_value_syntax(), proceed=False)
             return issues
 
-        elif "[" in path and "]" in path:
-            issues = cls._validate_complex_multivalued_path(path, placeholders)
+        elif "[" in path_exp and "]" in path_exp:
+            issues = cls._validate_complex_multivalued_path(path_exp, placeholders)
         else:
             issues = ValidationIssues()
-            path = decode_placeholders(path, placeholders)
-            issues.merge(AttrRepFactory.validate(path))
+            path_exp = decode_placeholders(path_exp, placeholders)
+            issues.merge(AttrRepFactory.validate(path_exp))
 
         for _, errors in issues.errors:
             for error in errors:
@@ -89,13 +120,13 @@ class PatchPath(Generic[TAttrRep]):
 
     @classmethod
     def _validate_complex_multivalued_path(
-        cls, path: str, placeholders: dict[str, Any]
+        cls, path_exp: str, placeholders: dict[str, Any]
     ) -> ValidationIssues:
-        filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
+        filter_exp = decode_placeholders(path_exp[: path_exp.index("]") + 1], placeholders)
         issues = Filter.validate(filter_exp)
         if issues.has_errors():
             return issues
-        value_sub_attr_rep_exp = path[path.index("]") + 1 :]
+        value_sub_attr_rep_exp = path_exp[path_exp.index("]") + 1 :]
         if value_sub_attr_rep_exp:
             if value_sub_attr_rep_exp.startswith("."):
                 value_sub_attr_rep_exp = value_sub_attr_rep_exp[1:]
@@ -109,22 +140,34 @@ class PatchPath(Generic[TAttrRep]):
         return issues
 
     @classmethod
-    def deserialize(cls, path: str) -> "PatchPath":
+    def deserialize(cls, path_exp: str) -> "PatchPath":
+        """
+        Deserializes the provided path expression into a `PatchPath`.
+
+        Args:
+            path_exp: Path expression to deserialize.
+
+        Raises:
+            ValueError: When `path_exp` is not a valid path expression.
+
+        Returns:
+            Deserialized `PatchPath`.
+        """
         try:
-            return cls._deserialize(path)
-        except Exception as e:
-            raise ValueError("invalid path expression", e)
-
-    @classmethod
-    def _deserialize(cls, path: str) -> "PatchPath":
-        path, placeholders = encode_strings(path)
-        if "[" in path and "]" in path:
-            return cls._deserialize_complex_multivalued_path(path, placeholders)
-
-        if "[" in path or "]" in path:
+            return cls._deserialize(path_exp)
+        except Exception:
             raise ValueError("invalid path expression")
 
-        attr_rep = AttrRepFactory.deserialize(decode_placeholders(path, placeholders))
+    @classmethod
+    def _deserialize(cls, path_exp: str) -> "PatchPath":
+        path_exp, placeholders = encode_strings(path_exp)
+        if "[" in path_exp and "]" in path_exp:
+            return cls._deserialize_complex_multivalued_path(path_exp, placeholders)
+
+        if "[" in path_exp or "]" in path_exp:
+            raise ValueError("invalid path expression")
+
+        attr_rep = AttrRepFactory.deserialize(decode_placeholders(path_exp, placeholders))
         if attr_rep.is_sub_attr:
             sub_attr_name = attr_rep.sub_attr
             if isinstance(attr_rep, BoundedAttrRep):
@@ -145,12 +188,12 @@ class PatchPath(Generic[TAttrRep]):
 
     @classmethod
     def _deserialize_complex_multivalued_path(
-        cls, path: str, placeholders: dict[str, Any]
+        cls, path_exp: str, placeholders: dict[str, Any]
     ) -> "PatchPath":
-        filter_exp = decode_placeholders(path[: path.index("]") + 1], placeholders)
+        filter_exp = decode_placeholders(path_exp[: path_exp.index("]") + 1], placeholders)
         filter_ = Filter.deserialize(filter_exp)
         sub_attr_name = None
-        sub_attr_exp = path[path.index("]") + 1 :]
+        sub_attr_exp = path_exp[path_exp.index("]") + 1 :]
         if sub_attr_exp:
             if sub_attr_exp.startswith("."):
                 sub_attr_exp = sub_attr_exp[1:]
@@ -164,8 +207,14 @@ class PatchPath(Generic[TAttrRep]):
         )
 
     def serialize(self) -> str:
+        """
+        Serializes `PatchPath` to string expression.
+        """
         if self._filter:
-            return self._filter.serialize()
+            serialized = self._filter.serialize()
+            if self.sub_attr_name:
+                serialized += f".{self.sub_attr_name}"
+            return serialized
 
         if isinstance(self._attr_rep, BoundedAttrRep):
             return str(
@@ -195,20 +244,33 @@ class PatchPath(Generic[TAttrRep]):
             and self._sub_attr_name == other._sub_attr_name
         )
 
-    def __call__(self, value: Any, schema: BaseSchema) -> bool:
-        attr = schema.attrs.get_by_path(self)
+    def __call__(self, value: Any, schema: ResourceSchema) -> bool:
+        """
+        Returns the flag indicating whether the provided value matches value selection filter.
+        Paths without the filter evaluate to `True`.
+
+        Args:
+            value: The value to test against value selection filter.
+            schema: Schema that describes the provided value.
+
+        Raises:
+            ValueError: When provided `schema` does not define the attribute targeted by the path.
+            AttributeError: When the path does not have value selection filter.
+
+        Returns:
+            Flag indicating whether the provided value matches value selection filter.
+        """
+        attr = schema.attrs.get(self.attr_rep)
         if attr is None:
-            raise ValueError(f"path does not indicate any attribute for {schema!r} schema")
+            raise ValueError(f"path does not target any attribute for {schema!r} schema")
 
-        if not self._filter:
-            return True
+        if self._filter is None:
+            raise AttributeError("path has no value selection filter")
 
-        if isinstance(value, dict):
+        if isinstance(value, MutableMapping):
             value = SCIMData(value)
 
-        if attr.multi_valued:
-            value = [value]
-
+        value = [value]
         if isinstance(attr, Complex):
             data = SCIMData()
             data.set(self._attr_rep, value)
