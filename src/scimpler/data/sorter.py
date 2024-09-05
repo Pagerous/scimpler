@@ -51,6 +51,7 @@ class Sorter:
     """
     Sorter implementing sorting logic, as specified in RFC-7644.
     """
+
     def __init__(self, attr_rep: AttrRep, asc: bool = True):
         """
         Args:

@@ -146,12 +146,6 @@ def test_resource_schema_representation_can_be_generated(user_schema):
         assert attr["name"] not in ["id", "meta", "externalId"]
 
 
-def test_schema_extension_representation_can_be_generated(user_schema):
-    output = SchemaDefinitionSchema().get_repr(user_schema.get_extension("EnterpriseUser"))
-
-    assert output
-
-
 def test_schema_data_can_be_serialized(user_schema):
     schema = SchemaDefinitionSchema()
     data = schema.get_repr(user_schema)

@@ -21,6 +21,8 @@ nav:
           - Filter: api_reference/scimpler_data/filter.md
           - Integer: api_reference/scimpler_data/integer.md
           - PatchPath: api_reference/scimpler_data/patch_path.md
+          - ResourceSchema: api_reference/scimpler_data/resource_schema.md
+          - SchemaExtension: api_reference/scimpler_data/schema_extension.md
           - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
           - Sorter: api_reference/scimpler_data/sorter.md

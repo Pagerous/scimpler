@@ -260,11 +260,6 @@ def test_endpoint_can_be_changed_for_base_resource_schema():
     assert schema.endpoint == "/BaseResourceDifferentEndpoint"
 
 
-def test_value_error_is_raised_if_retrieving_non_existent_extension(user_schema):
-    with pytest.raises(ValueError, match="'User' has no 'NonExistentExtension' extension"):
-        user_schema.get_extension("NonExistentExtension")
-
-
 def test_same_extension_can_not_be_registered_twice(user_schema, enterprise_extension):
     with pytest.raises(ValueError, match="already in 'User' resource"):
         user_schema.extend(enterprise_extension)

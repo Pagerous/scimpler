@@ -47,6 +47,10 @@ class SchemaMeta(type):
 
 
 class BaseSchema(metaclass=SchemaMeta):
+    """
+    Base class for all schemas. Includes `schemas` attribute to attributes defined in subclasses.
+    """
+
     schema: str | SchemaURI
     base_attrs: list[Attribute] = [
         UriReference(
@@ -79,10 +83,16 @@ class BaseSchema(metaclass=SchemaMeta):
 
     @property
     def attrs(self) -> BoundedAttrs:
+        """
+        Attributes that belong to the schema.
+        """
         return self._attrs
 
     @property
     def schemas(self) -> list[SchemaURI]:
+        """
+        All schema URIs by which the schema is identified.
+        """
         return [cast(SchemaURI, self.schema)]
 
     def _get_attrs(self) -> list[Attribute]:
@@ -93,6 +103,10 @@ class BaseSchema(metaclass=SchemaMeta):
         return attrs
 
     def deserialize(self, data: MutableMapping[str, Any]) -> SCIMData:
+        """
+        Deserializes the provided data according to the schema attributes and their deserialization
+        logic. Unknown attributes are not included in the result.
+        """
         data = SCIMData(data)
         deserialized = SCIMData()
         for attr_rep, attr in self.attrs:
@@ -102,6 +116,10 @@ class BaseSchema(metaclass=SchemaMeta):
         return self._deserialize(deserialized)
 
     def serialize(self, data: MutableMapping[str, Any]) -> SCIMData:
+        """
+        Serializes the provided data according to the schema attributes and their serialization
+        logic. Unknown attributes are not included in the result.
+        """
         data = SCIMData(data)
         serialized = SCIMData()
         for attr_rep, attr in self.attrs:
@@ -111,6 +129,9 @@ class BaseSchema(metaclass=SchemaMeta):
         return self._serialize(serialized)
 
     def filter(self, data: MutableMapping[str, Any], attr_filter: AttrFilter) -> SCIMData:
+        """
+        Filters the provided data according to the provided `attr_filter`.
+        """
         data = SCIMData(data)
         filtered = SCIMData()
         for attr_rep, attr in attr_filter(self.attrs):
@@ -132,8 +153,32 @@ class BaseSchema(metaclass=SchemaMeta):
         self,
         data: MutableMapping[str, Any],
         presence_config: Optional[AttrPresenceConfig] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ValidationIssues:
+        """
+        Validates the provided data according to the schema attributes configuration.
+
+        In addition, it validates `schemas` attribute:
+
+        - if there are no duplicates,
+        - if base schema is included,
+        - if all provided schemas are known.
+
+        Optionally, one can pass `AttrPresenceConfig`, so attribute requiredness, returnability,
+        and issuer is checked, depending on the data flow direction.
+
+        Extended built-in validation logic is supplied with `_validate` method, implemented
+        in subclasses.
+
+        Args:
+            data: The data to be validated.
+            presence_config: Presence config that enables additional validation of correctness
+                of values presence.
+            **kwargs: Additional parameters passed to `_validate` method.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         data = SCIMData(data)
         issues.merge(self._validate_data(data, presence_config))
@@ -146,6 +191,9 @@ class BaseSchema(metaclass=SchemaMeta):
         return issues
 
     def clone(self, attr_filter: AttrFilter) -> Self:
+        """
+        Clones the schema with attributes filtered with the provided `attr_filter`.
+        """
         cloned = copy(self)
         cloned._attrs = self._attrs.clone(attr_filter, ignore_filter=["schemas"])
         return cloned
@@ -386,6 +434,9 @@ class BaseSchema(metaclass=SchemaMeta):
         return True
 
     def include_schema_data(self, data: MutableMapping) -> None:
+        """
+        Includes the `schemas` attribute value in the provided `data`.
+        """
         data["schemas"] = [self.schema]
 
 
@@ -404,6 +455,10 @@ def validate_resource_type_consistency(
 
 
 class BaseResourceSchema(BaseSchema):
+    """
+    Base class for system and user resources.
+    """
+
     name: str
     endpoint: Optional[str] = None
     base_attrs: list[Attribute] = [
@@ -448,6 +503,9 @@ class BaseResourceSchema(BaseSchema):
         self.endpoint = self.endpoint or f"/{self.name}"
 
     def include_schema_data(self, data: MutableMapping) -> None:
+        """
+        Includes `schemas` and `meta.resourceType` attribute values in the provided `data`.
+        """
         super().include_schema_data(data)
         if "meta" in data:
             data["meta"]["resourceType"] = self.name
@@ -456,6 +514,32 @@ class BaseResourceSchema(BaseSchema):
 
 
 class ResourceSchema(BaseResourceSchema):
+    """
+    Base class for all user-defined resources. Attributes: `schemas`, `meta`, `id`, and `externalId`
+    are already defined in the schema.
+
+    To define the schema, besides `base_attrs`, one must specify `schema`, `name` and `endpoint`
+    class attributes. Optional class attributes are `plural_name`, and `description`.
+
+    If `plural_name` is not specified, it is defaulted to `name`.
+
+    Examples:
+        >>> class MyResourceSchema(ResourceSchema):
+        >>>     schema = "urn:my:resource"
+        >>>     name = "Resource"
+        >>>     plural_name = "Resources"
+        >>>     endpoint = "/Resources"
+        >>>     description = "The best resource."
+        >>>     base_attrs = [...]
+
+    The built-in validation is extended. Apart from constraints checked by the parent classes,
+    `ResourceSchema`:
+
+    - validates the consistency od `meta.resourceType` with the configured
+      `ResourceSchema.name`,
+    - validates if `schemas` contains schema URIs for all attributes in data.
+    """
+
     plural_name: str
     description: str = ""
     base_attrs: list[Attribute] = [
@@ -477,6 +561,13 @@ class ResourceSchema(BaseResourceSchema):
     ]
 
     def __init__(self, attr_filter: Optional[AttrFilter] = None):
+        """
+        Args:
+            attr_filter: Attribute filter used to filter attributes defined in class-level
+                `base_attrs` attribute. Useful for creating different schemas, e.g. with
+                only "readWrite" attributes, so serialization and deserialization also
+                filter the data.
+        """
         self.plural_name = getattr(self, "plural_name", self.name)
         self.endpoint = self.endpoint or f"/{self.plural_name}"
         self._common_attrs = ["id", "externalId", "meta"]
@@ -485,23 +576,35 @@ class ResourceSchema(BaseResourceSchema):
 
     @property
     def schemas(self) -> list[SchemaURI]:
+        """
+        Schema URIs by which the schema is identified. Includes schema extension URIs.
+        """
         return [cast(SchemaURI, self.schema)] + [
             extension["extension"].schema for extension in self._schema_extensions.values()
         ]
 
     @property
     def extensions(self) -> dict[SchemaURI, bool]:
+        """
+        Extensions added to the schema. Map containing schema extension URIs and flags indicating
+        whether they are required extensions.
+        """
         return {
             item["extension"].schema: item["required"] for item in self._schema_extensions.values()
         }
 
-    def get_extension(self, name: str) -> "SchemaExtension":
-        name_lower = name.lower()
-        if name_lower not in self._schema_extensions:
-            raise ValueError(f"{self.name!r} has no {name!r} extension")
-        return self._schema_extensions[name_lower]["extension"]
-
     def extend(self, extension: "SchemaExtension", required: bool = False) -> None:
+        """
+        Extends the base schema with the provided schema `extension`. Extension attributes
+        become part of the schema and are available in `ResourceSchema.attrs`.
+
+        Args:
+            extension: Schema extension which extends the base schema.
+            required: Flag indicating whether the extension is required. If the extension
+                is required, all required fields from the extension become required in base
+                schema during presence checks. If the extension is not required and some of
+                its attributes are required, they are not considered required in the base schema.
+        """
         if extension.schema in map(lambda x: x.lower(), self.schemas):
             raise ValueError(f"schema {extension.schema!r} already in {self.name!r} resource")
         if extension.name.lower() in self._schema_extensions:
@@ -575,6 +678,11 @@ class ResourceSchema(BaseResourceSchema):
         return True
 
     def include_schema_data(self, data: MutableMapping) -> None:
+        """
+        Includes `schemas` and `meta.resourceType` attribute values in the provided `data`.
+        The exact content of `schemas` depends on the rest of the data. If the data contains
+        attributes from the extensions, the extension URIs appear in the attached `schemas`.
+        """
         super().include_schema_data(data)
         for extension, extension_attrs in self.attrs.extensions.items():
             for attr_rep, _ in extension_attrs:
@@ -584,6 +692,20 @@ class ResourceSchema(BaseResourceSchema):
 
 
 class SchemaExtension:
+    """
+    Base class for all user-defined schema extensions.
+
+    To define the schema extension, besides `base_attrs`, one must specify `schema` and `name`
+    class attributes. Optionally, `description` can be provided.
+
+    Examples:
+        >>> class MyResourceSchemaExtension(SchemaExtension):
+        >>>     schema = "urn:my:resource:extension"
+        >>>     name = "ResourceExtension"
+        >>>     description = "The best resource extension."
+        >>>     base_attrs = [...]
+    """
+
     schema: str | SchemaURI
     name: str
     description: str = ""
@@ -599,4 +721,7 @@ class SchemaExtension:
 
     @property
     def attrs(self) -> BoundedAttrs:
+        """
+        Attributes that belong to the extension.
+        """
         return self._attrs

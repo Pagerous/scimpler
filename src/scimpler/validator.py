@@ -611,10 +611,9 @@ def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) ->
     if not presence_config.attr_reps:
         return True
 
-    is_contained = (
-        _is_contained(sorter.attr_rep, presence_config.attr_reps)
-        or _is_parent_contained(sorter.attr_rep, presence_config.attr_reps)
-    )
+    is_contained = _is_contained(
+        sorter.attr_rep, presence_config.attr_reps
+    ) or _is_parent_contained(sorter.attr_rep, presence_config.attr_reps)
     if presence_config.include and not is_contained or not presence_config.include and is_contained:
         return False
     return True

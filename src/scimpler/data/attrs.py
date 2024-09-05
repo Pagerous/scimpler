@@ -571,6 +571,7 @@ class Boolean(Attribute):
     """
     Represents **boolean** attribute.
     """
+
     scim_type = SCIMType.BOOLEAN
     base_types = (bool,)
 
@@ -580,6 +581,7 @@ class Decimal(AttributeWithUniqueness):
     """
     Represents **decimal** attribute.
     """
+
     scim_type = SCIMType.DECIMAL
     base_types = (float, int)
 
@@ -644,6 +646,7 @@ class Integer(AttributeWithUniqueness):
     """
     Represents **integer** attribute.
     """
+
     scim_type = SCIMType.INTEGER
     base_types = (int,)
 
@@ -708,6 +711,7 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
     """
     Represents **string** attribute.
     """
+
     scim_type = SCIMType.STRING
     base_types = (str,)
 
@@ -787,6 +791,7 @@ class Binary(AttributeWithCaseExact):
     Represents **binary** attribute. Binary attributes are
     case-sensitive, since they are represented by base64-encoded strings.
     """
+
     scim_type = SCIMType.BINARY
     base_types = (str,)
 
@@ -900,6 +905,7 @@ class Reference(AttributeWithCaseExact, abc.ABC):
         reference_types: types of the references, supported by the attribute.
         **kwargs: The same keyword arguments base classes receive.
     """
+
     scim_type = SCIMType.REFERENCE
     base_types = (str,)
 
@@ -938,6 +944,7 @@ class DateTime(Attribute):
     """
     Represents **dateTime** attribute.
     """
+
     scim_type = SCIMType.DATETIME
     base_types = (str,)
 
@@ -1245,6 +1252,7 @@ class Complex(Attribute):
     """
     Represents **complex** attribute.
     """
+
     scim_type = SCIMType.COMPLEX
     base_types = (MutableMapping,)
 
