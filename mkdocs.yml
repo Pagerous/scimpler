@@ -28,6 +28,7 @@ nav:
           - ResourceSchema: api_reference/scimpler_data/resource_schema.md
           - SchemaExtension: api_reference/scimpler_data/schema_extension.md
           - SchemaUri: api_reference/scimpler_data/schema_uri.md
+          - ScimData: api_reference/scimpler_data/scim_data.md
           - ScimReference: api_reference/scimpler_data/scim_reference.md
           - String: api_reference/scimpler_data/string.md
           - Sorter: api_reference/scimpler_data/sorter.md
