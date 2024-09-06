@@ -18,15 +18,15 @@ from scimpler.schemas.schema import SchemaDefinitionSchema
 from scimpler.validator import (
     BulkOperations,
     Error,
-    ResourceObjectDELETE,
-    ResourceObjectGET,
-    ResourceObjectPATCH,
-    ResourceObjectPUT,
-    ResourcesGET,
-    ResourcesPOST,
-    SearchRequestPOST,
-    ServerRootResourcesGET,
-    ServiceResourceObjectGET,
+    ResourceObjectDelete,
+    ResourceObjectGet,
+    ResourceObjectPatch,
+    ResourceObjectPut,
+    ResourcesGet,
+    ResourcesPost,
+    SearchRequestPost,
+    ServerRootResourcesGet,
+    ServiceResourceObjectGet,
     can_validate_filtering,
     can_validate_sorting,
 )
@@ -75,7 +75,7 @@ def test_validate_error_status_code_value():
 def test_resource_location_consistency_validation_fails_if_no_consistency(
     user_data_server, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
 
     expected_issues = {
         "body": {
@@ -114,7 +114,7 @@ def test_resource_location_consistency_validation_fails_if_no_consistency(
 def test_validate_resource_location_consistency__succeeds_if_consistency(
     user_data_server, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=201,
@@ -131,7 +131,7 @@ def test_number_of_resources_validation_fails_if_more_resources_than_total_resul
     list_user_data, user_schema
 ):
     list_user_data["totalResults"] = 1
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -147,7 +147,7 @@ def test_number_of_resources_validation_fails_if_less_resources_than_total_resul
     list_user_data, user_schema
 ):
     list_user_data["totalResults"] = 3
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -162,7 +162,7 @@ def test_number_of_resources_validation_fails_if_less_resources_than_total_resul
 def test_number_of_resources_validation_fails_if_more_resources_than_specified_count(
     list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -178,7 +178,7 @@ def test_number_of_resources_validation_fails_if_more_resources_than_specified_c
 def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
     count, list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -192,7 +192,7 @@ def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
 def test_pagination_info_validation_fails_if_start_index_is_missing_when_pagination(
     list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data["itemsPerPage"] = 1
     list_user_data.pop("startIndex")
@@ -210,7 +210,7 @@ def test_pagination_info_validation_fails_if_start_index_is_missing_when_paginat
 def test_resources_get_response_validation_fails_if_mismatch_in_start_index(
     list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     list_user_data["startIndex"] = 3
     expected = {"body": {"startIndex": {"_errors": [{"code": 4}]}}}
 
@@ -226,7 +226,7 @@ def test_resources_get_response_validation_fails_if_mismatch_in_start_index(
 def test_pagination_info_validation_fails_if_items_per_page_is_missing_when_pagination(
     list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data.pop("itemsPerPage")
     expected = {"body": {"itemsPerPage": {"_errors": [{"code": 5}]}}}
@@ -243,7 +243,7 @@ def test_pagination_info_validation_fails_if_items_per_page_is_missing_when_pagi
 def test_validate_pagination_info_validation_succeeds_when_if_data_for_pagination(
     list_user_data, user_schema
 ):
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data["itemsPerPage"] = 1
 
@@ -279,7 +279,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
             }
         }
     }
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -309,7 +309,7 @@ def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schem
             }
         }
     }
-    validator = ServerRootResourcesGET(CONFIG, resource_schema=[user_schema, group_schema])
+    validator = ServerRootResourcesGet(CONFIG, resource_schema=[user_schema, group_schema])
 
     issues = validator.validate_response(
         status_code=200,
@@ -342,7 +342,7 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data, u
             }
         }
     }
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -373,7 +373,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
             }
         }
     }
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -388,7 +388,7 @@ def test_validate_resources_sorted__not_sorted(list_user_data, user_schema):
     sorter = Sorter(AttrRep(attr="name", sub_attr="familyName"), asc=False)
     expected = {"body": {"Resources": {"_errors": [{"code": 22}]}}}
 
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     issues = validator.validate_response(
         status_code=200,
         sorter=sorter,
@@ -409,7 +409,7 @@ def test_validate_resources_sorted__not_sorted_by_extended_attr(list_user_data, 
     )
     expected = {"body": {"Resources": {"_errors": [{"code": 22}]}}}
 
-    validator = ResourcesGET(CONFIG, resource_schema=user_schema)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
     issues = validator.validate_response(
         status_code=200,
         sorter=sorter,
@@ -458,7 +458,7 @@ def test_error_data_can_be_serialized(error_data):
 
 
 def test_correct_resource_object_get_response_passes_validation(user_data_server, user_schema):
-    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
     user_data_server.pop("name")
 
     issues = validator.validate_response(
@@ -481,7 +481,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
 def test_validation_failure_on_missing_etag_header_when_etag_supported(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
     expected_issues = {"headers": {"ETag": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
@@ -498,7 +498,7 @@ def test_validation_failure_on_missing_etag_header_when_etag_supported(
 def test_validation_failure_on_missing_meta_version_when_etag_supported(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
     user_data_server["meta"].pop("version")
     expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 5}]}}}}
 
@@ -521,7 +521,7 @@ def test_validation_failure_on_etag_and_meta_version_mismatch(
     config = deepcopy(CONFIG)
     config.etag.supported = etag_supported
 
-    validator = ResourceObjectGET(config, resource_schema=user_schema)
+    validator = ResourceObjectGet(config, resource_schema=user_schema)
     expected_issues = {
         "body": {"meta": {"version": {"_errors": [{"code": 8}]}}},
         "headers": {"ETag": {"_errors": [{"code": 8}]}},
@@ -544,7 +544,7 @@ def test_response_is_validated_without_tag_and_version_if_etag_not_supported(
 ):
     config = deepcopy(CONFIG)
     config.etag.supported = False
-    validator = ResourceObjectGET(config, resource_schema=user_schema)
+    validator = ResourceObjectGet(config, resource_schema=user_schema)
     user_data_server["meta"].pop("version")
 
     issues = validator.validate_response(
@@ -559,7 +559,7 @@ def test_response_is_validated_without_tag_and_version_if_etag_not_supported(
 
 
 def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server, user_schema):
-    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
     user_data_server["meta"]["version"] = 123
     expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 2}]}}}}
 
@@ -576,7 +576,7 @@ def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server
 
 
 def test_request_schema_in_resource_object_get_request_data_is_not_supported(user_schema):
-    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
 
     with pytest.raises(NotImplementedError):
         print(validator.request_schema)
@@ -584,7 +584,7 @@ def test_request_schema_in_resource_object_get_request_data_is_not_supported(use
 
 def test_data_for_resource_object_get_response_can_be_serialized(user_data_server, user_schema):
     user_data_server["password"] = "1234"
-    validator = ResourceObjectGET(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -592,7 +592,7 @@ def test_data_for_resource_object_get_response_can_be_serialized(user_data_serve
 
 
 def test_service_object_resource_get_request_is_not_validated():
-    validator = ServiceResourceObjectGET(CONFIG, resource_schema=ResourceTypeSchema())
+    validator = ServiceResourceObjectGet(CONFIG, resource_schema=ResourceTypeSchema())
 
     issues = validator.validate_request(body={"some": "weird_stuff"})
 
@@ -600,7 +600,7 @@ def test_service_object_resource_get_request_is_not_validated():
 
 
 def test_validation_warning_for_missing_response_body_for_resources_post(user_schema):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
     expected_issues = {"body": {"_warnings": [{"code": 4}]}}
 
     issues = validator.validate_response(
@@ -612,7 +612,7 @@ def test_validation_warning_for_missing_response_body_for_resources_post(user_sc
 
 
 def test_correct_resource_type_post_request_passes_validation(user_data_client, user_schema):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_request(
         body=user_data_client,
@@ -624,7 +624,7 @@ def test_correct_resource_type_post_request_passes_validation(user_data_client, 
 def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
     user_data_client, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
     user_data_client["userName"] = 123
     expected_issues = {"body": {"userName": {"_errors": [{"code": 2}]}}}
 
@@ -638,7 +638,7 @@ def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_vali
 def test_resources_post_response_validation_fails_if_different_created_and_last_modified(
     user_data_server, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
     user_data_server["meta"]["lastModified"] = "2011-05-13T04:42:34Z"
     expected_issues = {"body": {"meta": {"lastModified": {"_errors": [{"code": 8}]}}}}
 
@@ -657,7 +657,7 @@ def test_resources_post_response_validation_fails_if_different_created_and_last_
 def test_resources_post_response_validation_fails_if_missing_location_header(
     user_data_server, user_schema
 ):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
     expected_issues = {"headers": {"Location": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
@@ -672,7 +672,7 @@ def test_resources_post_response_validation_fails_if_missing_location_header(
 
 
 def test_correct_resource_object_put_request_passes_validation(user_data_client, user_schema):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
     user_data_client["id"] = "anything"
 
     issues = validator.validate_request(
@@ -685,7 +685,7 @@ def test_correct_resource_object_put_request_passes_validation(user_data_client,
 def test_resource_object_put_request__fails_when_missing_required_field(
     user_data_client, user_schema
 ):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
     # user_data_client misses 'id' and 'meta'
     expected_issues = {"body": {"id": {"_errors": [{"code": 5}]}}}
 
@@ -695,7 +695,7 @@ def test_resource_object_put_request__fails_when_missing_required_field(
 
 
 def test_correct_resource_object_put_response_passes_validation(user_data_server, user_schema):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -710,7 +710,7 @@ def test_correct_resource_object_put_response_passes_validation(user_data_server
 
 
 def test_data_for_resource_object_put_request_can_be_deserialized(user_data_client, user_schema):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
 
     data = validator.request_schema.deserialize(user_data_client)
 
@@ -719,7 +719,7 @@ def test_data_for_resource_object_put_request_can_be_deserialized(user_data_clie
 
 
 def test_data_for_resource_object_put_response_can_be_serialized(user_data_server, user_schema):
-    validator = ResourceObjectPUT(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -728,7 +728,7 @@ def test_data_for_resource_object_put_response_can_be_serialized(user_data_serve
 
 
 def test_correct_resource_type_post_response_passes_validation(user_data_server, user_schema):
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=201,
@@ -744,7 +744,7 @@ def test_correct_resource_type_post_response_passes_validation(user_data_server,
 
 def test_resource_type_post_request_data_can_be_deserialized(user_data_client, user_schema):
     user_data_client["id"] = "1234"
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
 
     data = validator.request_schema.deserialize(user_data_client)
 
@@ -761,7 +761,7 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server, us
     user_data_server["meta"]["lastModified"] = datetime.fromisoformat(
         user_data_server["meta"]["lastModified"]
     )
-    validator = ResourcesPOST(CONFIG, resource_schema=user_schema)
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -777,9 +777,9 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server, us
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGET,
-        ServerRootResourcesGET,
-        SearchRequestPOST,
+        ResourcesGet,
+        ServerRootResourcesGet,
+        SearchRequestPost,
     ),
 )
 def test_correct_list_response_passes_validation(validator_cls, list_user_data, user_schema):
@@ -805,9 +805,9 @@ def test_correct_list_response_passes_validation(validator_cls, list_user_data, 
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGET,
-        ServerRootResourcesGET,
-        SearchRequestPOST,
+        ResourcesGet,
+        ServerRootResourcesGet,
+        SearchRequestPost,
     ),
 )
 def test_attributes_existence_is_validated_in_list_response(validator_cls, user_schema):
@@ -832,9 +832,9 @@ def test_attributes_existence_is_validated_in_list_response(validator_cls, user_
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGET,
-        ServerRootResourcesGET,
-        SearchRequestPOST,
+        ResourcesGet,
+        ServerRootResourcesGet,
+        SearchRequestPost,
     ),
 )
 def test_attributes_presence_is_validated_in_resources_in_list_response(validator_cls, user_schema):
@@ -866,9 +866,9 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGET,
-        ServerRootResourcesGET,
-        SearchRequestPOST,
+        ResourcesGet,
+        ServerRootResourcesGet,
+        SearchRequestPost,
     ),
 )
 def test_start_index_consistency_is_not_validated_if_bad_type(
@@ -894,9 +894,9 @@ def test_start_index_consistency_is_not_validated_if_bad_type(
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGET,
-        ServerRootResourcesGET,
-        SearchRequestPOST,
+        ResourcesGet,
+        ServerRootResourcesGet,
+        SearchRequestPost,
     ),
 )
 def test_resources_are_not_validated_for_pagination_if_bad_type(
@@ -922,9 +922,9 @@ def test_resources_are_not_validated_for_pagination_if_bad_type(
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGET,
-        ServerRootResourcesGET,
-        SearchRequestPOST,
+        ResourcesGet,
+        ServerRootResourcesGet,
+        SearchRequestPost,
     ),
 )
 def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resources_has_issues(
@@ -959,9 +959,9 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGET,
-        ServerRootResourcesGET,
-        SearchRequestPOST,
+        ResourcesGet,
+        ServerRootResourcesGet,
+        SearchRequestPost,
     ),
 )
 def test_resources_response_data_can_be_serialized(validator_cls, list_user_data, user_schema):
@@ -973,7 +973,7 @@ def test_resources_response_data_can_be_serialized(validator_cls, list_user_data
 
 
 def test_correct_search_request_passes_validation(user_schema):
-    validator = SearchRequestPOST(CONFIG, resource_schema=[user_schema])
+    validator = SearchRequestPost(CONFIG, resource_schema=[user_schema])
 
     issues = validator.validate_request(
         body={
@@ -992,7 +992,7 @@ def test_correct_search_request_passes_validation(user_schema):
 def test_search_request_validation_fails_if_attributes_and_excluded_attributes_provided(
     user_schema,
 ):
-    validator = SearchRequestPOST(CONFIG, resource_schema=[user_schema])
+    validator = SearchRequestPost(CONFIG, resource_schema=[user_schema])
     expected_issues = {
         "body": {
             "attributes": {"_errors": [{"code": 11}]},
@@ -1011,7 +1011,7 @@ def test_search_request_validation_fails_if_attributes_and_excluded_attributes_p
 
 
 def test_correct_remove_operations_pass_validation(fake_schema):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -1045,7 +1045,7 @@ def test_correct_remove_operations_pass_validation(fake_schema):
 
 @pytest.mark.parametrize("op", ("add", "replace"))
 def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -1087,7 +1087,7 @@ def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
 
 
 def test_attr_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"0": {"path": {"_errors": [{"code": 17}]}}}}}
 
     issues = validator.validate_request(
@@ -1107,7 +1107,7 @@ def test_attr_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
 
 
 def test_attr_presence_in_value_is_not_validated_if_bad_path(fake_schema):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
 
     issues = validator.validate_request(
@@ -1121,7 +1121,7 @@ def test_attr_presence_in_value_is_not_validated_if_bad_path(fake_schema):
 
 
 def test_resource_object_patch_request_data_can_be_deserialized(fake_schema):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=fake_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     data = validator.request_schema.deserialize(
         {
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -1154,7 +1154,7 @@ def test_resource_object_patch_request_data_can_be_deserialized(fake_schema):
 def test_resource_object_patch_response_validation_fails_if_204_but_attributes_requested(
     user_schema,
 ):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=204,
@@ -1170,7 +1170,7 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
 def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attributes_requested(
     user_schema,
 ):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=204,
@@ -1184,7 +1184,7 @@ def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attrib
 def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1199,7 +1199,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data
 def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_attributes(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectPATCH(CONFIG, resource_schema=user_schema)
+    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1224,14 +1224,14 @@ def test_runtime_error_is_raised_if_patch_not_supported_and_resource_object_patc
     user_schema,
 ):
     with pytest.raises(RuntimeError):
-        ResourceObjectPATCH(
+        ResourceObjectPatch(
             config=create_service_provider_config(patch={"supported": False}),
             resource_schema=user_schema,
         )
 
 
 def test_resource_object_delete_response_validation_fails_if_status_different_than_204():
-    validator = ResourceObjectDELETE(CONFIG)
+    validator = ResourceObjectDelete(CONFIG)
 
     issues = validator.validate_response(status_code=200)
 
@@ -1239,7 +1239,7 @@ def test_resource_object_delete_response_validation_fails_if_status_different_th
 
 
 def test_resource_object_delete_response_validation_succeeds_if_status_204():
-    validator = ResourceObjectDELETE(CONFIG)
+    validator = ResourceObjectDelete(CONFIG)
 
     issues = validator.validate_response(status_code=204)
 
@@ -1247,7 +1247,7 @@ def test_resource_object_delete_response_validation_succeeds_if_status_204():
 
 
 def test_resource_object_delete_request_validation_does_nothing():
-    validator = ResourceObjectDELETE(CONFIG)
+    validator = ResourceObjectDelete(CONFIG)
 
     issues = validator.validate_request()
 
@@ -1255,7 +1255,7 @@ def test_resource_object_delete_request_validation_does_nothing():
 
 
 def test_not_implemented_error_is_raised_if_accessing_response_schema_for_delete():
-    validator = ResourceObjectDELETE(CONFIG)
+    validator = ResourceObjectDelete(CONFIG)
 
     with pytest.raises(NotImplementedError):
         print(validator.response_schema)
@@ -1662,7 +1662,7 @@ def test_bulk_operations_response_validation_fails_if_too_many_failed_operations
 
 
 def test_service_provider_configuration_is_validated():
-    validator = ResourceObjectGET(
+    validator = ResourceObjectGet(
         CONFIG, resource_schema=service_provider_config.ServiceProviderConfigSchema()
     )
     input_ = {
@@ -1713,7 +1713,7 @@ def test_service_provider_configuration_is_validated():
 
 
 def test_group_output_is_validated_correctly(group_data_server, group_schema):
-    validator = ResourceObjectGET(CONFIG, resource_schema=group_schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=group_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1729,7 +1729,7 @@ def test_group_output_is_validated_correctly(group_data_server, group_schema):
 
 def test_schemas_output_can_be_validated(user_schema, group_schema):
     schema = SchemaDefinitionSchema()
-    validator = ResourcesGET(CONFIG, resource_schema=schema)
+    validator = ResourcesGet(CONFIG, resource_schema=schema)
     body = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 2,
@@ -1745,7 +1745,7 @@ def test_schemas_output_can_be_validated(user_schema, group_schema):
 
 def test_schema_response_can_be_validated(user_schema):
     schema = SchemaDefinitionSchema()
-    validator = ResourceObjectGET(CONFIG, resource_schema=schema)
+    validator = ResourceObjectGet(CONFIG, resource_schema=schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1759,7 +1759,7 @@ def test_schema_response_can_be_validated(user_schema):
 
 
 def test_resource_type_response_can_be_validated():
-    validator = ResourceObjectGET(CONFIG, resource_schema=ResourceTypeSchema())
+    validator = ResourceObjectGet(CONFIG, resource_schema=ResourceTypeSchema())
     body = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
         "id": "User",
@@ -1792,7 +1792,7 @@ def test_resource_type_response_can_be_validated():
 
 
 def test_resource_types_response_can_be_validated():
-    validator = ResourcesGET(CONFIG, resource_schema=ResourceTypeSchema())
+    validator = ResourcesGet(CONFIG, resource_schema=ResourceTypeSchema())
     body = {
         "totalResults": 2,
         "itemsPerPage": 2,

@@ -21,7 +21,7 @@ from scimpler.data.identifiers import (
     AttrRep,
     AttrRepFactory,
     BoundedAttrRep,
-    SchemaURI,
+    SchemaUri,
 )
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
@@ -30,7 +30,7 @@ from scimpler.data.sorter import Sorter
 
 __all__ = [
     "AttrName",
-    "SchemaURI",
+    "SchemaUri",
     "AttrRep",
     "BoundedAttrRep",
     "AttrRepFactory",

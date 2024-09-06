@@ -1,1 +1,1 @@
-::: scimpler.data.SchemaURI
+::: scimpler.data.SchemaUri

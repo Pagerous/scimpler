@@ -2,7 +2,7 @@ from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Union
 
-from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep, SchemaURI
+from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep, SchemaUri
 from scimpler.registry import schemas
 
 
@@ -145,9 +145,9 @@ class ScimData(MutableMapping):
         value is actually set depends on the type of `key`:
 
         - if `str` is provided, the key is parsed to one of supported key types and used as follows,
-        - if `SchemaURI` representing schema extension is provided, the `value` is set directly
+        - if `SchemaUri` representing schema extension is provided, the `value` is set directly
             under the key,
-        - if `SchemaURI` representing base schema is provided, a `ValueError` exception is raised,
+        - if `SchemaUri` representing base schema is provided, a `ValueError` exception is raised,
         - if `AttrRep` is provided, the `value` is set directly under the key, if `key` represents
             top-level attribute, or it is nested under `AttrRep.sub_attr`, if it represents
             a sub-attribute,
@@ -157,7 +157,7 @@ class ScimData(MutableMapping):
 
 
         Raises:
-            ValueError: If `key` is `SchemaURI` reprensenting base schema.
+            ValueError: If `key` is `SchemaUri` reprensenting base schema.
             KeyError: If trying to set sub-attribute value to existing parent that is
                 not single-valued complex attribute value.
 
@@ -267,9 +267,9 @@ class ScimData(MutableMapping):
 
         The type of `key` determines which entry is actually accessed:
         - if `str` is provided, the key is parsed to one of supported key types and used as follows,
-        - if `SchemaURI` representing schema extension is provided, the whole subsection that
+        - if `SchemaUri` representing schema extension is provided, the whole subsection that
             belongs to it is returned,
-        - if `SchemaURI` representing base schema is provided, a `ValueError` exception is raised,
+        - if `SchemaUri` representing base schema is provided, a `ValueError` exception is raised,
         - if `AttrRep` is provided, the retrieved value belongs to top-level attribute, or nested
             one, kept under `AttrRep.sub_attr`, if `key` represents a sub-attribute,
         - if `BoundedAttrRep` is provided, the value is retrieved in the same way as for `AttrRep`
@@ -277,7 +277,7 @@ class ScimData(MutableMapping):
             the value is retrieved from schema URI key namespace.
 
         Raises:
-            ValueError: If `key` is `SchemaURI` reprensenting base schema.
+            ValueError: If `key` is `SchemaUri` reprensenting base schema.
             KeyError: If trying to set sub-attribute value to existing parent that is
                 not single-valued complex attribute value.
 
@@ -409,7 +409,7 @@ class ScimData(MutableMapping):
 
     @staticmethod
     def _normalize(value: Union[str, AttrRep]) -> Union[_SchemaKey, _AttrKey]:
-        if isinstance(value, SchemaURI):
+        if isinstance(value, SchemaUri):
             if schemas.get(value, False) is False:
                 raise KeyError(
                     f"schema {value!r} is not recognized or is an extension, so does not require "
@@ -419,7 +419,7 @@ class ScimData(MutableMapping):
 
         if isinstance(value, str):
             try:
-                value = SchemaURI(value)
+                value = SchemaUri(value)
                 is_extension = schemas.get(value)
                 if is_extension is False:
                     raise KeyError(

@@ -33,6 +33,8 @@ nav:
           - String: api_reference/scimpler_data/string.md
           - Sorter: api_reference/scimpler_data/sorter.md
           - UriReference: api_reference/scimpler_data/uri_reference.md
+      - scimpler.ext:
+          - marshmallow: api_reference/scimpler_ext/marshmallow.md
       - scimpler.data.operator:
           - And: api_reference/scimpler_data_operator/and.md
           - BinaryAttributeOperator: api_reference/scimpler_data_operator/binary_attribute_operator.md
@@ -62,8 +64,18 @@ nav:
           - SearchRequestSchema: api_reference/scimpler_schemas/search_request_schema.md
           - ServiceProviderConfigSchema: api_reference/scimpler_schemas/service_provider_config_schema.md
           - UserSchema: api_reference/scimpler_schemas/user_schema.md
-      - scimpler.ext:
-          - marshmallow: api_reference/scimpler_ext/marshmallow.md
+      - scimpler.validator:
+          - BulkOperations: api_reference/scimpler_validator/bulk_operations.md
+          - Error: api_reference/scimpler_validator/error.md
+          - ResourceObjectDelete: api_reference/scimpler_validator/resource_object_delete.md
+          - ResourceObjectGet: api_reference/scimpler_validator/resource_object_get.md
+          - ResourceObjectPatch: api_reference/scimpler_validator/resource_object_patch.md
+          - ResourceObjectPut: api_reference/scimpler_validator/resource_object_put.md
+          - ResourcesGet: api_reference/scimpler_validator/resources_get.md
+          - ResourcesPost: api_reference/scimpler_validator/resources_post.md
+          - SearchRequestPost: api_reference/scimpler_validator/search_request_post.md
+          - ServerRootResourcesGet: api_reference/scimpler_validator/server_root_resources_get.md
+          - ServiceResourceObjectGet: api_reference/scimpler_validator/service_resource_object_get.md
 
   - Compliance: compliance.md
 theme: material

@@ -29,7 +29,7 @@ from scimpler.data.identifiers import (
     AttrRep,
     AttrRepFactory,
     BoundedAttrRep,
-    SchemaURI,
+    SchemaUri,
 )
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
@@ -1545,7 +1545,7 @@ class BoundedAttrs:
 
     Examples:
         >>> bounded_attrs = BoundedAttrs(
-        >>>     schema=SchemaURI("my:resource:schema"),
+        >>>     schema=SchemaUri("my:resource:schema"),
         >>>     attrs=[
         >>>         String("myString"),
         >>>         Complex("myComplex", sub_attributes=[Integer("myInteger")])
@@ -1558,14 +1558,14 @@ class BoundedAttrs:
 
     def __init__(
         self,
-        schema: SchemaURI,
+        schema: SchemaUri,
         attrs: Optional[Iterable[Attribute]] = None,
         common_attrs: Optional[Iterable[str]] = None,
     ):
         self._schema = schema
         self._core_attrs: dict[BoundedAttrRep, Attribute] = {}
         self._common_attrs = {AttrName(item) for item in (common_attrs or set())}
-        self._extensions: dict[SchemaURI, BoundedAttrs] = {}
+        self._extensions: dict[SchemaUri, BoundedAttrs] = {}
 
         self._attrs: dict[BoundedAttrRep, Attribute] = {}
         self._bounded_complex_sub_attrs: dict[BoundedAttrRep, dict[BoundedAttrRep, Attribute]] = (
@@ -1605,7 +1605,7 @@ class BoundedAttrs:
 
         Examples:
             >>> bounded_attrs = BoundedAttrs(
-            >>>     schema=SchemaURI("my:resource:schema"),
+            >>>     schema=SchemaUri("my:resource:schema"),
             >>>     attrs=[
             >>>         String("myString"),
             >>>         Complex("myComplex", sub_attributes=[Integer("myInteger")])
@@ -1669,13 +1669,13 @@ class BoundedAttrs:
         return iter(self._core_attrs.items())
 
     @property
-    def extensions(self) -> dict[SchemaURI, "BoundedAttrs"]:
+    def extensions(self) -> dict[SchemaUri, "BoundedAttrs"]:
         """
         Associated extensions.
         """
         return self._extensions
 
-    def extend(self, schema: SchemaURI, attrs: "BoundedAttrs") -> None:
+    def extend(self, schema: SchemaUri, attrs: "BoundedAttrs") -> None:
         """
         Extends bounded attributes with provided attributes, associated with a provided schema.
         Args:

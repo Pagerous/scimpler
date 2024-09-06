@@ -35,9 +35,9 @@ pip install "scimpler[marshmallow]"
 
 ```python
 from scimpler.schemas import UserSchema
-from scimpler.validator import ResourcesPOST
+from scimpler.validator import ResourcesPost
 
-validator = ResourcesPOST(resource_schema=UserSchema())
+validator = ResourcesPost(resource_schema=UserSchema())
 
 validation_issues = validator.validate_request(
     body={

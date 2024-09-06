@@ -675,12 +675,12 @@ def create_response_schema(
     Examples:
         >>> from scimpler.data import AttrPresenceConfig
         >>> from scimpler.schemas import UserSchema
-        >>> from scimpler.validator import ResourcesGET
+        >>> from scimpler.validator import ResourcesGet
         >>>
         >>> def get_presence_config_from_request() -> AttrPresenceConfig:
         >>>     ...
         >>>
-        >>> v = ResourcesGET(resource_schema=UserSchema())
+        >>> v = ResourcesGet(resource_schema=UserSchema())
         >>> schema_cls = create_response_schema(
         >>>     v,
         >>>     context_provider=lambda: ResponseContext(
@@ -714,9 +714,9 @@ def create_request_schema(validator: Validator) -> type[marshmallow.Schema]:
 
     Examples:
         >>> from scimpler.schemas import UserSchema
-        >>> from scimpler.validator import ResourcesPOST
+        >>> from scimpler.validator import ResourcesPost
         >>>
-        >>> v = ResourcesPOST(resource_schema=UserSchema())
+        >>> v = ResourcesPost(resource_schema=UserSchema())
         >>> schema_cls = create_request_schema(v)
         >>> schema = schema_cls()
         >>> schema

@@ -36,7 +36,7 @@ class AttrName(str):
         return hash(self.lower())
 
 
-class SchemaURI(str):
+class SchemaUri(str):
     """
     Represents schema URI.
 
@@ -46,10 +46,10 @@ class SchemaURI(str):
         ValueError: If the provided value is not valid schema URI.
     """
 
-    def __new__(cls, value: str) -> "SchemaURI":
-        if not isinstance(value, SchemaURI) and not _URI_PREFIX.fullmatch(value + ":"):
+    def __new__(cls, value: str) -> "SchemaUri":
+        if not isinstance(value, SchemaUri) and not _URI_PREFIX.fullmatch(value + ":"):
             raise ValueError(f"{value!r} is not a valid schema URI")
-        return cast(SchemaURI, str.__new__(cls, value))
+        return cast(SchemaUri, str.__new__(cls, value))
 
     def __eq__(self, other: Any) -> bool:
         if isinstance(other, str):
@@ -150,7 +150,7 @@ class BoundedAttrRep(AttrRep):
             ValueError: If the provided `schema` is not recognized in the system registry.
         """
         super().__init__(attr, sub_attr)
-        schema = SchemaURI(schema)
+        schema = SchemaUri(schema)
         is_extension = schemas.get(schema)
         if is_extension is None:
             raise ValueError(f"unknown schema {schema!r}")
@@ -170,7 +170,7 @@ class BoundedAttrRep(AttrRep):
         return hash((self._attr, self._schema, self._sub_attr))
 
     @property
-    def schema(self) -> SchemaURI:
+    def schema(self) -> SchemaUri:
         """
         The schema URI to which the attribute or sub-attribute belongs.
         """
@@ -206,7 +206,7 @@ class AttrRepFactory:
         if match is not None:
             schema = match.group(1)
             schema = schema[:-1] if schema else ""
-            if not schema or SchemaURI(schema) in schemas:
+            if not schema or SchemaUri(schema) in schemas:
                 return issues
         issues.add_error(
             issue=ValidationError.bad_attribute_name(value),

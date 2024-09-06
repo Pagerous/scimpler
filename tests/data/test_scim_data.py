@@ -1,6 +1,6 @@
 import pytest
 
-from scimpler.data.identifiers import AttrRep, BoundedAttrRep, SchemaURI
+from scimpler.data.identifiers import AttrRep, BoundedAttrRep, SchemaUri
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 
 
@@ -131,7 +131,7 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
             },
         ),
         (
-            SchemaURI("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
+            SchemaUri("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
             {"employeeNumber": "10", "manager": {"displayName": "John Smith"}},
             {
                 "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
@@ -195,11 +195,11 @@ def test_multivalued_sub_attr_can_be_set_and_reassigned():
 
 def test_extension_can_be_reassigned():
     data = ScimData()
-    data.set(SchemaURI("my:schema:extension"), {"a": "b"})
+    data.set(SchemaUri("my:schema:extension"), {"a": "b"})
 
-    data.set(SchemaURI("MY:schema:EXTENSION"), {"a": "C"})
+    data.set(SchemaUri("MY:schema:EXTENSION"), {"a": "C"})
 
-    assert data.get(SchemaURI("my:SCHEMA:extension")) == {"a": "C"}
+    assert data.get(SchemaUri("my:SCHEMA:extension")) == {"a": "C"}
 
 
 def test_can_reassign_primitive_value_to_simple_multivalued_attr():
@@ -328,7 +328,7 @@ def test_data_repr():
                 "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"b": {"d": 4}},
                 "c": 3,
             },
-            SchemaURI("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
+            SchemaUri("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
             {"b": {"d": 4}},
             Missing,
         ),
@@ -353,7 +353,7 @@ def test_entry_can_be_popped_from_data(data, attr_rep, expected, remaining):
 
 def test_schema_uri_creation_fails_if_bad_uri():
     with pytest.raises(ValueError, match="not a valid schema URI"):
-        SchemaURI("bad^uri")
+        SchemaUri("bad^uri")
 
 
 @pytest.mark.parametrize(

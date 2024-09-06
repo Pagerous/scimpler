@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from scimpler.config import ServiceProviderConfig, create_service_provider_config
 
 if TYPE_CHECKING:
-    from scimpler.data.identifiers import SchemaURI
+    from scimpler.data.identifiers import SchemaUri
     from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
     from scimpler.data.schemas import ResourceSchema
 
@@ -18,7 +18,7 @@ def register_resource_schema(resource_schema: "ResourceSchema"):
     resources[resource_schema.name] = resource_schema
 
 
-def register_schema(schema: "SchemaURI", extension: bool = False):
+def register_schema(schema: "SchemaUri", extension: bool = False):
     if schema.lower().startswith("urn:ietf:params:scim:api:messages:2.0:") and schema in schemas:
         raise RuntimeError("schemas for SCIM API messages can not be overridden")
     schemas[schema] = extension

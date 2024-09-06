@@ -22,7 +22,7 @@ from scimpler.data.attrs import (
     String,
     UriReference,
 )
-from scimpler.data.identifiers import BoundedAttrRep, SchemaURI
+from scimpler.data.identifiers import BoundedAttrRep, SchemaUri
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.registry import register_schema
@@ -43,8 +43,8 @@ class SchemaMeta(type):
     def __init__(cls, name, bases, dct):
         super().__init__(name, bases, dct)
         if hasattr(cls, "schema"):
-            cls.schema = SchemaURI(cls.schema)
-            register_schema(SchemaURI(cls.schema))
+            cls.schema = SchemaUri(cls.schema)
+            register_schema(SchemaUri(cls.schema))
 
 
 class BaseSchema(metaclass=SchemaMeta):
@@ -52,7 +52,7 @@ class BaseSchema(metaclass=SchemaMeta):
     Base class for all schemas. Includes `schemas` attribute to attributes defined in subclasses.
     """
 
-    schema: str | SchemaURI
+    schema: str | SchemaUri
     base_attrs: list[Attribute] = [
         UriReference(
             name="schemas",
@@ -77,7 +77,7 @@ class BaseSchema(metaclass=SchemaMeta):
             filtered_attrs.insert(0, BaseSchema.base_attrs[0])
 
         self._attrs = BoundedAttrs(
-            schema=cast(SchemaURI, self.schema),
+            schema=cast(SchemaUri, self.schema),
             attrs=filtered_attrs,
             common_attrs=list(common_attrs or []) + ["schemas"],
         )
@@ -90,11 +90,11 @@ class BaseSchema(metaclass=SchemaMeta):
         return self._attrs
 
     @property
-    def schemas(self) -> list[SchemaURI]:
+    def schemas(self) -> list[SchemaUri]:
         """
         All schema URIs by which the schema is identified.
         """
-        return [cast(SchemaURI, self.schema)]
+        return [cast(SchemaUri, self.schema)]
 
     def _get_attrs(self) -> list[Attribute]:
         attrs = []
@@ -576,16 +576,16 @@ class ResourceSchema(BaseResourceSchema):
         self._schema_extensions: dict[str, dict] = {}
 
     @property
-    def schemas(self) -> list[SchemaURI]:
+    def schemas(self) -> list[SchemaUri]:
         """
         Schema URIs by which the schema is identified. Includes schema extension URIs.
         """
-        return [cast(SchemaURI, self.schema)] + [
+        return [cast(SchemaUri, self.schema)] + [
             extension["extension"].schema for extension in self._schema_extensions.values()
         ]
 
     @property
-    def extensions(self) -> dict[SchemaURI, bool]:
+    def extensions(self) -> dict[SchemaUri, bool]:
         """
         Extensions added to the schema. Map containing schema extension URIs and flags indicating
         whether they are required extensions.
@@ -627,7 +627,7 @@ class ResourceSchema(BaseResourceSchema):
                     category=ScimpleUserWarning,
                 )
         self._attrs.extend(
-            schema=cast(SchemaURI, extension.schema),
+            schema=cast(SchemaUri, extension.schema),
             attrs=extension.attrs,
         )
 
@@ -707,13 +707,13 @@ class SchemaExtension:
         >>>     base_attrs = [...]
     """
 
-    schema: str | SchemaURI
+    schema: str | SchemaUri
     name: str
     description: str = ""
     base_attrs: list[Attribute] = []
 
     def __init__(self, attr_filter: Optional[AttrFilter] = None):
-        self.schema = SchemaURI(self.schema)
+        self.schema = SchemaUri(self.schema)
         register_schema(self.schema, True)
         self._attrs = BoundedAttrs(
             schema=self.schema,

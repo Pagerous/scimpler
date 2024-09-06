@@ -208,7 +208,7 @@ def _validate_resource_output_body(
     return issues
 
 
-class ResourceObjectGET(Validator):
+class ResourceObjectGet(Validator):
     def __init__(
         self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: BaseResourceSchema
     ):
@@ -243,12 +243,12 @@ class ResourceObjectGET(Validator):
         )
 
 
-class ServiceResourceObjectGET(ResourceObjectGET):
+class ServiceResourceObjectGet(ResourceObjectGet):
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
 
-class ResourceObjectPUT(Validator):
+class ResourceObjectPut(Validator):
     def __init__(
         self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
     ):
@@ -307,7 +307,7 @@ class ResourceObjectPUT(Validator):
         )
 
 
-class ResourcesPOST(Validator):
+class ResourcesPost(Validator):
     def __init__(
         self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
     ):
@@ -620,7 +620,7 @@ def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) ->
     return True
 
 
-class ServerRootResourcesGET(Validator):
+class ServerRootResourcesGet(Validator):
     def __init__(
         self,
         config: Optional[ServiceProviderConfig] = None,
@@ -662,14 +662,14 @@ class ServerRootResourcesGET(Validator):
         )
 
 
-class ResourcesGET(ServerRootResourcesGET):
+class ResourcesGet(ServerRootResourcesGet):
     def __init__(
         self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: BaseResourceSchema
     ):
         super().__init__(config, resource_schema=[resource_schema])
 
 
-class SearchRequestPOST(Validator):
+class SearchRequestPost(Validator):
     def __init__(
         self,
         config: Optional[ServiceProviderConfig] = None,
@@ -721,7 +721,7 @@ class SearchRequestPOST(Validator):
         )
 
 
-class ResourceObjectPATCH(Validator):
+class ResourceObjectPatch(Validator):
     def __init__(
         self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
     ):
@@ -792,7 +792,7 @@ class ResourceObjectPATCH(Validator):
         return issues
 
 
-class ResourceObjectDELETE(Validator):
+class ResourceObjectDelete(Validator):
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
@@ -846,27 +846,27 @@ class BulkOperations(Validator):
             "DELETE": {},
         }
         for resource_schema in resource_schemas:
-            get = ResourceObjectGET(self.config, resource_schema=resource_schema)
+            get = ResourceObjectGet(self.config, resource_schema=resource_schema)
             self._validators["GET"][resource_schema.endpoint] = get
             response_schemas["GET"][resource_schema.endpoint] = get.response_schema
             request_schemas["GET"][resource_schema.endpoint] = None
 
-            post = ResourcesPOST(self.config, resource_schema=resource_schema)
+            post = ResourcesPost(self.config, resource_schema=resource_schema)
             self._validators["POST"][resource_schema.endpoint] = post
             response_schemas["POST"][resource_schema.endpoint] = post.response_schema
             request_schemas["POST"][resource_schema.endpoint] = post.request_schema
 
-            put = ResourceObjectPUT(self.config, resource_schema=resource_schema)
+            put = ResourceObjectPut(self.config, resource_schema=resource_schema)
             self._validators["PUT"][resource_schema.endpoint] = put
             response_schemas["PUT"][resource_schema.endpoint] = put.response_schema
             request_schemas["PUT"][resource_schema.endpoint] = put.request_schema
 
-            patch = ResourceObjectPATCH(self.config, resource_schema=resource_schema)
+            patch = ResourceObjectPatch(self.config, resource_schema=resource_schema)
             self._validators["PATCH"][resource_schema.endpoint] = patch
             response_schemas["PATCH"][resource_schema.endpoint] = patch.response_schema
             request_schemas["PATCH"][resource_schema.endpoint] = patch.request_schema
 
-            delete = ResourceObjectDELETE(self.config)
+            delete = ResourceObjectDelete(self.config)
             self._validators["DELETE"][resource_schema.endpoint] = delete
             response_schemas["DELETE"][resource_schema.endpoint] = None
             request_schemas["DELETE"][resource_schema.endpoint] = None
