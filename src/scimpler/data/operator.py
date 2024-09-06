@@ -1,11 +1,13 @@
 import abc
+import inspect
 import operator
-from typing import Any, Generator, Generic, Mapping, Optional, TypeVar, Union
+from typing import Any, Generator, Generic, Mapping, Optional, TypeVar, Union, final
 
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.schemas import ResourceSchema
 from scimpler.data.scim_data import Invalid, Missing, ScimData
+from scimpler.registry import register_binary_operator, register_unary_operator
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[ResourceSchema, Complex])
 
@@ -62,6 +64,7 @@ class LogicalOperator(Operator, abc.ABC):
             yield sub_operator.match(value, schema_or_complex)
 
 
+@final
 class And(LogicalOperator):
     """
     Represents `and` SCIM operator. Matches if all sub-operators match.
@@ -96,6 +99,7 @@ class And(LogicalOperator):
         return self._sub_operators
 
 
+@final
 class Or(LogicalOperator):
     """
     Represents `or` SCIM operator. Matches if any of sub-operators match.
@@ -126,6 +130,7 @@ class Or(LogicalOperator):
         return False
 
 
+@final
 class Not(LogicalOperator):
     """
     Represents `not` SCIM operator. Matches if a sub-operator does not match.
@@ -155,7 +160,17 @@ class Not(LogicalOperator):
         return not next(self._collect_matches(value, schema_or_complex))
 
 
-class AttributeOperator(Operator, abc.ABC):
+class AttributeOperatorMeta(abc.ABCMeta):
+    def __init__(cls, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not inspect.isabstract(cls):
+            if issubclass(cls, UnaryAttributeOperator):
+                register_unary_operator(cls)
+            elif issubclass(cls, BinaryAttributeOperator):
+                register_binary_operator(cls)
+
+
+class AttributeOperator(Operator, metaclass=AttributeOperatorMeta):
     """
     Base class for all operators that involve attributes directly.
     Every subclass which is not an abstract must specify `op`,
@@ -240,6 +255,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         return match
 
 
+@final
 class Present(UnaryAttributeOperator):
     op = "pr"
     supported_scim_types = {
@@ -385,6 +401,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         return False
 
 
+@final
 class Equal(BinaryAttributeOperator):
     """
     Represents `eq` SCIM operator.
@@ -411,6 +428,7 @@ class Equal(BinaryAttributeOperator):
         return operator.eq(attr_value, op_value)
 
 
+@final
 class NotEqual(BinaryAttributeOperator):
     """
     Represents `ne` SCIM operator.
@@ -437,6 +455,7 @@ class NotEqual(BinaryAttributeOperator):
         return operator.ne(attr_value, op_value)
 
 
+@final
 class Contains(BinaryAttributeOperator):
     """
     Represents `co` SCIM operator.
@@ -454,6 +473,7 @@ class Contains(BinaryAttributeOperator):
         return operator.contains(attr_value, op_value)
 
 
+@final
 class StartsWith(BinaryAttributeOperator):
     """
     Represents `sw` SCIM operator.
@@ -471,6 +491,7 @@ class StartsWith(BinaryAttributeOperator):
         return attr_value.startswith(op_value)
 
 
+@final
 class EndsWith(BinaryAttributeOperator):
     """
     Represents `ew` SCIM operator.
@@ -488,6 +509,7 @@ class EndsWith(BinaryAttributeOperator):
         return attr_value.endswith(op_value)
 
 
+@final
 class GreaterThan(BinaryAttributeOperator):
     """
     Represents `gt` SCIM operator.
@@ -505,6 +527,7 @@ class GreaterThan(BinaryAttributeOperator):
         return operator.gt(attr_value, op_value)
 
 
+@final
 class GreaterThanOrEqual(BinaryAttributeOperator):
     """
     Represents `ge` SCIM operator.
@@ -522,6 +545,7 @@ class GreaterThanOrEqual(BinaryAttributeOperator):
         return operator.ge(attr_value, op_value)
 
 
+@final
 class LesserThan(BinaryAttributeOperator):
     """
     Represents `lt` SCIM operator.
@@ -539,6 +563,7 @@ class LesserThan(BinaryAttributeOperator):
         return operator.lt(attr_value, op_value)
 
 
+@final
 class LesserThanOrEqual(BinaryAttributeOperator):
     """
     Represents `le` SCIM operator.
@@ -561,6 +586,7 @@ TLogicalOrAttributeOperator = TypeVar(
 )
 
 
+@final
 class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
     """
     Represents complex attribute grouping operator. Can be used for single-valued and

@@ -27,12 +27,7 @@ from scimpler.data.utils import (
     get_placeholder,
 )
 from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
-from scimpler.registry import (
-    binary_operators,
-    register_binary_operator,
-    register_unary_operator,
-    unary_operators,
-)
+from scimpler.registry import binary_operators, unary_operators
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)
@@ -509,8 +504,9 @@ class Filter(Generic[TOperator]):
             if isinstance(attr_rep, AttrRep) and attr_rep.is_sub_attr:
                 raise
             sub_op_exp = match.group(2)
-            deserialized_sub_op = Filter._deserialize_operator(
-                sub_op_exp, placeholders, in_complex_group=True
+            deserialized_sub_op = cast(
+                Union[op.AttributeOperator, op.LogicalOperator],
+                Filter._deserialize_operator(sub_op_exp, placeholders, in_complex_group=True),
             )
             id_, placeholder = get_placeholder()
             placeholders[id_] = op.ComplexAttributeOperator(
@@ -701,15 +697,3 @@ class Filter(Generic[TOperator]):
                 ],
             }
         raise TypeError(f"unsupported filter type '{type(operator).__name__}'")
-
-
-register_unary_operator(op.Present)
-register_binary_operator(op.Equal)
-register_binary_operator(op.NotEqual)
-register_binary_operator(op.Contains)
-register_binary_operator(op.StartsWith)
-register_binary_operator(op.EndsWith)
-register_binary_operator(op.GreaterThan)
-register_binary_operator(op.GreaterThanOrEqual)
-register_binary_operator(op.LesserThan)
-register_binary_operator(op.LesserThanOrEqual)

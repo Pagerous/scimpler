@@ -6,7 +6,6 @@ import pytest
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
-from scimpler.registry import register_binary_operator, register_unary_operator
 
 
 @pytest.mark.parametrize(
@@ -2443,7 +2442,7 @@ def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, exp
     assert filter_.to_dict() == expected
 
 
-def test_binary_operator_can_be_registered(user_schema):
+def test_binary_operator_can_be_defined_and_used(user_schema):
     class Regex(BinaryAttributeOperator):
         op = "re"
         supported_scim_types = {"string"}
@@ -2453,15 +2452,13 @@ def test_binary_operator_can_be_registered(user_schema):
         def operator(attr_value: Any, op_value: Any) -> bool:
             return bool(re.fullmatch(op_value, attr_value))
 
-    register_binary_operator(Regex)
-
     filter_ = Filter.deserialize("userName re 'super\\d{4}user'")
 
     assert filter_({"userName": "super4132user"}, user_schema)
     assert not filter_({"userName": "super413user"}, user_schema)
 
 
-def test_unary_operator_can_be_registered(user_schema):
+def test_custom_unary_operator_can_be_defined_and_used(user_schema):
     class IsNice(UnaryAttributeOperator):
         op = "isNice"
         supported_scim_types = {"string"}
@@ -2470,8 +2467,6 @@ def test_unary_operator_can_be_registered(user_schema):
         @staticmethod
         def operator(value: Any) -> bool:
             return value == "Nice"
-
-    register_unary_operator(IsNice)
 
     filter_ = Filter.deserialize("userName isNice")
 
