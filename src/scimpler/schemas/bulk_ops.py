@@ -13,7 +13,7 @@ _RESOURCE_TYPE_REGEX = re.compile(r"/\w+")
 _RESOURCE_OBJECT_REGEX = re.compile(r"/\w+/.*")
 
 
-def _validate_operation_method_existence(method: Any) -> ValidationIssues:
+def validate_operation_method_existence(method: Any) -> ValidationIssues:
     issues = ValidationIssues()
     if method in [None, Missing]:
         issues.add_error(
@@ -28,7 +28,7 @@ def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
     for i, item in enumerate(value):
         method = item.get("method")
         issues.merge(
-            issues=_validate_operation_method_existence(method),
+            issues=validate_operation_method_existence(method),
             location=(i, "method"),
         )
         bulk_id = item.get("bulkId")
@@ -73,7 +73,7 @@ def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
     return issues
 
 
-def deserialize_request_operations(value: list[ScimData]) -> list[ScimData]:
+def process_request_operations(value: list[ScimData]) -> list[ScimData]:
     value = deepcopy(value)
     for i, item in enumerate(value):
         method = item.get("method")
@@ -83,6 +83,23 @@ def deserialize_request_operations(value: list[ScimData]) -> list[ScimData]:
 
 
 class BulkRequestSchema(BaseSchema):
+    """
+    Built-in and ready to use, BulkRequest schema. Identified by
+    `urn:ietf:params:scim:api:messages:2.0:BulkRequest` schema URI.
+
+    Provides data validation and checks:
+
+    - if `method` is provided,
+    - if `bulkId` is provided for `POST` method,
+    - if `path` is provided,
+    - if `path` is valid, depending on the method type,
+    - if `data` is provided for `POST`, `PUT`, and `PATCH` methods.
+
+    During (de)serialization, if method type is `GET` or `DELETE`, the `data` if provided,
+    is dropped. For all other methods, the `data` is (de)serialized together with rest of the
+    fields.
+    """
+
     schema = "urn:ietf:params:scim:api:messages:2.0:BulkRequest"
     base_attrs = [
         Integer("failOnErrors"),
@@ -91,7 +108,8 @@ class BulkRequestSchema(BaseSchema):
             required=True,
             multi_valued=True,
             validators=[validate_request_operations],
-            deserializer=deserialize_request_operations,
+            deserializer=process_request_operations,
+            serializer=process_request_operations,
             sub_attributes=[
                 String(
                     name="method",
@@ -114,6 +132,30 @@ class BulkRequestSchema(BaseSchema):
         self,
         sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]],
     ):
+        """
+        Args:
+            sub_schemas: Schemas supported by the bulk request, per resource type endpoint
+                and method type.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema, GroupSchema, PatchOpSchema
+            >>>
+            >>> user, group = UserSchema(), GroupSchema()
+            >>> user_patch = PatchOpSchema(user)
+            >>> group_patch = PatchOpSchema(group)
+            >>> BulkRequestSchema(
+            >>>     {
+            >>>         "GET": {
+            >>>             user.endpoint: user,
+            >>>             group.endpoint: group,
+            >>>         },
+            >>>         "PATCH": {
+            >>>             user.endpoint: user_patch,
+            >>>             group.endpoint: group_patch,
+            >>>         }
+            >>>     }
+            >>> )
+        """
         super().__init__()
         self._sub_schemas = sub_schemas
 
@@ -142,6 +184,11 @@ class BulkRequestSchema(BaseSchema):
         return data
 
     def get_schema(self, operation: Mapping) -> Optional[BaseSchema]:
+        """
+        Returns one of the sub-schemas, depending on the provided `operation` data. Returns
+        `None` if an operation's method is not supported, or path indicates unsupported resource
+        type.
+        """
         method = operation.get("method", "").upper()
         if method not in self._sub_schemas:
             return None
@@ -157,7 +204,7 @@ def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
     for i, item in enumerate(value):
         method = item.get("method")
         issues.merge(
-            issues=_validate_operation_method_existence(method),
+            issues=validate_operation_method_existence(method),
             location=(i, "method"),
         )
         bulk_id = item.get("bulkId")
@@ -192,7 +239,7 @@ def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
     return issues
 
 
-def _validate_status(value: Any) -> ValidationIssues:
+def validate_status(value: Any) -> ValidationIssues:
     issues = ValidationIssues()
     try:
         int(value)
@@ -205,6 +252,19 @@ def _validate_status(value: Any) -> ValidationIssues:
 
 
 class BulkResponseSchema(BaseSchema):
+    """
+    Built-in and ready to use, BulkResponse schema. Identified by
+    `urn:ietf:params:scim:api:messages:2.0:BulkResponse` schema URI.
+
+    Provides data validation and checks:
+
+    - if `method` is provided,
+    - if `bulkId` is provided for `POST` method,
+    - if `status` is provided,
+    - if `location` is provided for successful operations,
+    - if `response` is provided for unsuccessful operations,
+    """
+
     schema = "urn:ietf:params:scim:api:messages:2.0:BulkResponse"
     base_attrs = [
         Complex(
@@ -221,7 +281,7 @@ class BulkResponseSchema(BaseSchema):
                 String(
                     name="status",
                     required=True,
-                    validators=[_validate_status],
+                    validators=[validate_status],
                 ),
                 Unknown("response"),
             ],
@@ -237,6 +297,28 @@ class BulkResponseSchema(BaseSchema):
         sub_schemas: Mapping[str, Mapping[str, Optional[BaseSchema]]],
         error_schema: ErrorSchema,
     ):
+        """
+        Args:
+            sub_schemas: Schemas supported by the bulk response, per resource type endpoint
+                and method type.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema, GroupSchema
+            >>>
+            >>> user, group = UserSchema(), GroupSchema()
+            >>> BulkResponseSchema(
+            >>>     {
+            >>>         "GET": {
+            >>>             user.endpoint: user,
+            >>>             group.endpoint: group,
+            >>>         },
+            >>>         "PATCH": {
+            >>>             user.endpoint: user,
+            >>>             group.endpoint: group,
+            >>>         }
+            >>>     }
+            >>> )
+        """
         super().__init__()
         self._sub_schemas = sub_schemas
         self._error_schema = error_schema
@@ -266,6 +348,11 @@ class BulkResponseSchema(BaseSchema):
         return data
 
     def get_schema(self, operation: Mapping) -> Optional[BaseSchema]:
+        """
+        Returns one of the sub-schemas, depending on the provided `operation` data. Returns
+        `None` if `status` is not present in the `operation`, or if an operation's method
+        is not supported, or location indicates unsupported resource type.
+        """
         operation = ScimData(operation)
         status = operation.get("status")
         if status in [None, Missing]:

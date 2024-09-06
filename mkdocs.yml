@@ -50,6 +50,18 @@ nav:
           - Present: api_reference/scimpler_data_operator/present.md
           - StartsWith: api_reference/scimpler_data_operator/starts_with.md
           - UnaryAttributeOperator: api_reference/scimpler_data_operator/unary_attribute_operator.md
+      - scimpler.schemas:
+          - BulkRequestSchema: api_reference/scimpler_schemas/bulk_request_schema.md
+          - BulkResponseSchema: api_reference/scimpler_schemas/bulk_response_schema.md
+          - ErrorSchema: api_reference/scimpler_schemas/error_schema.md
+          - GroupSchema: api_reference/scimpler_schemas/group_schema.md
+          - ListResponseSchema: api_reference/scimpler_schemas/list_response_schema.md
+          - PatchOpSchema: api_reference/scimpler_schemas/patch_op_schema.md
+          - ResourceTypeSchema: api_reference/scimpler_schemas/resource_type_schema.md
+          - SchemaDefinitionSchema: api_reference/scimpler_schemas/schema_definition_schema.md
+          - SearchRequestSchema: api_reference/scimpler_schemas/search_request_schema.md
+          - ServiceProviderConfigSchema: api_reference/scimpler_schemas/service_provider_config_schema.md
+          - UserSchema: api_reference/scimpler_schemas/user_schema.md
 
   - Compliance: compliance.md
 theme: material
