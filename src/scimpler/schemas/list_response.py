@@ -57,7 +57,10 @@ class ListResponseSchema(BaseSchema):
         self._contained_schemas = list(resource_schemas)
 
     @property
-    def contained_schemas(self) -> list[BaseResourceSchema]:
+    def supported_schemas(self) -> list[BaseResourceSchema]:
+        """
+        Resource schemas supported by the list response.
+        """
         return self._contained_schemas
 
     def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:

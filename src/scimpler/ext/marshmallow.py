@@ -589,14 +589,14 @@ def _create_schema(
     if isinstance(scimple_schema, BaseSchema):
         if (
             isinstance(scimple_schema, ListResponseSchema)
-            and len(scimple_schema.contained_schemas) == 1
+            and len(scimple_schema.supported_schemas) == 1
         ):
             fields = _get_fields(
                 scimple_schema.attrs,
                 field_by_attr_rep={
                     scimple_schema.attrs.resources: marshmallow.fields.List(
                         marshmallow.fields.Nested(
-                            _get_fields(scimple_schema.contained_schemas[0].attrs)
+                            _get_fields(scimple_schema.supported_schemas[0].attrs)
                         ),
                     )
                 },

@@ -9,7 +9,7 @@ from scimpler.data.scim_data import Invalid, Missing, MissingType, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 
 
-def _validate_operations(value: list[ScimData]) -> ValidationIssues:
+def validate_operations(value: list[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         type_ = item.get("op")
@@ -21,7 +21,7 @@ def _validate_operations(value: list[ScimData]) -> ValidationIssues:
                 proceed=False,
                 location=[i, "path"],
             )
-        elif type_ == "add":
+        elif type_ in ["add", "replace"]:
             if op_value in [None, Missing]:
                 issues.add_error(
                     issue=ValidationError.missing(),
@@ -32,13 +32,28 @@ def _validate_operations(value: list[ScimData]) -> ValidationIssues:
 
 
 class PatchOpSchema(BaseSchema):
+    """
+    PatchOp schema, identified by `urn:ietf:params:scim:api:messages:2.0:PatchOp` URI.
+
+    Provides data validation and checks if:
+
+    - `Operations.op` is one of `add`, `remove`, and `replace`,
+    - `Operations.path` is provided in `remove` operation,
+    - `Operations.value` is provided in every `add` and `replace` operations,
+    - `Operations.path` targets existing attribute,
+    - `Operations.path` does not target `readOnly` attribute,
+    - `Operations.path` deos not target required attribute in `remove` operation,
+    - All required data is supplied for complex attribute in `add` and `remove` operation,
+    - `Operations.data` is correct, according to the schema and its attributes.
+    """
+
     schema = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
     base_attrs: list[Attribute] = [
         Complex(
             name="Operations",
             required=True,
             multi_valued=True,
-            validators=[_validate_operations],
+            validators=[validate_operations],
             sub_attributes=[
                 String(
                     "op",
@@ -58,12 +73,17 @@ class PatchOpSchema(BaseSchema):
     ]
 
     def __init__(self, resource_schema: ResourceSchema):
+        """
+        Args:
+            resource_schema: Resource schema supported by the patch operation.
+
+        Examples:
+             >>> from scimpler.schemas import UserSchema
+             >>>
+             >>> patch_op = PatchOpSchema(UserSchema())
+        """
         super().__init__()
         self._resource_schema = resource_schema
-
-    @property
-    def resource_schema(self) -> ResourceSchema:
-        return self._resource_schema
 
     def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
@@ -118,24 +138,24 @@ class PatchOpSchema(BaseSchema):
                     proceed=True,
                     location=path_location,
                 )
-        else:
-            parent_attr = cast(Attribute, self._resource_schema.attrs.get(path.attr_rep))
-            if attr.required and not attr.multi_valued:
-                issues.add_error(
-                    issue=ValidationError.attribute_can_not_be_deleted(),
-                    proceed=True,
-                    location=path_location,
-                )
-            if (
-                parent_attr.mutability == AttributeMutability.READ_ONLY
-                or attr.mutability == AttributeMutability.READ_ONLY
-            ):
-                issues.add_error(
-                    issue=ValidationError.attribute_can_not_be_modified(),
-                    proceed=True,
-                    location=path_location,
-                )
+            return issues
 
+        parent_attr = cast(Attribute, self._resource_schema.attrs.get(path.attr_rep))
+        if attr.required and not attr.multi_valued:
+            issues.add_error(
+                issue=ValidationError.attribute_can_not_be_deleted(),
+                proceed=True,
+                location=path_location,
+            )
+        if (
+            parent_attr.mutability == AttributeMutability.READ_ONLY
+            or attr.mutability == AttributeMutability.READ_ONLY
+        ):
+            issues.add_error(
+                issue=ValidationError.attribute_can_not_be_modified(),
+                proceed=True,
+                location=path_location,
+            )
         return issues
 
     def _validate_add_or_replace_operation(
@@ -167,8 +187,8 @@ class PatchOpSchema(BaseSchema):
             issues = self._resource_schema.validate(value)
             issues.pop_errors([27, 28, 29], ("schemas",))
             for attr_rep, attr in self._resource_schema.attrs:
-                attr_value = value.get(attr_rep)
-                if attr_value is Missing:
+                parent_attr_value = value.get(attr_rep)
+                if parent_attr_value is Missing:
                     continue
 
                 if attr.mutability == AttributeMutability.READ_ONLY:
@@ -187,8 +207,8 @@ class PatchOpSchema(BaseSchema):
                 for sub_attr_name, sub_attr in attr.attrs:
                     if (
                         sub_attr.mutability == AttributeMutability.READ_ONLY
-                        and attr_value is not Invalid
-                        and attr_value.get(sub_attr_name) is not Missing
+                        and parent_attr_value is not Invalid
+                        and parent_attr_value.get(sub_attr_name) is not Missing
                     ):
                         issues.add_error(
                             issue=ValidationError.attribute_can_not_be_modified(),
@@ -199,7 +219,7 @@ class PatchOpSchema(BaseSchema):
 
                 if not sub_attr_err:
                     issues.merge(
-                        self._validate_complex_sub_attrs_presence(attr, attr_value),
+                        self._validate_complex_sub_attrs_presence(attr, parent_attr_value),
                         location=attr_location,
                     )
             return issues
@@ -323,8 +343,52 @@ class PatchOpSchema(BaseSchema):
     def get_value_schema(
         self,
         path: Union[str, PatchPath, None, MissingType],
-        value: Any,
+        value: Any = None,
     ) -> Union[BaseSchema, Attribute]:
+        """
+        Returns the supported schema or one of its attributes, depending on the provided `path`
+        and `value`. If `path` is `None` or `Missing`, whole supported schema is returned.
+
+        If `path` is string value, it is deserialized and processed like `PatchPath`. For
+        valid `PatchPath`, the attribute targeted by it is returned. The only exception is when
+        the `path` has value selection filter with no sub-attribute specified, and provided value
+        is not a list of values (like for multi-valued attribute), but single entry. Then the
+        returned attribute is the copy of original attribute with `multi_valued` property set
+        to `False`.
+
+        Raises:
+            ValueError: When `path` targets attribute that does not exist in the supported schema.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>>
+            >>> user = UserSchema()
+            >>> patch_op = PatchOpSchema(user)
+            >>> patch_op.get_value_schema(None)
+            <scimpler.schemas.user.UserSchema at 0x7f1f6c193090>
+            >>> patch_op.get_value_schema("userName")
+            String(userName)
+            >>> patch_op.get_value_schema(
+            >>>     "emails[type eq 'work']",
+            >>>     [{"type": "work", "value": "work@example.com"}]
+            >>> )
+            Complex(emails)
+            >>> patch_op.get_value_schema(
+            >>>     "emails[type eq 'work']",
+            >>>     [{"type": "work", "value": "work@example.com"}]
+            >>> ).multi_valued
+            True
+            >>> patch_op.get_value_schema(
+            >>>     "emails[type eq 'work']",
+            >>>     {"type": "work", "value": "work@example.com"}
+            >>> )
+            Complex(emails)
+            >>> patch_op.get_value_schema(
+            >>>     "emails[type eq 'work']",
+            >>>     {"type": "work", "value": "work@example.com"}
+            >>> ).multi_valued
+            False
+        """
         if not isinstance(path, (str, PatchPath)):
             return self._resource_schema
 
@@ -338,7 +402,8 @@ class PatchOpSchema(BaseSchema):
             raise ValueError(f"target indicated by path {path!r} does not exist")
 
         if (
-            path_normalized.has_filter
+            value
+            and path_normalized.has_filter
             and not path_normalized.sub_attr_name
             and not isinstance(value, list)
         ):
