@@ -9,11 +9,19 @@ from scimpler.data.schemas import ResourceSchema
 
 
 class GroupSchema(ResourceSchema):
+    """
+    Group schema, identified by `urn:ietf:params:scim:schemas:core:2.0:Group` URI.
+
+    Provides data validation and additional check if `members.type` is either `"User"` or `"Group"`.
+
+    Default endpoint is `/Groups`.
+    """
+
     schema = "urn:ietf:params:scim:schemas:core:2.0:Group"
     name = "Group"
     plural_name = "Groups"
     endpoint = "/Groups"
-    description = "Group"
+    description = "Group schema."
     base_attrs: list[Attribute] = [
         String(
             name="displayName",
