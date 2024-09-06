@@ -18,6 +18,8 @@ from scimpler.schemas import (
 from scimpler.validator import Validator
 
 _marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
+_initialized = False
+_auto_initialized = False
 
 
 class ContextError(Exception):
@@ -61,6 +63,14 @@ def initialize(
     fields_by_attrs: Optional[dict[type[attrs.Attribute], type[marshmallow.fields.Field]]] = None,
 ):
     global _marshmallow_field_by_attr_type
+    global _marshmallow_field_by_attr_type, _initialized
+    if _auto_initialized:
+        raise RuntimeError(
+            "marshmallow extension has been automatically initialized with default field mapping; "
+            "call scimpler.ext.marshmallow.initialize() before first call to extension"
+        )
+    if _initialized:
+        raise RuntimeError("marshmallow extension has been already initialized")
 
     default: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {
         attrs.Unknown: marshmallow.fields.Raw,
@@ -77,6 +87,7 @@ def initialize(
     if fields_by_attrs is not None:
         default.update(fields_by_attrs)
     _marshmallow_field_by_attr_type = default
+    _initialized = True
 
 
 def _get_fields(
@@ -627,6 +638,7 @@ def create_response_schema(
     validator: Validator,
     context_provider: Optional[ResponseContextProvider] = None,
 ) -> type[marshmallow.Schema]:
+    _ensure_initialized()
     return _create_schema(
         scimple_schema=validator.response_schema,
         processors=Processors(validator=validator.validate_response),
@@ -635,8 +647,16 @@ def create_response_schema(
 
 
 def create_request_schema(validator: Validator) -> type[marshmallow.Schema]:
+    _ensure_initialized()
     return _create_schema(
         scimple_schema=validator.request_schema,
         processors=Processors(validator=validator.validate_request),
         context_provider=None,
     )
+
+
+def _ensure_initialized():
+    global _auto_initialized
+    if not _initialized:
+        initialize()
+        _auto_initialized = True
