@@ -847,29 +847,29 @@ class BulkOperations(Validator):
         }
         for resource_schema in resource_schemas:
             get = ResourceObjectGET(self.config, resource_schema=resource_schema)
-            self._validators["GET"][resource_schema.plural_name] = get
-            response_schemas["GET"][resource_schema.plural_name] = get.response_schema
-            request_schemas["GET"][resource_schema.plural_name] = None
+            self._validators["GET"][resource_schema.endpoint] = get
+            response_schemas["GET"][resource_schema.endpoint] = get.response_schema
+            request_schemas["GET"][resource_schema.endpoint] = None
 
             post = ResourcesPOST(self.config, resource_schema=resource_schema)
-            self._validators["POST"][resource_schema.plural_name] = post
-            response_schemas["POST"][resource_schema.plural_name] = post.response_schema
-            request_schemas["POST"][resource_schema.plural_name] = post.request_schema
+            self._validators["POST"][resource_schema.endpoint] = post
+            response_schemas["POST"][resource_schema.endpoint] = post.response_schema
+            request_schemas["POST"][resource_schema.endpoint] = post.request_schema
 
             put = ResourceObjectPUT(self.config, resource_schema=resource_schema)
-            self._validators["PUT"][resource_schema.plural_name] = put
-            response_schemas["PUT"][resource_schema.plural_name] = put.response_schema
-            request_schemas["PUT"][resource_schema.plural_name] = put.request_schema
+            self._validators["PUT"][resource_schema.endpoint] = put
+            response_schemas["PUT"][resource_schema.endpoint] = put.response_schema
+            request_schemas["PUT"][resource_schema.endpoint] = put.request_schema
 
             patch = ResourceObjectPATCH(self.config, resource_schema=resource_schema)
-            self._validators["PATCH"][resource_schema.plural_name] = patch
-            response_schemas["PATCH"][resource_schema.plural_name] = patch.response_schema
-            request_schemas["PATCH"][resource_schema.plural_name] = patch.request_schema
+            self._validators["PATCH"][resource_schema.endpoint] = patch
+            response_schemas["PATCH"][resource_schema.endpoint] = patch.response_schema
+            request_schemas["PATCH"][resource_schema.endpoint] = patch.request_schema
 
             delete = ResourceObjectDELETE(self.config)
-            self._validators["DELETE"][resource_schema.plural_name] = delete
-            response_schemas["DELETE"][resource_schema.plural_name] = None
-            request_schemas["DELETE"][resource_schema.plural_name] = None
+            self._validators["DELETE"][resource_schema.endpoint] = delete
+            response_schemas["DELETE"][resource_schema.endpoint] = None
+            request_schemas["DELETE"][resource_schema.endpoint] = None
 
         self._error_validator = Error(self.config)
         self._request_schema = BulkRequestSchema(sub_schemas=request_schemas)
@@ -920,10 +920,10 @@ class BulkOperations(Validator):
                     continue
 
                 if method == "POST":
-                    resource_name = path.split("/", 1)[1]
+                    resource_type_endpoint = path
                 else:
-                    resource_name = path.split("/", 2)[1]
-                validator = self._validators[method].get(resource_name)
+                    resource_type_endpoint = f"/{path.split('/', 2)[1]}"
+                validator = self._validators[method].get(resource_type_endpoint)
                 if validator is None:
                     issues.add_error(
                         issue=ValidationError.unknown_operation_resource(),
@@ -1009,8 +1009,8 @@ class BulkOperations(Validator):
 
             resource_validator = None
             if location:
-                for resource_plural_name, validator in self._validators[method].items():
-                    if f"/{resource_plural_name}/" in location:
+                for endpoint, validator in self._validators[method].items():
+                    if endpoint in location:
                         resource_validator = validator
                         break
                 else:

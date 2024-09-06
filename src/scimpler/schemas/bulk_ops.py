@@ -146,12 +146,10 @@ class BulkRequestSchema(BaseSchema):
         if method not in self._sub_schemas:
             return None
         if method == "POST":
-            path_parts = operation.get("path", "").split("/", 1)
+            resource_type_endpoint = operation.get("path", "")
         else:
-            path_parts = operation.get("path", "").split("/", 2)
-        if len(path_parts) < 2:
-            return None
-        return self._sub_schemas[method].get(path_parts[1])
+            resource_type_endpoint = f"/{operation.get('path', '').split('/', 2)[1]}"
+        return self._sub_schemas[method].get(resource_type_endpoint)
 
 
 def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
@@ -172,7 +170,7 @@ def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
         status = item.get("status")
         if method and status:
             location = item.get("location")
-            if location in [None, Missing] and method and (method != "POST" or int(status) < 300):
+            if location in [None, Missing] and (method != "POST" or int(status) < 300):
                 issues.add_error(
                     issue=ValidationError.missing(),
                     proceed=False,
@@ -275,9 +273,9 @@ class BulkResponseSchema(BaseSchema):
         if int(status) >= 300:
             return self._error_schema
         location = operation.get("location", "")
-        for resource_name, schema in self._sub_schemas.get(
+        for endpoint, schema in self._sub_schemas.get(
             operation.get("method", "").upper(), {}
         ).items():
-            if f"/{resource_name}/" in location:
+            if endpoint in location:
                 return schema
         return None
