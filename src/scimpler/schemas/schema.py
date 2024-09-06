@@ -41,7 +41,7 @@ def validate_attributes(value: list[ScimData]) -> ValidationIssues:
     return issues
 
 
-def serialize_attributes(value: list[ScimData]) -> list[dict]:
+def process_attributes(value: list[ScimData]) -> list[ScimData]:
     serialized = []
     for i, item in enumerate(value):
         attr_type = item.get("type")
@@ -53,7 +53,7 @@ def serialize_attributes(value: list[ScimData]) -> list[dict]:
                 item.set("subAttributes", attributes.serialize(sub_attributes))
         if attr_type not in ["string", "reference", "binary"]:
             item.pop("caseExact")
-        serialized.append(item.to_dict())
+        serialized.append(item)
     return serialized
 
 
@@ -63,7 +63,8 @@ attributes = Complex(
     multi_valued=True,
     mutability=AttributeMutability.READ_ONLY,
     validators=[validate_attributes],
-    serializer=serialize_attributes,
+    serializer=process_attributes,
+    deserializer=process_attributes,
     sub_attributes=[
         String(
             name="name",
@@ -179,6 +180,15 @@ attributes = Complex(
 
 
 class SchemaDefinitionSchema(BaseResourceSchema):
+    """
+    "Schema" schema, identified by `urn:ietf:params:scim:schemas:core:2.0:Schema` URI.
+
+    Provides data validation and additionally checks if `attributes.caseExact` is provided when
+    `attributes.type` is `string`.
+
+    The default endpoint is `/Schemas`.
+    """
+
     schema = "urn:ietf:params:scim:schemas:core:2.0:Schema"
     name = "Schema"
     endpoint = "/Schemas"
@@ -195,7 +205,7 @@ class SchemaDefinitionSchema(BaseResourceSchema):
         String(
             name="name",
             description=(
-                "The schema's human-readable name.  When "
+                "The schema's human-readable name. When "
                 "applicable, service providers MUST specify the name e.g., 'User'."
             ),
             mutability=AttributeMutability.READ_ONLY,
@@ -204,7 +214,7 @@ class SchemaDefinitionSchema(BaseResourceSchema):
         String(
             name="description",
             description=(
-                "The schema's human-readable description.  When "
+                "The schema's human-readable description. When "
                 "applicable, service providers MUST specify the description."
             ),
             mutability=AttributeMutability.READ_ONLY,
@@ -218,6 +228,10 @@ class SchemaDefinitionSchema(BaseResourceSchema):
         schema: Union[ResourceSchema, SchemaExtension],
         version: Optional[str] = None,
     ) -> dict[str, Any]:
+        """
+        Returns the representation of the provided resource `schema`, compatible with the
+        content returned through `/Schemas` endpoint.
+        """
         attrs = cast(
             Iterator[tuple[BoundedAttrRep, Attribute]],
             schema.attrs if isinstance(schema, SchemaExtension) else schema.attrs.core_attrs,

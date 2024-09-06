@@ -12,6 +12,12 @@ from scimpler.data.schemas import BaseResourceSchema, ResourceSchema
 
 
 class ResourceTypeSchema(BaseResourceSchema):
+    """
+    ResourceType schema, identified by `urn:ietf:params:scim:schemas:core:2.0:ResourceType` URI.
+
+    The default endpoint is `/ResourceTypes`.
+    """
+
     schema = "urn:ietf:params:scim:schemas:core:2.0:ResourceType"
     name = "ResourceType"
     endpoint = "/ResourceTypes"
@@ -93,6 +99,10 @@ class ResourceTypeSchema(BaseResourceSchema):
     ]
 
     def get_repr(self, schema: ResourceSchema) -> dict[str, Any]:
+        """
+        Returns the representation of the provided resource `schema`, compatible with the
+        content returned through `/ResourceTypes` endpoint.
+        """
         return {
             "schemas": self.schemas,
             "id": schema.name,

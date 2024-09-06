@@ -14,6 +14,13 @@ from scimpler.data.schemas import BaseResourceSchema
 
 
 class ServiceProviderConfigSchema(BaseResourceSchema):
+    """
+    ServiceProviderConfig schema, identified by
+    `urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig` URI.
+
+    The default endpoint is `/ServiceProviderConfig`.
+    """
+
     schema = "urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"
     name = "ServiceProviderConfig"
     endpoint = "/ServiceProviderConfig"
