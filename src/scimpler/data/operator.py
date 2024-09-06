@@ -1,6 +1,7 @@
 import abc
 import inspect
 import operator
+from abc import ABC
 from typing import Any, Generator, Generic, Mapping, Optional, TypeVar, Union, final
 
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
@@ -170,7 +171,7 @@ class AttributeOperatorMeta(abc.ABCMeta):
                 register_binary_operator(cls)
 
 
-class AttributeOperator(Operator, metaclass=AttributeOperatorMeta):
+class AttributeOperator(Operator, ABC, metaclass=AttributeOperatorMeta):
     """
     Base class for all operators that involve attributes directly.
     Every subclass which is not an abstract must specify `op`,

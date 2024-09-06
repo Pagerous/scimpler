@@ -62,6 +62,8 @@ nav:
           - SearchRequestSchema: api_reference/scimpler_schemas/search_request_schema.md
           - ServiceProviderConfigSchema: api_reference/scimpler_schemas/service_provider_config_schema.md
           - UserSchema: api_reference/scimpler_schemas/user_schema.md
+      - scimpler.ext:
+          - marshmallow: api_reference/scimpler_ext/marshmallow.md
 
   - Compliance: compliance.md
 theme: material

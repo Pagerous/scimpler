@@ -62,7 +62,27 @@ ContextProvider = Union[ResponseContextProvider]
 def initialize(
     fields_by_attrs: Optional[dict[type[attrs.Attribute], type[marshmallow.fields.Field]]] = None,
 ):
-    global _marshmallow_field_by_attr_type
+    """
+    Initializes the `marshmallow` extension. Used to specify mapping of scimpler attributes to
+    marshmallow fields, used during data (de)serialization.
+
+    Default mapping is as follows:
+
+        scimpler.data.Boolean           ---> marshmallow.fields.Boolean
+        scimpler.data.Integer           ---> marshmallow.fields.Integer
+        scimpler.data.Decimal           ---> marshmallow.fields.Float
+        scimpler.data.DateTime          ---> marshmallow.fields.DateTime
+        scimpler.data.Binary            ---> marshmallow.fields.String
+        scimpler.data.ExternalReference ---> marshmallow.fields.String
+        scimpler.data.UriReference      ---> marshmallow.fields.String
+        scimpler.data.ScimReference     ---> marshmallow.fields.String
+        scimpler.data.String            ---> marshmallow.fields.String
+
+    `scimpler.data.Complex` is always converted to `marshmallow.fields.Nested`.
+
+    Raises:
+        RuntimeError: When attempt to initialize the extension second time.
+    """
     global _marshmallow_field_by_attr_type, _initialized
     if _auto_initialized:
         raise RuntimeError(
@@ -638,6 +658,41 @@ def create_response_schema(
     validator: Validator,
     context_provider: Optional[ResponseContextProvider] = None,
 ) -> type[marshmallow.Schema]:
+    """
+    Creates `marshmallow` schema for the response from the provided `validator`.
+
+    The fields of the resulting schema have no SCIM-specific properties and attributes. Instead,
+    the scimpler schema is hidden inside, so all validations and most of (de)serialization is
+    the done exactly same.
+
+    Args:
+       validator: The validator to create the schema from.
+       context_provider: Callable that returns `ResponseContext`, so parameters required
+          for response validation. It is impossible to pass them once `marshmallow.Schema` is
+          created.
+
+
+    Examples:
+        >>> from scimpler.data import AttrPresenceConfig
+        >>> from scimpler.schemas import UserSchema
+        >>> from scimpler.validator import ResourcesGET
+        >>>
+        >>> def get_presence_config_from_request() -> AttrPresenceConfig:
+        >>>     ...
+        >>>
+        >>> v = ResourcesGET(resource_schema=UserSchema())
+        >>> schema_cls = create_response_schema(
+        >>>     v,
+        >>>     context_provider=lambda: ResponseContext(
+        >>>         status_code=200,
+        >>>         presence_config=get_presence_config_from_request(),
+        >>>     )
+        >>> )
+        >>> schema = schema_cls()
+        >>> schema
+        <UserSchema(many=False)>
+        >>> schema.dump({...})
+    """
     _ensure_initialized()
     return _create_schema(
         scimple_schema=validator.response_schema,
@@ -647,6 +702,27 @@ def create_response_schema(
 
 
 def create_request_schema(validator: Validator) -> type[marshmallow.Schema]:
+    """
+    Creates `marshmallow` schema for the request from the provided `validator`.
+
+    The fields of the resulting schema have no SCIM-specific properties and attributes. Instead,
+    the scimpler schema is hidden inside, so all validations and most of (de)serialization is
+    the done exactly same.
+
+    Args:
+       validator: The validator to create the schema from.
+
+    Examples:
+        >>> from scimpler.schemas import UserSchema
+        >>> from scimpler.validator import ResourcesPOST
+        >>>
+        >>> v = ResourcesPOST(resource_schema=UserSchema())
+        >>> schema_cls = create_request_schema(v)
+        >>> schema = schema_cls()
+        >>> schema
+        <UserSchema(many=False)>
+        >>> schema.load({...})
+    """
     _ensure_initialized()
     return _create_schema(
         scimple_schema=validator.request_schema,
