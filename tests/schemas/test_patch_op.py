@@ -590,6 +590,7 @@ def test_operation_value_is_validated_against_mutability_for_attribute_in_extens
     class MyResourceSchema(ResourceSchema):
         schema = "my:custom:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
 
     class MyExtension(SchemaExtension):
         schema = "my:custom:schema:extension"

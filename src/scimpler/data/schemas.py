@@ -461,7 +461,7 @@ class BaseResourceSchema(BaseSchema):
     """
 
     name: str
-    endpoint: Optional[str] = None
+    endpoint: str
     base_attrs: list[Attribute] = [
         Complex(
             name="meta",

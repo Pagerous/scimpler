@@ -22,6 +22,7 @@ def schema_with_extensions() -> Generator[ResourceSchema, None, None]:
     class MyResourceSchema(ResourceSchema):
         schema = "my:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
 
     schema = MyResourceSchema()
 
@@ -167,6 +168,7 @@ def test_adding_same_schema_extension_to_resource_fails():
     class MyResourceSchema(ResourceSchema):
         schema = "my:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
 
     class MyExtension(SchemaExtension):
         schema = "my:schema:extension"
@@ -252,7 +254,7 @@ def test_endpoint_can_be_changed_for_base_resource_schema():
     class MyBaseResourceSchema(BaseResourceSchema):
         schema = "base:resource:schema"
         name = "BaseResource"
-        endpoint = "/BaseResource"
+        endpoint = "/BaseResources"
 
     schema = MyBaseResourceSchema()
 
@@ -270,6 +272,7 @@ def test_warning_is_raised_if_adding_extension_with_the_same_attr_name():
     class MyResource(ResourceSchema):
         schema = "my:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
         base_attrs = [String(name="attr")]
 
     class MyExtension(SchemaExtension):
@@ -584,6 +587,7 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
     class MyResource(ResourceSchema):
         schema = "my:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
 
     class MyExtension(SchemaExtension):
         schema = "my:schema:extension"
@@ -607,6 +611,7 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
     class MyResource(ResourceSchema):
         schema = "my:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
 
     class MyExtension(SchemaExtension):
         schema = "my:schema:extension"
@@ -629,6 +634,7 @@ def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_
     class MyResource(ResourceSchema):
         schema = "my:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
         base_attrs = [
             Complex(
                 name="super_complex",
@@ -735,6 +741,7 @@ def test_registering_different_extensions_but_with_the_same_name_fails():
     class MyResourceSchema(ResourceSchema):
         schema = "my:schema"
         name = "MyResource"
+        endpoint = "/MyResources"
 
     class Extension1(SchemaExtension):
         schema = "my:schema:extension"
