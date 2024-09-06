@@ -465,33 +465,33 @@ class BaseResourceSchema(BaseSchema):
     base_attrs: list[Attribute] = [
         Complex(
             name="meta",
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
             mutability=AttributeMutability.READ_ONLY,
             sub_attributes=[
                 String(
                     name="resourceType",
                     case_exact=True,
-                    issuer=AttributeIssuer.SERVER,
+                    issuer=AttributeIssuer.SERVICE_PROVIDER,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 DateTime(
                     name="created",
-                    issuer=AttributeIssuer.SERVER,
+                    issuer=AttributeIssuer.SERVICE_PROVIDER,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 DateTime(
                     name="lastModified",
-                    issuer=AttributeIssuer.SERVER,
+                    issuer=AttributeIssuer.SERVICE_PROVIDER,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 UriReference(
                     name="location",
-                    issuer=AttributeIssuer.SERVER,
+                    issuer=AttributeIssuer.SERVICE_PROVIDER,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 String(
                     name="version",
-                    issuer=AttributeIssuer.SERVER,
+                    issuer=AttributeIssuer.SERVICE_PROVIDER,
                     case_exact=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
@@ -547,7 +547,7 @@ class ResourceSchema(BaseResourceSchema):
         String(
             name="id",
             required=True,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
             case_exact=True,
             mutability=AttributeMutability.READ_ONLY,
             returned=AttributeReturn.ALWAYS,
@@ -556,7 +556,7 @@ class ResourceSchema(BaseResourceSchema):
         ),
         String(
             name="externalId",
-            issuer=AttributeIssuer.CLIENT,
+            issuer=AttributeIssuer.PROVISIONING_CLIENT,
             case_exact=True,
         ),
     ]

@@ -83,7 +83,9 @@ def user_schema(enterprise_extension) -> UserSchema:
 
 @pytest.fixture(scope="session")
 def user_client_schema(user_schema) -> UserSchema:
-    return user_schema.clone(AttrFilter(filter_=lambda attr: attr.issuer != AttributeIssuer.SERVER))
+    return user_schema.clone(
+        AttrFilter(filter_=lambda attr: attr.issuer != AttributeIssuer.SERVICE_PROVIDER)
+    )
 
 
 @pytest.fixture(scope="session")

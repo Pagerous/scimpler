@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from scimpler.data.identifiers import SchemaUri
@@ -23,9 +23,6 @@ def register_schema(schema: "SchemaUri", extension: bool = False):
     if schema.lower().startswith("urn:ietf:params:scim:api:messages:2.0:") and schema in schemas:
         raise RuntimeError("schemas for SCIM API messages can not be overridden")
     schemas[schema] = extension
-
-
-Converter = Callable[[Any], Any]
 
 
 unary_operators: dict[str, type["UnaryAttributeOperator"]] = {}

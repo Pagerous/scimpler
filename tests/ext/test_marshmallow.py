@@ -18,8 +18,8 @@ from scimpler.validator import (
     BulkOperations,
     ResourceObjectGet,
     ResourceObjectPatch,
+    ResourcesGet,
     SearchRequestPost,
-    ServerRootResourcesGet,
 )
 
 
@@ -281,7 +281,7 @@ def test_user_response_can_be_validated(user_data_server, user_schema):
 
 
 def test_list_response_can_be_dumped(list_data, list_data_deserialized, user_schema, group_schema):
-    validator = ServerRootResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(list_data_deserialized)
@@ -290,7 +290,7 @@ def test_list_response_can_be_dumped(list_data, list_data_deserialized, user_sch
 
 
 def test_list_response_can_be_loaded(list_data, list_data_deserialized, user_schema, group_schema):
-    validator = ServerRootResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     loaded = schema_cls().load(list_data)
@@ -301,7 +301,7 @@ def test_list_response_can_be_loaded(list_data, list_data_deserialized, user_sch
 def test_list_response_loading_fails_if_validation_error(list_data, user_schema, group_schema):
     list_data["Resources"][1]["id"] = 123
     list_data["Resources"][2]["meta"]["created"] = "123"
-    validator = ServerRootResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     with pytest.raises(
@@ -313,7 +313,7 @@ def test_list_response_loading_fails_if_validation_error(list_data, user_schema,
 def test_list_response_can_be_validated(list_data, user_schema, group_schema):
     list_data["Resources"][1]["id"] = 123
     list_data["Resources"][2]["meta"]["created"] = "123"
-    validator = ServerRootResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
     expected_issues = {
         "body": {

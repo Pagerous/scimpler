@@ -7,7 +7,7 @@ from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperat
 
 
 def test_runtime_error_is_raised_if_registering_same_resource_name_but_different_endpoint(
-    user_schema
+    user_schema,
 ):
     class FakeUserResource(ResourceSchema):
         name = "User"
@@ -22,9 +22,9 @@ def test_runtime_error_is_raised_if_registering_same_resource_name_but_different
 
 def test_runtime_error_is_raised_if_provided_different_implementation_for_same_unary_operator():
     with pytest.raises(
-        RuntimeError,
-        match="different implementation for unary operator 'pr' already provided"
+        RuntimeError, match="different implementation for unary operator 'pr' already provided"
     ):
+
         class FakePresent(UnaryAttributeOperator):
             op = "pr"
             supported_scim_types = {"string"}
@@ -37,9 +37,9 @@ def test_runtime_error_is_raised_if_provided_different_implementation_for_same_u
 
 def test_runtime_error_is_raised_if_provided_different_implementation_for_same_binary_operator():
     with pytest.raises(
-        RuntimeError,
-        match="different implementation for binary operator 'eq' already provided"
+        RuntimeError, match="different implementation for binary operator 'eq' already provided"
     ):
+
         class FakeEqual(BinaryAttributeOperator):
             op = "eq"
             supported_scim_types = {"string"}

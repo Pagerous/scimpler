@@ -85,7 +85,7 @@ def validate_presence(
     issues = ValidationIssues()
     if value not in [None, "", [], Missing]:
         if direction == DataDirection.REQUEST:
-            if attr.issuer == AttributeIssuer.SERVER and not ignore_issuer:
+            if attr.issuer == AttributeIssuer.SERVICE_PROVIDER and not ignore_issuer:
                 issues.add_error(
                     issue=ValidationError.must_not_be_provided(),
                     proceed=True,
@@ -110,7 +110,7 @@ def validate_presence(
         # issued by the server, so skipping for data from client
         and not (
             direction == DataDirection.REQUEST
-            and attr.issuer == AttributeIssuer.SERVER
+            and attr.issuer == AttributeIssuer.SERVICE_PROVIDER
             and not ignore_issuer
         )
         and (

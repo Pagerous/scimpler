@@ -28,7 +28,7 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
         String(
             name="id",
             required=False,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
             case_exact=True,
             multi_valued=False,
             mutability=AttributeMutability.READ_ONLY,

@@ -154,8 +154,8 @@ class AttributeUniqueness(str, Enum):
 
 
 class AttributeIssuer(Enum):
-    SERVER = "SERVER"
-    CLIENT = "CLIENT"
+    SERVICE_PROVIDER = "SERVICE_PROVIDER"
+    PROVISIONING_CLIENT = "PROVISIONING_CLIENT"
     NOT_SPECIFIED = "NOT_SPECIFIED"
 
 

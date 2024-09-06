@@ -71,7 +71,7 @@ attributes = Complex(
             description="The attribute's name.",
             required=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="type",
@@ -91,33 +91,33 @@ attributes = Complex(
             ],
             required=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         Unknown(
             name="subAttributes",
             description="Used to define the sub-attributes of a complex attribute.",
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         Boolean(
             name="multiValued",
             description="A Boolean value indicating an attribute's plurality.",
             required=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="description",
             description="A human-readable description of the attribute.",
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         Boolean(
             name="required",
             description="A boolean value indicating whether or not the attribute is required.",
             required=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         Unknown(
             name="canonicalValues",
@@ -128,7 +128,7 @@ attributes = Complex(
             ),
             multi_valued=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         Boolean(
             name="caseExact",
@@ -136,7 +136,7 @@ attributes = Complex(
                 "A Boolean value indicating whether or not a string attribute is case sensitive."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="mutability",
@@ -145,7 +145,7 @@ attributes = Complex(
             restrict_canonical_values=True,
             required=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="returned",
@@ -154,7 +154,7 @@ attributes = Complex(
             restrict_canonical_values=True,
             required=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="uniqueness",
@@ -162,7 +162,7 @@ attributes = Complex(
             canonical_values=["none", "server", "global"],
             restrict_canonical_values=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="referenceTypes",
@@ -173,7 +173,7 @@ attributes = Complex(
             ),
             multi_valued=True,
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
     ],
 )
@@ -200,7 +200,7 @@ class SchemaDefinitionSchema(BaseResourceSchema):
                 "When applicable, service providers MUST specify the URI."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="name",
@@ -209,7 +209,7 @@ class SchemaDefinitionSchema(BaseResourceSchema):
                 "applicable, service providers MUST specify the name e.g., 'User'."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="description",
@@ -218,7 +218,7 @@ class SchemaDefinitionSchema(BaseResourceSchema):
                 "applicable, service providers MUST specify the description."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         attributes,
     ]

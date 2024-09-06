@@ -64,7 +64,6 @@ nav:
           - ResourcesGet: api_reference/scimpler_query_handler/resources_get.md
           - ResourcesPost: api_reference/scimpler_query_handler/resources_post.md
           - SchemasGet: api_reference/scimpler_query_handler/schemas_get.md
-          - ServerRootResourcesGet: api_reference/scimpler_query_handler/server_root_resources_get.md
       - scimpler.schemas:
           - BulkRequestSchema: api_reference/scimpler_schemas/bulk_request_schema.md
           - BulkResponseSchema: api_reference/scimpler_schemas/bulk_response_schema.md
@@ -87,8 +86,6 @@ nav:
           - ResourcesGet: api_reference/scimpler_validator/resources_get.md
           - ResourcesPost: api_reference/scimpler_validator/resources_post.md
           - SearchRequestPost: api_reference/scimpler_validator/search_request_post.md
-          - ServerRootResourcesGet: api_reference/scimpler_validator/server_root_resources_get.md
-          - ServiceResourceObjectGet: api_reference/scimpler_validator/service_resource_object_get.md
       - scimpler.config: api_reference/scimpler_config.md
 
   - Compliance: compliance.md

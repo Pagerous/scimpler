@@ -38,8 +38,7 @@ class Validator(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
-        """Docs placeholder."""
+    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues: ...
 
     @abc.abstractmethod
     def validate_response(
@@ -49,17 +48,23 @@ class Validator(abc.ABC):
         body: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
-    ) -> ValidationIssues:
-        """Docs placeholder."""
+    ) -> ValidationIssues: ...
 
 
 class Error(Validator):
-    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None):
-        super().__init__(config)
+    """
+    Error validator, designed to validate any SCIM errors.
+    """
+
+    def __init__(self):
+        super().__init__(None)
         self._schema = ErrorSchema()
 
     @property
     def response_schema(self) -> ErrorSchema:
+        """
+        Schema designed for response (de)serialization.
+        """
         return self._schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
@@ -71,8 +76,25 @@ class Error(Validator):
         status_code: int,
         body: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ValidationIssues:
+        """
+        Validates the error response.
+
+        Except for error body validation done by the inner schema, the validator checks if:
+
+        - `status` in body matches the provided `status_code`,
+        - value of `status_code` is in range: 400 <= status_code < 600.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned error body.
+            headers: Returned response headers.
+            **kwargs: Not used.
+
+        Returns:
+            Validation issues.
+        """
         body_location = ("body",)
         issues = ValidationIssues()
         normalized = ScimData(body or {})
@@ -95,7 +117,7 @@ class Error(Validator):
                 location=["status"],
                 proceed=True,
             )
-        if not 200 <= status_code < 600:
+        if not 400 <= status_code < 600:
             issues.add_error(
                 issue=ValidationError.bad_value_content(),
                 location=["status"],
@@ -145,6 +167,10 @@ def _validate_resource_output_body(
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
+    presence_config = presence_config or AttrPresenceConfig("RESPONSE")
+    if presence_config.direction != "RESPONSE":
+        raise ValueError("bad direction in attribute presence config for response validation")
+
     issues.merge(
         schema.validate(
             data=body,
@@ -208,18 +234,37 @@ def _validate_resource_output_body(
 
 
 class ResourceObjectGet(Validator):
+    """
+    Validator for **HTTP GET** operations performed against **resource object** endpoints.
+    """
+
     def __init__(
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: BaseResourceSchema,
     ):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+            resource_schema: Resource schema associated with the validator.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>>
+            >>> validator = ResourceObjectGet(resource_schema=UserSchema())
+        """
         super().__init__(config)
         self._schema = resource_schema
         self._response_schema = resource_schema.clone(_resource_output_filter)
 
     @property
     def response_schema(self) -> BaseResourceSchema:
+        """
+        Schema designed for response (de)serialization. Contains attributes whose `returnability`
+        differs from `never`, and whose `mutability` differs from `writeOnly`.
+        """
         return self._response_schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
@@ -233,6 +278,29 @@ class ResourceObjectGet(Validator):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP GET** responses returned from **resource object** endpoints.
+
+        Except for body validation done by the inner schema, the validator checks if:
+
+        - returned `status_code` equals 200,
+        - `Location` header matches `meta.location` from body, if header is provided,
+        - `ETag` header is provided if `etag` is enabled in the service provider configuration,
+        - `meta.version` is provided if `etag` is enabled in the service provider configuration,
+        - `ETag` header matches `meta.version` when both are provided.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned body.
+            headers: Returned response headers.
+
+        Keyword Args:
+            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+                is used, with no attribute inclusivity and exclusivity specified.
+
+        Returns:
+            Validation issues.
+        """
         return _validate_resource_output_body(
             schema=self._schema,
             config=self.config,
@@ -245,18 +313,28 @@ class ResourceObjectGet(Validator):
         )
 
 
-class ServiceResourceObjectGet(ResourceObjectGet):
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
-        return ValidationIssues()
-
-
 class ResourceObjectPut(Validator):
+    """
+    Validator for **HTTP PUT** operations performed against **resource object** endpoints.
+    """
+
     def __init__(
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: ResourceSchema,
     ):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+            resource_schema: Resource schema associated with the validator.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>>
+            >>> validator = ResourceObjectPut(resource_schema=UserSchema())
+        """
         super().__init__(config)
         self._request_schema = resource_schema.clone(
             attr_filter=AttrFilter(
@@ -270,13 +348,33 @@ class ResourceObjectPut(Validator):
 
     @property
     def request_schema(self) -> ResourceSchema:
+        """
+        Schema designed for request (de)serialization. Contains attributes whose `mutability`
+        differs from `readOnly` or are required.
+        """
         return self._request_schema
 
     @property
     def response_schema(self) -> ResourceSchema:
+        """
+        Schema designed for response (de)serialization. Contains attributes whose `returnability`
+        differs from `never`, and whose `mutability` differs from `writeOnly`.
+        """
         return self._schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+        """
+        Validates the **HTTP PUT** requests sent to **resource object** endpoints.
+
+        Performs request body validation using inner resource schema, including attribute presence
+        validation that checks if all required attributes are provided (regardless the issuer).
+
+        Args:
+            body: The request body.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         issues.merge(
             issues=self._schema.validate(
@@ -300,6 +398,29 @@ class ResourceObjectPut(Validator):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP PUT** responses returned from **resource object** endpoints.
+
+        Except for body validation done by inner schema, the validator checks if:
+
+        - returned `status_code` equals 200,
+        - `Location` header matches `meta.location` from body, if header is provided,
+        - `ETag` header is provided if `etag` is enabled in the service provider configuration,
+        - `meta.version` is provided if `etag` is enabled in the service provider configuration,
+        - `ETag` header matches `meta.version` when both are provided.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned body.
+            headers: Returned response headers.
+
+        Keyword Args:
+            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+                is used, with no attribute inclusivity and exclusivity specified.
+
+        Returns:
+            Validation issues.
+        """
         return _validate_resource_output_body(
             schema=self._schema,
             config=self.config,
@@ -313,19 +434,34 @@ class ResourceObjectPut(Validator):
 
 
 class ResourcesPost(Validator):
+    """
+    Validator for **HTTP POST** operations performed against **resource type** endpoints.
+    """
+
     def __init__(
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: ResourceSchema,
     ):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+            resource_schema: Resource schema associated with the validator.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>>
+            >>> validator = ResourcesPost(resource_schema=UserSchema())
+        """
         super().__init__(config)
         self._schema = resource_schema
         self._request_schema = resource_schema.clone(
             attr_filter=AttrFilter(
                 filter_=lambda attr: (
                     attr.mutability != AttributeMutability.READ_ONLY
-                    and attr.issuer != AttributeIssuer.SERVER
+                    and attr.issuer != AttributeIssuer.SERVICE_PROVIDER
                 )
             )
         )
@@ -333,13 +469,36 @@ class ResourcesPost(Validator):
 
     @property
     def request_schema(self) -> ResourceSchema:
+        """
+        Schema designed for request (de)serialization. Contains attributes whose `mutability`
+        differs from `readOnly`, and which are not issued by the service provider.
+        """
         return self._request_schema
 
     @property
     def response_schema(self) -> ResourceSchema:
+        """
+        Schema designed for response (de)serialization. Contains attributes whose `returnability`
+        differs from `never`, and whose `mutability` differs from `writeOnly`.
+        """
         return self._response_schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+        """
+        Validates the **HTTP POST** requests sent to **resource type** endpoints.
+
+        Performs request body validation using inner resource schema, including attribute presence
+        validation that checks if:
+
+        - attributes issued by the service provider are not provided,
+        - required attribute are provided.
+
+        Args:
+            body: The request body.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         normalized = ScimData(body or {})
         issues.merge(
@@ -356,6 +515,31 @@ class ResourcesPost(Validator):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP POST** responses returned from **resource type** endpoints.
+
+        Except for body validation (if provided) done by the inner schema, the validator checks if:
+
+        - returned `status_code` equals 200,
+        - `Location` header is provided,
+        - `Location` header matches `meta.location` from body,
+        - `ETag` header is provided if `etag` is enabled in the service provider configuration,
+        - `meta.version` is provided if `etag` is enabled in the service provider configuration,
+        - `ETag` header matches `meta.version` when both are provided,
+        - `meta.created` equals `meta.lastModified`.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned body.
+            headers: Returned response headers.
+
+        Keyword Args:
+            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+                is used, with no attribute inclusivity and exclusivity specified.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         if not body:
             issues.add_warning(issue=ValidationWarning.missing(), location=["body"])
@@ -471,6 +655,7 @@ def _validate_resources_filtered(
 
 def _validate_resources_get_response(
     schema: ListResponseSchema,
+    config: scimpler.config.ServiceProviderConfig,
     status_code: int,
     body: ScimData,
     start_index: int = 1,
@@ -558,6 +743,18 @@ def _validate_resources_get_response(
             issues=_validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
         )
+
+    if config.etag.supported:
+        for i, (resource, resource_schema) in enumerate(zip(resources, resource_schemas)):
+            if not isinstance(resource_schema, ResourceSchema):
+                continue
+
+            if resource.get("meta.version") is Missing:
+                issues.add_error(
+                    issue=ValidationError.missing(),
+                    location=(*resources_location, i),
+                    proceed=True,
+                )
     return issues
 
 
@@ -628,13 +825,32 @@ def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) ->
     return True
 
 
-class ServerRootResourcesGet(Validator):
+class ResourcesGet(Validator):
+    """
+    Validator for **HTTP GET** operations performed against **resource type** endpoints. Is able to
+    handle different schemas in the same time, so can be used in **resource root** endpoint.
+    """
+
     def __init__(
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: Sequence[BaseResourceSchema] | BaseResourceSchema,
     ):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+            resource_schema: Resource schema(s) associated with the validator.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema, GroupSchema
+            >>>
+            >>> # for resource root endpoint
+            >>> root_validator = ResourcesGet(resource_schema=[UserSchema(), GroupSchema()])
+            >>> # for specific resource type endpoint
+            >>> validator = ResourcesGet(resource_schema=UserSchema())
+        """
         super().__init__(config)
         if isinstance(resource_schema, BaseResourceSchema):
             resource_schema = [resource_schema]
@@ -645,6 +861,11 @@ class ServerRootResourcesGet(Validator):
 
     @property
     def response_schema(self) -> ListResponseSchema:
+        """
+        Schema designed for response (de)serialization. Resource schemas contain attributes whose
+        `returnability` differs from `never`, and whose `mutability` differs from `writeOnly`.
+        ListResponse schema contains all attributes.
+        """
         return self._response_schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
@@ -658,8 +879,45 @@ class ServerRootResourcesGet(Validator):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP GET** responses returned from **resource type** endpoints.
+
+        Except for body validation done by the inner `ListResponseSchema`, the validator checks if:
+
+        - returned `status_code` equals 200,
+        - `startIndex` in the body is lesser or equal to the provided `start_index`,
+        - `totalResults` greater or equal to number of `Resources`,
+        - `totalResults` differs from number of `Resources` when `count` is not specified,
+        - number of `Resources` is lesser or equal to the `count`, if specified,
+        - `startIndex` is specified in the body for pagination,
+        - `itemsPerPage` is specified in the body for pagination,
+        - `Resources` are filtered, according to the provided `filter`,
+        - `Resources` are sorted, according to the provided `sorter`,
+        - every resource contains `meta.version`, if `etag` is supported.
+
+        Filtering and sorting is not validated if attributes required to check filtering and
+        sorting are meant to be excluded due to `AttrPresenceConfig`.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned body.
+            headers: Not used.
+
+        Keyword Args:
+            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+                is used, with no attribute inclusivity and exclusivity specified. Applied on
+                `Resources` only.
+            start_index (Optional[int]): The 1-based index of the first query result.
+            count (Optional[int]): Specifies the desired number of query results per page.
+            filter (Optional[Filter]): Filter that was applied on `Resources`.
+            sorter (Optional[Sorter]): Sorter that was applied on `Resources`.
+
+        Returns:
+            Validation issues.
+        """
         return _validate_resources_get_response(
             schema=self._response_validation_schema,
+            config=self.config,
             status_code=status_code,
             body=ScimData(body or {}),
             start_index=kwargs.get("start_index", 1),
@@ -668,16 +926,6 @@ class ServerRootResourcesGet(Validator):
             sorter=kwargs.get("sorter"),
             resource_presence_config=kwargs.get("presence_config"),
         )
-
-
-class ResourcesGet(ServerRootResourcesGet):
-    def __init__(
-        self,
-        config: Optional[scimpler.config.ServiceProviderConfig] = None,
-        *,
-        resource_schema: BaseResourceSchema,
-    ):
-        super().__init__(config, resource_schema=[resource_schema])
 
 
 class SearchRequestPost(Validator):
@@ -722,6 +970,7 @@ class SearchRequestPost(Validator):
     ) -> ValidationIssues:
         return _validate_resources_get_response(
             schema=self._response_validation_schema,
+            config=self.config,
             status_code=status_code,
             body=ScimData(body or {}),
             start_index=kwargs.get("start_index", 1),
@@ -885,7 +1134,7 @@ class BulkOperations(Validator):
             response_schemas["DELETE"][resource_schema.endpoint] = None
             request_schemas["DELETE"][resource_schema.endpoint] = None
 
-        self._error_validator = Error(self.config)
+        self._error_validator = Error()
         self._request_schema = BulkRequestSchema(sub_schemas=request_schemas)
         self._response_schema = BulkResponseSchema(
             sub_schemas=response_schemas,

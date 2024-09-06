@@ -25,8 +25,6 @@ from scimpler.validator import (
     ResourcesGet,
     ResourcesPost,
     SearchRequestPost,
-    ServerRootResourcesGet,
-    ServiceResourceObjectGet,
     can_validate_filtering,
     can_validate_sorting,
 )
@@ -47,7 +45,7 @@ from tests.conftest import CONFIG
     ),
 )
 def test_validate_error_status_code_consistency(status_code, expected):
-    validator = Error(CONFIG)
+    validator = Error()
 
     issues = validator.validate_response(
         status_code=status_code,
@@ -58,7 +56,7 @@ def test_validate_error_status_code_consistency(status_code, expected):
 
 
 def test_validate_error_status_code_value():
-    validator = Error(CONFIG)
+    validator = Error()
     expected_issues = {
         "body": {"status": {"_errors": [{"code": 4}]}},
         "status": {"_errors": [{"code": 4}]},
@@ -309,7 +307,7 @@ def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schem
             }
         }
     }
-    validator = ServerRootResourcesGet(CONFIG, resource_schema=[user_schema, group_schema])
+    validator = ResourcesGet(CONFIG, resource_schema=[user_schema, group_schema])
 
     issues = validator.validate_response(
         status_code=200,
@@ -420,7 +418,7 @@ def test_validate_resources_sorted__not_sorted_by_extended_attr(list_user_data, 
 
 
 def test_correct_error_response_passes_validation(error_data):
-    validator = Error(CONFIG)
+    validator = Error()
 
     issues = validator.validate_response(status_code=400, body=error_data)
 
@@ -428,7 +426,7 @@ def test_correct_error_response_passes_validation(error_data):
 
 
 def test_error_status_consistency_is_not_validated_if_bad_status(error_data):
-    validator = Error(CONFIG)
+    validator = Error()
     error_data["status"] = "abc"
     expected_issues = {"body": {"status": {"_errors": [{"code": 1}]}}}
 
@@ -438,21 +436,21 @@ def test_error_status_consistency_is_not_validated_if_bad_status(error_data):
 
 
 def test_request_schema_in_error_validator_is_not_implemented():
-    validator = Error(CONFIG)
+    validator = Error()
 
     with pytest.raises(NotImplementedError):
         print(validator.request_schema)
 
 
 def test_request_validation_in_error_validator_is_not_implemented():
-    validator = Error(CONFIG)
+    validator = Error()
 
     with pytest.raises(NotImplementedError):
         validator.validate_request()
 
 
 def test_error_data_can_be_serialized(error_data):
-    validator = Error(CONFIG)
+    validator = Error()
 
     assert validator.response_schema.serialize(error_data) == error_data
 
@@ -592,7 +590,7 @@ def test_data_for_resource_object_get_response_can_be_serialized(user_data_serve
 
 
 def test_service_object_resource_get_request_is_not_validated():
-    validator = ServiceResourceObjectGet(CONFIG, resource_schema=ResourceTypeSchema())
+    validator = ResourceObjectGet(CONFIG, resource_schema=ResourceTypeSchema())
 
     issues = validator.validate_request(body={"some": "weird_stuff"})
 
@@ -778,7 +776,7 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server, us
     "validator_cls",
     (
         ResourcesGet,
-        ServerRootResourcesGet,
+        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -806,7 +804,7 @@ def test_correct_list_response_passes_validation(validator_cls, list_user_data, 
     "validator_cls",
     (
         ResourcesGet,
-        ServerRootResourcesGet,
+        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -833,7 +831,7 @@ def test_attributes_existence_is_validated_in_list_response(validator_cls, user_
     "validator_cls",
     (
         ResourcesGet,
-        ServerRootResourcesGet,
+        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -867,7 +865,7 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
     "validator_cls",
     (
         ResourcesGet,
-        ServerRootResourcesGet,
+        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -895,7 +893,7 @@ def test_start_index_consistency_is_not_validated_if_bad_type(
     "validator_cls",
     (
         ResourcesGet,
-        ServerRootResourcesGet,
+        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -923,7 +921,7 @@ def test_resources_are_not_validated_for_pagination_if_bad_type(
     "validator_cls",
     (
         ResourcesGet,
-        ServerRootResourcesGet,
+        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -960,7 +958,7 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
     "validator_cls",
     (
         ResourcesGet,
-        ServerRootResourcesGet,
+        ResourcesGet,
         SearchRequestPost,
     ),
 )

@@ -28,7 +28,7 @@ class ResourceTypeSchema(BaseResourceSchema):
                 "The resource type's server unique id. " "May be the same as the 'name' attribute."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         String(
             name="name",
@@ -37,7 +37,7 @@ class ResourceTypeSchema(BaseResourceSchema):
                 "service providers MUST specify the name, e.g., 'User'."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
             required=True,
         ),
         String(
@@ -48,7 +48,7 @@ class ResourceTypeSchema(BaseResourceSchema):
                 "specify the description."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
         ),
         UriReference(
             name="endpoint",
@@ -57,14 +57,14 @@ class ResourceTypeSchema(BaseResourceSchema):
                 "endpoint relative to the Base URL, e.g., '/Users'."
             ),
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
             required=True,
         ),
         String(
             name="schema",
             description="The resource type's primary/base schema URI.",
             mutability=AttributeMutability.READ_ONLY,
-            issuer=AttributeIssuer.SERVER,
+            issuer=AttributeIssuer.SERVICE_PROVIDER,
             required=True,
         ),
         Complex(
@@ -76,7 +76,7 @@ class ResourceTypeSchema(BaseResourceSchema):
                     name="schema",
                     description="The URI of a schema extension.",
                     mutability=AttributeMutability.READ_ONLY,
-                    issuer=AttributeIssuer.SERVER,
+                    issuer=AttributeIssuer.SERVICE_PROVIDER,
                     required=True,
                 ),
                 Boolean(
@@ -91,7 +91,7 @@ class ResourceTypeSchema(BaseResourceSchema):
                         "extension."
                     ),
                     mutability=AttributeMutability.READ_ONLY,
-                    issuer=AttributeIssuer.SERVER,
+                    issuer=AttributeIssuer.SERVICE_PROVIDER,
                     required=True,
                 ),
             ],
