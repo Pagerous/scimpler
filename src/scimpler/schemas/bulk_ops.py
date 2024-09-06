@@ -84,8 +84,7 @@ def process_request_operations(value: list[ScimData]) -> list[ScimData]:
 
 class BulkRequestSchema(BaseSchema):
     """
-    Built-in and ready to use, BulkRequest schema. Identified by
-    `urn:ietf:params:scim:api:messages:2.0:BulkRequest` schema URI.
+    BulkRequest schema, identified by `urn:ietf:params:scim:api:messages:2.0:BulkRequest` URI.
 
     Provides data validation and checks:
 
@@ -253,8 +252,7 @@ def validate_status(value: Any) -> ValidationIssues:
 
 class BulkResponseSchema(BaseSchema):
     """
-    Built-in and ready to use, BulkResponse schema. Identified by
-    `urn:ietf:params:scim:api:messages:2.0:BulkResponse` schema URI.
+    BulkResponse schema, identified by `urn:ietf:params:scim:api:messages:2.0:BulkResponse` URI.
 
     Provides data validation and checks:
 
@@ -262,7 +260,7 @@ class BulkResponseSchema(BaseSchema):
     - if `bulkId` is provided for `POST` method,
     - if `status` is provided,
     - if `location` is provided for successful operations,
-    - if `response` is provided for unsuccessful operations,
+    - if `response` is provided for unsuccessful operations.
     """
 
     schema = "urn:ietf:params:scim:api:messages:2.0:BulkResponse"

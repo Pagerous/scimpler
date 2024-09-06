@@ -22,6 +22,15 @@ def validate_error_status(value: str) -> ValidationIssues:
 
 
 class ErrorSchema(BaseSchema):
+    """
+    Error schema, identified by `urn:ietf:params:scim:api:messages:2.0:Error` URI.
+
+    Provides data validation and checks:
+
+    - if `status` represents numerical value in range 400-599,
+    - if `scimType` is one of pre-defined scim error types.
+    """
+
     schema = "urn:ietf:params:scim:api:messages:2.0:Error"
     base_attrs: list[Attribute] = [
         String(
@@ -52,6 +61,3 @@ class ErrorSchema(BaseSchema):
             returned=AttributeReturn.ALWAYS,
         ),
     ]
-
-    def __init__(self):
-        super().__init__()
