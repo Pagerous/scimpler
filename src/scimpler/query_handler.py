@@ -4,7 +4,7 @@ from typing import Any, MutableMapping, Optional
 from scimpler import registry
 from scimpler.config import ServiceProviderConfig
 from scimpler.data.attrs import AttrFilter
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.schemas.search_request import SearchRequestSchema
 
@@ -19,15 +19,15 @@ class QueryHandler(abc.ABC):
         """Docs placeholder."""
 
     def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:
-        query_params = SCIMData(query_params or {})
+        query_params = ScimData(query_params or {})
         query_params.set(
             "schemas",
             ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],
         )
         return self.schema.validate(query_params)
 
-    def deserialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> SCIMData:
-        query_params = SCIMData(query_params or {})
+    def deserialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
+        query_params = ScimData(query_params or {})
         attributes = query_params.get("attributes")
         if isinstance(attributes, str):
             attributes = [item.strip() for item in attributes.split(",")]
@@ -39,8 +39,8 @@ class QueryHandler(abc.ABC):
         query_params.update(self.schema.deserialize(query_params))
         return query_params
 
-    def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> SCIMData:
-        query_params = SCIMData(query_params or {})
+    def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
+        query_params = ScimData(query_params or {})
         serialized = self.schema.serialize(query_params)
         if attributes := query_params.get("attributes"):
             serialized["attributes"] = ",".join(attributes)

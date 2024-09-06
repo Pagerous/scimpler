@@ -20,7 +20,7 @@ from scimpler.data.attrs import (
 )
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.schemas import GroupSchema, UserSchema
 from scimpler.schemas.user import EnterpriseUserSchemaExtension
 
@@ -410,7 +410,7 @@ def bulk_request_deserialized(bulk_request_serialized: dict):
     deserialized["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath.deserialize(
         deserialized["Operations"][2]["data"]["Operations"][1]["path"]
     )
-    return SCIMData(deserialized)
+    return ScimData(deserialized)
 
 
 @pytest.fixture

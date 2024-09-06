@@ -7,7 +7,7 @@ import pytest
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.patch_path import PatchPath
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.ext.marshmallow import (
     ResponseContext,
     create_request_schema,
@@ -34,7 +34,7 @@ def list_data_deserialized(list_data):
     for resource in list_data["Resources"]:
         resource["meta"]["created"] = datetime.fromisoformat(resource["meta"]["created"])
         resource["meta"]["lastModified"] = datetime.fromisoformat(resource["meta"]["lastModified"])
-    return SCIMData(list_data)
+    return ScimData(list_data)
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def user_deserialized(user_data_server):
     user_data_server["meta"]["lastModified"] = datetime.fromisoformat(
         user_data_server["meta"]["lastModified"]
     )
-    return SCIMData(user_data_server)
+    return ScimData(user_data_server)
 
 
 @pytest.fixture
@@ -113,7 +113,7 @@ def bulk_response_deserialized(user_deserialized, group_deserialized):
     user_2.set("id", "b7c14771-226c-4d05-8860-134711653041")
     user_2.set("meta.location", "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041")
     user_2.set("meta.version", 'W/"huJj29dMNgu3WXPD"')
-    return SCIMData(get_bulk_data(user_1, user_2, group_deserialized))
+    return ScimData(get_bulk_data(user_1, user_2, group_deserialized))
 
 
 @pytest.fixture
@@ -183,7 +183,7 @@ def search_request_serialized():
 
 @pytest.fixture
 def search_request_deserialized():
-    return SCIMData(
+    return ScimData(
         {
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],
             "attributes": [
@@ -215,7 +215,7 @@ def user_patch_deserialized(user_patch_serialized: dict):
     deserialized["Operations"][4]["path"] = PatchPath.deserialize(
         deserialized["Operations"][4]["path"]
     )
-    return SCIMData(deserialized)
+    return ScimData(deserialized)
 
 
 def test_user_response_can_be_dumped(user_deserialized, user_data_server, user_schema):

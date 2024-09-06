@@ -12,7 +12,7 @@ from scimpler.data.schemas import (
     SchemaExtension,
     validate_resource_type_consistency,
 )
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.registry import register_resource_schema, resources, schemas
 from scimpler.warning import ScimpleUserWarning
 
@@ -192,7 +192,7 @@ def test_schema_can_be_cloned_with_attr_filter_specified(user_schema):
 
 
 def test_data_can_be_filtered_according_to_attr_filter(user_data_client, user_schema):
-    expected = SCIMData(
+    expected = ScimData(
         {
             "schemas": [
                 "urn:ietf:params:scim:schemas:core:2.0:User",
@@ -222,7 +222,7 @@ def test_data_can_be_filtered_according_to_attr_filter(user_data_client, user_sc
             },
         }
     )
-    user_data_client = SCIMData(user_data_client)
+    user_data_client = ScimData(user_data_client)
 
     actual = user_schema.filter(
         user_data_client, AttrFilter(filter_=lambda attr: attr.mutability == "readOnly")
@@ -312,7 +312,7 @@ def test_restricted_attributes_can_be_sent_with_request(user_data_client, user_s
 
 
 def test_presence_validation_fails_on_attr_not_requested_by_exclusion(user_schema):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -331,7 +331,7 @@ def test_presence_validation_fails_on_attr_not_requested_by_exclusion(user_schem
 
 
 def test_presence_validation_fails_on_attr_not_requested_by_inclusion(user_schema):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -355,7 +355,7 @@ def test_presence_validation_fails_on_attr_not_requested_by_inclusion(user_schem
 
 
 def test_presence_validation_fails_on_sub_attr_not_requested_by_exclusion(user_schema):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -394,7 +394,7 @@ def test_presence_validation_fails_on_sub_attr_not_requested_by_exclusion(user_s
 
 
 def test_presence_validation_fails_on_sub_attr_not_requested_by_inclusion(user_schema):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -464,7 +464,7 @@ def test_presence_validation_fails_if_not_provided_attribute_that_always_should_
 
 
 def test_presence_validation_fails_if_not_provided_requested_required_attribute(user_schema):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -489,7 +489,7 @@ def test_presence_validation_fails_if_not_provided_requested_required_attribute(
 
 
 def test_presence_validation_passes_if_not_provided_requested_optional_attribute(user_schema):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -509,7 +509,7 @@ def test_presence_validation_passes_if_not_provided_requested_optional_attribute
 def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_exclusion(
     user_schema,
 ):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -541,7 +541,7 @@ def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_
 def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_inclusion(
     user_schema,
 ):
-    data = SCIMData(
+    data = ScimData(
         {
             "id": "1",
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
@@ -596,7 +596,7 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
     expected_issues = {"my:schema:extension": {"age": {"_errors": [{"code": 5}]}}}
 
     issues = schema.validate(
-        SCIMData({"id": "1", "schemas": ["my:schema"]}),
+        ScimData({"id": "1", "schemas": ["my:schema"]}),
         AttrPresenceConfig("RESPONSE"),
     )
 
@@ -618,7 +618,7 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
     schema.extend(extension, required=False)
 
     issues = schema.validate(
-        SCIMData({"id": "1", "schemas": ["my:schema"]}),
+        ScimData({"id": "1", "schemas": ["my:schema"]}),
         AttrPresenceConfig("RESPONSE"),
     )
 
@@ -642,7 +642,7 @@ def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_
         ]
 
     my_resource = MyResource()
-    data = SCIMData(
+    data = ScimData(
         {
             "schemas": ["my:schema"],
             "super_complex": None,

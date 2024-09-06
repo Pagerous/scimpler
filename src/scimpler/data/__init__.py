@@ -20,6 +20,7 @@ from scimpler.data.identifiers import AttrName, SchemaURI, AttrRep, AttrRepFacto
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.data.sorter import Sorter
+from scimpler.data.scim_data import ScimData
 
 __all__ = [
     "AttrName",
@@ -47,4 +48,5 @@ __all__ = [
     "Filter",
     "PatchPath",
     "Sorter",
+    "ScimData",
 ]

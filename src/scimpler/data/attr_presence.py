@@ -1,4 +1,3 @@
-from collections.abc import MutableMapping
 from enum import Enum
 from typing import Any, Collection, Optional, Union
 
@@ -70,18 +69,6 @@ class AttrPresenceConfig:
     @property
     def ignore_issuer(self) -> list[AttrRep]:
         return self._ignore_issuer
-
-    @classmethod
-    def from_data(cls, data: MutableMapping) -> Optional["AttrPresenceConfig"]:
-        to_include = data.get("attributes")
-        to_exclude = data.get("excludedAttributes")
-        if to_include or to_exclude:
-            return AttrPresenceConfig(
-                direction="RESPONSE",
-                attr_reps=to_include or to_exclude,
-                include=bool(to_include),
-            )
-        return None
 
 
 def validate_presence(

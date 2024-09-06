@@ -6,7 +6,7 @@ from scimpler.data.attrs import Attribute, Integer, String
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep, AttrRepFactory
 from scimpler.data.schemas import AttrFilter, BaseSchema
-from scimpler.data.scim_data import Missing, SCIMData
+from scimpler.data.scim_data import Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 
 
@@ -92,7 +92,7 @@ class SearchRequestSchema(BaseSchema):
             exclude.add(AttrName("sortOrder"))
         return cls(attr_filter=AttrFilter(attr_names=exclude, include=False))
 
-    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
+    def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         to_include = data.get("attributes")
         to_exclude = data.get("excludedAttributes")

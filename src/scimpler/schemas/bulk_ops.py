@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from scimpler.data.attrs import Complex, ExternalReference, Integer, String, Unknown
 from scimpler.data.schemas import BaseSchema
-from scimpler.data.scim_data import Missing, SCIMData
+from scimpler.data.scim_data import Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.schemas.error import ErrorSchema
 
@@ -23,7 +23,7 @@ def _validate_operation_method_existence(method: Any) -> ValidationIssues:
     return issues
 
 
-def validate_request_operations(value: list[SCIMData]) -> ValidationIssues:
+def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         method = item.get("method")
@@ -73,7 +73,7 @@ def validate_request_operations(value: list[SCIMData]) -> ValidationIssues:
     return issues
 
 
-def deserialize_request_operations(value: list[SCIMData]) -> list[SCIMData]:
+def deserialize_request_operations(value: list[ScimData]) -> list[ScimData]:
     value = deepcopy(value)
     for i, item in enumerate(value):
         method = item.get("method")
@@ -117,17 +117,17 @@ class BulkRequestSchema(BaseSchema):
         super().__init__()
         self._sub_schemas = sub_schemas
 
-    def _deserialize(self, data: SCIMData) -> SCIMData:
+    def _deserialize(self, data: ScimData) -> ScimData:
         return self._process(data, "deserialize")
 
-    def _serialize(self, data: SCIMData) -> SCIMData:
+    def _serialize(self, data: ScimData) -> ScimData:
         return self._process(data, "serialize")
 
-    def _process(self, data: SCIMData, method: str) -> SCIMData:
+    def _process(self, data: ScimData, method: str) -> ScimData:
         operations = data.get("Operations", [])
         processed = []
         for operation in operations:
-            operation = SCIMData(operation)
+            operation = ScimData(operation)
             schema = self.get_schema(operation)
             if schema is None:
                 processed.append(operation)
@@ -154,7 +154,7 @@ class BulkRequestSchema(BaseSchema):
         return self._sub_schemas[method].get(path_parts[1])
 
 
-def validate_response_operations(value: list[SCIMData]) -> ValidationIssues:
+def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         method = item.get("method")
@@ -243,17 +243,17 @@ class BulkResponseSchema(BaseSchema):
         self._sub_schemas = sub_schemas
         self._error_schema = error_schema
 
-    def _deserialize(self, data: SCIMData) -> SCIMData:
+    def _deserialize(self, data: ScimData) -> ScimData:
         return self._process(data, "deserialize")
 
-    def _serialize(self, data: SCIMData) -> SCIMData:
+    def _serialize(self, data: ScimData) -> ScimData:
         return self._process(data, "serialize")
 
-    def _process(self, data: SCIMData, method: str) -> SCIMData:
+    def _process(self, data: ScimData, method: str) -> ScimData:
         operations = data.get("Operations", [])
         processed = []
         for operation in operations:
-            operation = SCIMData(operation)
+            operation = ScimData(operation)
             schema = self.get_schema(operation)
             if schema is None:
                 processed.append(operation)
@@ -268,7 +268,7 @@ class BulkResponseSchema(BaseSchema):
         return data
 
     def get_schema(self, operation: Mapping) -> Optional[BaseSchema]:
-        operation = SCIMData(operation)
+        operation = ScimData(operation)
         status = operation.get("status")
         if status in [None, Missing]:
             return None

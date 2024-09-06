@@ -6,7 +6,7 @@ from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.data.operator import ComplexAttributeOperator
 from scimpler.data.schemas import ResourceSchema
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.data.utils import decode_placeholders, encode_strings
 from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
 
@@ -277,15 +277,15 @@ class PatchPath:
             raise AttributeError("path has no value selection filter")
 
         if isinstance(value, MutableMapping):
-            value = SCIMData(value)
+            value = ScimData(value)
 
         value = [value]
         if isinstance(attr, Complex):
-            data = SCIMData()
+            data = ScimData()
             data.set(self._attr_rep, value)
             return self._filter(data, schema)
 
-        data = SCIMData({"value": value})
+        data = ScimData({"value": value})
         value_attr = copy(attr)
         value_attr._name = AttrName("value")
         return self._filter.operator.sub_operator.match(

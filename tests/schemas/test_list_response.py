@@ -2,7 +2,7 @@ import pytest
 
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.identifiers import AttrRep
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.schemas import list_response
 
 
@@ -99,7 +99,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(
     (
         (
             [
-                SCIMData(
+                ScimData(
                     {
                         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
                         "userName": "bjensen",
@@ -111,7 +111,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(
         (
             [
                 # only "schemas" attribute is used
-                SCIMData(
+                ScimData(
                     {
                         "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
                     }
@@ -121,7 +121,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(
         ),
         (
             [
-                SCIMData(
+                ScimData(
                     {
                         "userName": "bjensen",
                     }
@@ -132,7 +132,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(
         (
             [
                 # extensions are ignored
-                SCIMData(
+                ScimData(
                     {
                         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                             "employeeNumber": "2",
@@ -158,7 +158,7 @@ def test_get_schema_for_resources(data, schema, user_schema):
     (
         (
             [
-                SCIMData(
+                ScimData(
                     {
                         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
                         "userName": "bjensen",
@@ -168,7 +168,7 @@ def test_get_schema_for_resources(data, schema, user_schema):
         ),
         (
             [
-                SCIMData(
+                ScimData(
                     {
                         "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
                     }
@@ -177,7 +177,7 @@ def test_get_schema_for_resources(data, schema, user_schema):
         ),
         (
             [
-                SCIMData(
+                ScimData(
                     {
                         "userName": "bjensen",
                     }
@@ -187,7 +187,7 @@ def test_get_schema_for_resources(data, schema, user_schema):
         (
             [
                 # extensions are ignored
-                SCIMData(
+                ScimData(
                     {
                         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
                             "employeeNumber": "2",

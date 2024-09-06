@@ -7,7 +7,7 @@ from scimpler.data.identifiers import AttrName, AttrRep
 from scimpler.data.operator import ComplexAttributeOperator, Equal
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
-from scimpler.data.scim_data import Invalid, SCIMData
+from scimpler.data.scim_data import Invalid, ScimData
 from scimpler.schemas.patch_op import PatchOpSchema
 
 
@@ -16,22 +16,22 @@ from scimpler.schemas.patch_op import PatchOpSchema
     (
         (
             [
-                SCIMData({"op": "add", "path": "userName", "value": "bjensen"}),
-                SCIMData({"op": "unknown"}),
+                ScimData({"op": "add", "path": "userName", "value": "bjensen"}),
+                ScimData({"op": "unknown"}),
             ],
             {"1": {"op": {"_errors": [{"code": 9}]}}},
         ),
         (
             [
-                SCIMData({"op": "add", "path": "userName", "value": "bjensen"}),
-                SCIMData({"op": "remove", "path": None}),
+                ScimData({"op": "add", "path": "userName", "value": "bjensen"}),
+                ScimData({"op": "remove", "path": None}),
             ],
             {"1": {"path": {"_errors": [{"code": 5}]}}},
         ),
         (
             [
-                SCIMData({"op": "add", "path": "userName", "value": "bjensen"}),
-                SCIMData({"op": "add", "value": None}),
+                ScimData({"op": "add", "path": "userName", "value": "bjensen"}),
+                ScimData({"op": "add", "value": None}),
             ],
             {"1": {"value": {"_errors": [{"code": 5}]}}},
         ),
@@ -54,15 +54,15 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(
             {
                 "op": op,
                 "value": {
-                    "ignore^me": 42,
+                    "ignore_me": 42,
                     "name": {
                         "formatted": "Ms. Barbara J Jensen III",
-                        "ignore^me": 42,
+                        "ignore_me": 42,
                     },
                     "userName": "bjensen",
                     "emails": [{"value": "bjensen@example.com", "type": "work"}],
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-                        "ignore^me": 42,
+                        "ignore_me": 42,
                         "department": "Tour Operations",
                         "manager": {"value": "10", "$ref": "/Users/10"},
                     },
@@ -277,7 +277,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
                 filter_=None,
             ),
             {"formatted": "Jan Kowalski", "familyName": "Kowalski"},
-            SCIMData({"formatted": "Jan Kowalski", "familyName": "Kowalski"}),
+            ScimData({"formatted": "Jan Kowalski", "familyName": "Kowalski"}),
         ),
         (
             "emails",
@@ -287,7 +287,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
                 filter_=None,
             ),
             [{"type": "work", "value": "work@example.com"}],
-            [SCIMData({"type": "work", "value": "work@example.com"})],
+            [ScimData({"type": "work", "value": "work@example.com"})],
         ),
         (
             'emails[type eq "work"].value',

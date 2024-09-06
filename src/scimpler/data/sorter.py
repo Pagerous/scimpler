@@ -4,7 +4,7 @@ from typing import Any, Iterable, Optional, Sequence, Union
 
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.schemas import BaseResourceSchema
-from scimpler.data.scim_data import AttrRep, Missing, SCIMData
+from scimpler.data.scim_data import AttrRep, Missing, ScimData
 
 
 class AlwaysLastKey:
@@ -80,7 +80,7 @@ class Sorter:
         self,
         data: Iterable[MutableMapping],
         schema: Union[BaseResourceSchema, Sequence[BaseResourceSchema]],
-    ) -> list[SCIMData]:
+    ) -> list[ScimData]:
         """
         Sorts the provided data according to the sorter configuration and the provided schemas.
         It is able to perform sorting of data items that belong to the same schema, or to different
@@ -107,7 +107,7 @@ class Sorter:
 
         Examples:
             >>> from scimpler.schemas import UserSchema
-            >>> from scimpler.identifier import AttrRep
+            >>> from scimpler.data.identifiers import AttrRep
             >>>
             >>> sorter = Sorter(attr_rep=AttrRep("userName"), asc=False)
             >>> sorter(
@@ -116,7 +116,7 @@ class Sorter:
             >>> [{"userName": "b_user"}, {"userName": "a_user"}]
 
             >>> from scimpler.schemas import GroupSchema, UserSchema
-            >>> from scimpler.identifier import AttrRep
+            >>> from scimpler.data.identifiers import AttrRep
             >>>
             >>> group, user = GroupSchema(), UserSchema()
             >>> sorter = Sorter(attr_rep=AttrRep("externalId"), asc=True)
@@ -127,16 +127,16 @@ class Sorter:
             >>> [{"externalId": "1"}, {"externalId": "2"}, {"externalId": "3"}]
 
         """
-        normalized = [SCIMData(item) for item in data]
+        normalized = [ScimData(item) for item in data]
         if not normalized:
             return normalized
         return self._sort(normalized, schema)
 
     def _sort(
         self,
-        data: list[SCIMData],
+        data: list[ScimData],
         schema: Union[BaseResourceSchema, Sequence[BaseResourceSchema]],
-    ) -> list[SCIMData]:
+    ) -> list[ScimData]:
         if not any(item.get(self._attr_rep) for item in data):
             return data
 
@@ -160,14 +160,14 @@ class Sorter:
 
         return StringKey(value, attr)
 
-    def _attr_key_many_schemas(self, data: list[SCIMData], schemas: Sequence[BaseResourceSchema]):
+    def _attr_key_many_schemas(self, data: list[ScimData], schemas: Sequence[BaseResourceSchema]):
         def attr_key(item):
             schema = schemas[data.index(item)]
             return self._attr_key(item, schema)
 
         return attr_key
 
-    def _attr_key(self, item: SCIMData, schema: BaseResourceSchema):
+    def _attr_key(self, item: ScimData, schema: BaseResourceSchema):
         attr = schema.attrs.get(self._attr_rep)
         if attr is None:
             return self._get_key(None, None)

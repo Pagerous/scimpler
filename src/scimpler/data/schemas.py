@@ -23,7 +23,7 @@ from scimpler.data.attrs import (
     UriReference,
 )
 from scimpler.data.identifiers import BoundedAttrRep, SchemaURI
-from scimpler.data.scim_data import Invalid, Missing, SCIMData
+from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.registry import register_schema
 from scimpler.warning import ScimpleUserWarning
@@ -103,38 +103,38 @@ class BaseSchema(metaclass=SchemaMeta):
                 attrs.extend(getattr(cls, "base_attrs"))
         return attrs
 
-    def deserialize(self, data: MutableMapping[str, Any]) -> SCIMData:
+    def deserialize(self, data: MutableMapping[str, Any]) -> ScimData:
         """
         Deserializes the provided data according to the schema attributes and their deserialization
         logic. Unknown attributes are not included in the result.
         """
-        data = SCIMData(data)
-        deserialized = SCIMData()
+        data = ScimData(data)
+        deserialized = ScimData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             if value is not Missing:
                 deserialized.set(attr_rep, attr.deserialize(value))
         return self._deserialize(deserialized)
 
-    def serialize(self, data: MutableMapping[str, Any]) -> SCIMData:
+    def serialize(self, data: MutableMapping[str, Any]) -> ScimData:
         """
         Serializes the provided data according to the schema attributes and their serialization
         logic. Unknown attributes are not included in the result.
         """
-        data = SCIMData(data)
-        serialized = SCIMData()
+        data = ScimData(data)
+        serialized = ScimData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
             if value is not Missing:
                 serialized.set(attr_rep, attr.serialize(value))
         return self._serialize(serialized)
 
-    def filter(self, data: MutableMapping[str, Any], attr_filter: AttrFilter) -> SCIMData:
+    def filter(self, data: MutableMapping[str, Any], attr_filter: AttrFilter) -> ScimData:
         """
         Filters the provided data according to the provided `attr_filter`.
         """
-        data = SCIMData(data)
-        filtered = SCIMData()
+        data = ScimData(data)
+        filtered = ScimData()
         for attr_rep, attr in attr_filter(self.attrs):
             value = data.get(attr_rep)
             if value is Missing:
@@ -144,10 +144,10 @@ class BaseSchema(metaclass=SchemaMeta):
             filtered.set(attr_rep, value)
         return filtered
 
-    def _deserialize(self, data: SCIMData) -> SCIMData:
+    def _deserialize(self, data: ScimData) -> ScimData:
         return data
 
-    def _serialize(self, data: SCIMData) -> SCIMData:
+    def _serialize(self, data: ScimData) -> ScimData:
         return data
 
     def validate(
@@ -181,7 +181,7 @@ class BaseSchema(metaclass=SchemaMeta):
             Validation issues.
         """
         issues = ValidationIssues()
-        data = SCIMData(data)
+        data = ScimData(data)
         issues.merge(self._validate_data(data, presence_config))
         if issues.can_proceed(("schemas",)):
             issues.merge(
@@ -234,12 +234,12 @@ class BaseSchema(metaclass=SchemaMeta):
             )
         return issues
 
-    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
+    def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
         return ValidationIssues()
 
     def _validate_data(
         self,
-        data: SCIMData,
+        data: ScimData,
         presence_config: Optional[AttrPresenceConfig] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
@@ -430,7 +430,7 @@ class BaseSchema(metaclass=SchemaMeta):
     def _is_attr_required_by_schema(
         self,
         attr_rep: BoundedAttrRep,
-        data: SCIMData,
+        data: ScimData,
     ) -> bool:
         return True
 
@@ -631,7 +631,7 @@ class ResourceSchema(BaseResourceSchema):
             attrs=extension.attrs,
         )
 
-    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
+    def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         resource_type_rep = getattr(self.attrs, "meta__resourcetype", None)
         # it means that schema doesn't contain 'meta.resourceType'
@@ -647,7 +647,7 @@ class ResourceSchema(BaseResourceSchema):
             )
         return issues
 
-    def _validate_schemas_field(self, data: SCIMData) -> ValidationIssues:
+    def _validate_schemas_field(self, data: ScimData) -> ValidationIssues:
         provided_schemas = data.get(self.attrs.schemas)
         if not provided_schemas:
             return ValidationIssues()
@@ -669,7 +669,7 @@ class ResourceSchema(BaseResourceSchema):
     def _is_attr_required_by_schema(
         self,
         attr_rep: BoundedAttrRep,
-        data: SCIMData,
+        data: ScimData,
     ) -> bool:
         if (
             attr_rep.schema not in (data.get("schemas") or [])

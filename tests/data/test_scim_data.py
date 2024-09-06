@@ -1,7 +1,7 @@
 import pytest
 
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep, SchemaURI
-from scimpler.data.scim_data import Invalid, Missing, SCIMData
+from scimpler.data.scim_data import Invalid, Missing, ScimData
 
 
 @pytest.mark.parametrize(
@@ -65,7 +65,7 @@ from scimpler.data.scim_data import Invalid, Missing, SCIMData
     ),
 )
 def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_data_server):
-    actual = SCIMData(user_data_server).get(attr_rep)
+    actual = ScimData(user_data_server).get(attr_rep)
 
     assert actual == expected
 
@@ -143,7 +143,7 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
     ),
 )
 def test_value_can_be_inserted_to_scim_data_data(key, value, expected):
-    data = SCIMData()
+    data = ScimData()
 
     data.set(key, value)
 
@@ -151,7 +151,7 @@ def test_value_can_be_inserted_to_scim_data_data(key, value, expected):
 
 
 def test_attr_value_in_data_can_be_reassigned():
-    data = SCIMData()
+    data = ScimData()
     data.set("key", 123)
 
     data.set("KEY", 456)
@@ -160,7 +160,7 @@ def test_attr_value_in_data_can_be_reassigned():
 
 
 def test_sub_attr_value_in_data_can_be_reassigned():
-    data = SCIMData()
+    data = ScimData()
     data.set("key.subkey", 123)
 
     data.set("KEY.SUBKEY", 456)
@@ -169,7 +169,7 @@ def test_sub_attr_value_in_data_can_be_reassigned():
 
 
 def test_assigning_sub_attr_to_non_complex_attr_fails():
-    data = SCIMData()
+    data = ScimData()
     data.set("key", 1)
 
     with pytest.raises(KeyError, match=r"can not assign \(subkey, \[1, 2, 3\]\) to 'key'"):
@@ -177,7 +177,7 @@ def test_assigning_sub_attr_to_non_complex_attr_fails():
 
 
 def test_multivalued_sub_attr_can_be_set_and_retrieved():
-    data = SCIMData()
+    data = ScimData()
     data.set("key.subkey", [1, 2, 3])
 
     assert data.get("key.subkey") == [1, 2, 3]
@@ -185,7 +185,7 @@ def test_multivalued_sub_attr_can_be_set_and_retrieved():
 
 
 def test_multivalued_sub_attr_can_be_set_and_reassigned():
-    data = SCIMData()
+    data = ScimData()
     data.set("key.subkey", [1, 2, 3])
     data.set("KEY.SUBKEY", [4, 5, 6])
 
@@ -194,7 +194,7 @@ def test_multivalued_sub_attr_can_be_set_and_reassigned():
 
 
 def test_extension_can_be_reassigned():
-    data = SCIMData()
+    data = ScimData()
     data.set(SchemaURI("my:schema:extension"), {"a": "b"})
 
     data.set(SchemaURI("MY:schema:EXTENSION"), {"a": "C"})
@@ -203,7 +203,7 @@ def test_extension_can_be_reassigned():
 
 
 def test_can_reassign_primitive_value_to_simple_multivalued_attr():
-    data = SCIMData()
+    data = ScimData()
     data.set("key.subkey", [1, 2, 3])
     data.set("KEY.SUBKEY", 4)
 
@@ -212,7 +212,7 @@ def test_can_reassign_primitive_value_to_simple_multivalued_attr():
 
 
 def test_can_set_and_retrieve_simple_multivalued_attr():
-    data = SCIMData()
+    data = ScimData()
 
     data.set("key", [1, 2, 3])
 
@@ -221,7 +221,7 @@ def test_can_set_and_retrieve_simple_multivalued_attr():
 
 
 def test_reassign_simple_multivalued_attr():
-    data = SCIMData()
+    data = ScimData()
 
     data.set("key", [1, 2, 3])
     data.set("KEY", [4, 5, 6])
@@ -231,7 +231,7 @@ def test_reassign_simple_multivalued_attr():
 
 
 def test_creating_data_removes_duplicates():
-    data = SCIMData({"a": 1, "A": 2})
+    data = ScimData({"a": 1, "A": 2})
 
     assert data.to_dict() == {"A": 2}
 
@@ -246,15 +246,15 @@ def test_missing_type_repr():
 
 def test_non_string_keys_are_excluded_from_data():
     data = {"a": "b", 1: 2, True: False}
-    data = SCIMData(data)
+    data = ScimData(data)
 
     assert data.to_dict() == {"a": "b"}
 
 
 def test_data_repr():
-    data = SCIMData({"a": "b", "c": "d", "e": "f"})
+    data = ScimData({"a": "b", "c": "d", "e": "f"})
 
-    assert repr(data) == "SCIMData({'a': 'b', 'c': 'd', 'e': 'f'})"
+    assert repr(data) == "ScimData({'a': 'b', 'c': 'd', 'e': 'f'})"
 
 
 @pytest.mark.parametrize(
@@ -333,16 +333,6 @@ def test_data_repr():
             Missing,
         ),
         (
-            {
-                "a": 1,
-                "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"b": {"d": 4}},
-                "c": 3,
-            },
-            SchemaURI("non:existing:extension"),
-            Missing,
-            Missing,
-        ),
-        (
             {"a": 1, "c": 3},
             BoundedAttrRep(
                 schema="urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", attr="manager"
@@ -353,7 +343,7 @@ def test_data_repr():
     ),
 )
 def test_entry_can_be_popped_from_data(data, attr_rep, expected, remaining):
-    data = SCIMData(data)
+    data = ScimData(data)
 
     actual = data.pop(attr_rep)
 
@@ -370,12 +360,12 @@ def test_schema_uri_creation_fails_if_bad_uri():
     ("data_1", "data_2", "expected"),
     (
         (
-            SCIMData(),
-            SCIMData(),
+            ScimData(),
+            ScimData(),
             True,
         ),
         (
-            SCIMData(
+            ScimData(
                 {
                     "userName": "bjensen",
                     "name": {"formatted": "Bjensen"},
@@ -385,7 +375,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
                     },
                 }
             ),
-            SCIMData(
+            ScimData(
                 {
                     "USERNAME": "bjensen",
                     "NAME": {"FORMATTED": "Bjensen"},
@@ -398,7 +388,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
             True,
         ),
         (
-            SCIMData(
+            ScimData(
                 {
                     "userName": "bjensen",
                     "name": {"formatted": "Bjensen"},
@@ -408,7 +398,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
                     },
                 }
             ),
-            SCIMData(
+            ScimData(
                 {
                     "NAME": {"FORMATTED": "Bjensen"},
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
@@ -420,7 +410,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
             False,
         ),
         (
-            SCIMData(
+            ScimData(
                 {
                     "name": {"formatted": "Bjensen"},
                     "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
@@ -429,7 +419,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
                     },
                 }
             ),
-            SCIMData(
+            ScimData(
                 {
                     "USERNAME": "bjensen",
                     "NAME": {"FORMATTED": "Bjensen"},

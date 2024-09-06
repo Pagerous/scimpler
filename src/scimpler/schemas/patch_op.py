@@ -5,11 +5,11 @@ from scimpler.data.attr_presence import validate_presence
 from scimpler.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import BaseSchema, ResourceSchema
-from scimpler.data.scim_data import Invalid, Missing, MissingType, SCIMData
+from scimpler.data.scim_data import Invalid, Missing, MissingType, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 
 
-def _validate_operations(value: list[SCIMData]) -> ValidationIssues:
+def _validate_operations(value: list[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         type_ = item.get("op")
@@ -65,7 +65,7 @@ class PatchOpSchema(BaseSchema):
     def resource_schema(self) -> ResourceSchema:
         return self._resource_schema
 
-    def _validate(self, data: SCIMData, **kwargs) -> ValidationIssues:
+    def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         ops = data.get(self.attrs.operations__op)
         paths = data.get(self.attrs.operations__path)
@@ -278,7 +278,7 @@ class PatchOpSchema(BaseSchema):
             )
         return issues
 
-    def _serialize(self, data: SCIMData) -> SCIMData:
+    def _serialize(self, data: ScimData) -> ScimData:
         processed = []
         for operation in data.get(self.attrs.operations):
             op = operation.get("op")
@@ -294,11 +294,11 @@ class PatchOpSchema(BaseSchema):
             if path:
                 processed_operation["path"] = path
 
-            processed.append(SCIMData(processed_operation))
+            processed.append(ScimData(processed_operation))
         data.set(self.attrs.operations, processed)
         return data
 
-    def _deserialize(self, data: SCIMData) -> SCIMData:
+    def _deserialize(self, data: ScimData) -> ScimData:
         ops = data.get(self.attrs.operations__op)
         paths = data.get(self.attrs.operations__path)
         values = data.get(self.attrs.operations__value)
@@ -316,7 +316,7 @@ class PatchOpSchema(BaseSchema):
                     )
             if path:
                 processed_operation["path"] = path
-            processed.append(SCIMData(processed_operation))
+            processed.append(ScimData(processed_operation))
         data.set(self.attrs.operations, processed)
         return data
 

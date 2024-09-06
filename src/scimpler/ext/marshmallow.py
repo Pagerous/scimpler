@@ -8,7 +8,7 @@ from scimpler.data import attrs
 from scimpler.data.attrs import Attribute
 from scimpler.data.identifiers import AttrName, AttrRep, BoundedAttrRep
 from scimpler.data.schemas import BaseSchema, ResourceSchema
-from scimpler.data.scim_data import Missing, SCIMData
+from scimpler.data.scim_data import Missing, ScimData
 from scimpler.schemas import (
     BulkRequestSchema,
     BulkResponseSchema,
@@ -167,15 +167,15 @@ def _get_list_response_processors(
 ):
     processors_ = {}
 
-    def deserialize(data: MutableMapping[str, Any]) -> SCIMData:
-        data = SCIMData(data)
+    def deserialize(data: MutableMapping[str, Any]) -> ScimData:
+        data = ScimData(data)
         resources = data.pop("Resources", [])
         deserialized = scimple_schema.deserialize(data)
         deserialized_resources = []
         for resource in resources:
-            resource_schema = scimple_schema.get_schema(SCIMData(resource))
+            resource_schema = scimple_schema.get_schema(ScimData(resource))
             if resource_schema is None:
-                deserialized_resource = SCIMData()
+                deserialized_resource = ScimData()
             else:
                 deserialized_resource = _create_schema(
                     scimple_schema=resource_schema,
@@ -189,7 +189,7 @@ def _get_list_response_processors(
 
     if validator := processors.validator:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             if response_context_provider is None:
                 raise ContextError(
                     "response context must be provided when loading ListResponseSchema"
@@ -198,14 +198,14 @@ def _get_list_response_processors(
             return deserialize(data)
     else:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             return deserialize(data)
 
-    def _post_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
-        return SCIMData(data)
+    def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        return ScimData(data)
 
-    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> SCIMData:
-        data = SCIMData(data)
+    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        data = ScimData(data)
         resources_ = data.pop("Resources", [])
         serialized = scimple_schema.serialize(data)
         serialized_resources = []
@@ -239,7 +239,7 @@ def _get_resource_processors(
 
     def _post_load(
         _, data: MutableMapping[str, Any], original_data: MutableMapping[str, Any], **__
-    ) -> SCIMData:
+    ) -> ScimData:
         for extension_uri in scimple_schema.extensions:
             extension_uri_lower = extension_uri.lower()
             for k in original_data:
@@ -252,9 +252,9 @@ def _get_resource_processors(
                         extension_data = extension_data[part]
                     data.pop(key_parts[0])
                     data[k] = extension_data
-        return SCIMData(data)
+        return ScimData(data)
 
-    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
         return scimple_schema.serialize(data)
 
     processors_["_pre_load"] = _get_generic_pre_load(
@@ -273,7 +273,7 @@ def _get_patch_op_processors(
 ) -> dict[str, Callable]:
     processors_ = {}
 
-    def deserialize(data: MutableMapping[str, Any]) -> SCIMData:
+    def deserialize(data: MutableMapping[str, Any]) -> ScimData:
         values = [operation.pop("value", Missing) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
         for operation, value in zip(deserialized.get("Operations", []), values):
@@ -292,18 +292,18 @@ def _get_patch_op_processors(
 
     if validator := processors.validator:  # noqa
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             _validate_request(data, validator)
             return deserialize(data)
     else:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             return deserialize(data)
 
-    def _post_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
-        return SCIMData(data)
+    def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        return ScimData(data)
 
-    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
         values = [operation.pop("value") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, value in zip(serialized.get("Operations", []), values):
@@ -346,7 +346,7 @@ def _get_bulk_response_processors(
             context_provider=None,
         )
 
-    def deserialize(data: MutableMapping[str, Any]) -> SCIMData:
+    def deserialize(data: MutableMapping[str, Any]) -> ScimData:
         responses = [operation.pop("response") for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
         for operation, response in zip(deserialized.get("Operations", []), responses):
@@ -357,20 +357,20 @@ def _get_bulk_response_processors(
 
     if validator := processors.validator:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             if response_context_provider is None:
                 raise ContextError("context must be provided when loading BulkResponseSchema")
             _validate_response(data, validator, response_context_provider())
             return deserialize(data)
     else:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             return deserialize(data)
 
-    def _post_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
-        return SCIMData(data)
+    def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        return ScimData(data)
 
-    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
         responses = [operation.pop("response") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, response in zip(serialized.get("Operations", []), responses):
@@ -391,7 +391,7 @@ def _get_bulk_request_processors(
 ) -> dict[str, Callable]:
     processors_ = {}
 
-    def deserialize(data: MutableMapping[str, Any]) -> SCIMData:
+    def deserialize(data: MutableMapping[str, Any]) -> ScimData:
         requests_data = [operation.pop("data", None) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
         for operation, data in zip(deserialized.get("Operations", []), requests_data):
@@ -410,18 +410,18 @@ def _get_bulk_request_processors(
 
     if validator := processors.validator:  # noqa
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             _validate_request(data, validator)
             return deserialize(data)
     else:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             return deserialize(data)
 
-    def _post_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
-        return SCIMData(data)
+    def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        return ScimData(data)
 
-    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
         operation_data = [operation.pop("data") for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, data_item in zip(serialized.get("Operations", []), operation_data):
@@ -449,12 +449,12 @@ def _get_generic_pre_load(
     processors: Processors,
     response_context_provider: Optional[ResponseContextProvider] = None,
 ) -> Callable:
-    def deserialize(data: MutableMapping[str, Any]) -> SCIMData:
+    def deserialize(data: MutableMapping[str, Any]) -> ScimData:
         return scimple_schema.deserialize(data)
 
     if validator := processors.validator:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             if response_context_provider is None:
                 _validate_request(data, validator)
             else:
@@ -462,7 +462,7 @@ def _get_generic_pre_load(
             return deserialize(data)
     else:
 
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
             return deserialize(data)
 
     return marshmallow.pre_load(_pre_load)
@@ -475,10 +475,10 @@ def _get_generic_processors(
 ) -> dict[str, Callable]:
     processors_ = {}
 
-    def _post_load(_, data: MutableMapping[str, Any], **__) -> SCIMData:
-        return SCIMData(data)
+    def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        return ScimData(data)
 
-    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> SCIMData:
+    def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
         return scimple_schema.serialize(data)
 
     processors_["_pre_load"] = _get_generic_pre_load(
@@ -505,9 +505,9 @@ def _get_generic_attr_processors(
         if data is None:
             return data
         if isinstance(data, MutableMapping):
-            return SCIMData(data)
+            return ScimData(data)
         if isinstance(data, list):
-            return [SCIMData(item) if isinstance(item, MutableMapping) else item for item in data]
+            return [ScimData(item) if isinstance(item, MutableMapping) else item for item in data]
         return data
 
     def _pre_dump(_, data: Any, **__) -> dict[str, Any]:

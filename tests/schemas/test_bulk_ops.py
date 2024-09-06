@@ -1,6 +1,6 @@
 import pytest
 
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.schemas import ErrorSchema
 from scimpler.schemas.bulk_ops import BulkRequestSchema, BulkResponseSchema
 
@@ -11,7 +11,7 @@ def test_validation_bulk_request_operation_fails_if_no_method():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"path": "/Users"})])
+        .validate([ScimData({"path": "/Users"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -23,7 +23,7 @@ def test_validation_bulk_request_operation_fails_if_unknown_method():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"method": "TERMINATE", "path": "/Users"})])
+        .validate([ScimData({"method": "TERMINATE", "path": "/Users"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -35,7 +35,7 @@ def test_validation_bulk_request_operation_fails_if_no_bulk_id_for_post():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"method": "POST", "data": {"a": 1, "b": 2}, "path": "/NiceResource"})])
+        .validate([ScimData({"method": "POST", "data": {"a": 1, "b": 2}, "path": "/NiceResource"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -47,7 +47,7 @@ def test_validation_bulk_request_operation_fails_if_no_data_for_post():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"method": "POST", "bulkId": "abc", "path": "/NiceResource"})])
+        .validate([ScimData({"method": "POST", "bulkId": "abc", "path": "/NiceResource"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -59,7 +59,7 @@ def test_validation_bulk_request_operation_fails_if_no_data_for_patch():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"method": "PATCH", "path": "/NiceResource/123"})])
+        .validate([ScimData({"method": "PATCH", "path": "/NiceResource/123"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -71,7 +71,7 @@ def test_validation_bulk_request_operation_fails_if_no_data_for_put():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"method": "PUT", "path": "/NiceResource/123"})])
+        .validate([ScimData({"method": "PUT", "path": "/NiceResource/123"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -83,7 +83,7 @@ def test_validation_bulk_request_operation_fails_if_path_missing():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"method": "PUT", "data": {"a": 1}})])
+        .validate([ScimData({"method": "PUT", "data": {"a": 1}})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -97,7 +97,7 @@ def test_validation_bulk_request_operation_fails_if_bad_path_for_post():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "POST",
                         "bulkId": "abc",
@@ -121,7 +121,7 @@ def test_validation_bulk_request_operation_fails_if_bad_path(method):
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {"method": method, "bulkId": "abc", "data": {"a": 1}, "path": "/NiceResource"}
                 )
             ]
@@ -138,8 +138,8 @@ def test_data_is_removed_when_parsing_bulk_request_get_or_delete_operation(metho
         .attrs.get("operations")
         .deserialize(
             [
-                SCIMData({"method": method, "data": {"a": 1}, "path": "/NiceResource/123"}),
-                SCIMData({"method": "PUT", "data": {"a": 1}, "path": "/NiceResource/123"}),
+                ScimData({"method": method, "data": {"a": 1}, "path": "/NiceResource/123"}),
+                ScimData({"method": "PUT", "data": {"a": 1}, "path": "/NiceResource/123"}),
             ]
         )
     )
@@ -154,7 +154,7 @@ def test_validation_bulk_request_post_operation_succeeds():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {"method": "POST", "bulkId": "abc", "data": {"a": 1}, "path": "/NiceResource"}
                 )
             ]
@@ -168,7 +168,7 @@ def test_validation_bulk_request_get_operation_succeeds():
     issues = (
         BulkRequestSchema(sub_schemas={})
         .attrs.get("operations")
-        .validate([SCIMData({"method": "GET", "path": "/NiceResource/123"})])
+        .validate([ScimData({"method": "GET", "path": "/NiceResource/123"})])
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -180,7 +180,7 @@ def test_validation_bulk_request_put_operation_succeeds():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "PUT",
                         "data": {"a": 1},
@@ -201,7 +201,7 @@ def test_validation_bulk_request_patch_operation_succeeds():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "PATCH",
                         "data": {"a": 1},
@@ -222,7 +222,7 @@ def test_validation_bulk_request_delete_operation_succeeds():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "DELETE",
                         "version": 'W/"4weymrEsh5O6cAEK"',
@@ -242,7 +242,7 @@ def test_validation_bulk_response_operation_fails_if_no_method():
     issues = (
         BulkResponseSchema(sub_schemas={}, error_schema=ErrorSchema())
         .attrs.get("operations")
-        .validate([SCIMData({"status": "200"})])
+        .validate([ScimData({"status": "200"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -256,7 +256,7 @@ def test_validation_bulk_response_operation_fails_if_unknown_method():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "TERMINATE",
                         "status": "200",
@@ -280,7 +280,7 @@ def test_validation_bulk_response_operation_fails_if_no_bulk_id_for_post():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "POST",
                         "status": "200",
@@ -304,7 +304,7 @@ def test_validation_bulk_response_operation_fails_if_no_status():
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "POST",
                         "bulkId": "qwerty",
@@ -326,7 +326,7 @@ def test_validation_bulk_response_operation_fails_if_no_location_for_normal_comp
     issues = (
         BulkResponseSchema(sub_schemas={}, error_schema=ErrorSchema())
         .attrs.get("operations")
-        .validate([SCIMData({"method": "POST", "bulkId": "qwerty", "status": "200"})])
+        .validate([ScimData({"method": "POST", "bulkId": "qwerty", "status": "200"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -338,7 +338,7 @@ def test_validation_bulk_response_operation_succeeds_if_no_location_for_post_fai
         .attrs.get("operations")
         .validate(
             [
-                SCIMData(
+                ScimData(
                     {
                         "method": "POST",
                         "bulkId": "qwerty",
@@ -367,7 +367,7 @@ def test_validation_bulk_response_operation_fails_if_no_response_for_failed_oper
     issues = (
         BulkResponseSchema(sub_schemas={}, error_schema=ErrorSchema())
         .attrs.get("operations")
-        .validate([SCIMData({"method": "POST", "bulkId": "qwerty", "status": "401"})])
+        .validate([ScimData({"method": "POST", "bulkId": "qwerty", "status": "401"})])
     )
 
     assert issues.to_dict() == expected_issues
@@ -379,7 +379,7 @@ def test_validation_bulk_response_operation_fails_if_bad_status_syntax():
     issues = (
         BulkResponseSchema(sub_schemas={}, error_schema=ErrorSchema())
         .attrs.get("operations")
-        .validate([SCIMData({"method": "POST", "bulkId": "qwerty", "status": "abc"})])
+        .validate([ScimData({"method": "POST", "bulkId": "qwerty", "status": "abc"})])
     )
 
     assert issues.to_dict() == expected_issues

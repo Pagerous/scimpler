@@ -2,15 +2,15 @@ import pytest
 
 from scimpler.data.attrs import ScimReference, String
 from scimpler.data.identifiers import AttrRep
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.data.sorter import AlwaysLastKey, Sorter, StringKey
 
 
 def test_items_are_sorted_according_to_attr_value(user_schema):
     sorter = Sorter(AttrRep(attr="userName"), asc=True)
-    c_1 = SCIMData({"userName": "C", "id": "2"})
-    c_2 = SCIMData({"userName": "A", "id": "3"})
-    c_3 = SCIMData({"userName": "B", "id": "1"})
+    c_1 = ScimData({"userName": "C", "id": "2"})
+    c_2 = ScimData({"userName": "A", "id": "3"})
+    c_3 = ScimData({"userName": "B", "id": "1"})
 
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
@@ -22,9 +22,9 @@ def test_items_are_sorted_according_to_attr_value(user_schema):
 
 def test_items_with_missing_value_for_attr_are_sorted_last_for_asc(user_schema):
     sorter = Sorter(AttrRep(attr="userName"), asc=True)
-    c_1 = SCIMData({"urn:ietf:params:scim:schemas:core:2.0:User:userName": "C", "id": "2"})
-    c_2 = SCIMData({"userName": "A", "id": "3"})
-    c_3 = SCIMData({"id": "1"})
+    c_1 = ScimData({"urn:ietf:params:scim:schemas:core:2.0:User:userName": "C", "id": "2"})
+    c_2 = ScimData({"userName": "A", "id": "3"})
+    c_3 = ScimData({"id": "1"})
     values = [c_1, c_2, c_3]
     expected = [c_2, c_1, c_3]
 
@@ -35,9 +35,9 @@ def test_items_with_missing_value_for_attr_are_sorted_last_for_asc(user_schema):
 
 def test_items_with_missing_value_for_attr_are_sorted_first_for_desc(user_schema):
     sorter = Sorter(AttrRep(attr="userName"), asc=False)
-    c_1 = SCIMData({"userName": "C", "id": "2"})
-    c_2 = SCIMData({"userName": "A", "id": "3"})
-    c_3 = SCIMData({"id": "1"})
+    c_1 = ScimData({"userName": "C", "id": "2"})
+    c_2 = ScimData({"userName": "A", "id": "3"})
+    c_3 = ScimData({"id": "1"})
     values = [c_1, c_2, c_3]
     expected = [c_3, c_1, c_2]
 
@@ -48,9 +48,9 @@ def test_items_with_missing_value_for_attr_are_sorted_first_for_desc(user_schema
 
 def test_original_order_is_preserved_if_no_values_for_all_items(user_schema):
     sorter = Sorter(AttrRep(attr="userName"))
-    c_1 = SCIMData({"id": "2"})
-    c_2 = SCIMData({"id": "3"})
-    c_3 = SCIMData({"id": "1"})
+    c_1 = ScimData({"id": "2"})
+    c_2 = ScimData({"id": "3"})
+    c_3 = ScimData({"id": "1"})
     values = [c_1, c_2, c_3]
     expected = [c_1, c_2, c_3]
 
@@ -61,9 +61,9 @@ def test_original_order_is_preserved_if_no_values_for_all_items(user_schema):
 
 def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_attrs(fake_schema):
     sorter = Sorter(AttrRep(attr="str_mv"), asc=True)
-    c_1 = SCIMData({"str_mv": [7, 1, 9]})
-    c_2 = SCIMData({"str_mv": [1, 8, 2]})
-    c_3 = SCIMData({"str_mv": [4, 3, 6]})
+    c_1 = ScimData({"str_mv": [7, 1, 9]})
+    c_2 = ScimData({"str_mv": [1, 8, 2]})
+    c_3 = ScimData({"str_mv": [4, 3, 6]})
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
 
@@ -74,13 +74,12 @@ def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_
 
 def test_items_are_sorted_according_to_sub_attr_value(user_schema):
     sorter = Sorter(AttrRep(attr="name", sub_attr="givenName"), asc=True)
-    c_1 = SCIMData(
+    c_1 = ScimData(
         {"urn:ietf:params:scim:schemas:core:2.0:User:name": {"givenName": "C"}, "id": "2"}
     )
-    c_2 = SCIMData({"name": {"givenName": "A"}, "id": "3"})
-    c_3 = SCIMData({"name": {"givenName": "B"}, "id": "1"})
+    c_2 = ScimData({"name": {"givenName": "A"}, "id": "3"})
+    c_3 = ScimData({"name": {"givenName": "B"}, "id": "1"})
     values = [c_1, c_2, c_3]
-
     expected = [c_2, c_3, c_1]
 
     actual = sorter(values, schema=user_schema)
@@ -90,9 +89,9 @@ def test_items_are_sorted_according_to_sub_attr_value(user_schema):
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc(user_schema):
     sorter = Sorter(AttrRep(attr="name", sub_attr="givenName"), asc=True)
-    c_1 = SCIMData({"name": {"givenName": "C"}, "id": "2"})
-    c_2 = SCIMData({"id": "3"})
-    c_3 = SCIMData({"name": {"givenName": "B"}, "id": "1"})
+    c_1 = ScimData({"name": {"givenName": "C"}, "id": "2"})
+    c_2 = ScimData({"id": "3"})
+    c_3 = ScimData({"name": {"givenName": "B"}, "id": "1"})
     values = [c_1, c_2, c_3]
     expected = [c_3, c_1, c_2]
 
@@ -103,9 +102,9 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_last_for_asc(user_sche
 
 def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc(user_schema):
     sorter = Sorter(AttrRep(attr="name", sub_attr="givenName"), asc=False)
-    c_1 = SCIMData({"name": {"givenName": "C"}, "id": "2"})
-    c_2 = SCIMData({"id": "3"})
-    c_3 = SCIMData({"name": {"givenName": "B"}, "id": "1"})
+    c_1 = ScimData({"name": {"givenName": "C"}, "id": "2"})
+    c_2 = ScimData({"id": "3"})
+    c_3 = ScimData({"name": {"givenName": "B"}, "id": "1"})
     values = [c_1, c_2, c_3]
     expected = [c_2, c_1, c_3]
 
@@ -116,13 +115,13 @@ def test_items_with_missing_value_for_sub_attr_are_sorted_first_for_desc(user_sc
 
 def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_attrs(user_schema):
     sorter = Sorter(AttrRep(attr="emails"), asc=True)
-    c_1 = SCIMData(
+    c_1 = ScimData(
         {
             "id": "1",
             "emails": [{"value": "b@example.com"}, {"primary": True, "value": "z@example.com"}],
         }
     )
-    c_2 = SCIMData(
+    c_2 = ScimData(
         {
             "id": "2",
             "emails": [
@@ -130,13 +129,13 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
             ],
         }
     )
-    c_3 = SCIMData(
+    c_3 = ScimData(
         {
             "id": "3",
             "emails": [{"primary": True, "value": "a@example.com"}, {"value": "z@example.com"}],
         }
     )
-    c_4 = SCIMData({"id": "4", "emails": []})
+    c_4 = ScimData({"id": "4", "emails": []})
     values = [c_1, c_4, c_2, c_3]
     expected = [c_3, c_2, c_1, c_4]
 
@@ -147,13 +146,13 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
 
 def test_items_can_be_sorted_by_complex_sub_attr_if_attr_multivalued(user_schema):
     sorter = Sorter(AttrRep(attr="emails", sub_attr="value"), asc=True)
-    c_1 = SCIMData(
+    c_1 = ScimData(
         {
             "id": "1",
             "emails": [{"value": "z@example.com"}, {"value": "b@example.com"}],
         }
     )
-    c_2 = SCIMData(
+    c_2 = ScimData(
         {
             "id": "2",
             "emails": [
@@ -161,13 +160,13 @@ def test_items_can_be_sorted_by_complex_sub_attr_if_attr_multivalued(user_schema
             ],
         }
     )
-    c_3 = SCIMData(
+    c_3 = ScimData(
         {
             "id": "3",
             "emails": [{"value": "a@example.com"}, {"value": "z@example.com"}],
         }
     )
-    c_4 = SCIMData({"id": "4", "emails": []})
+    c_4 = ScimData({"id": "4", "emails": []})
     values = [c_1, c_4, c_2, c_3]
     expected = [c_3, c_2, c_1, c_4]
 
@@ -178,10 +177,10 @@ def test_items_can_be_sorted_by_complex_sub_attr_if_attr_multivalued(user_schema
 
 def test_case_insensitive_attributes_are_respected_if_schema_provided(user_schema):
     sorter = Sorter(AttrRep(attr="userName"), asc=True)
-    c_1 = SCIMData({"userName": "C", "id": "2"})
+    c_1 = ScimData({"userName": "C", "id": "2"})
     # 'a' would be after 'C' if case-sensitive
-    c_2 = SCIMData({"userName": "a", "id": "3"})
-    c_3 = SCIMData({"userName": "B", "id": "1"})
+    c_2 = ScimData({"userName": "a", "id": "3"})
+    c_3 = ScimData({"userName": "B", "id": "1"})
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
 
@@ -192,9 +191,9 @@ def test_case_insensitive_attributes_are_respected_if_schema_provided(user_schem
 
 def test_case_sensitive_attributes_are_respected_if_schema_provided(user_schema):
     sorter = Sorter(AttrRep(attr="id"), asc=True)
-    c_1 = SCIMData({"id": "a"})
-    c_2 = SCIMData({"id": "A"})
-    c_3 = SCIMData({"id": "B"})
+    c_1 = ScimData({"id": "a"})
+    c_2 = ScimData({"id": "A"})
+    c_3 = ScimData({"id": "B"})
     values = [c_1, c_2, c_3]
     expected = [c_2, c_3, c_1]
 
@@ -207,9 +206,9 @@ def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_cas
     user_schema, fake_schema
 ):
     sorter = Sorter(AttrRep(attr="userName"), asc=False)
-    c_1 = SCIMData({"userName": "A"})
-    c_2 = SCIMData({"userName": "a"})
-    c_3 = SCIMData({"userName": "B"})
+    c_1 = ScimData({"userName": "A"})
+    c_2 = ScimData({"userName": "a"})
+    c_3 = ScimData({"userName": "B"})
     values = [c_1, c_2, c_3]
     expected = [c_3, c_2, c_1]
     schemas = [fake_schema, user_schema, user_schema]
@@ -221,8 +220,8 @@ def test_case_sensitive_match_if_any_of_two_fields_from_different_schemas_is_cas
 
 def test_fails_if_different_value_types(fake_schema, user_schema):
     sorter = Sorter(AttrRep(attr="title"), asc=False)
-    c_1 = SCIMData({"title": 1})
-    c_2 = SCIMData({"title": "a"})
+    c_1 = ScimData({"title": 1})
+    c_2 = ScimData({"title": "a"})
     values = [c_1, c_2]
     schemas = [fake_schema, user_schema]
 

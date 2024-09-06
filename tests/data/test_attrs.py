@@ -19,7 +19,7 @@ from scimpler.data.attrs import (
     UriReference,
 )
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.error import ValidationError, ValidationIssues
 
 
@@ -80,7 +80,7 @@ def test_complex_attribute_sub_attributes_are_validated_separately():
         },
     }
 
-    issues = attr.validate(SCIMData({"sub_attr_1": "123", "sub_attr_2": "123"}))
+    issues = attr.validate(ScimData({"sub_attr_1": "123", "sub_attr_2": "123"}))
 
     assert issues.to_dict() == expected_issues
 
@@ -124,8 +124,8 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
 
     issues = attr.validate(
         value=[
-            SCIMData({"sub_attr_1": 123, "sub_attr_2": "123"}),
-            SCIMData({"sub_attr_1": 123, "sub_attr_2": 123}),
+            ScimData({"sub_attr_1": 123, "sub_attr_2": "123"}),
+            ScimData({"sub_attr_1": 123, "sub_attr_2": 123}),
         ],
     )
 
@@ -478,7 +478,7 @@ def test_validate_bad_type(input_value, attr, expected_issues):
             DateTime("datetime"),
         ),
         (
-            SCIMData({"sub_attr_1": 1, "sub_attr_2": "2"}),
+            ScimData({"sub_attr_1": 1, "sub_attr_2": "2"}),
             Complex("complex", sub_attributes=[]),
         ),
     ),
@@ -495,8 +495,8 @@ def test_complex_mv_attr_fails_if_multiple_primary_items():
 
     issues = attr.validate(
         [
-            SCIMData({"value": "bce", "primary": True}),
-            SCIMData({"value": "abc", "primary": True}),
+            ScimData({"value": "bce", "primary": True}),
+            ScimData({"value": "abc", "primary": True}),
         ]
     )
 
@@ -509,8 +509,8 @@ def test_warning_is_returned_if_multiple_type_value_pairs():
 
     issues = attr.validate(
         [
-            SCIMData({"value": "abc", "type": "work"}),
-            SCIMData({"value": "abc", "type": "work"}),
+            ScimData({"value": "abc", "type": "work"}),
+            ScimData({"value": "abc", "type": "work"}),
         ]
     )
 
@@ -524,7 +524,7 @@ def test_invalid_items_dont_count_in_type_value_pairs():
     issues = attr.validate(
         [
             2,
-            SCIMData({"value": "abc", "type": "work"}),
+            ScimData({"value": "abc", "type": "work"}),
         ]
     )
 

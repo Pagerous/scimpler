@@ -31,7 +31,7 @@ from scimpler.data.identifiers import (
     BoundedAttrRep,
     SchemaURI,
 )
-from scimpler.data.scim_data import Invalid, Missing, SCIMData
+from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 from scimpler.registry import resources
 
@@ -1350,7 +1350,7 @@ class Complex(Attribute):
         self,
         data: Union[MutableMapping, Iterable[MutableMapping]],
         attr_filter: AttrFilter,
-    ) -> Union[SCIMData, list[SCIMData]]:
+    ) -> Union[ScimData, list[ScimData]]:
         """
         Filters the data according to the provided attribute filter. All non-matching keys in
         the item are dropped from the result. Both single-valued and multivalued complex attribute
@@ -1365,15 +1365,15 @@ class Complex(Attribute):
             Filtered data
         """
         if isinstance(data, MutableMapping):
-            return self._filter(SCIMData(data), attr_filter)
-        return [self._filter(SCIMData(item), attr_filter) for item in data]
+            return self._filter(ScimData(data), attr_filter)
+        return [self._filter(ScimData(item), attr_filter) for item in data]
 
     def _filter(
         self,
-        data: SCIMData,
+        data: ScimData,
         attr_filter: AttrFilter,
-    ) -> SCIMData:
-        filtered = SCIMData()
+    ) -> ScimData:
+        filtered = ScimData()
         for name, attr in attr_filter(self.attrs):
             if (value := data.get(name)) is not Missing:
                 filtered.set(name, value)
@@ -1397,7 +1397,7 @@ class Complex(Attribute):
 
     def _validate(self, value: MutableMapping[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
-        value = SCIMData(value)
+        value = ScimData(value)
         for name, sub_attr in self._sub_attributes:
             sub_attr_value = value.get(name)
             if sub_attr_value is Missing:
@@ -1411,9 +1411,9 @@ class Complex(Attribute):
             )
         return issues
 
-    def _deserialize(self, value: MutableMapping[str, Any]) -> SCIMData:
-        value = SCIMData(value)
-        deserialized = SCIMData()
+    def _deserialize(self, value: MutableMapping[str, Any]) -> ScimData:
+        value = ScimData(value)
+        deserialized = ScimData()
         for name, sub_attr in self._sub_attributes:
             sub_attr_value = value.get(name)
             if sub_attr_value is Missing:
@@ -1421,9 +1421,9 @@ class Complex(Attribute):
             deserialized.set(name, sub_attr.deserialize(sub_attr_value))
         return deserialized
 
-    def _serialize(self, value: MutableMapping[str, Any]) -> SCIMData:
-        value = SCIMData(value)
-        serialized = SCIMData()
+    def _serialize(self, value: MutableMapping[str, Any]) -> ScimData:
+        value = ScimData(value)
+        serialized = ScimData()
         for name, sub_attr in self._sub_attributes:
             sub_attr_value = value.get(name)
             if sub_attr_value is Missing:
@@ -1444,7 +1444,7 @@ class Complex(Attribute):
         return output
 
 
-def _validate_single_primary_value(value: Collection[SCIMData]) -> ValidationIssues:
+def _validate_single_primary_value(value: Collection[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     primary_entries = 0
     for item in value:
@@ -1458,7 +1458,7 @@ def _validate_single_primary_value(value: Collection[SCIMData]) -> ValidationIss
     return issues
 
 
-def _validate_type_value_pairs(value: Collection[SCIMData]) -> ValidationIssues:
+def _validate_type_value_pairs(value: Collection[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     pairs: dict[tuple[Any, Any], int] = defaultdict(int)
     for item in value:

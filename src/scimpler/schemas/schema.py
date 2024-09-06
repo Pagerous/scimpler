@@ -11,11 +11,11 @@ from scimpler.data.attrs import (
 )
 from scimpler.data.identifiers import BoundedAttrRep
 from scimpler.data.schemas import BaseResourceSchema, ResourceSchema, SchemaExtension
-from scimpler.data.scim_data import Missing, SCIMData
+from scimpler.data.scim_data import Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 
-def validate_attributes(value: list[SCIMData]) -> ValidationIssues:
+def validate_attributes(value: list[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
         attr_type = item.get("type")
@@ -41,7 +41,7 @@ def validate_attributes(value: list[SCIMData]) -> ValidationIssues:
     return issues
 
 
-def serialize_attributes(value: list[SCIMData]) -> list[dict]:
+def serialize_attributes(value: list[ScimData]) -> list[dict]:
     serialized = []
     for i, item in enumerate(value):
         attr_type = item.get("type")

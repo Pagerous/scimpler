@@ -17,7 +17,7 @@ from scimpler.data import operator as op
 from scimpler.data.attrs import Complex
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.data.schemas import BaseSchema
-from scimpler.data.scim_data import SCIMData
+from scimpler.data.scim_data import ScimData
 from scimpler.data.utils import (
     OP_REGEX,
     decode_placeholders,
@@ -656,12 +656,12 @@ class Filter(Generic[TOperator]):
         Returns:
             Flag indicating whether the data matches the filter.
         """
-        return self._operator.match(SCIMData(data), schema_or_complex)
+        return self._operator.match(ScimData(data), schema_or_complex)
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, Filter):
             return False
-        return SCIMData(self.to_dict()) == SCIMData(other.to_dict())
+        return ScimData(self.to_dict()) == ScimData(other.to_dict())
 
     def to_dict(self) -> dict:
         """

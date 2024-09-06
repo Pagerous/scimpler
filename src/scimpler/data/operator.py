@@ -1,11 +1,11 @@
 import abc
 import operator
-from typing import Any, Generator, Generic, Optional, TypeVar, Union
+from typing import Any, Generator, Generic, Mapping, Optional, TypeVar, Union
 
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.schemas import ResourceSchema
-from scimpler.data.scim_data import Invalid, Missing, SCIMData
+from scimpler.data.scim_data import Invalid, Missing, ScimData
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[ResourceSchema, Complex])
 
@@ -18,7 +18,7 @@ class Operator(abc.ABC, Generic[TSchemaOrComplex]):
     @abc.abstractmethod
     def match(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """
@@ -55,7 +55,7 @@ class LogicalOperator(Operator, abc.ABC):
 
     def _collect_matches(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> Generator[bool, None, None]:
         for sub_operator in self.sub_operators:
@@ -71,7 +71,7 @@ class And(LogicalOperator):
 
     def match(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """
@@ -85,7 +85,7 @@ class And(LogicalOperator):
         Returns:
             Flag indicating whether the value matches the operator.
         """
-        value = value or SCIMData()
+        value = value or ScimData()
         for match in self._collect_matches(value, schema_or_complex):
             if not match:
                 return False
@@ -105,7 +105,7 @@ class Or(LogicalOperator):
 
     def match(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """
@@ -119,7 +119,7 @@ class Or(LogicalOperator):
         Returns:
             Flag indicating whether the value matches the operator.
         """
-        value = value or SCIMData()
+        value = value or ScimData()
         for match in self._collect_matches(value, schema_or_complex):
             if match:
                 return True
@@ -138,7 +138,7 @@ class Not(LogicalOperator):
 
     def match(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """
@@ -180,6 +180,10 @@ class AttributeOperator(Operator, abc.ABC):
         """
         return self._attr_rep
 
+    @classmethod
+    def is_type_supported(cls, value):
+        return type(value) in cls.supported_types
+
 
 class UnaryAttributeOperator(AttributeOperator, abc.ABC):
     """
@@ -196,7 +200,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """
@@ -226,11 +230,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr.multi_valued:
             if isinstance(attr_value, list):
                 match = any(
-                    [
-                        self.operator(item)
-                        for item in attr_value
-                        if type(item) in self.supported_types
-                    ]
+                    [self.operator(item) for item in attr_value if self.is_type_supported(item)]
                 )
             else:
                 match = False
@@ -252,14 +252,14 @@ class Present(UnaryAttributeOperator):
         "integer",
         "complex",
     }
-    supported_types = {str, bool, int, dict, float, type(None)}
+    supported_types = {str, bool, int, ScimData, float, type(None)}
 
     @staticmethod
     def operator(value: Any) -> bool:
         """
         Implements operator's logic for matching the provided value.
         """
-        if isinstance(value, dict):
+        if isinstance(value, Mapping):
             return any([Present.operator(val) for val in value.values()])
         if isinstance(value, str):
             return value != ""
@@ -281,7 +281,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
                 (left operand).
         """
         super().__init__(attr_rep=attr_rep)
-        if type(value) not in self.supported_types:
+        if not self.is_type_supported(value):
             raise TypeError(
                 f"value type {type(value).__name__!r} is not supported by {self.op!r} operator"
             )
@@ -346,7 +346,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
     def match(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """
@@ -595,7 +595,7 @@ class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
 
     def match(
         self,
-        value: Optional[SCIMData],
+        value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         """
@@ -631,10 +631,10 @@ class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
         return False
 
     @staticmethod
-    def _normalize(attr: Complex, value: Any) -> list[SCIMData]:
-        value = value or ([] if attr.multi_valued else SCIMData())
+    def _normalize(attr: Complex, value: Any) -> list[ScimData]:
+        value = value or ([] if attr.multi_valued else ScimData())
         return [
-            SCIMData(item)
+            ScimData(item)
             for item in (value if isinstance(value, list) else [value])
-            if isinstance(item, (dict, SCIMData))
+            if isinstance(item, Mapping)
         ]
