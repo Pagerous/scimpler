@@ -8,7 +8,7 @@ from scimpler.data.operator import ComplexAttributeOperator
 from scimpler.data.schemas import ResourceSchema
 from scimpler.data.scim_data import ScimData
 from scimpler.data.utils import decode_placeholders, encode_strings
-from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
+from scimpler.error import ScimErrorType, ValidationError, ValidationIssues
 
 
 class PatchPath:
@@ -110,7 +110,7 @@ class PatchPath:
 
         for _, errors in issues.errors:
             for error in errors:
-                error.scim_error = SCIMErrorType.INVALID_PATH
+                error.scim_error = ScimErrorType.INVALID_PATH
         return issues
 
     @classmethod

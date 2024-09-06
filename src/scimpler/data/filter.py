@@ -26,7 +26,7 @@ from scimpler.data.utils import (
     encode_strings,
     get_placeholder,
 )
-from scimpler.error import SCIMErrorType, ValidationError, ValidationIssues
+from scimpler.error import ScimErrorType, ValidationError, ValidationIssues
 from scimpler.registry import binary_operators, unary_operators
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
@@ -265,7 +265,7 @@ class Filter(Generic[TOperator]):
 
         for _, errors in issues.errors:
             for error in errors:
-                error.scim_error = SCIMErrorType.INVALID_FILTER
+                error.scim_error = ScimErrorType.INVALID_FILTER
         return issues
 
     @staticmethod

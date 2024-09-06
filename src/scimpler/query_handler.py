@@ -62,23 +62,23 @@ class GenericQueryHandler(QueryHandler, abc.ABC):
         return self._schema
 
 
-class ResourcesPOST(GenericQueryHandler):
+class ResourcesPost(GenericQueryHandler):
     pass
 
 
-class ResourceObjectGET(GenericQueryHandler):
+class ResourceObjectGet(GenericQueryHandler):
     pass
 
 
-class ResourceObjectPUT(GenericQueryHandler):
+class ResourceObjectPut(GenericQueryHandler):
     pass
 
 
-class ResourceObjectPATCH(GenericQueryHandler):
+class ResourceObjectPatch(GenericQueryHandler):
     pass
 
 
-class ServerRootResourcesGET(QueryHandler):
+class ServerRootResourcesGet(QueryHandler):
     def __init__(self, config: ServiceProviderConfig):
         super().__init__(config)
         self._schema = SearchRequestSchema.from_config(self.config)
@@ -88,7 +88,7 @@ class ServerRootResourcesGET(QueryHandler):
         return self._schema
 
 
-class ResourcesGET(ServerRootResourcesGET):
+class ResourcesGet(ServerRootResourcesGet):
     pass
 
 
@@ -114,9 +114,9 @@ class _ServiceProviderConfig(QueryHandler):
         return super().validate(query_params)
 
 
-class SchemasGET(_ServiceProviderConfig):
+class SchemasGet(_ServiceProviderConfig):
     pass
 
 
-class ResourceTypesGET(_ServiceProviderConfig):
+class ResourceTypesGet(_ServiceProviderConfig):
     pass
