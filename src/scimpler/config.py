@@ -74,3 +74,11 @@ def create_service_provider_config(
             _AuthenticationScheme(**item) for item in authentication_schemes or []
         ],
     )
+
+
+service_provider_config: ServiceProviderConfig = create_service_provider_config()
+
+
+def set_service_provider_config(config: ServiceProviderConfig):
+    global service_provider_config
+    service_provider_config = config

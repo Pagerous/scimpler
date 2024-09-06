@@ -2,8 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from scimpler import registry
-from scimpler.config import create_service_provider_config
+from scimpler.config import create_service_provider_config, set_service_provider_config
 from scimpler.data.attrs import (
     AttrFilter,
     AttributeIssuer,
@@ -77,7 +76,8 @@ _fake_schema = FakeSchema()
 
 
 @pytest.fixture(scope="session")
-def user_schema() -> UserSchema:
+def user_schema(enterprise_extension) -> UserSchema:
+    _user_schema.extend(enterprise_extension, True)
     return _user_schema
 
 
@@ -118,16 +118,9 @@ def schema(request, user_schema, group_schema, fake_schema):
     raise ValueError("unknown schema")
 
 
-def pytest_sessionstart(session):
-    _user_schema.extend(_enterprise_extension, required=True)
-    registry.register_resource_schema(_user_schema)
-    registry.register_resource_schema(_group_schema)
-    registry.register_resource_schema(_fake_schema)
-
-
 @pytest.fixture(scope="session", autouse=True)
-def set_service_provider_config():
-    registry.set_service_provider_config(
+def set_service_provider_config_():
+    set_service_provider_config(
         create_service_provider_config(
             patch={"supported": True},
             bulk={"max_operations": 10, "max_payload_size": 4242, "supported": True},

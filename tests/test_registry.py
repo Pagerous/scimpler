@@ -1,23 +1,50 @@
+from typing import Any
+
 import pytest
 
-from scimpler.data.operator import Equal, Present
-from scimpler.registry import (
-    register_binary_operator,
-    register_resource_schema,
-    register_unary_operator,
-)
+from scimpler.data import ResourceSchema
+from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
 
 
-def test_runtime_error_is_raised_if_registering_same_resource_twice(user_schema):
-    with pytest.raises(RuntimeError, match="resource '.*' already registered"):
-        register_resource_schema(user_schema)
+def test_runtime_error_is_raised_if_registering_same_resource_name_but_different_endpoint(
+    user_schema
+):
+    class FakeUserResource(ResourceSchema):
+        name = "User"
+        endpoint = "/FakeUsers"
+
+    with pytest.raises(
+        RuntimeError,
+        match="resource 'User' already defined for different endpoint '/Users'",
+    ):
+        FakeUserResource()
 
 
-def test_runtime_error_is_raised_if_binary_operator_is_registered_twice():
-    with pytest.raises(RuntimeError, match="binary operator '.*' already registered"):
-        register_binary_operator(Equal)
+def test_runtime_error_is_raised_if_provided_different_implementation_for_same_unary_operator():
+    with pytest.raises(
+        RuntimeError,
+        match="different implementation for unary operator 'pr' already provided"
+    ):
+        class FakePresent(UnaryAttributeOperator):
+            op = "pr"
+            supported_scim_types = {"string"}
+            supported_types = {str}
+
+            @staticmethod
+            def operator(value: Any) -> bool:
+                return True
 
 
-def test_runtime_error_is_raised_if_unary_operator_is_registered_twice():
-    with pytest.raises(RuntimeError, match="unary operator '.*' already registered"):
-        register_unary_operator(Present)
+def test_runtime_error_is_raised_if_provided_different_implementation_for_same_binary_operator():
+    with pytest.raises(
+        RuntimeError,
+        match="different implementation for binary operator 'eq' already provided"
+    ):
+        class FakeEqual(BinaryAttributeOperator):
+            op = "eq"
+            supported_scim_types = {"string"}
+            supported_types = {str}
+
+            @staticmethod
+            def operator(attr_value: Any, op_value: Any) -> bool:
+                return attr_value != op_value

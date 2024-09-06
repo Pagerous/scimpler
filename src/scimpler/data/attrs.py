@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 import precis_i18n.profile
 from precis_i18n import get_profile
 
+from scimpler._registry import resources
 from scimpler.data.constants import SCIMType
 from scimpler.data.identifiers import (
     AttrName,
@@ -33,7 +34,6 @@ from scimpler.data.identifiers import (
 )
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
-from scimpler.registry import resources
 
 if TYPE_CHECKING:
     from scimpler.data.patch_path import PatchPath
@@ -1218,8 +1218,8 @@ class ScimReference(Reference):
         if not issues.can_proceed():
             return issues
 
-        for resource_schema in resources.values():
-            if resource_schema.name in self._reference_types and resource_schema.endpoint in value:
+        for resource_name, endpoint in resources.items():
+            if resource_name in self._reference_types and endpoint in value:
                 return issues
 
         issues.add_error(

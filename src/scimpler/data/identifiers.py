@@ -1,8 +1,8 @@
 import re
 from typing import Any, Optional, Union, cast
 
+from scimpler._registry import schemas
 from scimpler.error import ValidationError, ValidationIssues
-from scimpler.registry import schemas
 
 _ATTR_NAME = re.compile(r"([a-zA-Z][\w$-]*|\$ref)")
 _URI_PREFIX = re.compile(r"(?:[\w.-]+:)*")

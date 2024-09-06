@@ -4,11 +4,11 @@ import operator
 from abc import ABC
 from typing import Any, Generator, Generic, Mapping, Optional, TypeVar, Union, final
 
+from scimpler._registry import register_binary_operator, register_unary_operator
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.schemas import ResourceSchema
 from scimpler.data.scim_data import Invalid, Missing, ScimData
-from scimpler.registry import register_binary_operator, register_unary_operator
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[ResourceSchema, Complex])
 

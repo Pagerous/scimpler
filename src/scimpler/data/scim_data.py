@@ -2,8 +2,8 @@ from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Union
 
+from scimpler._registry import schemas
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep, SchemaUri
-from scimpler.registry import schemas
 
 
 class InvalidType:

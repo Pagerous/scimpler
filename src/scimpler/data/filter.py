@@ -13,6 +13,7 @@ from typing import (
     cast,
 )
 
+from scimpler._registry import binary_operators, unary_operators
 from scimpler.data import operator as op
 from scimpler.data.attrs import Complex
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
@@ -27,7 +28,6 @@ from scimpler.data.utils import (
     get_placeholder,
 )
 from scimpler.error import ScimErrorType, ValidationError, ValidationIssues
-from scimpler.registry import binary_operators, unary_operators
 
 OR_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\bor\b\s*", flags=re.DOTALL)
 AND_LOGICAL_OPERATOR_SPLIT_REGEX = re.compile(r"\s*\band\b\s*", flags=re.DOTALL)

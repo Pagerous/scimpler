@@ -3,6 +3,7 @@ from typing import Generator
 
 import pytest
 
+from scimpler._registry import register_resource_schema, resources, schemas
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import AttrFilter, Boolean, Complex, Integer, String
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep
@@ -13,7 +14,6 @@ from scimpler.data.schemas import (
     validate_resource_type_consistency,
 )
 from scimpler.data.scim_data import ScimData
-from scimpler.registry import register_resource_schema, resources, schemas
 from scimpler.warning import ScimpleUserWarning
 
 

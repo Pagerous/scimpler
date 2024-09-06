@@ -1,8 +1,7 @@
 import abc
 from typing import Any, MutableMapping, Optional
 
-from scimpler import registry
-from scimpler.config import ServiceProviderConfig
+import scimpler.config
 from scimpler.data.attrs import AttrFilter
 from scimpler.data.scim_data import ScimData
 from scimpler.error import ValidationError, ValidationIssues
@@ -10,8 +9,8 @@ from scimpler.schemas.search_request import SearchRequestSchema
 
 
 class QueryHandler(abc.ABC):
-    def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
-        self.config = config or registry.service_provider_config
+    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None) -> None:
+        self.config = config or scimpler.config.service_provider_config
 
     @property
     @abc.abstractmethod
@@ -51,7 +50,7 @@ class QueryHandler(abc.ABC):
 
 
 class GenericQueryHandler(QueryHandler, abc.ABC):
-    def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
+    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None) -> None:
         super().__init__(config)
         self._schema = SearchRequestSchema(
             attr_filter=AttrFilter(attr_names={"attributes", "excludedAttributes"}, include=True)
@@ -79,7 +78,7 @@ class ResourceObjectPatch(GenericQueryHandler):
 
 
 class ServerRootResourcesGet(QueryHandler):
-    def __init__(self, config: ServiceProviderConfig):
+    def __init__(self, config: scimpler.config.ServiceProviderConfig):
         super().__init__(config)
         self._schema = SearchRequestSchema.from_config(self.config)
 
@@ -93,7 +92,7 @@ class ResourcesGet(ServerRootResourcesGet):
 
 
 class _ServiceProviderConfig(QueryHandler):
-    def __init__(self, config: Optional[ServiceProviderConfig] = None) -> None:
+    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None) -> None:
         super().__init__(config)
         self._schema = SearchRequestSchema(attr_filter=AttrFilter(filter_=lambda _: False))
 

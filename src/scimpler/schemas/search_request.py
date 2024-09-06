@@ -1,7 +1,6 @@
 from typing import Optional
 
-from scimpler import registry
-from scimpler.config import ServiceProviderConfig
+import scimpler.config
 from scimpler.data.attrs import Attribute, Integer, String
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep, AttrRepFactory
@@ -101,13 +100,15 @@ class SearchRequestSchema(BaseSchema):
         super().__init__(attr_filter=attr_filter)
 
     @classmethod
-    def from_config(cls, config: Optional[ServiceProviderConfig] = None) -> "SearchRequestSchema":
+    def from_config(
+        cls, config: Optional[scimpler.config.ServiceProviderConfig] = None
+    ) -> "SearchRequestSchema":
         """
         Creates `SearchRequestSchema` from the `config`. If `config` is not provided, the
         registered configuration is used.
         """
         exclude = set()
-        config = config or registry.service_provider_config
+        config = config or scimpler.config.service_provider_config
         if not config.filter.supported:
             exclude.add(AttrName("filter"))
         if not config.sort.supported:

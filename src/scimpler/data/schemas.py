@@ -4,6 +4,7 @@ from typing import Any, Iterable, MutableMapping, Optional, cast
 
 from typing_extensions import Self
 
+from scimpler._registry import register_resource_schema, register_schema
 from scimpler.data.attr_presence import (
     AttrPresenceConfig,
     DataInclusivity,
@@ -25,7 +26,6 @@ from scimpler.data.attrs import (
 from scimpler.data.identifiers import BoundedAttrRep, SchemaUri
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
-from scimpler.registry import register_schema
 from scimpler.warning import ScimpleUserWarning
 
 
@@ -569,6 +569,7 @@ class ResourceSchema(BaseResourceSchema):
                 only "readWrite" attributes, so serialization and deserialization also
                 filter the data.
         """
+        register_resource_schema(self)
         self.plural_name = getattr(self, "plural_name", self.name)
         self.endpoint = self.endpoint or f"/{self.plural_name}"
         self._common_attrs = ["id", "externalId", "meta"]

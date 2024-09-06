@@ -1,8 +1,7 @@
 import abc
 from typing import Any, Optional, Sequence, Union, cast
 
-from scimpler import registry
-from scimpler.config import ServiceProviderConfig
+import scimpler.config
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import (
     AttrFilter,
@@ -27,8 +26,8 @@ from scimpler.schemas import (
 
 
 class Validator(abc.ABC):
-    def __init__(self, config: Optional[ServiceProviderConfig] = None):
-        self.config = config or registry.service_provider_config
+    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None):
+        self.config = config or scimpler.config.service_provider_config
 
     @property
     def request_schema(self) -> BaseSchema:
@@ -55,7 +54,7 @@ class Validator(abc.ABC):
 
 
 class Error(Validator):
-    def __init__(self, config: Optional[ServiceProviderConfig] = None):
+    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None):
         super().__init__(config)
         self._schema = ErrorSchema()
 
@@ -136,7 +135,7 @@ def _validate_status_code(expected: int, actual: int) -> ValidationIssues:
 
 def _validate_resource_output_body(
     schema: BaseResourceSchema,
-    config: ServiceProviderConfig,
+    config: scimpler.config.ServiceProviderConfig,
     location_header_required: bool,
     expected_status_code: int,
     status_code: int,
@@ -210,7 +209,10 @@ def _validate_resource_output_body(
 
 class ResourceObjectGet(Validator):
     def __init__(
-        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: BaseResourceSchema
+        self,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
+        *,
+        resource_schema: BaseResourceSchema,
     ):
         super().__init__(config)
         self._schema = resource_schema
@@ -250,7 +252,10 @@ class ServiceResourceObjectGet(ResourceObjectGet):
 
 class ResourceObjectPut(Validator):
     def __init__(
-        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
+        self,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
+        *,
+        resource_schema: ResourceSchema,
     ):
         super().__init__(config)
         self._request_schema = resource_schema.clone(
@@ -309,7 +314,10 @@ class ResourceObjectPut(Validator):
 
 class ResourcesPost(Validator):
     def __init__(
-        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
+        self,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
+        *,
+        resource_schema: ResourceSchema,
     ):
         super().__init__(config)
         self._schema = resource_schema
@@ -623,7 +631,7 @@ def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) ->
 class ServerRootResourcesGet(Validator):
     def __init__(
         self,
-        config: Optional[ServiceProviderConfig] = None,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: Sequence[BaseResourceSchema] | BaseResourceSchema,
     ):
@@ -664,7 +672,10 @@ class ServerRootResourcesGet(Validator):
 
 class ResourcesGet(ServerRootResourcesGet):
     def __init__(
-        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: BaseResourceSchema
+        self,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
+        *,
+        resource_schema: BaseResourceSchema,
     ):
         super().__init__(config, resource_schema=[resource_schema])
 
@@ -672,7 +683,7 @@ class ResourcesGet(ServerRootResourcesGet):
 class SearchRequestPost(Validator):
     def __init__(
         self,
-        config: Optional[ServiceProviderConfig] = None,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: Sequence[ResourceSchema] | ResourceSchema,
     ):
@@ -723,7 +734,10 @@ class SearchRequestPost(Validator):
 
 class ResourceObjectPatch(Validator):
     def __init__(
-        self, config: Optional[ServiceProviderConfig] = None, *, resource_schema: ResourceSchema
+        self,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
+        *,
+        resource_schema: ResourceSchema,
     ):
         super().__init__(config)
         if not self.config.patch.supported:
@@ -817,7 +831,7 @@ class ResourceObjectDelete(Validator):
 class BulkOperations(Validator):
     def __init__(
         self,
-        config: Optional[ServiceProviderConfig] = None,
+        config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schemas: Sequence[ResourceSchema],
     ):
