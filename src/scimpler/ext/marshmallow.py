@@ -82,7 +82,7 @@ def initialize(
 def _get_fields(
     attrs_: Iterable[tuple[BoundedAttrRep, attrs.Attribute]],
     field_by_attr_rep: Optional[dict[AttrRep, marshmallow.fields.Field]] = None,
-) -> dict[str, marshmallow.fields.Field]:
+) -> dict:
     field_by_attr_rep = field_by_attr_rep or {}
     fields_: dict[str, marshmallow.fields.Field] = {}
     for attr_rep, attr in attrs_:
@@ -97,7 +97,7 @@ def _get_fields(
 def _get_complex_sub_fields(
     attrs_: Iterable[tuple[AttrName, attrs.Attribute]],
     field_by_attr_name: Optional[dict[str, marshmallow.fields.Field]] = None,
-) -> dict[str, marshmallow.fields.Field]:
+) -> dict:
     field_by_attr_name = field_by_attr_name or {}
     fields_: dict[str, marshmallow.fields.Field] = {}
     for name, attr in attrs_:

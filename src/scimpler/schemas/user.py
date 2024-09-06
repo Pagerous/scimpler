@@ -110,6 +110,20 @@ def process_ims_value(value: str) -> str:
 
 
 class UserSchema(ResourceSchema):
+    """
+    User schema, identified by `urn:ietf:params:scim:schemas:core:2.0:User` URI.
+
+    Provides data validation and checks if:
+
+    - the `preferredLanguage` syntax is correct,
+    - the `locale` syntax is correct,
+    - the `emails.value` syntax is correct,
+    - the `phoneNumbers.value` syntax is correct,
+    - the `country` syntax is correct.
+
+    During (de)serialization, `ims.value` is processed in a way that blank characters are removed.
+    """
+
     schema = "urn:ietf:params:scim:schemas:core:2.0:User"
     name = "User"
     plural_name = "Users"
@@ -193,7 +207,7 @@ class UserSchema(ResourceSchema):
             name="displayName",
             description=(
                 "The name of the User, suitable for display "
-                "to end-users.  The name SHOULD be the full name of the User being "
+                "to end-users. The name SHOULD be the full name of the User being "
                 "described, if known."
             ),
         ),
@@ -201,7 +215,7 @@ class UserSchema(ResourceSchema):
             name="nickName",
             description=(
                 "The casual way to address the user in real "
-                "life, e.g., 'Bob' or 'Bobby' instead of 'Robert'.  This attribute "
+                "life, e.g., 'Bob' or 'Bobby' instead of 'Robert'. This attribute "
                 "SHOULD NOT be used to represent a User's username (e.g., 'bjensen' or "
                 "'mpepperidge')."
             ),
@@ -221,7 +235,7 @@ class UserSchema(ResourceSchema):
             name="userType",
             description=(
                 "Used to identify the relationship between "
-                "the organization and the user.  Typical values used might be "
+                "the organization and the user. Typical values used might be "
                 "'Contractor', 'Employee', 'Intern', 'Temp', 'External', and "
                 "'Unknown', but any value may be used."
             ),
@@ -230,7 +244,7 @@ class UserSchema(ResourceSchema):
             name="preferredLanguage",
             description=(
                 "Indicates the User's preferred written or "
-                "spoken language.  Generally used for selecting a localized user "
+                "spoken language. Generally used for selecting a localized user "
                 "interface; e.g., 'en_US' specifies the language English and country US."
             ),
             validators=[validate_preferred_language],
@@ -259,7 +273,7 @@ class UserSchema(ResourceSchema):
         String(
             name="password",
             description=(
-                "The User's cleartext password.  This "
+                "The User's cleartext password. This "
                 "attribute is intended to be used as a means to specify an initial "
                 "password when creating a new User or to reset an existing User's password."
             ),
@@ -269,7 +283,7 @@ class UserSchema(ResourceSchema):
         Complex(
             name="emails",
             description=(
-                "Email addresses for the user.  The value "
+                "Email addresses for the user. The value "
                 "SHOULD be canonicalized by the service provider, e.g., "
                 "'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'. "
                 "Canonical type values of 'work', 'home', and 'other'."
@@ -279,7 +293,7 @@ class UserSchema(ResourceSchema):
                 String(
                     name="value",
                     description=(
-                        "Email addresses for the user.  The value "
+                        "Email addresses for the user. The value "
                         "SHOULD be canonicalized by the service provider, e.g., "
                         "'bjensen@example.com' instead of 'bjensen@EXAMPLE.COM'. "
                         "Canonical type values of 'work', 'home', and 'other'."
@@ -302,7 +316,7 @@ class UserSchema(ResourceSchema):
                     description=(
                         "A Boolean value indicating the 'primary' "
                         "or preferred attribute value for this attribute, "
-                        "e.g., the preferred mailing address or primary email address.  "
+                        "e.g., the preferred mailing address or primary email address. "
                         "The primary attribute value 'true' MUST appear no more than once."
                     ),
                 ),
@@ -311,7 +325,7 @@ class UserSchema(ResourceSchema):
         Complex(
             name="phoneNumbers",
             description=(
-                "Phone numbers for the User.  The value "
+                "Phone numbers for the User. The value "
                 "SHOULD be canonicalized by the service provider according to the "
                 "format specified in RFC 3966, e.g., 'tel:+1-201-555-0123'. "
                 "Canonical type values of 'work', 'home', 'mobile', 'fax', 'pager', "
@@ -413,7 +427,7 @@ class UserSchema(ResourceSchema):
             name="addresses",
             description=(
                 "A physical mailing address for this User. "
-                "Canonical type values of 'work', 'home', and 'other'.  This attribute "
+                "Canonical type values of 'work', 'home', and 'other'. This attribute "
                 "is a complex type with the following sub-attributes."
             ),
             multi_valued=True,
@@ -422,7 +436,7 @@ class UserSchema(ResourceSchema):
                     name="formatted",
                     description=(
                         "The full mailing address, formatted for "
-                        "display or use with a mailing label.  This attribute MAY contain "
+                        "display or use with a mailing label. This attribute MAY contain "
                         "newlines."
                     ),
                 ),
@@ -435,7 +449,7 @@ class UserSchema(ResourceSchema):
                     description=(
                         "The full street address component, "
                         "which may include house number, street name, P.O. box, "
-                        "and multi-line extended street address information.  "
+                        "and multi-line extended street address information. "
                         "This attribute MAY contain newlines."
                     ),
                 ),
@@ -520,7 +534,7 @@ class UserSchema(ResourceSchema):
                     name="primary",
                     description=(
                         "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute.  The primary "
+                        "or preferred attribute value for this attribute. The primary "
                         "attribute value 'true' MUST appear no more than once."
                     ),
                 ),
@@ -547,7 +561,7 @@ class UserSchema(ResourceSchema):
                     name="primary",
                     description=(
                         "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute.  The primary "
+                        "or preferred attribute value for this attribute. The primary "
                         "attribute value 'true' MUST appear no more than once."
                     ),
                 ),
@@ -574,7 +588,7 @@ class UserSchema(ResourceSchema):
                     name="primary",
                     description=(
                         "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute.  The primary "
+                        "or preferred attribute value for this attribute. The primary "
                         "attribute value 'true' MUST appear no more than once."
                     ),
                 ),
@@ -614,7 +628,7 @@ class EnterpriseUserSchemaExtension(SchemaExtension):
         Complex(
             name="manager",
             description=(
-                "The User's manager.  A complex type that "
+                "The User's manager. A complex type that "
                 "optionally allows service providers to represent organizational "
                 "hierarchy by referencing the 'id' attribute of another User."
             ),

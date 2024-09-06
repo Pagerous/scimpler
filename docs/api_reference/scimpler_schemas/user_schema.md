@@ -1,0 +1,1 @@
+::: scimpler.schemas.UserSchema
