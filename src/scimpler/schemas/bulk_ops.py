@@ -254,13 +254,13 @@ class BulkResponseSchema(BaseSchema):
     """
     BulkResponse schema, identified by `urn:ietf:params:scim:api:messages:2.0:BulkResponse` URI.
 
-    Provides data validation and checks:
+    Provides data validation and checks if:
 
-    - if `method` is provided,
-    - if `bulkId` is provided for `POST` method,
-    - if `status` is provided,
-    - if `location` is provided for successful operations,
-    - if `response` is provided for unsuccessful operations.
+    - `method` is provided,
+    - `bulkId` is provided for `POST` method,
+    - `status` is provided,
+    - `location` is provided for successful operations,
+    - `response` is provided for unsuccessful operations.
     """
 
     schema = "urn:ietf:params:scim:api:messages:2.0:BulkResponse"

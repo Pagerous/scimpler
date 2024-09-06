@@ -1,4 +1,4 @@
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Iterable, Mapping, Optional, Union
 
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import Attribute, Integer, Unknown
@@ -21,6 +21,16 @@ def _validate_resources_type(value) -> ValidationIssues:
 
 
 class ListResponseSchema(BaseSchema):
+    """
+    ListResponse schema, identified by `urn:ietf:params:scim:api:messages:2.0:ListResponse` URI.
+
+    Provides data validation and checks if:
+
+    - `itemsPerPage` is consistent with number of `Resources`,
+    - `Resources` contains known resources,
+    - `Resources` contains valid resources that correspond to the known schemas.
+    """
+
     schema = "urn:ietf:params:scim:api:messages:2.0:ListResponse"
     base_attrs: list[Attribute] = [
         Integer("totalResults", required=True),
@@ -33,7 +43,16 @@ class ListResponseSchema(BaseSchema):
         ),
     ]
 
-    def __init__(self, resource_schemas: Sequence[BaseResourceSchema]):
+    def __init__(self, resource_schemas: Iterable[BaseResourceSchema]):
+        """
+        Args:
+            resource_schemas: Resource schemas supported by the list response.
+
+        Examples:
+             >>> from scimpler.schemas import UserSchema, GroupSchema
+             >>>
+             >>> list_response = ListResponseSchema([UserSchema(), GroupSchema()])
+        """
         super().__init__()
         self._contained_schemas = list(resource_schemas)
 
@@ -108,10 +127,38 @@ class ListResponseSchema(BaseSchema):
         return serialized_resources
 
     def get_schemas(self, resources: list[Any]) -> list[Optional[BaseResourceSchema]]:
+        """
+        Returns schemas for corresponding items in the provided `resources`. Returns `None`
+        for the particular item if its schema is not supported by the list response.
+
+        Args:
+            resources: Resources data to get the schemas for.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>>
+            >>> user = UserSchema()
+            >>> list_response = ListResponseSchema([user])
+            >>> list_response.get_schemas(
+            >>>     [
+            >>>         {
+            >>>             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"]
+            >>>             "id": "1",
+            >>>             "userName": "Pagerous",
+            >>>         },
+            >>>         {
+            >>>             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"]
+            >>>             "id": "2",
+            >>>             "name": "GitHub Users",
+            >>>         }
+            >>>     ]
+            >>> )
+            [<scimpler.schemas.user.UserSchema at 0x7f1f6c193090>, None]
+        """
         resource_schemas: list[Optional[BaseResourceSchema]] = []
         n_schemas = len(self._contained_schemas)
         for resource in resources:
-            if isinstance(resource, dict):
+            if isinstance(resource, Mapping):
                 resource = ScimData(resource)
             if not isinstance(resource, ScimData):
                 resource_schemas.append(None)
@@ -121,7 +168,15 @@ class ListResponseSchema(BaseSchema):
                 resource_schemas.append(self.get_schema(resource))
         return resource_schemas
 
-    def get_schema(self, resource: ScimData) -> Optional[BaseResourceSchema]:
+    def get_schema(self, resource: Mapping) -> Optional[BaseResourceSchema]:
+        """
+        Returns a schema for the provided `resource`. Returns `None` if the schema
+        in `resource` is not supported by the list response.
+
+        Args:
+            resource: Resource data to get the schema for.
+        """
+        resource = ScimData(resource)
         schemas_value = resource.get("schemas")
         if isinstance(schemas_value, list) and len(schemas_value) > 0:
             schemas_value = {

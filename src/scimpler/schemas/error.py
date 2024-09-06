@@ -25,10 +25,10 @@ class ErrorSchema(BaseSchema):
     """
     Error schema, identified by `urn:ietf:params:scim:api:messages:2.0:Error` URI.
 
-    Provides data validation and checks:
+    Provides data validation and checks if:
 
-    - if `status` represents numerical value in range 400-599,
-    - if `scimType` is one of pre-defined scim error types.
+    - `status` represents numerical value in range 400-599,
+    - `scimType` is one of pre-defined scim error types.
     """
 
     schema = "urn:ietf:params:scim:api:messages:2.0:Error"
