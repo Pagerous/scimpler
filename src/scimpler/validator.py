@@ -8,9 +8,9 @@ from scimpler.data.attrs import (
     AttributeIssuer,
     AttributeMutability,
     AttributeReturn,
+    Complex,
 )
 from scimpler.data.filter import Filter
-from scimpler.data.identifiers import AttrRep, BoundedAttrRep
 from scimpler.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from scimpler.data.scim_data import Missing, ScimData
 from scimpler.data.sorter import Sorter
@@ -137,8 +137,7 @@ def _validate_resource_location_consistency(
     meta_location_rep = schema.attrs.meta__location
     meta_location = body.get(meta_location_rep)
     if (
-        not meta_location
-        and not included_by_attr_presence_config(meta_location_rep, presence_config)
+        not meta_location and not presence_config.allowed(meta_location_rep)
     ) or location_header is None:
         return issues
 
@@ -232,9 +231,7 @@ def _validate_resource_output_body(
                 proceed=False,
             )
 
-        if version in [None, Missing] and included_by_attr_presence_config(
-            version_rep, presence_config
-        ):
+        if version in [None, Missing] and presence_config.allowed(version_rep):
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
@@ -743,18 +740,25 @@ def _validate_resources_get_response(
         return issues
 
     resource_schemas = cast(Sequence[BaseResourceSchema], schema.get_schemas(resources))
-    if filter_ is not None and can_validate_filtering(filter_, resource_presence_config):
-        issues.merge(
-            issues=_validate_resources_filtered(filter_, resources, resource_schemas),
-            location=resources_location,
-        )
-    if sorter is not None and included_by_attr_presence_config(
-        sorter.attr_rep, resource_presence_config
-    ):
-        issues.merge(
-            issues=_validate_resources_sorted(sorter, resources, resource_schemas),
-            location=resources_location,
-        )
+    if filter_ is not None:
+        for resource, resource_schema in zip(resources, resource_schemas):
+            if not can_validate_filtering(filter_, resource_presence_config, resource_schema):
+                break
+        else:
+            issues.merge(
+                issues=_validate_resources_filtered(filter_, resources, resource_schemas),
+                location=resources_location,
+            )
+
+    if sorter is not None:
+        for resource, resource_schema in zip(resources, resource_schemas):
+            if not can_validate_sorting(sorter, resource_presence_config, resource_schema):
+                break
+        else:
+            issues.merge(
+                issues=_validate_resources_sorted(sorter, resources, resource_schemas),
+                location=resources_location,
+            )
 
     if config.etag.supported:
         for i, (resource, resource_schema) in enumerate(zip(resources, resource_schemas)):
@@ -770,76 +774,57 @@ def _validate_resources_get_response(
     return issues
 
 
-def _is_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
-    return attr_rep in attr_reps
+def can_validate_filtering(
+    filter_: Filter,
+    presence_config: AttrPresenceConfig,
+    schema: BaseResourceSchema,
+) -> bool:
+    filter_attr_reps = filter_.attr_reps
+    for attr_rep in filter_attr_reps:
+        if not presence_config.allowed(attr_rep):
+            return False
 
+        attr = schema.attrs.get(attr_rep)
+        if attr is None:
+            continue  # intentional, such resources should be filtered out (except for 'not pr')
 
-def _is_parent_contained(attr_rep: AttrRep, attr_reps) -> bool:
-    return bool(
-        attr_rep.is_sub_attr
-        and (
-            (
-                BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
-                if isinstance(attr_rep, BoundedAttrRep)
-                else AttrRep(attr=attr_rep.attr)
-            )
-            in attr_reps
-        )
-    )
-
-
-def _is_child_contained(attr_rep: AttrRep, attr_reps: list[AttrRep]) -> bool:
-    for rep in attr_reps:
-        if not rep.is_sub_attr:
+        if not (isinstance(attr, Complex) and attr.multi_valued):
             continue
 
-        if isinstance(attr_rep, BoundedAttrRep) and isinstance(rep, BoundedAttrRep):
-            if attr_rep.schema == rep.schema and attr_rep.attr == rep.attr:
-                return True
-            return False
-        return True
+        value_attr_rep = getattr(schema.attrs, f"{attr.name}__value", None)
+        if value_attr_rep is None:
+            continue
 
-    return False
-
-
-def can_validate_filtering(filter_: Filter, presence_config: AttrPresenceConfig) -> bool:
-    if presence_config.include is None:
-        return True
-
-    filter_attr_reps = filter_.attr_reps
-    if presence_config.include:
-        for attr_rep in filter_attr_reps:
-            if not (
-                _is_contained(attr_rep, presence_config.attr_reps)
-                or _is_parent_contained(attr_rep, presence_config.attr_reps)
-                or _is_child_contained(attr_rep, presence_config.attr_reps)
-            ):
-                return False
-        return True
-
-    for attr_rep in presence_config.attr_reps:
-        if _is_contained(attr_rep, filter_attr_reps) or _is_child_contained(
-            attr_rep, filter_attr_reps
-        ):
+        if not presence_config.allowed(value_attr_rep):
             return False
     return True
 
 
-def included_by_attr_presence_config(
-    attr_rep: AttrRep, presence_config: AttrPresenceConfig
+def can_validate_sorting(
+    sorter: Sorter, presence_config: AttrPresenceConfig, schema: BaseResourceSchema
 ) -> bool:
-    if not presence_config.attr_reps:
-        return True
+    allowed = presence_config.allowed(sorter.attr_rep)
+    if not allowed:
+        return False
 
-    is_contained = _is_contained(attr_rep, presence_config.attr_reps)
-    is_parent_contained = _is_parent_contained(attr_rep, presence_config.attr_reps)
+    attr = schema.attrs.get(sorter.attr_rep)
+    if attr is None:
+        return True  # intentional, such resources should be ordered last
 
-    if is_parent_contained:
-        return presence_config.include
+    if not (isinstance(attr, Complex) and attr.multi_valued):
+        return allowed
 
-    return (
-        is_contained and presence_config.include or not is_contained and not presence_config.include
-    )
+    value_attr_rep = getattr(schema.attrs, f"{attr.name}__value", None)
+    if value_attr_rep is None:
+        return allowed
+
+    primary_attr_rep = getattr(schema.attrs, f"{attr.name}__primary", None)
+    if primary_attr_rep is None:
+        return allowed
+
+    value_allowed = presence_config.allowed(value_attr_rep)
+    primary_allowed = presence_config.allowed(primary_attr_rep)
+    return bool(value_allowed and primary_allowed)
 
 
 class ResourcesGet(Validator):

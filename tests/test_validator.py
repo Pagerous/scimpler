@@ -26,7 +26,7 @@ from scimpler.validator import (
     ResourcesPost,
     SearchRequestPost,
     can_validate_filtering,
-    included_by_attr_presence_config,
+    can_validate_sorting,
 )
 from tests.conftest import CONFIG
 
@@ -1934,11 +1934,11 @@ def test_resource_types_response_can_be_validated():
         ),
     ),
 )
-def test_can_validate_filtering(filter_, checker, expected):
-    assert can_validate_filtering(filter_, checker) is expected
+def test_can_validate_filtering(filter_, checker, expected, user_schema):
+    assert can_validate_filtering(filter_, checker, user_schema) is expected
 
 
-def test_can_validate_filtering_with_bounded_attributes():
+def test_can_validate_filtering_with_bounded_attributes(user_schema):
     assert can_validate_filtering(
         filter_=Filter.deserialize("urn:ietf:params:scim:schemas:core:2.0:User:name pr"),
         presence_config=AttrPresenceConfig(
@@ -1952,6 +1952,7 @@ def test_can_validate_filtering_with_bounded_attributes():
             ],
             include=True,
         ),
+        schema=user_schema,
     )
 
     assert not can_validate_filtering(
@@ -1969,6 +1970,7 @@ def test_can_validate_filtering_with_bounded_attributes():
             ],
             include=True,
         ),
+        schema=user_schema,
     )
 
 
@@ -2003,7 +2005,7 @@ def test_can_validate_filtering_with_bounded_attributes():
                 attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
                 include=True,
             ),
-            False,
+            True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
@@ -2035,10 +2037,49 @@ def test_can_validate_filtering_with_bounded_attributes():
             ),
             True,
         ),
+        (
+            Sorter(attr_rep=AttrRep(attr="emails")),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="emails", sub_attr="type")],
+                include=False,
+            ),
+            True,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="emails")),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="emails", sub_attr="value")],
+                include=False,
+            ),
+            False,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="emails")),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="emails", sub_attr="value")],
+                include=True,
+            ),
+            False,  # primary excluded
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="emails")),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[
+                    AttrRep(attr="emails", sub_attr="value"),
+                    AttrRep(attr="emails", sub_attr="primary"),
+                ],
+                include=True,
+            ),
+            True,
+        ),
     ),
 )
-def test_can_validate_sorting(sorter, checker, expected):
-    assert included_by_attr_presence_config(sorter.attr_rep, checker) == expected
+def test_can_validate_sorting(sorter, checker, expected, user_schema):
+    assert can_validate_sorting(sorter, checker, user_schema) == expected
 
 
 def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):

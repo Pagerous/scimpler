@@ -70,6 +70,89 @@ class AttrPresenceConfig:
     def ignore_issuer(self) -> list[AttrRep]:
         return self._ignore_issuer
 
+    def allowed(self, attr_rep: AttrRep) -> bool:
+        """
+        Returns boolean indicating whether the `attr_rep` is allowed to exist whenever the
+        presence configuration is applied. It considers the value existence only, without any
+        of its possible characteristics.
+
+        Examples:
+            >>> from scimpler.data.identifiers import AttrRep
+            >>>
+            >>> presence_config = AttrPresenceConfig(
+            >>>     "RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
+            >>> )
+            >>> presence_config.allowed(AttrRep(attr="name", sub_attr="formatted"))
+            True
+            >>> presence_config.allowed(AttrRep(attr="userName"))
+            False
+        """
+        if self._include is None:
+            return True
+
+        if not self._attr_reps:
+            return True
+
+        is_contained = self._is_contained(attr_rep)
+        if is_contained:
+            return self._include
+
+        is_sibling_contained = self._is_sibling_contained(attr_rep)
+        is_parent_contained = self._is_parent_contained(attr_rep)
+        if is_sibling_contained and not is_parent_contained and self._include:
+            return False
+
+        if is_parent_contained:
+            return self._include
+
+        is_child_contained = self._is_child_contained(attr_rep)
+        if is_child_contained and self._include:
+            return True
+
+        return not self._include
+
+    def _is_contained(self, attr_rep: AttrRep) -> bool:
+        return attr_rep in self._attr_reps
+
+    def _is_parent_contained(self, attr_rep: AttrRep) -> bool:
+        return bool(
+            attr_rep.is_sub_attr
+            and (
+                (
+                    BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
+                    if isinstance(attr_rep, BoundedAttrRep)
+                    else AttrRep(attr=attr_rep.attr)
+                )
+                in self._attr_reps
+            )
+        )
+
+    def _is_child_contained(self, attr_rep: AttrRep) -> bool:
+        for rep in self._attr_reps:
+            if not rep.is_sub_attr:
+                continue
+
+            if isinstance(attr_rep, BoundedAttrRep) and isinstance(rep, BoundedAttrRep):
+                if attr_rep.schema == rep.schema and attr_rep.attr == rep.attr:
+                    return True
+                return False
+            return True
+
+        return False
+
+    def _is_sibling_contained(self, attr_rep: AttrRep) -> bool:
+        if not attr_rep.is_sub_attr:
+            return False
+
+        for rep in self._attr_reps:
+            if not rep.is_sub_attr:
+                continue
+
+            if attr_rep.attr == rep.attr and attr_rep.sub_attr != rep.sub_attr:
+                return True
+
+        return False
+
 
 def validate_presence(
     attr: Attribute,
