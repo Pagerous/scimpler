@@ -109,6 +109,13 @@ SENSITIVE = {
 
 
 class ValidationError:
+    """
+    Represents a validation error. Uniquely identified by the error code.
+
+    Pre-formatted messages stored in `message_by_code` can be modified, as long as embedded
+    string parameters stay the same.
+    """
+
     message_by_code = {
         1: "bad value syntax",
         2: "bad type, expecting '{expected}'",
@@ -155,11 +162,22 @@ class ValidationError:
         110: "operand {value!r} is not compatible with {operator!r} operator",
     }
 
-    def __init__(self, code: int, scim_error: str, **context):
-        self._code = code
-        self._message = self.message_by_code[code].format(**context)
-        self._context = context
-
+    def __init__(
+        self,
+        code: int,
+        scim_error: Union[str, ScimErrorType],
+        message: Optional[str] = None,
+        **context,
+    ):
+        """
+        Args:
+            code: The error code. Can be one of built-in error_codes (see `message_by_code`
+                attribute) or custom. If custom, it must be greater than 1000.
+            scim_error: SCIM error corresponding to the validation error.
+            message: Error message. Can replace built-in message or be specified for custom
+                validation error.
+            **context: Parameters passed to pre-formatted messages.
+        """
         if code not in self.message_by_code and code <= 1000:
             raise ValueError("error code for custom validation error must be greater than 1000")
         self.code = code
@@ -364,6 +382,13 @@ class ValidationError:
 
 
 class ValidationWarning:
+    """
+    Represents a validation warning. Uniquely identified by the error code.
+
+    Pre-formatted messages stored in `message_by_code` can be modified, as long as embedded
+    string parameters stay the same.
+    """
+
     message_by_code = {
         1: "value should be one of: {expected_values}",
         2: (
@@ -375,11 +400,15 @@ class ValidationWarning:
         5: "should not equal to {value}",
     }
 
-    def __init__(self, code: int, **context):
-        self._code = code
-        self._message = self.message_by_code[code].format(**context)
-        self._context = context
-        self._location: Optional[str] = None
+    def __init__(self, code: int, message: Optional[str] = None, **context):
+        """
+        Args:
+            code: The warning code. Can be one of built-in error_codes (see `message_by_code`
+                attribute) or custom. If custom, it must be greater than 1000.
+            message: Warning message. Can replace built-in message or be specified for custom
+                validation warning.
+            **context: Parameters passed to pre-formatted messages.
+        """
         if code not in self.message_by_code and code <= 1000:
             raise ValueError("error code for custom validation error must be greater than 1000")
         self.code = code
@@ -421,6 +450,9 @@ class ValidationIssueDict(TypedDict):
 
 
 class ValidationIssues:
+    """
+    Keeps track of validation errors and warnings.
+    """
     def __init__(self) -> None:
         self._errors: dict[tuple, list[ValidationError]] = defaultdict(list)
         self._warnings: dict[tuple, list[ValidationWarning]] = defaultdict(list)
@@ -428,10 +460,12 @@ class ValidationIssues:
 
     @property
     def errors(self) -> Iterator[tuple[tuple[str, ...], list[ValidationError]]]:
+        """Validation errors by locations where they were added."""
         return iter(self._errors.items())
 
     @property
     def warnings(self) -> Iterator[tuple[tuple[str, ...], list[ValidationWarning]]]:
+        """Validation warnings by locations where they were added."""
         return iter(self._warnings.items())
 
     def merge(
@@ -439,6 +473,10 @@ class ValidationIssues:
         issues: "ValidationIssues",
         location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
+        """
+        Merges provided validation `issues` under specified `location`, if specified, in the
+        top-level otherwise.
+        """
         location = tuple(location or tuple())
         for other_location, errors in issues._errors.items():
             new_location = location + other_location
@@ -456,6 +494,12 @@ class ValidationIssues:
         proceed: bool,
         location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
+        """
+        Adds a validation error under specified `location`, if specified, in the top-level. The
+        `proceed` flag is an indicator whether the specified `location` could continue to be
+        validated against different conditions (`True`), or further validation should be terminated
+        (`False`).
+        """
         location = tuple(location or tuple())
         self._errors[location].append(issue)
         if not proceed:
@@ -466,6 +510,9 @@ class ValidationIssues:
         issue: ValidationWarning,
         location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
+        """
+        Adds a validation warning under specified `location`, if specified, in the top-level.
+        """
         location = tuple(location or tuple())
         self._warnings[location].append(issue)
 
@@ -475,6 +522,10 @@ class ValidationIssues:
         warning_codes: Optional[Collection[int]] = None,
         location: Optional[Sequence[Union[str, int]]] = None,
     ) -> "ValidationIssues":
+        """
+        Retrieves validation issues for the specified `location`, or all of them if not specified.
+        The returned issues can be filtered by `error_codes` and `warning_codes`.
+        """
         copy = ValidationIssues()
         location = tuple(location or tuple())
 
@@ -517,6 +568,11 @@ class ValidationIssues:
         warning_codes: Optional[Collection[int]] = None,
         location: Optional[Sequence[Union[str, int]]] = None
     ) -> "ValidationIssues":
+        """
+        Pops validation issues from the specified `location`, or all of them if not specified.
+        Additionally, `error_codes` or `warning_codes` should be specified, otherwise nothing
+        is popped.
+        """
         location = tuple(location or tuple())
 
         if location not in self._errors:
@@ -549,6 +605,11 @@ class ValidationIssues:
         return popped
 
     def can_proceed(self, *locations: Sequence[Union[str, int]]) -> bool:
+        """
+        Returns flag indicating whether validation could proceed given `locations`. If all
+        the provided `locations` have no errors, or these errors have not been added with
+        `proceed=True`, then `True` is returned.
+        """
         if not locations:
             locations = (tuple(),)
         for location in locations:
@@ -559,6 +620,10 @@ class ValidationIssues:
         return True
 
     def has_errors(self, *locations: Sequence[Union[str, int]]) -> bool:
+        """
+        Returns flag indicating whether any errors have been added under specified `locations`. If
+        at least one of the `locations` have errors (regardless of type), `True` is returned.
+        """
         if not locations:
             locations = (tuple(),)
 
@@ -570,6 +635,9 @@ class ValidationIssues:
         return False
 
     def to_dict(self, msg: bool = False, ctx: bool = False) -> dict:
+        """
+        Converts `ValidationIssues` to a dictionary.
+        """
         output: dict = {}
         self._to_dict("_errors", self._errors, output, msg=msg, ctx=ctx)
         self._to_dict("_warnings", self._warnings, output, msg=msg, ctx=ctx)
