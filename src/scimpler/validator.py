@@ -1191,6 +1191,10 @@ class ResourceObjectPatch(Validator):
 
 
 class ResourceObjectDelete(Validator):
+    """
+    Validator for **HTTP DELETE** operations performed against **resource object** endpoints.
+    """
+
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
@@ -1200,8 +1204,22 @@ class ResourceObjectDelete(Validator):
         status_code: int,
         body: Optional[dict[str, Any]] = None,
         headers: Optional[dict[str, Any]] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP DELETE** responses returned from **resource object** endpoints.
+
+        It only validates if provided `status_code` equals 204.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Not used.
+            headers: Not Used.
+            **kwargs: Not used.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         if status_code != 204:
             issues.add_error(
@@ -1213,12 +1231,31 @@ class ResourceObjectDelete(Validator):
 
 
 class BulkOperations(Validator):
+    """
+    Validator for **HTTP POST** operations performed against bulk endpoint.
+    """
+
     def __init__(
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schemas: Sequence[ResourceSchema],
     ):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+            resource_schemas: Resource schemas associated with the validator.
+
+        Raises:
+            RuntimeError: If `bulk` operation is not supported in the service provider
+                configuration.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema, GroupSchema
+            >>>
+            >>> validator = BulkOperations(resource_schemas=[UserSchema(), GroupSchema()])
+        """
         super().__init__(config)
         if not self.config.bulk.supported:
             raise RuntimeError("bulk operations are not configured")
@@ -1278,13 +1315,35 @@ class BulkOperations(Validator):
 
     @property
     def request_schema(self) -> BulkRequestSchema:
+        """
+        Schema designed for request (de)serialization. Schemas for `data` attribute values
+        are the same as request schemas in validators, corresponding to the bulk operations.
+        """
         return self._request_schema
 
     @property
     def response_schema(self) -> BulkResponseSchema:
+        """
+        Schema designed for response (de)serialization. Schemas for `response` attribute values
+        are the same as response schemas in validators, corresponding to the bulk operations.
+        """
         return self._response_schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+        """
+        Validates the **HTTP POST** requests performed against bulk endpoint.
+
+        Except for body validation done by the inner `BulkRequestSchema`, the validator checks if:
+
+        - number of `Operations` does not exceed configured maximum number of operations,
+        - correct data for operations is provided,
+
+        Args:
+            body: Request body.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         body_location = ("body",)
         normalized = ScimData(body or {})
@@ -1341,6 +1400,30 @@ class BulkOperations(Validator):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP POST** responses returned from bulk endpoint.
+
+        Except for body validation done by the inner `BulkResponseSchema`, the validator checks if:
+
+        - returned `status_code` equals 200,
+        - correct error responses are returned for statuses greater or equal to 300,
+        - correct responses are returned for successful completions,
+        - if `meta.location` matches `Operations.location` for every operation,
+        - if `meta.version` matches `Operations.version` for every operation,
+        - if number of unsuccessful completions did not exceed `fail_on_errors` parameter.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned body.
+            headers: Not used.
+
+        Keyword Args:
+            fail_on_errors (Optional[int]): An integer specifying the number of errors that the
+                service provider should accept before the operation is terminated.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         normalized = ScimData(body or {})
         body_location = ("body",)
