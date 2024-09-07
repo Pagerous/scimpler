@@ -90,9 +90,6 @@ class AttrPresenceConfig:
         if self._include is None:
             return True
 
-        if not self._attr_reps:
-            return True
-
         is_contained = self._is_contained(attr_rep)
         if is_contained:
             return self._include

@@ -74,3 +74,8 @@ def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
 )
 def test_attr_rep_can_be_compared(attr_1, attr_2, expected):
     assert (attr_1 == attr_2) is expected
+
+
+def test_accessing_sub_attr_if_attr_rep_is_not_sub_attr_fails():
+    with pytest.raises(AttributeError, match=r"AttrRep\(attr\) has no sub-attribute"):
+        AttrRep(attr="attr").sub_attr  # noqa

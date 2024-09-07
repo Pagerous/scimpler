@@ -20,7 +20,7 @@ class PatchPath:
     def __init__(
         self,
         attr_rep: AttrRep,
-        sub_attr_name: Optional[str],
+        sub_attr_name: Optional[str] = None,
         filter_: Optional[Filter[ComplexAttributeOperator]] = None,
     ):
         """

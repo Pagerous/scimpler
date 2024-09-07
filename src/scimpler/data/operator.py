@@ -169,6 +169,8 @@ class AttributeOperatorMeta(abc.ABCMeta):
                 register_unary_operator(cls)
             elif issubclass(cls, BinaryAttributeOperator):
                 register_binary_operator(cls)
+            else:
+                raise TypeError("custom subclassing of 'AttributeOperator' is forbidden")
 
 
 class AttributeOperator(Operator, ABC, metaclass=AttributeOperatorMeta):

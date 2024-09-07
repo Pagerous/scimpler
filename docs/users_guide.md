@@ -46,16 +46,15 @@ be excluded from the schema, so for example, they do not appear in the schema re
 from scimpler.schemas import UserSchema, EnterpriseUserSchemaExtension
 from scimpler.data import AttrFilter
 
-
 user_schema = UserSchema(
     AttrFilter(
-        attr_names=["name.formatted", "x509Certificates"],
+        attr_reps=["name.formatted", "x509Certificates"],
         include=False,
     )
 )
 enterprise_extension = EnterpriseUserSchemaExtension(
     AttrFilter(
-        attr_names=["manager"],
+        attr_reps=["manager"],
         include=True,
     )
 )

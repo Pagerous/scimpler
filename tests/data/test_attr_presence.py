@@ -97,3 +97,111 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
 def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_fails():
     with pytest.raises(ValueError, match="'include' must be specified if 'attr_reps' is specified"):
         AttrPresenceConfig(direction="RESPONSE", attr_reps=[AttrRep(attr="attr")])
+
+
+@pytest.mark.parametrize(
+    ("attr_rep", "presence_config", "expected"),
+    (
+        (
+            AttrRep(attr="userName"),
+            AttrPresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="userName"),
+            AttrPresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
+            ),
+            False,
+        ),
+        (
+            AttrRep(attr="name", sub_attr="formatted"),
+            AttrPresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="name"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
+                include=True,
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="userName"),
+            AttrPresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
+            ),
+            False,
+        ),
+        (
+            AttrRep(attr="userName"),
+            AttrPresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="name", sub_attr="formatted"),
+            AttrPresenceConfig(
+                direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
+            ),
+            False,
+        ),
+        (
+            AttrRep(attr="name"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
+                include=False,
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="emails"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="emails", sub_attr="type")],
+                include=False,
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="emails"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="emails", sub_attr="value")],
+                include=False,
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="emails"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="emails", sub_attr="value")],
+                include=True,
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="emails"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[
+                    AttrRep(attr="emails", sub_attr="value"),
+                    AttrRep(attr="emails", sub_attr="primary"),
+                ],
+                include=True,
+            ),
+            True,
+        ),
+    ),
+)
+def test_allowed(attr_rep, presence_config, expected):
+    assert presence_config.allowed(attr_rep) == expected

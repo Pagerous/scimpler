@@ -245,6 +245,13 @@ def test_check_if_data_matches_path(path, data, schema: ResourceSchema, expected
     assert actual is expected
 
 
+def test_trying_to_check_if_data_matches_path_without_filter_fails(user_schema):
+    path = PatchPath.deserialize("userName")
+
+    with pytest.raises(AttributeError, match="path has no value selection filter"):
+        path(42, user_schema)
+
+
 def test_patch_path_repr():
     assert (
         repr(PatchPath.deserialize("urn:ietf:params:scim:schemas:core:2.0:User:name.formatted"))
@@ -315,3 +322,25 @@ def test_calling_path_for_non_existing_attr_fails(user_schema):
 
     with pytest.raises(ValueError, match="path does not target any attribute"):
         path("whatever", user_schema)
+
+
+def test_creating_patch_path_with_bad_filter_operator_fails():
+    with pytest.raises(ValueError, match="'filter_' must consist of 'ComplexAttributeOperator"):
+        PatchPath(
+            attr_rep=AttrRep("emails"),
+            sub_attr_name=None,
+            filter_=Equal(AttrRep("emails"), "user@example.com"),  # noqa
+        )
+
+
+@pytest.mark.parametrize(
+    "patch_path",
+    (
+        "userName",
+        "name.formatted",
+        "emails[type eq 'work']",
+        "emails[type eq 'work'].display",
+    ),
+)
+def test_patch_path_can_be_serialized(patch_path):
+    assert PatchPath.deserialize(patch_path).serialize() == patch_path

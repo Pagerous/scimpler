@@ -200,12 +200,9 @@ class BaseSchema(metaclass=SchemaMeta):
         cloned._attrs = self._attrs.clone(attr_filter, ignore_filter=["schemas"])
         return cloned
 
-    def _validate_schemas_field(self, data):
+    def _validate_schemas_field(self, data: ScimData) -> ValidationIssues:
         issues = ValidationIssues()
         provided_schemas = data.get(self._attrs.schemas)
-        if not provided_schemas:
-            return issues
-
         main_schema = self.schema.lower()
         provided_schemas = [item.lower() for item in provided_schemas if item is not Invalid]
         if len(provided_schemas) > len(set(provided_schemas)):
@@ -651,9 +648,6 @@ class ResourceSchema(BaseResourceSchema):
 
     def _validate_schemas_field(self, data: ScimData) -> ValidationIssues:
         provided_schemas = data.get(self.attrs.schemas)
-        if not provided_schemas:
-            return ValidationIssues()
-
         issues = super()._validate_schemas_field(data)
         known_schemas = [item.lower() for item in self.schemas]
         provided_schemas = [item.lower() for item in provided_schemas if item is not Invalid]
@@ -687,9 +681,10 @@ class ResourceSchema(BaseResourceSchema):
         attributes from the extensions, the extension URIs appear in the attached `schemas`.
         """
         super().include_schema_data(data)
+        scim_data = ScimData(data)
         for extension, extension_attrs in self.attrs.extensions.items():
             for attr_rep, _ in extension_attrs:
-                if attr_rep in data:
+                if attr_rep in scim_data:
                     data["schemas"].append(str(extension))
                     break
 

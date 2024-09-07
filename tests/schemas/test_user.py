@@ -134,3 +134,41 @@ def test_ims_value_is_canonicalized(user_data_client, user_schema):
     data = user_schema.deserialize(user_data_client)
 
     assert data.get("ims")[0].get("value") == "gadugadu"
+
+
+def test_resource_schema_constant_attrs_can_be_attached_to_provided_data_with_extension(
+    user_schema,
+):
+    data = {"urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {"employeeNumber": "42"}}
+    expected = {
+        "schemas": [
+            "urn:ietf:params:scim:schemas:core:2.0:User",
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+        ],
+        "meta": {
+            "resourceType": "User",
+        },
+        **data,
+    }
+
+    user_schema.include_schema_data(data)
+
+    assert data == expected
+
+
+def test_resource_schema_constant_attrs_can_be_attached_to_provided_data_without_extension(
+    user_schema,
+):
+    data = {"meta": {}}
+    expected = {
+        "schemas": [
+            "urn:ietf:params:scim:schemas:core:2.0:User",
+        ],
+        "meta": {
+            "resourceType": "User",
+        },
+    }
+
+    user_schema.include_schema_data(data)
+
+    assert data == expected

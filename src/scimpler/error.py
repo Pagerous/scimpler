@@ -167,7 +167,7 @@ class ValidationError:
         code: int,
         scim_error: Union[str, ScimErrorType],
         message: Optional[str] = None,
-        **context,
+        **context: Any,
     ):
         """
         Args:
@@ -400,7 +400,7 @@ class ValidationWarning:
         5: "should not equal to {value}",
     }
 
-    def __init__(self, code: int, message: Optional[str] = None, **context):
+    def __init__(self, code: int, message: Optional[str] = None, **context: Any):
         """
         Args:
             code: The warning code. Can be one of built-in error_codes (see `message_by_code`
@@ -453,6 +453,7 @@ class ValidationIssues:
     """
     Keeps track of validation errors and warnings.
     """
+
     def __init__(self) -> None:
         self._errors: dict[tuple, list[ValidationError]] = defaultdict(list)
         self._warnings: dict[tuple, list[ValidationWarning]] = defaultdict(list)
@@ -566,7 +567,7 @@ class ValidationIssues:
         self,
         error_codes: Optional[Collection[int]] = None,
         warning_codes: Optional[Collection[int]] = None,
-        location: Optional[Sequence[Union[str, int]]] = None
+        location: Optional[Sequence[Union[str, int]]] = None,
     ) -> "ValidationIssues":
         """
         Pops validation issues from the specified `location`, or all of them if not specified.

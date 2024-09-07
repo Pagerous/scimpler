@@ -114,7 +114,7 @@ class SearchRequestSchema(BaseSchema):
         if not config.sort.supported:
             exclude.add(AttrName("sortBy"))
             exclude.add(AttrName("sortOrder"))
-        return cls(attr_filter=AttrFilter(attr_names=exclude, include=False))
+        return cls(attr_filter=AttrFilter(attr_reps=exclude, include=False))
 
     def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()

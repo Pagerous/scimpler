@@ -49,7 +49,7 @@ class AttrFilter:
     Attribute filter that filters attributes by specified attribute names and conditions.
 
     Args:
-        attr_names: Attribute names that should be included or excluded from the provided
+        attr_reps: Attribute representations that should be included or excluded from the provided
             collection. Must be specified together with `include` parameter.
             If the attribute is in the `attr_names`, and `included` is set to `True`, it must pass
             the provided `filter_` anyway, to be included in a final result.
@@ -62,7 +62,7 @@ class AttrFilter:
 
     Examples:
         >>> attr_filter = AttrFilter(
-        >>>     attr_names=["nickName", "name.givenName"],
+        >>>     attr_reps=["nickName", "name.givenName"],
         >>>     include=False,
         >>>     filter_=lambda attr: attr.mutability == "readOnly"
         >>>)
@@ -71,26 +71,27 @@ class AttrFilter:
 
     def __init__(
         self,
-        attr_names: Optional[Iterable[str]] = None,
+        attr_reps: Optional[Iterable[Union[str, AttrRep]]] = None,
         include: Optional[bool] = None,
         filter_: Optional[Callable[["Attribute"], bool]] = None,
     ):
-        if attr_names and include is None:
-            raise ValueError("'include' must be specified if 'attr_names' is provided")
+        if attr_reps and include is None:
+            raise ValueError("'include' must be specified if 'attr_reps' is provided")
 
         # stores attr names specified directly, e.g. 'emails'
         # will be here if specified as 'emails' and not 'emails.type'
         self._direct_top_level: set[AttrName] = set()
 
         self._complex_sub_attrs: dict[AttrName, set[AttrName]] = defaultdict(set)
-        if attr_names is not None:
-            for attr_name in attr_names:
-                parts = attr_name.split(".", 1)
-                attr_name = AttrName(parts[0])
-                if len(parts) == 1:
-                    self._direct_top_level.add(attr_name)
+        if attr_reps is not None:
+            for attr_rep in attr_reps:
+                if isinstance(attr_rep, str):
+                    attr_rep = AttrRepFactory.deserialize(attr_rep)
+                if attr_rep.is_sub_attr:
+                    self._complex_sub_attrs[attr_rep.attr].add(attr_rep.sub_attr)
                 else:
-                    self._complex_sub_attrs[attr_name].add(AttrName(parts[1]))
+                    self._direct_top_level.add(attr_rep.attr)
+
         self._include = include
         self._filter = filter_
 
@@ -111,7 +112,7 @@ class AttrFilter:
             if isinstance(attr, Complex):
                 attr = attr.clone(
                     AttrFilter(
-                        attr_names=self._complex_sub_attrs[attr.name],
+                        attr_reps=self._complex_sub_attrs[attr.name],
                         include=self._include,
                         filter_=self._filter,
                     )
@@ -1697,9 +1698,9 @@ class BoundedAttrs:
 
         Args:
             attr_filter: Attribute filter, used to determine which attributes and sub-attributes
-                should be included in the clone
-            ignore_filter: Names of common or core attributes that should be included in the clone,
-                regardless the filter
+                should be included in the clone.
+            ignore_filter: Names of the common or core attributes that should be included
+                in the clone, regardless the filter.
 
         Returns:
             Cloned `BoundedAttrs` with inner attributes, optionally filtered by `attr_filter`.

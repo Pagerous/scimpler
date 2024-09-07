@@ -75,7 +75,7 @@ class GenericQueryStringHandler(QueryStringHandler, abc.ABC):
     def __init__(self) -> None:
         super().__init__(None)
         self._schema = SearchRequestSchema(
-            attr_filter=AttrFilter(attr_names={"attributes", "excludedAttributes"}, include=True)
+            attr_filter=AttrFilter(attr_reps={"attributes", "excludedAttributes"}, include=True)
         )
 
     @property

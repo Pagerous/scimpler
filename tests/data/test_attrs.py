@@ -474,6 +474,14 @@ def test_validate_bad_type(input_value, attr, expected_issues):
             Binary("binary"),
         ),
         (
+            base64.b64encode("blahblah".encode()).decode("utf-8"),
+            Binary("binary", url_safe=True),
+        ),
+        (
+            base64.b64encode("blahblah".encode()).decode("utf-8")[:-1],
+            Binary("binary", omit_padding=True),
+        ),
+        (
             "2024-01-06T00:00:00",
             DateTime("datetime"),
         ),
@@ -566,6 +574,25 @@ def test_string_attributes_can_be_compared():
     assert str_1 == str_2
     assert str_1 != str_3
     assert str_1 != "str1"
+
+
+def test_binary_attributes_can_be_compared():
+    bin_1 = Binary(
+        name="bin_1",
+        omit_padding=True,
+    )
+    bin_2 = Binary(
+        name="bin_1",
+        omit_padding=True,
+    )
+    bin_3 = Binary(
+        name="bin_3",
+        url_safe=True,
+    )
+
+    assert bin_1 == bin_2
+    assert bin_1 != bin_3
+    assert bin_1 != "bin_1"
 
 
 def test_reference_attributes_can_be_compared():
@@ -831,3 +858,51 @@ def test_bounded_attr_rep_is_hashable():
         )
         is not None
     )
+
+
+def test_creating_attr_filter_with_attr_names_and_without_include_fails():
+    with pytest.raises(ValueError):
+        AttrFilter(attr_reps=["name.formatted"])
+
+
+def test_attrs_can_be_filtered_by_attr_filter(user_schema):
+    filter_ = AttrFilter(
+        attr_reps=[AttrRep(attr="name", sub_attr="formatted"), "userName"], include=True
+    )
+
+    filtered = filter_(user_schema.attrs)
+
+    username = filtered[0][1]
+    name = filtered[1][1]
+    assert username.name == "userName"
+    assert name.name == "name"
+    assert isinstance(name, Complex)
+    assert list(name.attrs)[0][1].name == "formatted"
+
+
+def test_passing_complex_as_sub_attr_fails():
+    with pytest.raises(
+        TypeError, match="complex attributes can not contain complex sub-attributes"
+    ):
+        Complex("badComplex", sub_attributes=[Complex("evenWorse")])
+
+
+def test_bounded_attrs_can_be_cloned(user_schema):
+    clone = list(
+        user_schema.attrs.clone(
+            attr_filter=AttrFilter(
+                attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
+                include=True,
+            ),
+            ignore_filter=["userName", "nonExisting"],
+        )
+    )
+
+    username = clone[0][1]
+    name = clone[1][1]
+    assert username.name == "userName"
+    assert name.name == "name"
+    assert isinstance(name, Complex)
+    assert list(name.attrs)[0][1].name == "formatted"
+    assert len(list(name.attrs)) == 1
+    assert len(clone) == 2  # no 'nonExisting'
