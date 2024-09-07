@@ -12,7 +12,7 @@ from scimpler.data.attrs import (
 )
 from scimpler.data.filter import Filter
 from scimpler.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
-from scimpler.data.scim_data import Missing, ScimData
+from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.data.sorter import Sorter
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 from scimpler.schemas import (
@@ -136,9 +136,14 @@ def _validate_resource_location_consistency(
     location_header = headers.get("Location")
     meta_location_rep = schema.attrs.meta__location
     meta_location = body.get(meta_location_rep)
+    if meta_location is Invalid or not location_header:
+        return issues
+
     if (
-        not meta_location and not presence_config.allowed(meta_location_rep)
-    ) or location_header is None:
+        not meta_location
+        and not presence_config.allowed(meta_location_rep)
+        or location_header is None
+    ):
         return issues
 
     if meta_location != location_header:
@@ -199,16 +204,14 @@ def _validate_resource_output_body(
         issues=_validate_status_code(expected_status_code, status_code),
         location=["status"],
     )
-    meta_rep = schema.attrs.meta__location
-    if issues.can_proceed(body_location + meta_rep.location, ("headers", "Location")):
-        issues.merge(
-            issues=_validate_resource_location_consistency(
-                body=body,
-                schema=schema,
-                headers=headers,
-                presence_config=presence_config,
-            ),
-        )
+    issues.merge(
+        issues=_validate_resource_location_consistency(
+            body=body,
+            schema=schema,
+            headers=headers,
+            presence_config=presence_config,
+        ),
+    )
     etag = headers.get("ETag")
     version_rep = schema.attrs.meta__version
     version = body.get(version_rep)
@@ -689,8 +692,8 @@ def _validate_resources_get_response(
         issues=_validate_status_code(200, status_code),
         location=("status",),
     )
-    if issues.can_proceed(start_index_location):
-        start_index_body = body.get(start_index_rep)
+    start_index_body = body.get(start_index_rep)
+    if start_index_body is not Invalid:
         if start_index_body and start_index_body > start_index:
             issues.add_error(
                 issue=ValidationError.bad_value_content(),
@@ -698,21 +701,18 @@ def _validate_resources_get_response(
                 location=start_index_location,
             )
 
-    if not issues.can_proceed(resources_location):
+    resources = body.get(schema.attrs.resources)
+    if resources is Invalid:
         return issues
 
-    total_results_rep = schema.attrs.totalresults
-    total_results_location = body_location + total_results_rep.location
+    total_results = body.get(schema.attrs.totalresults)
+    items_per_page = body.get(schema.attrs.itemsperpage)
+    start_index_body = body.get(schema.attrs.startindex)
 
-    items_per_page_rep = schema.attrs.itemsperpage
-    items_per_page_location = body_location + items_per_page_rep.location
-
-    resources = body.get(schema.attrs.resources)
     if resources is Missing:
         resources = []
 
-    if issues.can_proceed(total_results_location):
-        total_results = body.get(total_results_rep)
+    if total_results:
         issues.merge(
             issues=_validate_number_of_resources(
                 count=count,
@@ -721,9 +721,7 @@ def _validate_resources_get_response(
             ),
             location=resources_location,
         )
-        if issues.can_proceed(start_index_location, items_per_page_location):
-            start_index_body = body.get(start_index_rep)
-            items_per_page = body.get(items_per_page_rep)
+        if Invalid not in [start_index_body, items_per_page]:
             issues.merge(
                 issues=_validate_pagination_info(
                     schema=schema,
@@ -1435,10 +1433,10 @@ class BulkOperations(Validator):
             issues=_validate_status_code(200, status_code),
             location=["status"],
         )
-        operations_location = body_location + self._response_schema.attrs.operations.location
-        if not issues.can_proceed(operations_location):
+        if normalized.get("Operations") is Invalid:
             return issues
 
+        operations_location = body_location + self._response_schema.attrs.operations.location
         status_rep = self._response_schema.attrs.operations__status
         response_rep = self._response_schema.attrs.operations__response
         location_rep = self._response_schema.attrs.operations__location

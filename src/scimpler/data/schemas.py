@@ -183,10 +183,11 @@ class BaseSchema(metaclass=SchemaMeta):
         issues = ValidationIssues()
         data = ScimData(data)
         issues.merge(self._validate_data(data, presence_config))
-        if issues.can_proceed(("schemas",)):
+
+        if data.get("schemas"):
             issues.merge(
                 self._validate_schemas_field(data),
-                location=("schemas",),
+                location=["schemas"],
             )
         issues.merge(self._validate(data, **kwargs))
         return issues
