@@ -22,6 +22,9 @@ class AttrName(str):
         ValueError: If the provided value is not valid attribute name.
     """
 
+    def __repr__(self):
+        return f"AttrName({self})"
+
     def __new__(cls, value: str) -> "AttrName":
         if not isinstance(value, AttrName) and not _ATTR_NAME.fullmatch(value):
             raise ValueError(f"{value!r} is not valid attr name")

@@ -13,7 +13,7 @@ def validate_error_status(value: str) -> ValidationIssues:
             proceed=False,
         )
         return issues
-    if not 400 <= value_int < 600:
+    if not 300 <= value_int < 600:
         issues.add_error(
             issue=ValidationError.bad_value_content(),
             proceed=True,
@@ -27,7 +27,7 @@ class ErrorSchema(BaseSchema):
 
     Provides data validation and checks if:
 
-    - `status` represents numerical value in range 400-599,
+    - `status` represents numerical value in range 300-599,
     - `scimType` is one of pre-defined scim error types.
     """
 

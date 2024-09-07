@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from scimpler.data.attrs import Complex, ExternalReference, Integer, String, Unknown
 from scimpler.data.schemas import BaseSchema
-from scimpler.data.scim_data import Missing, ScimData
+from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 from scimpler.schemas.error import ErrorSchema
 
@@ -43,15 +43,16 @@ def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
-                location=(i, "path"),
+                location=[i, "path"],
             )
         else:
             if method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path):
                 issues.add_error(
                     issue=ValidationError.bad_value_syntax(),
                     proceed=False,
-                    location=(i, "path"),
+                    location=[i, "path"],
                 )
+                item["path"] = Invalid
             elif method in [
                 "GET",
                 "PATCH",
@@ -61,8 +62,9 @@ def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
                 issues.add_error(
                     issue=ValidationError.bad_value_syntax(),
                     proceed=False,
-                    location=(i, "path"),
+                    location=[i, "path"],
                 )
+                item["path"] = Invalid
         data = item.get("data")
         if method in ["POST", "PUT", "PATCH"] and data in [None, Missing]:
             issues.add_error(
@@ -86,13 +88,14 @@ class BulkRequestSchema(BaseSchema):
     """
     BulkRequest schema, identified by `urn:ietf:params:scim:api:messages:2.0:BulkRequest` URI.
 
-    Provides data validation and checks:
+    Provides data validation and checks if:
 
-    - if `method` is provided,
-    - if `bulkId` is provided for `POST` method,
-    - if `path` is provided,
-    - if `path` is valid, depending on the method type,
-    - if `data` is provided for `POST`, `PUT`, and `PATCH` methods.
+    - `method` is provided,
+    - `bulkId` is provided for `POST` method,
+    - `path` is provided,
+    - `path` is valid, depending on the method type,
+    - `path` specifies one of supported resources,
+    - `data` is provided for `POST`, `PUT`, and `PATCH` methods.
 
     During (de)serialization, if method type is `GET` or `DELETE`, the `data` if provided,
     is dropped. For all other methods, the `data` is (de)serialized together with rest of the
@@ -163,6 +166,30 @@ class BulkRequestSchema(BaseSchema):
 
     def _serialize(self, data: ScimData) -> ScimData:
         return self._process(data, "serialize")
+
+    def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
+        issues = ValidationIssues()
+        path_rep = self.attrs.operations__path
+        paths = data.get(self.attrs.operations__path)
+        methods = data.get(self.attrs.operations__method)
+        if not all([paths, methods]):
+            return issues
+
+        for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
+            if not all([path, method]):
+                continue
+            if method == "POST":
+                resource_type_endpoint = path
+            else:
+                resource_type_endpoint = f"/{path.split('/', 2)[1]}"
+            validator = self._sub_schemas[method].get(resource_type_endpoint)
+            if validator is None:
+                issues.add_error(
+                    issue=ValidationError.unknown_operation_resource(),
+                    proceed=False,
+                    location=[path_rep.attr, i, path_rep.sub_attr],
+                )
+        return issues
 
     def _process(self, data: ScimData, method: str) -> ScimData:
         operations = data.get("Operations", [])
@@ -260,6 +287,7 @@ class BulkResponseSchema(BaseSchema):
     - `bulkId` is provided for `POST` method,
     - `status` is provided,
     - `location` is provided for successful operations,
+    - `location` specifies one of supported resources,
     - `response` is provided for unsuccessful operations.
     """
 
@@ -320,6 +348,29 @@ class BulkResponseSchema(BaseSchema):
         super().__init__()
         self._sub_schemas = sub_schemas
         self._error_schema = error_schema
+
+    def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
+        issues = ValidationIssues()
+        locations = data.get(self.attrs.operations__location)
+        methods = data.get(self.attrs.operations__method)
+        if not all([locations, methods]):
+            return issues
+
+        for i, (method, location) in enumerate(zip(methods, locations)):
+            if not method:
+                continue
+            if location:
+                for endpoint, validator in self._sub_schemas[method].items():
+                    if endpoint in location:
+                        break
+                else:
+                    issues.add_error(
+                        issue=ValidationError.unknown_operation_resource(),
+                        proceed=False,
+                        location=["Operations", i, "location"],
+                    )
+                    data["Operations"][i]["location"] = Invalid
+        return issues
 
     def _deserialize(self, data: ScimData) -> ScimData:
         return self._process(data, "deserialize")

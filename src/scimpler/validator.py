@@ -84,7 +84,7 @@ class Error(Validator):
         Except for error body validation done by the inner schema, the validator checks if:
 
         - `status` in body matches the provided `status_code`,
-        - value of `status_code` is in range: 400 <= status_code < 600.
+        - value of `status_code` is in range: 300 <= status_code < 600.
 
         Args:
             status_code: Returned HTTP status code.
@@ -117,7 +117,7 @@ class Error(Validator):
                 location=["status"],
                 proceed=True,
             )
-        if not 400 <= status_code < 600:
+        if not 300 <= status_code < 600:
             issues.add_error(
                 issue=ValidationError.bad_value_content(),
                 location=["status"],
@@ -1077,7 +1077,7 @@ class ResourceObjectPatch(Validator):
             resource_schema: Resource schema associated with the validator.
 
         Raises:
-            RuntimeError: If PATCH operation is not supported in the service provider
+            RuntimeError: If `patch` operation is not supported in the service provider
                 configuration.
 
         Examples:
@@ -1277,14 +1277,6 @@ class BulkOperations(Validator):
         )
 
     @property
-    def error_validator(self) -> Error:
-        return self._error_validator
-
-    @property
-    def sub_validators(self) -> dict[str, dict[str, Validator]]:
-        return self._validators
-
-    @property
     def request_schema(self) -> BulkRequestSchema:
         return self._request_schema
 
@@ -1300,37 +1292,9 @@ class BulkOperations(Validator):
             self._request_schema.validate(normalized, AttrPresenceConfig("REQUEST")),
             location=body_location,
         )
-        if not issues.can_proceed(body_location + self._request_schema.attrs.operations.location):
+        if not normalized.get(self._request_schema.attrs.operations):
             return issues
 
-        path_rep = self._request_schema.attrs.operations__path
-        data_rep = self._request_schema.attrs.operations__data
-        method_rep = self._request_schema.attrs.operations__method
-        paths = normalized.get(path_rep)
-        data = normalized.get(data_rep)
-        methods = normalized.get(method_rep)
-        for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
-            path_location = body_location + (path_rep.attr, i, path_rep.sub_attr)
-            data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)
-            method_location = body_location + (method_rep.attr, i, method_rep.sub_attr)
-            if issues.can_proceed(path_location, method_location):
-                if method == "DELETE":
-                    continue
-
-                if method == "POST":
-                    resource_type_endpoint = path
-                else:
-                    resource_type_endpoint = f"/{path.split('/', 2)[1]}"
-                validator = self._validators[method].get(resource_type_endpoint)
-                if validator is None:
-                    issues.add_error(
-                        issue=ValidationError.unknown_operation_resource(),
-                        proceed=False,
-                        location=path_location,
-                    )
-                    continue
-                issues_ = validator.validate_request(body=data_item)
-                issues.merge(issues_.get(location=["body"]), location=data_item_location)
         if (
             isinstance(self.config.bulk.max_operations, int)
             and len(normalized.get(self._request_schema.attrs.operations))
@@ -1342,6 +1306,31 @@ class BulkOperations(Validator):
                 location=body_location + self._response_schema.attrs.operations.location,
             )
 
+        data_rep = self._request_schema.attrs.operations__data
+        paths = normalized.get(self._request_schema.attrs.operations__path)
+        data = normalized.get(self._request_schema.attrs.operations__data)
+        methods = normalized.get(self._request_schema.attrs.operations__method)
+        if not all([paths, data, methods]):
+            return issues
+
+        for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
+            if not all([path, method]):
+                continue
+
+            if method == "DELETE":
+                continue
+
+            if method == "POST":
+                resource_type_endpoint = path
+            else:
+                resource_type_endpoint = f"/{path.split('/', 2)[1]}"
+            validator = self._validators[method].get(resource_type_endpoint)
+            if validator is None:
+                continue
+
+            issues_ = validator.validate_request(body=data_item)
+            data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)
+            issues.merge(issues_.get(location=["body"]), location=data_item_location)
         return issues
 
     def validate_response(
@@ -1411,12 +1400,6 @@ class BulkOperations(Validator):
                     if endpoint in location:
                         resource_validator = validator
                         break
-                else:
-                    issues.add_error(
-                        issue=ValidationError.unknown_operation_resource(),
-                        proceed=False,
-                        location=location_location,
-                    )
 
             if not (status and response):
                 continue

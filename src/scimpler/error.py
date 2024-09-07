@@ -138,7 +138,7 @@ class ValidationError:
         15: "'primary' attribute set to 'True' MUST appear no more than once",
         16: "bad SCIM reference, allowed resources: {allowed_resources}",
         17: "bad attribute name {attribute!r}",
-        18: "error status must be greater or equal to 400 and lesser than 600",
+        18: "error status must be greater or equal to 300 and lesser than 600",
         19: "bad status code, expecting '{expected}'",
         20: "bad number of resources, {reason}",
         21: "does not match the filter",
