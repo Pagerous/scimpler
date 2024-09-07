@@ -45,6 +45,9 @@ class PatchOpSchema(BaseSchema):
     - `Operations.path` deos not target required attribute in `remove` operation,
     - All required data is supplied for complex attribute in `add` and `remove` operation,
     - `Operations.data` is correct, according to the schema and its attributes.
+
+    Other checks for immutability, like if `immutable` attributes is not changed, are not performed
+    (it requires to know previous state).
     """
 
     schema = "urn:ietf:params:scim:api:messages:2.0:PatchOp"

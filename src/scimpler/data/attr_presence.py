@@ -73,11 +73,11 @@ class AttrPresenceConfig:
     def allowed(self, attr_rep: AttrRep) -> bool:
         """
         Returns boolean indicating whether the `attr_rep` is allowed to exist whenever the
-        presence configuration is applied. It considers the value existence only, without any
-        of its possible characteristics.
+        presence configuration is applied, according to its `attr_reps` and `include` configuration.
+        It considers the value existence only, without any of its possible characteristics.
 
         Examples:
-            >>> from scimpler.data.identifiers import AttrRep
+            >>> from scimpler.data import AttrRep
             >>>
             >>> presence_config = AttrPresenceConfig(
             >>>     "RESPONSE", attr_reps=[AttrRep(attr="name")], include=True

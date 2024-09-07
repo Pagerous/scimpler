@@ -829,8 +829,8 @@ def can_validate_sorting(
 
 class ResourcesGet(Validator):
     """
-    Validator for **HTTP GET** operations performed against **resource type** endpoints. Is able to
-    handle different schemas in the same time, so can be used in **resource root** endpoint.
+    Validator for **HTTP GET** operations performed against **resource type** endpoints. It is
+    able to handle different schemas in the same time, so can be used in **resource root** endpoint.
     """
 
     def __init__(
@@ -931,12 +931,31 @@ class ResourcesGet(Validator):
 
 
 class SearchRequestPost(Validator):
+    """
+    Validator for **HTTP POST** query operations. It is  able to handle different schemas
+    in the same time, so can be used in **resource root** endpoint.
+    """
+
     def __init__(
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: Sequence[ResourceSchema] | ResourceSchema,
     ):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+            resource_schema: Resource schema(s) associated with the validator.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema, GroupSchema
+            >>>
+            >>> # for resource root endpoint
+            >>> root_validator = SearchRequestPost(resource_schema=[UserSchema(), GroupSchema()])
+            >>> # for specific resource type endpoint
+            >>> validator = SearchRequestPost(resource_schema=UserSchema())
+        """
         super().__init__(config)
         if isinstance(resource_schema, ResourceSchema):
             resource_schema = [resource_schema]
@@ -948,13 +967,32 @@ class SearchRequestPost(Validator):
 
     @property
     def request_schema(self) -> SearchRequestSchema:
+        """
+        Schema designed for request (de)serialization.
+        """
         return self._request_validation_schema
 
     @property
     def response_schema(self) -> ListResponseSchema:
+        """
+        Schema designed for response (de)serialization. Resource schemas contain attributes whose
+        `returnability` differs from `never`, and whose `mutability` differs from `writeOnly`.
+        ListResponse schema contains all attributes.
+        """
         return self._response_schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+        """
+        Validates the **HTTP POST** query requests.
+
+        Performs request body validation using inner `SearchRequestSchema`.
+
+        Args:
+            body: The request body.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         issues.merge(
             self._request_validation_schema.validate(
@@ -972,6 +1010,42 @@ class SearchRequestPost(Validator):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP GET** responses returned from **resource type** endpoints.
+
+        Except for body validation done by the inner `ListResponseSchema`, the validator checks if:
+
+        - returned `status_code` equals 200,
+        - `startIndex` in the body is lesser or equal to the provided `start_index`,
+        - `totalResults` greater or equal to number of `Resources`,
+        - `totalResults` differs from number of `Resources` when `count` is not specified,
+        - number of `Resources` is lesser or equal to the `count`, if specified,
+        - `startIndex` is specified in the body for pagination,
+        - `itemsPerPage` is specified in the body for pagination,
+        - `Resources` are filtered, according to the provided `filter`,
+        - `Resources` are sorted, according to the provided `sorter`,
+        - every resource contains `meta.version`, if `etag` is supported.
+
+        Filtering and sorting is not validated if attributes required to check filtering and
+        sorting are meant to be excluded due to `AttrPresenceConfig`.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned body.
+            headers: Not used.
+
+        Keyword Args:
+            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+                is used, with no attribute inclusivity and exclusivity specified. Applied on
+                `Resources` only.
+            start_index (Optional[int]): The 1-based index of the first query result.
+            count (Optional[int]): Specifies the desired number of query results per page.
+            filter (Optional[Filter]): Filter that was applied on `Resources`.
+            sorter (Optional[Sorter]): Sorter that was applied on `Resources`.
+
+        Returns:
+            Validation issues.
+        """
         return _validate_resources_get_response(
             schema=self._response_validation_schema,
             config=self.config,
@@ -986,12 +1060,31 @@ class SearchRequestPost(Validator):
 
 
 class ResourceObjectPatch(Validator):
+    """
+    Validator for **HTTP PATCH** operations performed against **resource object** endpoints.
+    """
+
     def __init__(
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
         resource_schema: ResourceSchema,
     ):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+            resource_schema: Resource schema associated with the validator.
+
+        Raises:
+            RuntimeError: If PATCH operation is not supported in the service provider
+                configuration.
+
+        Examples:
+            >>> from scimpler.schemas import UserSchema
+            >>>
+            >>> validator = ResourceObjectPatch(resource_schema=UserSchema())
+        """
         super().__init__(config)
         if not self.config.patch.supported:
             raise RuntimeError("patch operation is not supported")
@@ -1008,13 +1101,33 @@ class ResourceObjectPatch(Validator):
 
     @property
     def request_schema(self) -> PatchOpSchema:
+        """
+        Schema designed for request (de)serialization. Contains attributes whose `mutability`
+        differs from `readOnly`.
+        """
         return self._request_schema
 
     @property
     def response_schema(self) -> ResourceSchema:
+        """
+        Schema designed for response (de)serialization. Contains attributes whose `returnability`
+        differs from `never`, and whose `mutability` differs from `writeOnly`.
+        """
         return self._response_schema
 
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+        """
+        Validates the **HTTP PATCH** requests sent to **resource object** endpoints.
+
+        Performs request body validation using inner `PatchOpSchema`, including attribute presence
+        validation.
+
+        Args:
+            body: The request body.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         normalized = ScimData(body or {})
         issues.merge(
@@ -1031,6 +1144,30 @@ class ResourceObjectPatch(Validator):
         headers: Optional[dict[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
+        """
+        Validates the **HTTP PATCH** responses returned from **resource object** endpoints.
+
+        Except for body validation done by the inner schema, the validator checks if:
+
+        - returned `status_code` equals 204 if body is not returned, or 200, if body is returned
+            or `AttrPresenceConfig` is specified,
+        - `Location` header matches `meta.location` from body, if header is provided,
+        - `ETag` header is provided if `etag` is enabled in the service provider configuration,
+        - `meta.version` is provided if `etag` is enabled in the service provider configuration,
+        - `ETag` header matches `meta.version` when both are provided.
+
+        Args:
+            status_code: Returned HTTP status code.
+            body: Returned body.
+            headers: Returned response headers.
+
+        Keyword Args:
+            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+                is used, with no attribute inclusivity and exclusivity specified.
+
+        Returns:
+            Validation issues.
+        """
         issues = ValidationIssues()
         presence_config = kwargs.get("presence_config")
         if status_code == 204:
