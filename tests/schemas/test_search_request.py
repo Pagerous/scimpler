@@ -1,4 +1,4 @@
-from scimpler.config import create_service_provider_config
+from scimpler.config import ServiceProviderConfig
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep
 from scimpler.schemas.search_request import SearchRequestSchema
@@ -45,7 +45,7 @@ def test_full_search_request_is_deserialized():
 
 def test_search_request_schema_can_exclude_filter_and_sorting():
     schema = SearchRequestSchema.from_config(
-        config=create_service_provider_config(
+        config=ServiceProviderConfig.create(
             filter_={"supported": False},
             sort={"supported": False},
         )
@@ -58,7 +58,7 @@ def test_search_request_schema_can_exclude_filter_and_sorting():
 
 def test_search_request_schema_can_include_filter_and_sorting():
     schema = SearchRequestSchema.from_config(
-        config=create_service_provider_config(
+        config=ServiceProviderConfig.create(
             filter_={"supported": True, "max_results": 100},
             sort={"supported": True},
         )

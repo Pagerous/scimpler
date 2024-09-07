@@ -2,7 +2,7 @@ from copy import deepcopy
 
 import pytest
 
-from scimpler.config import create_service_provider_config, set_service_provider_config
+from scimpler.config import ServiceProviderConfig, set_service_provider_config
 from scimpler.data.attrs import (
     AttrFilter,
     AttributeIssuer,
@@ -123,7 +123,7 @@ def schema(request, user_schema, group_schema, fake_schema):
 @pytest.fixture(scope="session", autouse=True)
 def set_service_provider_config_():
     set_service_provider_config(
-        create_service_provider_config(
+        ServiceProviderConfig.create(
             patch={"supported": True},
             bulk={"max_operations": 10, "max_payload_size": 4242, "supported": True},
             filter_={"max_results": 100, "supported": True},
@@ -436,7 +436,7 @@ def group_data_server():
     }
 
 
-CONFIG = create_service_provider_config(
+CONFIG = ServiceProviderConfig.create(
     patch={"supported": True},
     bulk={"max_operations": 10, "max_payload_size": 4242, "supported": True},
     filter_={"max_results": 100, "supported": True},

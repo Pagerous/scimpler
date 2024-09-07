@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pytest
 
-from scimpler.config import create_service_provider_config
+from scimpler.config import ServiceProviderConfig
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import DateTime
 from scimpler.data.filter import Filter
@@ -1225,7 +1225,7 @@ def test_runtime_error_is_raised_if_patch_not_supported_and_resource_object_patc
 ):
     with pytest.raises(RuntimeError):
         ResourceObjectPatch(
-            config=create_service_provider_config(patch={"supported": False}),
+            config=ServiceProviderConfig.create(patch={"supported": False}),
             resource_schema=user_schema,
         )
 
@@ -1266,7 +1266,7 @@ def test_runtime_error_is_raised_if_bulk_ops_not_supported_and_bulk_operations_i
 ):
     with pytest.raises(RuntimeError):
         BulkOperations(
-            config=create_service_provider_config(bulk={"supported": False}),
+            config=ServiceProviderConfig.create(bulk={"supported": False}),
             resource_schemas=[user_schema],
         )
 
@@ -1353,7 +1353,7 @@ def test_bulk_operations_request_is_valid_if_correct_data(
 
 def test_bulk_operations_request_validation_fails_for_bad_data(user_schema):
     validator = BulkOperations(
-        config=create_service_provider_config(
+        config=ServiceProviderConfig.create(
             patch={"supported": True},
             bulk={"max_operations": 2, "max_payload_size": 1024, "supported": True},
         ),

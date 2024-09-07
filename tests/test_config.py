@@ -1,6 +1,6 @@
 import pytest
 
-from scimpler.config import create_service_provider_config
+from scimpler.config import ServiceProviderConfig
 
 
 def test_value_error_is_raised_if_options_not_specified_for_bulk_operation():
@@ -11,7 +11,7 @@ def test_value_error_is_raised_if_options_not_specified_for_bulk_operation():
             "if bulk operations are supported"
         ),
     ):
-        create_service_provider_config(bulk={"supported": True})
+        ServiceProviderConfig.create(bulk={"supported": True})
 
 
 def test_value_error_is_raised_if_options_not_specified_for_filter_operation():
@@ -19,4 +19,4 @@ def test_value_error_is_raised_if_options_not_specified_for_filter_operation():
         ValueError,
         match="'max_results' must be specified if filtering is supported",
     ):
-        create_service_provider_config(filter_={"supported": True})
+        ServiceProviderConfig.create(filter_={"supported": True})

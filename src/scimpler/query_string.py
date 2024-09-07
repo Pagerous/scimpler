@@ -131,7 +131,7 @@ class ResourcesGet(QueryStringHandler):
         return self._schema
 
 
-class _ServiceProviderConfig(QueryStringHandler):
+class _ServiceProviderConfigGet(QueryStringHandler):
     def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None) -> None:
         """
         Args:
@@ -162,14 +162,14 @@ class _ServiceProviderConfig(QueryStringHandler):
         return super().validate(query_params)
 
 
-class SchemasGet(_ServiceProviderConfig):
+class SchemasGet(_ServiceProviderConfigGet):
     """
     Handles query-string parameters sent with **HTTP GET** operations performed against
     **/Schemas** endpoint.
     """
 
 
-class ResourceTypesGet(_ServiceProviderConfig):
+class ResourceTypesGet(_ServiceProviderConfigGet):
     """
     Handles query-string parameters sent with **HTTP GET** operations performed against
     **/ResourceTypes** endpoint.
