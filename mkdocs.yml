@@ -56,14 +56,14 @@ nav:
           - ValidationWarning: api_reference/scimpler_error/validation_warning.md
       - scimpler.ext:
           - marshmallow: api_reference/scimpler_ext/marshmallow.md
-      - scimpler.query_handler:
-          - ResourceObjectGet: api_reference/scimpler_query_handler/resource_object_get.md
-          - ResourceObjectPatch: api_reference/scimpler_query_handler/resource_object_patch.md
-          - ResourceObjectPut: api_reference/scimpler_query_handler/resource_object_put.md
-          - ResourceTypesGet: api_reference/scimpler_query_handler/resource_types_get.md
-          - ResourcesGet: api_reference/scimpler_query_handler/resources_get.md
-          - ResourcesPost: api_reference/scimpler_query_handler/resources_post.md
-          - SchemasGet: api_reference/scimpler_query_handler/schemas_get.md
+      - scimpler.query_string_handler:
+          - ResourceObjectGet: api_reference/scimpler_query_string_handler/resource_object_get.md
+          - ResourceObjectPatch: api_reference/scimpler_query_string_handler/resource_object_patch.md
+          - ResourceObjectPut: api_reference/scimpler_query_string_handler/resource_object_put.md
+          - ResourceTypesGet: api_reference/scimpler_query_string_handler/resource_types_get.md
+          - ResourcesGet: api_reference/scimpler_query_string_handler/resources_get.md
+          - ResourcesPost: api_reference/scimpler_query_string_handler/resources_post.md
+          - SchemasGet: api_reference/scimpler_query_string_handler/schemas_get.md
       - scimpler.schemas:
           - BulkRequestSchema: api_reference/scimpler_schemas/bulk_request_schema.md
           - BulkResponseSchema: api_reference/scimpler_schemas/bulk_response_schema.md

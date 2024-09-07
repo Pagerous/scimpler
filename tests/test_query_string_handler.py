@@ -2,12 +2,12 @@ import pytest
 
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep
-from scimpler.query_handler import (
+from scimpler.query_string_handler import (
     ResourceObjectGet,
     ResourceObjectPatch,
     ResourceObjectPut,
     ResourcesPost,
-    ServerRootResourcesGet,
+    ResourcesGet,
 )
 from tests.conftest import CONFIG
 
@@ -15,10 +15,10 @@ from tests.conftest import CONFIG
 @pytest.mark.parametrize(
     "deserializer",
     (
-        ResourceObjectGet(CONFIG),
-        ResourcesPost(CONFIG),
-        ResourceObjectPut(CONFIG),
-        ResourceObjectPatch(CONFIG),
+        ResourceObjectGet(),
+        ResourcesPost(),
+        ResourceObjectPut(),
+        ResourceObjectPatch(),
     ),
 )
 def test_presence_config_is_deserialized_from_query_params(deserializer):
@@ -28,7 +28,7 @@ def test_presence_config_is_deserialized_from_query_params(deserializer):
 
 
 def test_server_root_resources_get_query_params_is_deserialized():
-    data = ServerRootResourcesGet(CONFIG).deserialize(
+    data = ResourcesGet(CONFIG).deserialize(
         {
             "attributes": ["userName", "name"],
             "filter": 'userName eq "bjensen"',

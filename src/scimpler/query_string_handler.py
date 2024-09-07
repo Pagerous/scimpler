@@ -8,16 +8,30 @@ from scimpler.error import ValidationError, ValidationIssues
 from scimpler.schemas.search_request import SearchRequestSchema
 
 
-class QueryHandler(abc.ABC):
+class QueryStringHandler(abc.ABC):
+    """
+    Handles query-string parameters.
+    """
+
     def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None) -> None:
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+        """
         self.config = config or scimpler.config.service_provider_config
 
     @property
     @abc.abstractmethod
-    def schema(self) -> SearchRequestSchema:
-        """Docs placeholder."""
+    def schema(self) -> SearchRequestSchema: ...
 
     def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:
+        """
+        Validates `query_params` using `SearchRequestSchema`.
+
+        Returns:
+            Validation issues.
+        """
         query_params = ScimData(query_params or {})
         query_params.set(
             "schemas",
@@ -26,6 +40,10 @@ class QueryHandler(abc.ABC):
         return self.schema.validate(query_params)
 
     def deserialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
+        """
+        Deserializes `query_params` using `SearchRequestSchema`, which contains attributes suitable
+        for the specific HTTP operation.
+        """
         query_params = ScimData(query_params or {})
         attributes = query_params.get("attributes")
         if isinstance(attributes, str):
@@ -39,6 +57,10 @@ class QueryHandler(abc.ABC):
         return query_params
 
     def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
+        """
+        Serializes `query_params` using `SearchRequestSchema`, which contains attributes suitable
+        for the specific HTTP operation.
+        """
         query_params = ScimData(query_params or {})
         serialized = self.schema.serialize(query_params)
         if attributes := query_params.get("attributes"):
@@ -49,9 +71,9 @@ class QueryHandler(abc.ABC):
         return query_params
 
 
-class GenericQueryHandler(QueryHandler, abc.ABC):
-    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None) -> None:
-        super().__init__(config)
+class GenericQueryStringHandler(QueryStringHandler, abc.ABC):
+    def __init__(self) -> None:
+        super().__init__(None)
         self._schema = SearchRequestSchema(
             attr_filter=AttrFilter(attr_names={"attributes", "excludedAttributes"}, include=True)
         )
@@ -61,24 +83,46 @@ class GenericQueryHandler(QueryHandler, abc.ABC):
         return self._schema
 
 
-class ResourcesPost(GenericQueryHandler):
-    pass
+class ResourcesPost(GenericQueryStringHandler):
+    """
+    Handles query-string parameters sent with **HTTP POST** operations performed against
+    **resource type** endpoints.
+    """
 
 
-class ResourceObjectGet(GenericQueryHandler):
-    pass
+class ResourceObjectGet(GenericQueryStringHandler):
+    """
+    Handles query-string parameters sent with **HTTP GET** operations performed against
+    **resource object** endpoints.
+    """
 
 
-class ResourceObjectPut(GenericQueryHandler):
-    pass
+class ResourceObjectPut(GenericQueryStringHandler):
+    """
+    Handles query-string parameters sent with **HTTP PUT** operations performed against
+    **resource object** endpoints.
+    """
 
 
-class ResourceObjectPatch(GenericQueryHandler):
-    pass
+class ResourceObjectPatch(GenericQueryStringHandler):
+    """
+    Handles query-string parameters sent with **HTTP PUT** operations performed against
+    **resource object** endpoints.
+    """
 
 
-class ServerRootResourcesGet(QueryHandler):
-    def __init__(self, config: scimpler.config.ServiceProviderConfig):
+class ResourcesGet(QueryStringHandler):
+    """
+    Handles query-string parameters sent with **HTTP GET** operations performed against
+    **resource type** endpoints.
+    """
+
+    def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None):
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+        """
         super().__init__(config)
         self._schema = SearchRequestSchema.from_config(self.config)
 
@@ -87,12 +131,13 @@ class ServerRootResourcesGet(QueryHandler):
         return self._schema
 
 
-class ResourcesGet(ServerRootResourcesGet):
-    pass
-
-
-class _ServiceProviderConfig(QueryHandler):
+class _ServiceProviderConfig(QueryStringHandler):
     def __init__(self, config: Optional[scimpler.config.ServiceProviderConfig] = None) -> None:
+        """
+        Args:
+            config: Service provider configuration. If not provided, defaults to
+                `scimpler.config.service_provider_config`
+        """
         super().__init__(config)
         self._schema = SearchRequestSchema(attr_filter=AttrFilter(filter_=lambda _: False))
 
@@ -101,6 +146,10 @@ class _ServiceProviderConfig(QueryHandler):
         return self._schema
 
     def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:
+        """
+        Validates `query_params` using `SearchRequestSchema`. Additionally, it checks if
+        `filter` is not provided.
+        """
         issues = ValidationIssues()
         query_params = query_params or {}
         if "filter" in query_params:
@@ -114,8 +163,14 @@ class _ServiceProviderConfig(QueryHandler):
 
 
 class SchemasGet(_ServiceProviderConfig):
-    pass
+    """
+    Handles query-string parameters sent with **HTTP GET** operations performed against
+    **/Schemas** endpoint.
+    """
 
 
 class ResourceTypesGet(_ServiceProviderConfig):
-    pass
+    """
+    Handles query-string parameters sent with **HTTP GET** operations performed against
+    **/ResourceTypes** endpoint.
+    """
