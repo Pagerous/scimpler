@@ -2,12 +2,12 @@ import pytest
 
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep
-from scimpler.query_string_handler import (
+from scimpler.query_string import (
     ResourceObjectGet,
     ResourceObjectPatch,
     ResourceObjectPut,
-    ResourcesPost,
     ResourcesGet,
+    ResourcesPost,
 )
 from tests.conftest import CONFIG
 
