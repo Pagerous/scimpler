@@ -108,17 +108,6 @@ SENSITIVE = {
 }
 
 
-def create_error(
-    status: int, scim_type: Optional[str] = None, detail: Optional[str] = None
-) -> dict:
-    output = {"status": str(status)}
-    if scim_type:
-        output["scimType"] = ScimErrorType(scim_type).value
-    if detail:
-        output["detail"] = detail
-    return output
-
-
 class ValidationError:
     message_by_code = {
         1: "bad value syntax",
@@ -171,6 +160,13 @@ class ValidationError:
         self._message = self.message_by_code[code].format(**context)
         self._context = context
 
+        if code not in self.message_by_code and code <= 1000:
+            raise ValueError("error code for custom validation error must be greater than 1000")
+        self.code = code
+        if message is None:
+            message = "" if code > 1000 else self.message_by_code[code].format(**context)
+        self.message = message
+        self.context = context
         self.scim_error = ScimErrorType(scim_error)
 
     @classmethod
@@ -361,17 +357,10 @@ class ValidationError:
     ):
         return cls(code=110, scim_error=scim_error, value=value, operator=operator)
 
-    @property
-    def context(self) -> dict:
-        return self._context
-
-    @property
-    def code(self) -> int:
-        return self._code
-
-    @property
-    def message(self) -> str:
-        return self._message
+    def __eq__(self, other):
+        if not isinstance(other, ValidationError):
+            return False
+        return self.code == other.code
 
 
 class ValidationWarning:
@@ -391,6 +380,13 @@ class ValidationWarning:
         self._message = self.message_by_code[code].format(**context)
         self._context = context
         self._location: Optional[str] = None
+        if code not in self.message_by_code and code <= 1000:
+            raise ValueError("error code for custom validation error must be greater than 1000")
+        self.code = code
+        if message is None:
+            message = "" if code > 1000 else self.message_by_code[code].format(**context)
+        self.message = message
+        self.context = context
 
     @classmethod
     def should_be_one_of(cls, expected_values: Collection[Any]):
@@ -412,17 +408,10 @@ class ValidationWarning:
     def should_not_equal_to(cls, value: Any):
         return cls(code=5, value=value)
 
-    @property
-    def context(self) -> dict:
-        return self._context
-
-    @property
-    def code(self) -> int:
-        return self._code
-
-    @property
-    def message(self) -> str:
-        return self._message
+    def __eq__(self, other):
+        if not isinstance(other, ValidationError):
+            return False
+        return self.code == other.code
 
 
 class ValidationIssueDict(TypedDict):
@@ -522,27 +511,40 @@ class ValidationIssues:
 
         return copy
 
-    def pop_errors(
-        self, codes: Collection[int], location: Optional[Sequence[Union[str, int]]] = None
+    def pop(
+        self,
+        error_codes: Optional[Collection[int]] = None,
+        warning_codes: Optional[Collection[int]] = None,
+        location: Optional[Sequence[Union[str, int]]] = None
     ) -> "ValidationIssues":
         location = tuple(location or tuple())
 
         if location not in self._errors:
             return ValidationIssues()
 
-        popped = self.get(error_codes=codes, warning_codes=[], location=location)
+        popped = self.get(
+            error_codes=error_codes or [],
+            warning_codes=warning_codes or [],
+            location=location,
+        )
 
-        for issue in self._errors[location]:
-            if issue.code in codes:
-                self._errors[location].remove(issue)
-                if issue.code in self._stop_proceeding.get(location, set()):
-                    self._stop_proceeding[location].remove(issue.code)
+        for location_, errors in popped.errors:
+            original_location = (*location, *location_)
+            for error in errors:
+                self._errors[original_location].remove(error)
+                if error.code in self._stop_proceeding.get(original_location, set()):
+                    self._stop_proceeding[original_location].remove(error.code)
 
-        if len(self._errors[location]) == 0:
-            self._errors.pop(location)
+            if not self._errors[original_location]:
+                self._errors.pop(original_location)
 
-        if location in self._stop_proceeding and len(self._stop_proceeding[location]) == 0:
-            self._stop_proceeding.pop(location)
+            if not self._stop_proceeding.get(original_location, set()):
+                self._stop_proceeding.pop(original_location, None)
+
+        for location_, warnings in popped.warnings:
+            original_location = (*location, *location_)
+            for warning in warnings:
+                self._warnings[original_location].remove(warning)
 
         return popped
 

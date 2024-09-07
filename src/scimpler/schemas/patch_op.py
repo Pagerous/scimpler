@@ -188,7 +188,7 @@ class PatchOpSchema(BaseSchema):
     ) -> ValidationIssues:
         if not isinstance(path, PatchPath):
             issues = self._resource_schema.validate(value)
-            issues.pop_errors([27, 28, 29], ("schemas",))
+            issues.pop([27, 28, 29], location=["schemas"])
             for attr_rep, attr in self._resource_schema.attrs:
                 parent_attr_value = value.get(attr_rep)
                 if parent_attr_value is Missing:

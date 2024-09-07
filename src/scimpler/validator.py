@@ -1507,8 +1507,8 @@ class BulkOperations(Validator):
                     status_code=status,
                     headers={"Location": location, "ETag": resource_version},
                 )
-                meta_location_missmatch = issues_.pop_errors([8], ("body", "meta", "location"))
-                header_location_mismatch = issues_.pop_errors([8], ("headers", "Location"))
+                meta_location_missmatch = issues_.pop([8], location=("body", "meta", "location"))
+                header_location_mismatch = issues_.pop([8], location=("headers", "Location"))
                 issues.merge(issues_.get(location=["body"]), location=response_location)
                 issues.merge(issues_.get(location=["status"]), location=status_location)
                 if meta_location_missmatch.has_errors() and header_location_mismatch.has_errors():

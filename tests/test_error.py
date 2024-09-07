@@ -73,13 +73,13 @@ def test_errors_can_be_popped_by_location_and_codes():
     }
     assert not issues.can_proceed(["a", "b"])
 
-    popped = issues.pop_errors(location=["a", "b"], codes=[1])
+    popped = issues.pop(location=["a", "b"], error_codes=[1])
 
     assert popped.to_dict() == {"_errors": [{"code": 1}]}
     assert issues.to_dict() == {"a": {"b": {"_errors": [{"code": 4}], "_warnings": [{"code": 4}]}}}
     assert not issues.can_proceed(["a", "b"])
 
-    issues.pop_errors(location=["a", "b"], codes=[4])
+    issues.pop(location=["a", "b"], error_codes=[4])
     assert issues.to_dict() == {"a": {"b": {"_warnings": [{"code": 4}]}}}
     assert issues.can_proceed(["a", "b"])
 
