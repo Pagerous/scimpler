@@ -127,11 +127,22 @@ class Error(Validator):
 
 
 def _validate_resource_location_consistency(
-    meta_location: str,
-    headers_location: str,
+    body: ScimData,
+    schema: BaseResourceSchema,
+    headers: dict[str, Any],
+    presence_config: AttrPresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    if meta_location != headers_location:
+    location_header = headers.get("Location")
+    meta_location_rep = schema.attrs.meta__location
+    meta_location = body.get(meta_location_rep)
+    if (
+        not meta_location
+        and not included_by_attr_presence_config(meta_location_rep, presence_config)
+    ) or location_header is None:
+        return issues
+
+    if meta_location != location_header:
         issues.add_error(
             issue=ValidationError.must_be_equal_to("'Location' header"),
             location=("body", "meta", "location"),
@@ -174,7 +185,7 @@ def _validate_resource_output_body(
     issues.merge(
         schema.validate(
             data=body,
-            presence_config=presence_config or AttrPresenceConfig("RESPONSE"),
+            presence_config=presence_config,
         ),
         location=body_location,
     )
@@ -190,18 +201,15 @@ def _validate_resource_output_body(
         location=["status"],
     )
     meta_rep = schema.attrs.meta__location
-    location_header = headers.get("Location")
-    if (
-        issues.can_proceed(body_location + meta_rep.location, ("headers", "Location"))
-        and location_header is not None
-    ):
+    if issues.can_proceed(body_location + meta_rep.location, ("headers", "Location")):
         issues.merge(
             issues=_validate_resource_location_consistency(
-                meta_location=body.get(meta_rep),
-                headers_location=location_header,
+                body=body,
+                schema=schema,
+                headers=headers,
+                presence_config=presence_config,
             ),
         )
-
     etag = headers.get("ETag")
     version_rep = schema.attrs.meta__version
     version = body.get(version_rep)
@@ -224,7 +232,9 @@ def _validate_resource_output_body(
                 proceed=False,
             )
 
-        if version in [None, Missing]:
+        if version in [None, Missing] and included_by_attr_presence_config(
+            version_rep, presence_config
+        ):
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
@@ -738,7 +748,9 @@ def _validate_resources_get_response(
             issues=_validate_resources_filtered(filter_, resources, resource_schemas),
             location=resources_location,
         )
-    if sorter is not None and can_validate_sorting(sorter, resource_presence_config):
+    if sorter is not None and included_by_attr_presence_config(
+        sorter.attr_rep, resource_presence_config
+    ):
         issues.merge(
             issues=_validate_resources_sorted(sorter, resources, resource_schemas),
             location=resources_location,
@@ -813,16 +825,21 @@ def can_validate_filtering(filter_: Filter, presence_config: AttrPresenceConfig)
     return True
 
 
-def can_validate_sorting(sorter: Sorter, presence_config: AttrPresenceConfig) -> bool:
+def included_by_attr_presence_config(
+    attr_rep: AttrRep, presence_config: AttrPresenceConfig
+) -> bool:
     if not presence_config.attr_reps:
         return True
 
-    is_contained = _is_contained(
-        sorter.attr_rep, presence_config.attr_reps
-    ) or _is_parent_contained(sorter.attr_rep, presence_config.attr_reps)
-    if presence_config.include and not is_contained or not presence_config.include and is_contained:
-        return False
-    return True
+    is_contained = _is_contained(attr_rep, presence_config.attr_reps)
+    is_parent_contained = _is_parent_contained(attr_rep, presence_config.attr_reps)
+
+    if is_parent_contained:
+        return presence_config.include
+
+    return (
+        is_contained and presence_config.include or not is_contained and not presence_config.include
+    )
 
 
 class ResourcesGet(Validator):
@@ -955,7 +972,9 @@ class SearchRequestPost(Validator):
     def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
         issues = ValidationIssues()
         issues.merge(
-            self._request_validation_schema.validate(ScimData(body or {})),
+            self._request_validation_schema.validate(
+                ScimData(body or {}), AttrPresenceConfig("REQUEST")
+            ),
             location=["body"],
         )
         return issues
@@ -990,7 +1009,7 @@ class ResourceObjectPatch(Validator):
     ):
         super().__init__(config)
         if not self.config.patch.supported:
-            raise RuntimeError("patch operation is not configured")
+            raise RuntimeError("patch operation is not supported")
         self._schema = PatchOpSchema(resource_schema)
         self._request_schema = PatchOpSchema(
             resource_schema.clone(
@@ -1030,29 +1049,23 @@ class ResourceObjectPatch(Validator):
         issues = ValidationIssues()
         presence_config = kwargs.get("presence_config")
         if status_code == 204:
-            if presence_config is not None and presence_config.attr_reps:
+            if body is not None or presence_config is not None and presence_config.attr_reps:
                 issues.add_error(
                     issue=ValidationError.bad_status_code(200),
                     proceed=True,
                     location=("status",),
                 )
             return issues
-        normalized = ScimData(body or {})
-        issues = _validate_resource_output_body(
+        return _validate_resource_output_body(
             schema=self._resource_schema,
             config=self.config,
             location_header_required=False,
             expected_status_code=200,
             status_code=status_code,
-            body=normalized,
+            body=ScimData(body or {}),
             headers=headers or {},
             presence_config=presence_config,
         )
-        meta_version_rep = self.response_schema.attrs.meta__version
-        if normalized.get(meta_version_rep) is Missing:
-            issues.pop_errors([5, 8], ("body", *meta_version_rep.location))
-            issues.pop_errors([8], ("headers", "ETag"))
-        return issues
 
 
 class ResourceObjectDelete(Validator):
@@ -1072,7 +1085,7 @@ class ResourceObjectDelete(Validator):
             issues.add_error(
                 issue=ValidationError.bad_status_code(204),
                 proceed=True,
-                location=("status",),
+                location=["status"],
             )
         return issues
 

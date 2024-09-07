@@ -26,7 +26,7 @@ from scimpler.validator import (
     ResourcesPost,
     SearchRequestPost,
     can_validate_filtering,
-    can_validate_sorting,
+    included_by_attr_presence_config,
 )
 from tests.conftest import CONFIG
 
@@ -975,6 +975,7 @@ def test_correct_search_request_passes_validation(user_schema):
 
     issues = validator.validate_request(
         body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],
             "attributes": ["userName", "name"],
             "filter": 'userName eq "bjensen"',
             "sortBy": "name.familyName",
@@ -1000,6 +1001,7 @@ def test_search_request_validation_fails_if_attributes_and_excluded_attributes_p
 
     issues = validator.validate_request(
         body={
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],
             "attributes": ["userName"],
             "excludedAttributes": ["name"],
         }
@@ -2036,7 +2038,7 @@ def test_can_validate_filtering_with_bounded_attributes():
     ),
 )
 def test_can_validate_sorting(sorter, checker, expected):
-    assert can_validate_sorting(sorter, checker) == expected
+    assert included_by_attr_presence_config(sorter.attr_rep, checker) == expected
 
 
 def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):
