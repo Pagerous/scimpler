@@ -246,13 +246,13 @@ issues = list_response.validate(data)
     **presence_config** parameter to `validate` method.
 
     ```python
-    from scimpler.data import AttrPresenceConfig
+    from scimpler.data import AttrValuePresenceConfig
     from scimpler.schemas import UserSchema
     
 
     user = UserSchema()
     data = {...}
-    issues = user.validate(data, presence_config=AttrPresenceConfig("RESPONSE"))
+    issues = user.validate(data, presence_config=AttrValuePresenceConfig("RESPONSE"))
     ```
 
 ## Data deserialization and serialization

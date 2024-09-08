@@ -17,7 +17,7 @@ class DataInclusivity(str, Enum):
     EXCLUDE = "EXCLUDE"
 
 
-class AttrPresenceConfig:
+class AttrValuePresenceConfig:
     """
     Configuration for attribute presence, according to the data flow direction,
     attribute properties, and specified inclusion / exclusion.
@@ -79,7 +79,7 @@ class AttrPresenceConfig:
         Examples:
             >>> from scimpler.data import AttrRep
             >>>
-            >>> presence_config = AttrPresenceConfig(
+            >>> presence_config = AttrValuePresenceConfig(
             >>>     "RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             >>> )
             >>> presence_config.allowed(AttrRep(attr="name", sub_attr="formatted"))

@@ -1,4 +1,4 @@
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.schemas.resource_type import ResourceTypeSchema
 
 
@@ -23,7 +23,7 @@ def test_resource_type_schema_is_validated():
         },
     }
 
-    assert schema.validate(input_, AttrPresenceConfig("RESPONSE")).to_dict(msg=True) == {}
+    assert schema.validate(input_, AttrValuePresenceConfig("RESPONSE")).to_dict(msg=True) == {}
 
 
 def test_resource_type_representation_can_be_generated(user_schema):

@@ -1,6 +1,6 @@
 import pytest
 
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.scim_data import ScimData
 from scimpler.schemas import list_response
@@ -41,7 +41,7 @@ def test_resources_validation_fails_if_bad_type(list_user_data, user_schema):
         }
     }
 
-    issues = schema.validate(list_user_data, AttrPresenceConfig("RESPONSE"))
+    issues = schema.validate(list_user_data, AttrValuePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected_issues
 
@@ -53,7 +53,7 @@ def test_resources_validation_succeeds_for_correct_data(list_user_data, user_sch
     list_user_data["Resources"][0]["unexpected"] = 123
     list_user_data["Resources"][1]["name"]["unexpected"] = 123
 
-    issues = schema.validate(list_user_data, AttrPresenceConfig("RESPONSE"))
+    issues = schema.validate(list_user_data, AttrValuePresenceConfig("RESPONSE"))
 
     assert issues.to_dict(msg=True) == {}
 
@@ -73,7 +73,7 @@ def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(
         },
     }
 
-    issues = schema.validate(list_user_data, AttrPresenceConfig("RESPONSE"))
+    issues = schema.validate(list_user_data, AttrValuePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected
 
@@ -89,7 +89,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(
         },
     }
 
-    issues = schema.validate(list_user_data, AttrPresenceConfig("RESPONSE"))
+    issues = schema.validate(list_user_data, AttrValuePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected
 
@@ -267,7 +267,7 @@ def test_bad_resources_type_is_validated(user_data_client, user_schema):
     }
     expected_issues = {"Resources": {"_errors": [{"code": 2}]}}
 
-    issues = schema.validate(data, AttrPresenceConfig("RESPONSE"))
+    issues = schema.validate(data, AttrValuePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected_issues
 
@@ -322,7 +322,7 @@ def test_validate_resources_attribute_presence__fails_if_requested_attribute_not
 
     issues = list_response.ListResponseSchema([user_schema]).validate(
         list_user_data,
-        resource_presence_config=AttrPresenceConfig(
+        resource_presence_config=AttrValuePresenceConfig(
             direction="RESPONSE",
             attr_reps=[AttrRep(attr="name")],
             include=False,

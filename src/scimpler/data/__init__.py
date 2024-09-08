@@ -1,4 +1,4 @@
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import (
     AttrFilter,
     Attribute,
@@ -35,7 +35,7 @@ __all__ = [
     "BoundedAttrRep",
     "AttrRepFactory",
     "AttrFilter",
-    "AttrPresenceConfig",
+    "AttrValuePresenceConfig",
     "Attribute",
     "Attrs",
     "Binary",

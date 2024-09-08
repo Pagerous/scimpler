@@ -5,7 +5,7 @@ import pytest
 
 from scimpler.config import ServiceProviderConfig
 from scimpler.data import ScimData
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import DateTime
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep
@@ -123,13 +123,13 @@ def test_resource_location_consistency_validation_is_not_checked_if_meta_locatio
             "Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904647",
             "ETag": r'W/"3694e05e9dff591"',
         },
-        presence_config=AttrPresenceConfig("RESPONSE", ["meta.location"], include=False),
+        presence_config=AttrValuePresenceConfig("RESPONSE", ["meta.location"], include=False),
     )
 
     assert issues.to_dict(msg=True) == {}
 
 
-def test_resource_output_validation_fails_if_attr_presence_config_for_request(
+def test_resource_output_validation_fails_if_attr_value_presence_config_for_request(
     user_data_server, user_schema
 ):
     validator = ResourcesPost(CONFIG, resource_schema=user_schema)
@@ -144,7 +144,7 @@ def test_resource_output_validation_fails_if_attr_presence_config_for_request(
                 "Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904647",
                 "ETag": r'W/"3694e05e9dff591"',
             },
-            presence_config=AttrPresenceConfig("REQUEST", ["meta.location"], include=False),
+            presence_config=AttrValuePresenceConfig("REQUEST", ["meta.location"], include=False),
         )
 
 
@@ -332,15 +332,15 @@ def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
     (
         (
             'emails[value eq "sven@example.com"]',
-            AttrPresenceConfig("RESPONSE", attr_reps=["emails.value"], include=False),
+            AttrValuePresenceConfig("RESPONSE", attr_reps=["emails.value"], include=False),
         ),
         (
             'emails eq "sven@example.com"',
-            AttrPresenceConfig("RESPONSE", attr_reps=["emails.value"], include=False),
+            AttrValuePresenceConfig("RESPONSE", attr_reps=["emails.value"], include=False),
         ),
         (
             'name.familyName eq "Sven"',
-            AttrPresenceConfig("RESPONSE", attr_reps=["name.familyName"], include=False),
+            AttrValuePresenceConfig("RESPONSE", attr_reps=["name.familyName"], include=False),
         ),
     ),
 )
@@ -484,7 +484,7 @@ def test_validate_resources_sorting_not_validated_if_attr_excluded(list_user_dat
         status_code=200,
         sorter=sorter,
         body=list_user_data,
-        presence_config=AttrPresenceConfig("RESPONSE", attr_reps=[attr_rep], include=False),
+        presence_config=AttrValuePresenceConfig("RESPONSE", attr_reps=[attr_rep], include=False),
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -560,7 +560,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
             "Location": user_data_server["meta"]["location"],
             "ETag": user_data_server["meta"]["version"],
         },
-        presence_config=AttrPresenceConfig(
+        presence_config=AttrValuePresenceConfig(
             direction="RESPONSE",
             attr_reps=[AttrRep(attr="name")],
             include=False,
@@ -885,7 +885,7 @@ def test_correct_list_response_passes_validation(validator_cls, list_user_data, 
         count=2,
         filter_=Filter(Present(AttrRep(attr="username"))),
         sorter=Sorter(AttrRep(attr="userName"), True),
-        presence_config=AttrPresenceConfig(
+        presence_config=AttrValuePresenceConfig(
             direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
         ),
     )
@@ -1241,7 +1241,7 @@ def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
     assert issues.to_dict(msg=True) == {}
 
 
-def test_attr_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
+def test_attr_value_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
     validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"0": {"path": {"_errors": [{"code": 17}]}}}}}
 
@@ -1261,7 +1261,7 @@ def test_attr_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
     assert issues.to_dict() == expected_issues
 
 
-def test_attr_presence_in_value_is_not_validated_if_bad_path(fake_schema):
+def test_attr_value_presence_in_value_is_not_validated_if_bad_path(fake_schema):
     validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
 
@@ -1314,7 +1314,7 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
     issues = validator.validate_response(
         status_code=204,
         body=None,
-        presence_config=AttrPresenceConfig(
+        presence_config=AttrValuePresenceConfig(
             direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
         ),
     )
@@ -1366,7 +1366,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
             "id": "1",
             "userName": "bjensen",
         },
-        presence_config=AttrPresenceConfig(
+        presence_config=AttrValuePresenceConfig(
             direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
         ),
         headers={"ETag": 'W/"3694e05e9dff591"'},
@@ -1997,21 +1997,21 @@ def test_resource_types_response_can_be_validated():
     (
         (
             Filter.deserialize("userName pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
             ),
             True,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="userName"), AttrRep(attr="name")],
                 include=True,
@@ -2020,21 +2020,21 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             True,
         ),
         (
             Filter.deserialize("name pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="display")],
                 include=True,
@@ -2043,21 +2043,21 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
             ),
             False,
         ),
         (
             Filter.deserialize("userName pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             True,
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="userName"), AttrRep(attr="name")],
                 include=False,
@@ -2066,21 +2066,21 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("userName pr and name.formatted pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             False,
         ),
         (
             Filter.deserialize("name.formatted pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             False,
         ),
         (
             Filter.deserialize("name pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="display")],
                 include=False,
@@ -2089,7 +2089,7 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("name pr and unknown pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="display")],
                 include=True,
@@ -2098,7 +2098,7 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("name pr and unknown pr"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="display")],
                 include=False,
@@ -2107,12 +2107,14 @@ def test_resource_types_response_can_be_validated():
         ),
         (
             Filter.deserialize("addresses eq 'Krakow'"),  # 'addresses' has no 'value'
-            AttrPresenceConfig(direction="RESPONSE"),
+            AttrValuePresenceConfig(direction="RESPONSE"),
             True,
         ),
         (
             Filter.deserialize("emails eq 'user@example.com'"),  # 'emails' has 'value'
-            AttrPresenceConfig(direction="RESPONSE", attr_reps=["emails.value"], include=False),
+            AttrValuePresenceConfig(
+                direction="RESPONSE", attr_reps=["emails.value"], include=False
+            ),
             False,
         ),
     ),
@@ -2124,7 +2126,7 @@ def test_can_validate_filtering(filter_, checker, expected, user_schema):
 def test_can_validate_filtering_with_bounded_attributes(user_schema):
     assert can_validate_filtering(
         filter_=Filter.deserialize("urn:ietf:params:scim:schemas:core:2.0:User:name pr"),
-        presence_config=AttrPresenceConfig(
+        presence_config=AttrValuePresenceConfig(
             direction="RESPONSE",
             attr_reps=[
                 BoundedAttrRep(
@@ -2142,7 +2144,7 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
         filter_=Filter.deserialize(
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:nonExisting pr"
         ),
-        presence_config=AttrPresenceConfig(
+        presence_config=AttrValuePresenceConfig(
             direction="RESPONSE",
             attr_reps=[
                 BoundedAttrRep(
@@ -2162,28 +2164,28 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
     (
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
             ),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name", sub_attr="formatted")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
                 include=True,
@@ -2192,28 +2194,28 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
         ),
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
             ),
             False,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name", sub_attr="formatted")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             False,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="name")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
                 include=False,
@@ -2222,7 +2224,7 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
         ),
         (
             Sorter(attr_rep=AttrRep(attr="emails")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="emails", sub_attr="type")],
                 include=False,
@@ -2231,7 +2233,7 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
         ),
         (
             Sorter(attr_rep=AttrRep(attr="emails")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="emails", sub_attr="value")],
                 include=False,
@@ -2240,7 +2242,7 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
         ),
         (
             Sorter(attr_rep=AttrRep(attr="emails")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="emails", sub_attr="value")],
                 include=True,
@@ -2249,7 +2251,7 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
         ),
         (
             Sorter(attr_rep=AttrRep(attr="emails")),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[
                     AttrRep(attr="emails", sub_attr="value"),
@@ -2261,17 +2263,17 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
         ),
         (
             Sorter(attr_rep=AttrRep(attr="unknown")),
-            AttrPresenceConfig(direction="RESPONSE"),
+            AttrValuePresenceConfig(direction="RESPONSE"),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="addresses")),  # 'addresses' has no 'value'
-            AttrPresenceConfig(direction="RESPONSE"),
+            AttrValuePresenceConfig(direction="RESPONSE"),
             True,
         ),
         (
             Sorter(attr_rep=AttrRep(attr="groups")),  # 'groups' has 'value', but no 'primary'
-            AttrPresenceConfig(direction="RESPONSE"),
+            AttrValuePresenceConfig(direction="RESPONSE"),
             True,
         ),
     ),

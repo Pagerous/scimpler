@@ -1,6 +1,6 @@
 from typing import Any, Iterable, Mapping, Optional, Union
 
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import Attribute, Integer, Unknown
 from scimpler.data.schemas import BaseResourceSchema, BaseSchema
 from scimpler.data.scim_data import Invalid, Missing, ScimData
@@ -81,7 +81,7 @@ class ListResponseSchema(BaseSchema):
 
         resource_presence_config = kwargs.get("resource_presence_config")
         if resource_presence_config is None:
-            resource_presence_config = AttrPresenceConfig("RESPONSE")
+            resource_presence_config = AttrValuePresenceConfig("RESPONSE")
 
         resource_schemas = self.get_schemas(resources)
         for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):

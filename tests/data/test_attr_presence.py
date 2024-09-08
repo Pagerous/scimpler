@@ -1,8 +1,8 @@
 import pytest
 
 from scimpler.data import BoundedAttrRep
-from scimpler.data.attr_presence import (
-    AttrPresenceConfig,
+from scimpler.data.attr_value_presence import (
+    AttrValuePresenceConfig,
     DataInclusivity,
     validate_presence,
 )
@@ -97,7 +97,7 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
 
 def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_fails():
     with pytest.raises(ValueError, match="'include' must be specified if 'attr_reps' is specified"):
-        AttrPresenceConfig(direction="RESPONSE", attr_reps=[AttrRep(attr="attr")])
+        AttrValuePresenceConfig(direction="RESPONSE", attr_reps=[AttrRep(attr="attr")])
 
 
 @pytest.mark.parametrize(
@@ -105,28 +105,28 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
     (
         (
             AttrRep(attr="userName"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=True
             ),
             True,
         ),
         (
             AttrRep(attr="userName"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             False,
         ),
         (
             AttrRep(attr="name", sub_attr="formatted"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=True
             ),
             True,
         ),
         (
             AttrRep(attr="name"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
                 include=True,
@@ -135,28 +135,28 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
         ),
         (
             AttrRep(attr="userName"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="userName")], include=False
             ),
             False,
         ),
         (
             AttrRep(attr="userName"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             True,
         ),
         (
             AttrRep(attr="name", sub_attr="formatted"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE", attr_reps=[AttrRep(attr="name")], include=False
             ),
             False,
         ),
         (
             AttrRep(attr="name"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="name", sub_attr="formatted")],
                 include=False,
@@ -165,7 +165,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
         ),
         (
             AttrRep(attr="emails"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="emails", sub_attr="type")],
                 include=False,
@@ -174,7 +174,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
         ),
         (
             AttrRep(attr="emails"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="emails", sub_attr="value")],
                 include=False,
@@ -183,7 +183,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
         ),
         (
             AttrRep(attr="emails"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[AttrRep(attr="emails", sub_attr="value")],
                 include=True,
@@ -192,7 +192,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
         ),
         (
             AttrRep(attr="emails"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[
                     AttrRep(attr="emails", sub_attr="value"),
@@ -204,7 +204,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
         ),
         (
             AttrRep(attr="emails", sub_attr="value"),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[
                     AttrRep(attr="emails", sub_attr="type"),
@@ -219,7 +219,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
                 attr="meta",
                 sub_attr="location",
             ),
-            AttrPresenceConfig(
+            AttrValuePresenceConfig(
                 direction="RESPONSE",
                 attr_reps=[
                     BoundedAttrRep(

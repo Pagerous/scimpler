@@ -660,11 +660,11 @@ def create_response_schema(
 
 
     Examples:
-        >>> from scimpler.data import AttrPresenceConfig
+        >>> from scimpler.data import AttrValuePresenceConfig
         >>> from scimpler.schemas import UserSchema
         >>> from scimpler.validator import ResourcesGet
         >>>
-        >>> def get_presence_config_from_request() -> AttrPresenceConfig:
+        >>> def get_presence_config_from_request() -> AttrValuePresenceConfig:
         >>>     ...
         >>>
         >>> v = ResourcesGet(resource_schema=UserSchema())

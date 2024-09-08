@@ -1,7 +1,7 @@
 from copy import copy
 from typing import Any, Optional, Union, cast
 
-from scimpler.data.attr_presence import validate_presence
+from scimpler.data.attr_value_presence import validate_presence
 from scimpler.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
 from scimpler.data.patch_path import PatchPath
 from scimpler.data.schemas import BaseSchema, ResourceSchema

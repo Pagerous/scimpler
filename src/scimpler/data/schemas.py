@@ -5,8 +5,8 @@ from typing import Any, Iterable, Mapping, MutableMapping, Optional, cast
 from typing_extensions import Self
 
 from scimpler._registry import register_resource_schema, register_schema
-from scimpler.data.attr_presence import (
-    AttrPresenceConfig,
+from scimpler.data.attr_value_presence import (
+    AttrValuePresenceConfig,
     DataInclusivity,
     validate_presence,
 )
@@ -153,7 +153,7 @@ class BaseSchema(metaclass=SchemaMeta):
     def validate(
         self,
         data: Mapping[str, Any],
-        presence_config: Optional[AttrPresenceConfig] = None,
+        presence_config: Optional[AttrValuePresenceConfig] = None,
         **kwargs: Any,
     ) -> ValidationIssues:
         """
@@ -165,7 +165,7 @@ class BaseSchema(metaclass=SchemaMeta):
         - if base schema is included,
         - if all provided schemas are known.
 
-        Optionally, one can pass `AttrPresenceConfig`, so attribute requiredness, returnability,
+        Optionally, one can pass `AttrValuePresenceConfig`, so attribute requiredness, returnability,
         and issuer is checked, depending on the data flow direction.
 
         Extended built-in validation logic is supplied with `_validate` method, implemented
@@ -238,7 +238,7 @@ class BaseSchema(metaclass=SchemaMeta):
     def _validate_data(
         self,
         data: ScimData,
-        presence_config: Optional[AttrPresenceConfig] = None,
+        presence_config: Optional[AttrValuePresenceConfig] = None,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         for attr_rep, attr in self.attrs:
@@ -268,12 +268,12 @@ class BaseSchema(metaclass=SchemaMeta):
         attr: Attribute,
         attr_rep: BoundedAttrRep,
         value: Any,
-        presence_config: AttrPresenceConfig,
+        presence_config: AttrValuePresenceConfig,
         required_by_schema: bool,
     ) -> ValidationIssues:
         issues = ValidationIssues()
         if isinstance(attr, Complex):
-            issues_ = self._validate_attr_presence(
+            issues_ = self._validate_attr_value_presence(
                 attr=attr,
                 attr_rep=attr_rep,
                 value=value,
@@ -296,7 +296,7 @@ class BaseSchema(metaclass=SchemaMeta):
 
                     for i, item in enumerate(value):
                         issues.merge(
-                            self._validate_attr_presence(
+                            self._validate_attr_value_presence(
                                 attr=sub_attr,
                                 attr_rep=bounded_sub_attr_rep,
                                 value=item.get(sub_attr_name),
@@ -307,7 +307,7 @@ class BaseSchema(metaclass=SchemaMeta):
                         )
                 else:
                     issues.merge(
-                        self._validate_attr_presence(
+                        self._validate_attr_value_presence(
                             attr=sub_attr,
                             attr_rep=bounded_sub_attr_rep,
                             value=value.get(sub_attr_name) if value else Missing,
@@ -321,7 +321,7 @@ class BaseSchema(metaclass=SchemaMeta):
         if attr.multi_valued and value:
             for i, item in enumerate(value):
                 issues.merge(
-                    self._validate_attr_presence(
+                    self._validate_attr_value_presence(
                         attr=attr,
                         attr_rep=attr_rep,
                         value=item,
@@ -332,7 +332,7 @@ class BaseSchema(metaclass=SchemaMeta):
             return issues
 
         issues.merge(
-            self._validate_attr_presence(
+            self._validate_attr_value_presence(
                 attr=attr,
                 attr_rep=attr_rep,
                 value=value,
@@ -343,11 +343,11 @@ class BaseSchema(metaclass=SchemaMeta):
         return issues
 
     @staticmethod
-    def _validate_attr_presence(
+    def _validate_attr_value_presence(
         attr: Attribute,
         attr_rep: BoundedAttrRep,
         value: Any,
-        presence_config: AttrPresenceConfig,
+        presence_config: AttrValuePresenceConfig,
         required_by_schema: bool,
     ):
         return validate_presence(
@@ -363,7 +363,7 @@ class BaseSchema(metaclass=SchemaMeta):
     def _get_inclusivity(
         attr: Attribute,
         attr_rep: BoundedAttrRep,
-        presence_config: AttrPresenceConfig,
+        presence_config: AttrValuePresenceConfig,
     ) -> Optional[DataInclusivity]:
         if presence_config.include is None:
             # for example "userName" attribute, but not "manager.value"

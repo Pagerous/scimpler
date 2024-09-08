@@ -4,7 +4,7 @@ from typing import Generator
 import pytest
 
 from scimpler._registry import register_resource_schema, resources, schemas
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import AttrFilter, Boolean, Complex, Integer, String
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep
 from scimpler.data.schemas import (
@@ -82,7 +82,7 @@ def test_validation_fails_if_bad_types(user_data_client, user_schema):
         },
     }
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -93,7 +93,7 @@ def test_validate_schemas_field__unknown_additional_field_is_validated(
     user_data_client["schemas"].append("bad:user:schema")
     expected_issues = {"schemas": {"_errors": [{"code": 14}]}}
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -102,7 +102,7 @@ def test_validate_schemas_field__fails_if_main_schema_is_missing(user_data_clien
     user_data_client["schemas"] = ["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]
     expected_issues = {"schemas": {"_errors": [{"code": 12}]}}
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -113,7 +113,7 @@ def test_validate_schemas_field__fails_if_extension_schema_is_missing(
     user_data_client["schemas"] = ["urn:ietf:params:scim:schemas:core:2.0:User"]
     expected_issues = {"schemas": {"_errors": [{"code": 13}]}}
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -126,7 +126,7 @@ def test_validate_schemas_field__fails_if_duplicated_values(user_data_client, us
     ]
     expected_issues = {"schemas": {"_errors": [{"code": 10}]}}
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -135,7 +135,7 @@ def test_validate_schemas_field__multiple_errors(user_data_client, user_schema):
     user_data_client["schemas"] = ["bad:user:schema"]
     expected_issues = {"schemas": {"_errors": [{"code": 14}, {"code": 12}, {"code": 13}]}}
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -236,7 +236,7 @@ def test_data_can_be_filtered_according_to_attr_filter(user_data_client, user_sc
 def test_schemas_is_not_validated_further_if_bad_type(user_data_client, user_schema):
     user_data_client["schemas"] = 123
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == {"schemas": {"_errors": [{"code": 2}]}}
 
@@ -245,7 +245,7 @@ def test_invalid_schemas_items_are_detected(user_data_client, user_schema):
     user_data_client["schemas"] = [user_schema.schema, 123]
     expected_issues = {"schemas": {"_errors": [{"code": 13}], "1": {"_errors": [{"code": 2}]}}}
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -301,7 +301,7 @@ def test_presence_validation_fails_if_returned_attribute_that_never_should_be_re
         }
     }
 
-    issues = user_schema.validate(user_data_server, AttrPresenceConfig("RESPONSE"))
+    issues = user_schema.validate(user_data_server, AttrValuePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected
 
@@ -309,7 +309,7 @@ def test_presence_validation_fails_if_returned_attribute_that_never_should_be_re
 def test_restricted_attributes_can_be_sent_with_request(user_data_client, user_schema):
     user_data_client["password"] = "1234"
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict(msg=True) == {}
 
@@ -327,7 +327,7 @@ def test_presence_validation_fails_on_attr_not_requested_by_exclusion(user_schem
     expected = {"name": {"_errors": [{"code": 7}]}}
 
     issues = user_schema.validate(
-        data, AttrPresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="name")], include=False)
+        data, AttrValuePresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="name")], include=False)
     )
 
     assert issues.to_dict() == expected
@@ -351,7 +351,7 @@ def test_presence_validation_fails_on_attr_not_requested_by_inclusion(user_schem
     expected = {"meta": {"_errors": [{"code": 7}]}}
 
     issues = user_schema.validate(
-        data, AttrPresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="name")], include=True)
+        data, AttrValuePresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="name")], include=True)
     )
 
     assert issues.to_dict() == expected
@@ -380,7 +380,7 @@ def test_presence_validation_fails_on_sub_attr_not_requested_by_exclusion(user_s
 
     issues = user_schema.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "RESPONSE",
             attr_reps=[
                 BoundedAttrRep(
@@ -418,7 +418,7 @@ def test_presence_validation_fails_on_sub_attr_not_requested_by_inclusion(user_s
 
     issues = user_schema.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "RESPONSE",
             attr_reps=[
                 BoundedAttrRep(
@@ -461,7 +461,7 @@ def test_presence_validation_fails_if_not_provided_attribute_that_always_should_
         },
     }
 
-    issues = user_schema.validate({}, AttrPresenceConfig("RESPONSE"))
+    issues = user_schema.validate({}, AttrValuePresenceConfig("RESPONSE"))
 
     assert issues.to_dict() == expected
 
@@ -485,7 +485,7 @@ def test_presence_validation_fails_if_not_provided_requested_required_attribute(
 
     issues = user_schema.validate(
         data,
-        AttrPresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="username")], include=True),
+        AttrValuePresenceConfig("RESPONSE", attr_reps=[AttrRep(attr="username")], include=True),
     )
 
     assert issues.to_dict() == expected
@@ -501,7 +501,7 @@ def test_presence_validation_passes_if_not_provided_requested_optional_attribute
 
     issues = user_schema.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "RESPONSE", attr_reps=[AttrRep(attr="name", sub_attr="familyname")], include=True
         ),
     )
@@ -533,7 +533,7 @@ def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_
 
     issues = user_schema.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "RESPONSE", attr_reps=[AttrRep(attr="emails", sub_attr="display")], include=False
         ),
     )
@@ -564,7 +564,7 @@ def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_
 
     issues = user_schema.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "RESPONSE", attr_reps=[AttrRep(attr="emails", sub_attr="display")], include=True
         ),
     )
@@ -578,7 +578,7 @@ def test_specifying_attribute_issued_by_service_provider_causes_validation_failu
     user_data_client["id"] = "should-not-be-provided"
     expected_issues = {"id": {"_errors": [{"code": 6}]}}
 
-    issues = user_schema.validate(user_data_client, AttrPresenceConfig("REQUEST"))
+    issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -601,7 +601,7 @@ def test_presence_validation_fails_if_missing_required_field_from_required_exten
 
     issues = schema.validate(
         ScimData({"id": "1", "schemas": ["my:schema"]}),
-        AttrPresenceConfig("RESPONSE"),
+        AttrValuePresenceConfig("RESPONSE"),
     )
 
     assert issues.to_dict() == expected_issues
@@ -624,7 +624,7 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
 
     issues = schema.validate(
         ScimData({"id": "1", "schemas": ["my:schema"]}),
-        AttrPresenceConfig("RESPONSE"),
+        AttrValuePresenceConfig("RESPONSE"),
     )
 
     assert issues.to_dict(msg=True) == {}
@@ -657,7 +657,7 @@ def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_
 
     issues = my_resource.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "REQUEST",
             attr_reps=[
                 AttrRep(attr="super_complex", sub_attr="str_required"),
@@ -694,7 +694,7 @@ def test_presence_validation_fails_if_provided_same_attr_from_different_schema(
 
     issues = schema_with_extensions.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "RESPONSE",
             attr_reps=[
                 BoundedAttrRep(
@@ -722,7 +722,7 @@ def test_presence_validation_passes_if_provided_same_attr_from_different_schema_
 
     issues = schema_with_extensions.validate(
         data,
-        AttrPresenceConfig(
+        AttrValuePresenceConfig(
             "RESPONSE",
             attr_reps=[
                 AttrRep(

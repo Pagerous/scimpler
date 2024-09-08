@@ -2,7 +2,7 @@ import abc
 from typing import Any, Mapping, Optional, Sequence, Union, cast
 
 import scimpler.config
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import (
     AttrFilter,
     AttributeIssuer,
@@ -101,7 +101,7 @@ class Error(Validator):
         issues = ValidationIssues()
         normalized = ScimData(body or {})
         issues.merge(
-            self.response_schema.validate(normalized, AttrPresenceConfig("RESPONSE")),
+            self.response_schema.validate(normalized, AttrValuePresenceConfig("RESPONSE")),
             location=body_location,
         )
         status_attr_rep = self.response_schema.attrs.status
@@ -132,7 +132,7 @@ def _validate_resource_location_consistency(
     body: ScimData,
     schema: BaseResourceSchema,
     headers: Mapping[str, Any],
-    presence_config: AttrPresenceConfig,
+    presence_config: AttrValuePresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
     location_header = headers.get("Location")
@@ -176,11 +176,11 @@ def _validate_resource_output_body(
     status_code: int,
     body: ScimData,
     headers: Mapping[str, Any],
-    presence_config: Optional[AttrPresenceConfig],
+    presence_config: Optional[AttrValuePresenceConfig],
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
-    presence_config = presence_config or AttrPresenceConfig("RESPONSE")
+    presence_config = presence_config or AttrValuePresenceConfig("RESPONSE")
     if presence_config.direction != "RESPONSE":
         raise ValueError("bad direction in attribute presence config for response validation")
 
@@ -303,7 +303,7 @@ class ResourceObjectGet(Validator):
             headers: Returned response headers.
 
         Keyword Args:
-            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+            presence_config (Optional[AttrValuePresenceConfig]): If not provided, the default one
                 is used, with no attribute inclusivity and exclusivity specified.
 
         Returns:
@@ -387,7 +387,7 @@ class ResourceObjectPut(Validator):
         issues.merge(
             issues=self._schema.validate(
                 data=body or {},
-                presence_config=AttrPresenceConfig(
+                presence_config=AttrValuePresenceConfig(
                     "REQUEST",
                     ignore_issuer=[
                         attr_rep for attr_rep, attr in self._schema.attrs if attr.required
@@ -423,7 +423,7 @@ class ResourceObjectPut(Validator):
             headers: Returned response headers.
 
         Keyword Args:
-            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+            presence_config (Optional[AttrValuePresenceConfig]): If not provided, the default one
                 is used, with no attribute inclusivity and exclusivity specified.
 
         Returns:
@@ -510,7 +510,7 @@ class ResourcesPost(Validator):
         issues = ValidationIssues()
         normalized = ScimData(body or {})
         issues.merge(
-            issues=self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
+            issues=self._schema.validate(normalized, AttrValuePresenceConfig("REQUEST")),
             location=["body"],
         )
         return issues
@@ -542,7 +542,7 @@ class ResourcesPost(Validator):
             headers: Returned response headers.
 
         Keyword Args:
-            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+            presence_config (Optional[AttrValuePresenceConfig]): If not provided, the default one
                 is used, with no attribute inclusivity and exclusivity specified.
 
         Returns:
@@ -670,7 +670,7 @@ def _validate_resources_get_response(
     count: Optional[int] = None,
     filter_: Optional[Filter] = None,
     sorter: Optional[Sorter] = None,
-    resource_presence_config: Optional[AttrPresenceConfig] = None,
+    resource_presence_config: Optional[AttrValuePresenceConfig] = None,
 ) -> ValidationIssues:
     issues = ValidationIssues()
     body_location = ("body",)
@@ -679,10 +679,10 @@ def _validate_resources_get_response(
     start_index_rep = schema.attrs.startindex
     start_index_location = body_location + start_index_rep.location
 
-    resource_presence_config = resource_presence_config or AttrPresenceConfig("RESPONSE")
+    resource_presence_config = resource_presence_config or AttrValuePresenceConfig("RESPONSE")
     issues_ = schema.validate(
         data=body,
-        presence_config=AttrPresenceConfig("RESPONSE"),
+        presence_config=AttrValuePresenceConfig("RESPONSE"),
         resource_presence_config=resource_presence_config,
     )
     issues.merge(issues_, location=body_location)
@@ -772,7 +772,7 @@ def _validate_resources_get_response(
 
 def can_validate_filtering(
     filter_: Filter,
-    presence_config: AttrPresenceConfig,
+    presence_config: AttrValuePresenceConfig,
     schema: BaseResourceSchema,
 ) -> bool:
     filter_attr_reps = filter_.attr_reps
@@ -797,7 +797,7 @@ def can_validate_filtering(
 
 
 def can_validate_sorting(
-    sorter: Sorter, presence_config: AttrPresenceConfig, schema: BaseResourceSchema
+    sorter: Sorter, presence_config: AttrValuePresenceConfig, schema: BaseResourceSchema
 ) -> bool:
     allowed = presence_config.allowed(sorter.attr_rep)
     if not allowed:
@@ -894,7 +894,7 @@ class ResourcesGet(Validator):
         - every resource contains `meta.version`, if `etag` is supported.
 
         Filtering and sorting is not validated if attributes required to check filtering and
-        sorting are meant to be excluded due to `AttrPresenceConfig`.
+        sorting are meant to be excluded due to `AttrValuePresenceConfig`.
 
         Args:
             status_code: Returned HTTP status code.
@@ -902,7 +902,7 @@ class ResourcesGet(Validator):
             headers: Not used.
 
         Keyword Args:
-            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+            presence_config (Optional[AttrValuePresenceConfig]): If not provided, the default one
                 is used, with no attribute inclusivity and exclusivity specified. Applied on
                 `Resources` only.
             start_index (Optional[int]): The 1-based index of the first query result.
@@ -992,7 +992,7 @@ class SearchRequestPost(Validator):
         issues = ValidationIssues()
         issues.merge(
             self._request_validation_schema.validate(
-                ScimData(body or {}), AttrPresenceConfig("REQUEST")
+                ScimData(body or {}), AttrValuePresenceConfig("REQUEST")
             ),
             location=["body"],
         )
@@ -1023,7 +1023,7 @@ class SearchRequestPost(Validator):
         - every resource contains `meta.version`, if `etag` is supported.
 
         Filtering and sorting is not validated if attributes required to check filtering and
-        sorting are meant to be excluded due to `AttrPresenceConfig`.
+        sorting are meant to be excluded due to `AttrValuePresenceConfig`.
 
         Args:
             status_code: Returned HTTP status code.
@@ -1031,7 +1031,7 @@ class SearchRequestPost(Validator):
             headers: Not used.
 
         Keyword Args:
-            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+            presence_config (Optional[AttrValuePresenceConfig]): If not provided, the default one
                 is used, with no attribute inclusivity and exclusivity specified. Applied on
                 `Resources` only.
             start_index (Optional[int]): The 1-based index of the first query result.
@@ -1127,7 +1127,7 @@ class ResourceObjectPatch(Validator):
         issues = ValidationIssues()
         normalized = ScimData(body or {})
         issues.merge(
-            self._schema.validate(normalized, AttrPresenceConfig("REQUEST")),
+            self._schema.validate(normalized, AttrValuePresenceConfig("REQUEST")),
             location=["body"],
         )
         return issues
@@ -1146,7 +1146,7 @@ class ResourceObjectPatch(Validator):
         Except for body validation done by the inner schema, the validator checks if:
 
         - returned `status_code` equals 204 if body is not returned, or 200, if body is returned
-            or `AttrPresenceConfig` is specified,
+            or `AttrValuePresenceConfig` is specified,
         - `Location` header matches `meta.location` from body, if header is provided,
         - `ETag` header is provided if `etag` is enabled in the service provider configuration,
         - `meta.version` is provided if `etag` is enabled in the service provider configuration,
@@ -1158,7 +1158,7 @@ class ResourceObjectPatch(Validator):
             headers: Returned response headers.
 
         Keyword Args:
-            presence_config (Optional[AttrPresenceConfig]): If not provided, the default one
+            presence_config (Optional[AttrValuePresenceConfig]): If not provided, the default one
                 is used, with no attribute inclusivity and exclusivity specified.
 
         Returns:
@@ -1344,7 +1344,7 @@ class BulkOperations(Validator):
         body_location = ("body",)
         normalized = ScimData(body or {})
         issues.merge(
-            self._request_schema.validate(normalized, AttrPresenceConfig("REQUEST")),
+            self._request_schema.validate(normalized, AttrValuePresenceConfig("REQUEST")),
             location=body_location,
         )
         if not normalized.get(self._request_schema.attrs.operations):
@@ -1415,7 +1415,7 @@ class BulkOperations(Validator):
         normalized = ScimData(body or {})
         body_location = ("body",)
         issues.merge(
-            self._response_schema.validate(normalized, AttrPresenceConfig("RESPONSE")),
+            self._response_schema.validate(normalized, AttrValuePresenceConfig("RESPONSE")),
             location=body_location,
         )
         issues.merge(

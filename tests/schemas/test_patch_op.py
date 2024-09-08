@@ -1,6 +1,6 @@
 import pytest
 
-from scimpler.data.attr_presence import AttrPresenceConfig
+from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import AttributeMutability, String
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep
@@ -90,7 +90,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(
         ],
     }
 
-    issues = schema.validate(input_data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
     assert issues.to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
@@ -137,7 +137,7 @@ def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_da
         }
     }
 
-    issues = schema.validate(input_data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
     assert issues.to_dict() == expected_issues
 
 
@@ -165,7 +165,7 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
         }
     }
 
-    issues = schema.validate(input_data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -240,7 +240,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
     }
     expected_issues = {"Operations": {"0": {"value": expected_value_issues}}}
 
-    issues = schema.validate(input_data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -342,7 +342,7 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
         ],
     }
 
-    issues = schema.validate(input_data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
     assert issues.to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
@@ -378,7 +378,7 @@ def test_add_operation__fails_if_attribute_is_readonly(op, path, value, user_sch
     }
     expected_issues = {"Operations": {"0": {"value": {"_errors": [{"code": 29}]}}}}
 
-    issues = schema.validate(input_data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -409,7 +409,7 @@ def test_remove_operation__succeeds_if_correct_path(path, user_schema):
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
-    assert schema.validate(input_data, AttrPresenceConfig("REQUEST")).to_dict(msg=True) == {}
+    assert schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
@@ -432,7 +432,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
-    assert schema.validate(input_data, AttrPresenceConfig("REQUEST")).to_dict(msg=True) == {}
+    assert schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(msg=True) == {}
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
@@ -475,7 +475,7 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
     expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
 
     assert (
-        patch_schema.validate(input_data, AttrPresenceConfig("REQUEST")).to_dict()
+        patch_schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict()
         == expected_issues
     )
     assert patch_schema.deserialize(input_data).to_dict() == expected_data
@@ -488,7 +488,7 @@ def test_validate_empty_body(user_schema):
         "Operations": {"_errors": [{"code": 5}]},
     }
 
-    issues = schema.validate({}, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate({}, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -547,7 +547,7 @@ def test_operation_value_is_not_validated_if_bad_path(user_schema):
         }
     }
 
-    issues = schema.validate(data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(data, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -581,7 +581,7 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
         }
     }
 
-    issues = schema.validate(data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(data, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -617,7 +617,7 @@ def test_operation_value_is_validated_against_mutability_for_attribute_in_extens
         }
     }
 
-    issues = schema.validate(data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(data, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
@@ -645,7 +645,7 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
         "Operations": {"0": {"value": {"displayName": {"_errors": [{"code": 29}]}}}},
     }
 
-    issues = schema.validate(data, AttrPresenceConfig("REQUEST"))
+    issues = schema.validate(data, AttrValuePresenceConfig("REQUEST"))
 
     assert issues.to_dict() == expected_issues
 
