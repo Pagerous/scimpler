@@ -5,9 +5,9 @@ from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 import marshmallow
 
 from scimpler.data import attrs
-from scimpler.data.attrs import Attribute
+from scimpler.data.attrs import Attribute, BoundedAttrs
 from scimpler.data.identifiers import AttrName, AttrRep, BoundedAttrRep
-from scimpler.data.schemas import BaseSchema, ResourceSchema
+from scimpler.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from scimpler.data.scim_data import Missing, ScimData
 from scimpler.schemas import (
     BulkRequestSchema,
@@ -17,7 +17,18 @@ from scimpler.schemas import (
 )
 from scimpler.validator import Validator
 
-_marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {}
+_marshmallow_field_by_attr_type: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {
+    attrs.Unknown: marshmallow.fields.Raw,
+    attrs.Boolean: marshmallow.fields.Boolean,
+    attrs.Integer: marshmallow.fields.Integer,
+    attrs.Decimal: marshmallow.fields.Float,
+    attrs.DateTime: marshmallow.fields.DateTime,
+    attrs.Binary: marshmallow.fields.String,
+    attrs.ExternalReference: marshmallow.fields.String,
+    attrs.UriReference: marshmallow.fields.String,
+    attrs.ScimReference: marshmallow.fields.String,
+    attrs.String: marshmallow.fields.String,
+}
 _initialized = False
 _auto_initialized = False
 
@@ -53,7 +64,8 @@ class ResponseContext:
 
 
 class ResponseContextProvider(Protocol):
-    def __call__(self) -> ResponseContext: ...
+    def __call__(self) -> ResponseContext:
+        """Returns `ResponseContext`."""
 
 
 ContextProvider = Union[ResponseContextProvider]
@@ -92,21 +104,8 @@ def initialize(
     if _initialized:
         raise RuntimeError("marshmallow extension has been already initialized")
 
-    default: dict[type[attrs.Attribute], type[marshmallow.fields.Field]] = {
-        attrs.Unknown: marshmallow.fields.Raw,
-        attrs.Boolean: marshmallow.fields.Boolean,
-        attrs.Integer: marshmallow.fields.Integer,
-        attrs.Decimal: marshmallow.fields.Float,
-        attrs.DateTime: marshmallow.fields.DateTime,
-        attrs.Binary: marshmallow.fields.String,
-        attrs.ExternalReference: marshmallow.fields.String,
-        attrs.UriReference: marshmallow.fields.String,
-        attrs.ScimReference: marshmallow.fields.String,
-        attrs.String: marshmallow.fields.String,
-    }
     if fields_by_attrs is not None:
-        default.update(fields_by_attrs)
-    _marshmallow_field_by_attr_type = default
+        _marshmallow_field_by_attr_type.update(fields_by_attrs)
     _initialized = True
 
 
@@ -127,17 +126,18 @@ def _get_fields(
 
 def _get_complex_sub_fields(
     attrs_: Iterable[tuple[AttrName, attrs.Attribute]],
-    field_by_attr_name: Optional[dict[str, marshmallow.fields.Field]] = None,
 ) -> dict:
-    field_by_attr_name = field_by_attr_name or {}
     fields_: dict[str, marshmallow.fields.Field] = {}
     for name, attr in attrs_:
-        if name in field_by_attr_name:
-            field = field_by_attr_name[name]
-        else:
-            field = _get_field(attr)
-        fields_[str(name)] = field
+        fields_[str(name)] = _get_field(attr)
     return fields_
+
+
+def _get_extension_fields(attrs_: BoundedAttrs) -> dict:
+    extension_fields = {}
+    for extension_uri, attrs__ in attrs_.extensions.items():
+        extension_fields[str(extension_uri)] = marshmallow.fields.Nested(_get_fields(attrs__))
+    return extension_fields
 
 
 def _get_field(attr: Attribute) -> marshmallow.fields.Field:
@@ -200,43 +200,38 @@ def _get_list_response_processors(
 
     def deserialize(data: MutableMapping[str, Any]) -> ScimData:
         data = ScimData(data)
+        if len(scimple_schema.supported_schemas) == 1:
+            return scimple_schema.deserialize(data)
+
         resources = data.pop("Resources", [])
         deserialized = scimple_schema.deserialize(data)
         deserialized_resources = []
         for resource in resources:
-            resource_schema = scimple_schema.get_schema(ScimData(resource))
-            if resource_schema is None:
-                deserialized_resource = ScimData()
-            else:
-                deserialized_resource = _create_schema(
-                    scimple_schema=resource_schema,
-                    processors=Processors(),
-                    context_provider=None,
-                )().load(resource)
+            resource_schema = cast(BaseResourceSchema, scimple_schema.get_schema(resource))
+            deserialized_resource = _create_schema(
+                scimple_schema=resource_schema,
+                processors=Processors(),
+                context_provider=None,
+            )().load(resource)
             deserialized_resources.append(deserialized_resource)
         if deserialized_resources:
             deserialized.set("Resources", deserialized_resources)
         return deserialized
 
-    if validator := processors.validator:
-
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
-            if response_context_provider is None:
-                raise ContextError(
-                    "response context must be provided when loading ListResponseSchema"
-                )
-            _validate_response(data, validator, response_context_provider())
-            return deserialize(data)
-    else:
-
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
-            return deserialize(data)
+    def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        if response_context_provider is None:
+            raise ContextError("response context must be provided when loading ListResponseSchema")
+        _validate_response(data, cast(Callable, processors.validator), response_context_provider())
+        return deserialize(data)
 
     def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
         return ScimData(data)
 
     def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
         data = ScimData(data)
+        if len(scimple_schema.supported_schemas) == 1:
+            return scimple_schema.serialize(data)
+
         resources_ = data.pop("Resources", [])
         serialized = scimple_schema.serialize(data)
         serialized_resources = []
@@ -335,7 +330,7 @@ def _get_patch_op_processors(
         return ScimData(data)
 
     def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
-        values = [operation.pop("value") for operation in data.get("Operations", [])]
+        values = [operation.pop("value", None) for operation in data.get("Operations", [])]
         serialized = scimple_schema.serialize(data)
         for operation, value in zip(serialized.get("Operations", []), values):
             if value in [None, Missing]:
@@ -367,10 +362,10 @@ def _get_bulk_response_processors(
 
     def _get_operation_response_schema(
         operation: MutableMapping[str, Any],
-    ) -> type[marshmallow.Schema]:
+    ) -> Optional[type[marshmallow.Schema]]:
         response_schema = scimple_schema.get_schema(operation)
         if response_schema is None:
-            raise marshmallow.ValidationError("unknown resource")
+            return None
         return _create_schema(
             scimple_schema=response_schema,
             processors=Processors(validator=None),
@@ -378,25 +373,21 @@ def _get_bulk_response_processors(
         )
 
     def deserialize(data: MutableMapping[str, Any]) -> ScimData:
-        responses = [operation.pop("response") for operation in data.get("Operations", [])]
+        responses = [operation.pop("response", None) for operation in data.get("Operations", [])]
         deserialized = scimple_schema.deserialize(data)
         for operation, response in zip(deserialized.get("Operations", []), responses):
             if response:
-                response_schema = _get_operation_response_schema(operation)
+                response_schema = cast(
+                    type[marshmallow.Schema], _get_operation_response_schema(operation)
+                )
                 operation.set("response", response_schema().load(response))
         return deserialized
 
-    if validator := processors.validator:
-
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
-            if response_context_provider is None:
-                raise ContextError("context must be provided when loading BulkResponseSchema")
-            _validate_response(data, validator, response_context_provider())
-            return deserialize(data)
-    else:
-
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
-            return deserialize(data)
+    def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        if response_context_provider is None:
+            raise ContextError("context must be provided when loading BulkResponseSchema")
+        _validate_response(data, cast(Callable, processors.validator), response_context_provider())
+        return deserialize(data)
 
     def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
         return ScimData(data)
@@ -407,7 +398,10 @@ def _get_bulk_response_processors(
         for operation, response in zip(serialized.get("Operations", []), responses):
             if response:
                 response_schema = _get_operation_response_schema(operation)
-                operation["response"] = response_schema().dump(response)
+                serialized_response = (
+                    {} if response_schema is None else response_schema().dump(response)
+                )
+                operation.set("response", serialized_response)
         return serialized
 
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
@@ -427,10 +421,7 @@ def _get_bulk_request_processors(
         deserialized = scimple_schema.deserialize(data)
         for operation, data in zip(deserialized.get("Operations", []), requests_data):
             if data:
-                request_scimple_schema = scimple_schema.get_schema(operation)
-                if request_scimple_schema is None:
-                    raise marshmallow.ValidationError("unknown resource")
-
+                request_scimple_schema = cast(BaseSchema, scimple_schema.get_schema(operation))
                 request_schema = _create_schema(
                     scimple_schema=request_scimple_schema,
                     processors=Processors(validator=None),
@@ -439,15 +430,9 @@ def _get_bulk_request_processors(
                 operation.set("data", request_schema().load(data))
         return deserialized
 
-    if validator := processors.validator:  # noqa
-
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
-            _validate_request(data, validator)
-            return deserialize(data)
-    else:
-
-        def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
-            return deserialize(data)
+    def _pre_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
+        _validate_request(data, cast(Callable, processors.validator))
+        return deserialize(data)
 
     def _post_load(_, data: MutableMapping[str, Any], **__) -> ScimData:
         return ScimData(data)
@@ -458,14 +443,19 @@ def _get_bulk_request_processors(
         for operation, data_item in zip(serialized.get("Operations", []), operation_data):
             if data_item:
                 request_scimple_schema = scimple_schema.get_schema(operation)
-                if request_scimple_schema is None:
-                    raise RuntimeError("unknown resource")
-                request_schema = _create_schema(
-                    scimple_schema=request_scimple_schema,
-                    processors=Processors(validator=None),
-                    context_provider=None,
+                request_schema = (
+                    None
+                    if request_scimple_schema is None
+                    else _create_schema(
+                        scimple_schema=request_scimple_schema,
+                        processors=Processors(validator=None),
+                        context_provider=None,
+                    )
                 )
-                operation["data"] = request_schema().dump(data_item)
+                serialized_data_item = (
+                    {} if request_schema is None else request_schema().dump(data_item)
+                )
+                operation["data"] = serialized_data_item
         return serialized
 
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
@@ -533,8 +523,6 @@ def _get_generic_attr_processors(
 
     def _post_load(_, data: Any, **__) -> Any:
         data = data.get(str(scimple_schema.name))
-        if data is None:
-            return data
         if isinstance(data, MutableMapping):
             return ScimData(data)
         if isinstance(data, list):
@@ -627,21 +615,20 @@ def _create_schema(
                 field_by_attr_rep={
                     scimple_schema.attrs.resources: marshmallow.fields.List(
                         marshmallow.fields.Nested(
-                            _get_fields(scimple_schema.supported_schemas[0].attrs)
+                            _create_schema(
+                                scimple_schema=scimple_schema.supported_schemas[0],
+                                processors=Processors(),
+                                context_provider=None,
+                            ),
                         ),
                     )
                 },
             )
         else:
-            fields = _get_fields(scimple_schema.attrs)
+            fields = _get_fields(scimple_schema.attrs.base_attrs)
 
         if isinstance(scimple_schema, ResourceSchema):
-            extension_fields = {}
-            for extension_uri, attrs_ in scimple_schema.attrs.extensions.items():
-                extension_fields[str(extension_uri)] = marshmallow.fields.Nested(
-                    _get_fields(attrs_)
-                )
-            fields.update(extension_fields)
+            fields.update(_get_extension_fields(scimple_schema.attrs))
     else:
         fields = {str(scimple_schema.name): _get_field(scimple_schema)}
 

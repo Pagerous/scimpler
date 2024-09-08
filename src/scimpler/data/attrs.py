@@ -1230,22 +1230,6 @@ class ScimReference(Reference):
         return issues
 
 
-_default_sub_attrs = [
-    Unknown("value"),
-    String(
-        "display",
-        mutability=AttributeMutability.IMMUTABLE,
-    ),
-    String("type"),
-    Boolean(
-        "primary",
-        serializer=lambda value: value or False,
-        deserializer=lambda value: value or False,
-    ),
-    UriReference("$ref"),
-]
-
-
 @final
 class Complex(Attribute):
     """
@@ -1565,6 +1549,7 @@ class BoundedAttrs:
     ):
         self._schema = schema
         self._core_attrs: dict[BoundedAttrRep, Attribute] = {}
+        self._base_attrs: dict[BoundedAttrRep, Attribute] = {}
         self._common_attrs = {AttrName(item) for item in (common_attrs or set())}
         self._extensions: dict[SchemaUri, BoundedAttrs] = {}
 
@@ -1579,6 +1564,7 @@ class BoundedAttrs:
                 attr=attr.name,
             )
             self._attrs[attr_rep] = attr
+            self._base_attrs[attr_rep] = attr
             if attr.name not in self._common_attrs:
                 self._core_attrs[attr_rep] = attr
 
@@ -1670,6 +1656,10 @@ class BoundedAttrs:
         return iter(self._core_attrs.items())
 
     @property
+    def base_attrs(self) -> Iterator[tuple[BoundedAttrRep, Attribute]]:
+        return iter(self._base_attrs.items())
+
+    @property
     def extensions(self) -> dict[SchemaUri, "BoundedAttrs"]:
         """
         Associated extensions.
@@ -1718,10 +1708,9 @@ class BoundedAttrs:
                 if attr.name == attr_name:
                     break
             else:
-                if (
-                    attr_name in self._common_attrs
-                    or BoundedAttrRep(schema=self._schema, attr=attr_name) in self._core_attrs
-                ) and (attr_to_include := self.get(attr_name)) is not None:
+                if (BoundedAttrRep(schema=self._schema, attr=attr_name) in self._base_attrs) and (
+                    attr_to_include := self.get(attr_name)
+                ) is not None:
                     to_include.append(attr_to_include)
 
         filtered_attrs = to_include + filtered_attrs

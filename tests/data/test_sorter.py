@@ -18,6 +18,7 @@ def test_items_are_sorted_according_to_attr_value(user_schema):
     actual = sorter(values, schema=user_schema)
 
     assert actual == expected
+    assert sorter.asc
 
 
 def test_items_with_missing_value_for_attr_are_sorted_last_for_asc(user_schema):

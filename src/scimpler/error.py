@@ -397,7 +397,6 @@ class ValidationWarning:
         ),
         3: "unexpected content, {reason}",
         4: "missing",
-        5: "should not equal to {value}",
     }
 
     def __init__(self, code: int, message: Optional[str] = None, **context: Any):
@@ -410,7 +409,7 @@ class ValidationWarning:
             **context: Parameters passed to pre-formatted messages.
         """
         if code not in self.message_by_code and code <= 1000:
-            raise ValueError("error code for custom validation error must be greater than 1000")
+            raise ValueError("error code for custom validation warning must be greater than 1000")
         self.code = code
         if message is None:
             message = "" if code > 1000 else self.message_by_code[code].format(**context)
@@ -433,12 +432,8 @@ class ValidationWarning:
     def missing(cls):
         return cls(code=4)
 
-    @classmethod
-    def should_not_equal_to(cls, value: Any):
-        return cls(code=5, value=value)
-
     def __eq__(self, other):
-        if not isinstance(other, ValidationError):
+        if not isinstance(other, ValidationWarning):
             return False
         return self.code == other.code
 
@@ -576,9 +571,6 @@ class ValidationIssues:
         """
         location = tuple(location or tuple())
 
-        if location not in self._errors:
-            return ValidationIssues()
-
         popped = self.get(
             error_codes=error_codes or [],
             warning_codes=warning_codes or [],
@@ -602,6 +594,9 @@ class ValidationIssues:
             original_location = (*location, *location_)
             for warning in warnings:
                 self._warnings[original_location].remove(warning)
+
+            if not self._warnings[original_location]:
+                self._warnings.pop(original_location)
 
         return popped
 

@@ -1,7 +1,7 @@
 import pytest
 
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep, SchemaUri
-from scimpler.data.scim_data import Invalid, Missing, ScimData
+from scimpler.data.scim_data import Invalid, InvalidType, Missing, MissingType, ScimData
 
 
 @pytest.mark.parametrize(
@@ -340,6 +340,14 @@ def test_data_repr():
             Missing,
             Missing,
         ),
+        (
+            {
+                "a": 1,
+            },
+            SchemaUri("urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"),
+            Missing,
+            Missing,
+        ),
     ),
 )
 def test_entry_can_be_popped_from_data(data, attr_rep, expected, remaining):
@@ -435,3 +443,40 @@ def test_schema_uri_creation_fails_if_bad_uri():
 )
 def test_data_can_be_compared(data_1, data_2, expected):
     assert (data_1 == data_2) is expected
+
+
+def test_missing_type_is_singleton():
+    assert MissingType() is MissingType()
+
+
+def test_invalid_type_is_singleton():
+    assert InvalidType() is InvalidType()
+
+
+def test_key_can_be_deleted_from_scim_data_by_del_keyword():
+    data = ScimData({"userName": "Pagerous"})
+
+    del data["USERNAME"]
+
+    assert data.get("uSeRnAmE") is Missing
+
+
+def test_deleting_non_existing_key_by_del_fails():
+    data = ScimData({"userName": "Pagerous"})
+
+    with pytest.raises(KeyError, match="nonExisting"):
+        del data["nonExisting"]
+
+
+def test_passing_base_schema_uri_as_key_fails():
+    data = ScimData()
+
+    with pytest.raises(KeyError, match="schema '.*' is not an extension"):
+        data.set("urn:ietf:params:scim:schemas:core:2.0:User", {"userName": "Pagerous"})
+
+
+def test_passing_unknown_schema_uri_as_key_fails():
+    data = ScimData()
+
+    with pytest.raises(KeyError, match="schema '.*' is not recognized or is not an extension"):
+        data.set(SchemaUri("unknown:schema"), {"userName": "Pagerous"})

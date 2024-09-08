@@ -412,8 +412,8 @@ class ScimData(MutableMapping):
         if isinstance(value, SchemaUri):
             if schemas.get(value, False) is False:
                 raise KeyError(
-                    f"schema {value!r} is not recognized or is an extension, so does not require "
-                    "own namespace in the data"
+                    f"schema {value!r} is not recognized or is not an extension, so does not "
+                    "require own namespace in the data"
                 )
             return _SchemaKey(schema=str(value))
 
@@ -423,7 +423,7 @@ class ScimData(MutableMapping):
                 is_extension = schemas.get(value)
                 if is_extension is False:
                     raise KeyError(
-                        f"schema {value!r} is an extension, so does not require "
+                        f"schema {value!r} is not an extension, so does not require "
                         "own namespace in the data"
                     )
                 elif is_extension is True:

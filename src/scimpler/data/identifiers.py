@@ -85,7 +85,7 @@ class AttrRep:
         self._str = str_
 
     def __str__(self) -> str:
-        return self._str
+        return str(self._str)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({str(self)})"
