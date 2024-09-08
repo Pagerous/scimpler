@@ -44,7 +44,7 @@ class Processors:
 
 class ResponseContext:
     def __init__(
-        self, status_code: int, headers: Optional[dict[str, Any]] | None = None, **kwargs: Any
+        self, status_code: int, headers: Optional[dict[str, Any]] = None, **kwargs: Any
     ) -> None:
         self._status_code = status_code
         self._headers = headers or {}
