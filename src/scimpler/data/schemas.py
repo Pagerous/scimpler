@@ -1,6 +1,6 @@
 import warnings
 from copy import copy
-from typing import Any, Iterable, Mapping, MutableMapping, Optional, cast
+from typing import Any, Iterable, Mapping, MutableMapping, Optional, Union, cast
 
 from typing_extensions import Self
 
@@ -52,7 +52,7 @@ class BaseSchema(metaclass=SchemaMeta):
     Base class for all schemas. Includes `schemas` attribute to attributes defined in subclasses.
     """
 
-    schema: str | SchemaUri
+    schema: Union[str, SchemaUri]
     base_attrs: list[Attribute] = [
         UriReference(
             name="schemas",
@@ -704,7 +704,7 @@ class SchemaExtension:
         >>>     base_attrs = [...]
     """
 
-    schema: str | SchemaUri
+    schema: Union[str, SchemaUri]
     name: str
     description: str = ""
     base_attrs: list[Attribute] = []

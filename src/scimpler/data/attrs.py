@@ -1015,7 +1015,7 @@ class DateTime(Attribute):
     @staticmethod
     def _deserialize_xsd_datetime(value: str) -> Optional[datetime]:
         try:
-            return datetime.fromisoformat(value)
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
             return None
 

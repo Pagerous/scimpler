@@ -833,7 +833,7 @@ class ResourcesGet(Validator):
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
-        resource_schema: Sequence[BaseResourceSchema] | BaseResourceSchema,
+        resource_schema: Union[Sequence[BaseResourceSchema], BaseResourceSchema],
     ):
         """
         Args:
@@ -936,7 +936,7 @@ class SearchRequestPost(Validator):
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
-        resource_schema: Sequence[ResourceSchema] | ResourceSchema,
+        resource_schema: Union[Sequence[ResourceSchema], ResourceSchema],
     ):
         """
         Args:

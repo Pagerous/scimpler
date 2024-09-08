@@ -7,11 +7,12 @@ from typing import (
     MutableMapping,
     Optional,
     Type,
-    TypeAlias,
     TypeVar,
     Union,
     cast,
 )
+
+from typing_extensions import TypeAlias
 
 from scimpler._registry import binary_operators, unary_operators
 from scimpler.data import operator as op
