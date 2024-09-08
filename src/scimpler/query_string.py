@@ -23,7 +23,11 @@ class QueryStringHandler(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def schema(self) -> SearchRequestSchema: ...
+    def schema(self) -> SearchRequestSchema:
+        """
+        Inner `SearchRequestSchema` used for query-string validation, serialization,
+        and deserialization.
+        """
 
     def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:
         """
@@ -42,7 +46,7 @@ class QueryStringHandler(abc.ABC):
     def deserialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
         """
         Deserializes `query_params` using `SearchRequestSchema`, which contains attributes suitable
-        for the specific HTTP operation.
+        for the specific HTTP operation. Unknown parameters are preserved.
         """
         query_params = ScimData(query_params or {})
         attributes = query_params.get("attributes")
@@ -59,14 +63,16 @@ class QueryStringHandler(abc.ABC):
     def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
         """
         Serializes `query_params` using `SearchRequestSchema`, which contains attributes suitable
-        for the specific HTTP operation.
+        for the specific HTTP operation. Unknown parameters are preserved.
         """
         query_params = ScimData(query_params or {})
         serialized = self.schema.serialize(query_params)
         if attributes := query_params.get("attributes"):
-            serialized["attributes"] = ",".join(attributes)
+            serialized["attributes"] = ",".join(str(attr_rep) for attr_rep in attributes)
         if excluded_attributes := query_params.get("excludedAttributes"):
-            serialized["excludedAttributes"] = ",".join(excluded_attributes)
+            serialized["excludedAttributes"] = ",".join(
+                str(attr_rep) for attr_rep in excluded_attributes
+            )
         query_params.update(serialized)
         return query_params
 
@@ -143,6 +149,10 @@ class _ServiceProviderConfigGet(QueryStringHandler):
 
     @property
     def schema(self) -> SearchRequestSchema:
+        """
+        Inner `SearchRequestSchema` used for query-string validation, serialization,
+        and deserialization.
+        """
         return self._schema
 
     def validate(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ValidationIssues:

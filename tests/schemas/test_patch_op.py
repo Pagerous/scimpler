@@ -759,3 +759,21 @@ def test_patch_op_deserialization_fails_if_bad_target(user_schema):
                 "Operations": [{"op": "add", "path": "name.nonExisting", "value": "whatever"}],
             }
         )
+
+
+def test_patch_path_operation_can_be_serialized(user_schema):
+    schema = PatchOpSchema(user_schema)
+    deserialized = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [
+            {"op": "add", "path": PatchPath.deserialize("nickName"), "value": "johndoe"}
+        ],
+    }
+    expected = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+        "Operations": [{"op": "add", "path": "nickName", "value": "johndoe"}],
+    }
+
+    actual = schema.serialize(deserialized)
+
+    assert actual == expected

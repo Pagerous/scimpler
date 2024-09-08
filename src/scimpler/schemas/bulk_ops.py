@@ -218,11 +218,12 @@ class BulkRequestSchema(BaseSchema):
         method = operation.get("method", "").upper()
         if method not in self._sub_schemas:
             return None
-        if method == "POST":
-            resource_type_endpoint = operation.get("path", "")
-        else:
-            resource_type_endpoint = f"/{operation.get('path', '').split('/', 2)[1]}"
-        return self._sub_schemas[method].get(resource_type_endpoint)
+        path = operation.get("path", "")
+        if "/" not in path:
+            return None
+        if method != "POST":
+            path = f"/{path.split('/', 2)[1]}"
+        return self._sub_schemas[method].get(path)
 
 
 def validate_response_operations(value: list[ScimData]) -> ValidationIssues:

@@ -1,7 +1,8 @@
 import pytest
 
+from scimpler.data import PatchPath
 from scimpler.data.scim_data import ScimData
-from scimpler.schemas import ErrorSchema
+from scimpler.schemas import ErrorSchema, PatchOpSchema
 from scimpler.schemas.bulk_ops import BulkRequestSchema, BulkResponseSchema
 
 
@@ -383,3 +384,70 @@ def test_validation_bulk_response_operation_fails_if_bad_status_syntax():
     )
 
     assert issues.to_dict() == expected_issues
+
+
+def test_bulk_request_can_be_deserialized(user_schema):
+    schema = BulkRequestSchema(
+        sub_schemas={"PATCH": {user_schema.endpoint: PatchOpSchema(user_schema)}}
+    )
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "Operations": [
+            {
+                "method": "PATCH",
+                "path": "/Users/123",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                    "Operations": [
+                        {
+                            "op": "add",
+                            "path": "emails",
+                            "value": {"type": "work", "value": "work@example.com"},
+                        }
+                    ],
+                },
+            }
+        ],
+    }
+
+    deserialized = schema.deserialize(data)
+
+    assert isinstance(deserialized["Operations"][0]["data"]["Operations"][0]["path"], PatchPath)
+
+
+def test_get_schema_for_bulk_request_returns_none_for_operation_with_unsupported_method(
+    user_schema,
+):
+    schema = BulkRequestSchema(
+        sub_schemas={"PATCH": {user_schema.endpoint: PatchOpSchema(user_schema)}}
+    )
+    operation = {
+        "method": "GET",
+        "path": "/Users/123",
+    }
+
+    assert schema.get_schema(operation) is None
+
+
+def test_get_schema_for_bulk_request_returns_none_for_operation_if_no_slash_in_path(user_schema):
+    schema = BulkRequestSchema(
+        sub_schemas={"PATCH": {user_schema.endpoint: PatchOpSchema(user_schema)}}
+    )
+    operation = {
+        "method": "PATCH",
+        "path": "Users",
+    }
+
+    assert schema.get_schema(operation) is None
+
+
+def test_get_schema_for_bulk_returns_returns_none_for_operation_with_no_status(user_schema):
+    schema = BulkResponseSchema(
+        sub_schemas={"PATCH": {user_schema.endpoint: user_schema}}, error_schema=ErrorSchema()
+    )
+    operation = {
+        "method": "PATCH",
+        "location": "/Users/123",
+    }
+
+    assert schema.get_schema(operation) is None
