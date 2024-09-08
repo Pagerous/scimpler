@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Optional, Sequence, Union, cast
+from typing import Any, Mapping, Optional, Sequence, Union, cast
 
 import scimpler.config
 from scimpler.data.attr_presence import AttrPresenceConfig
@@ -38,17 +38,19 @@ class Validator(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues: ...
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+        """Validates requests."""
 
     @abc.abstractmethod
     def validate_response(
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
-    ) -> ValidationIssues: ...
+    ) -> ValidationIssues:
+        """Validates responses."""
 
 
 class Error(Validator):
@@ -67,15 +69,15 @@ class Error(Validator):
         """
         return self._schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         raise NotImplementedError
 
     def validate_response(
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs: Any,
     ) -> ValidationIssues:
         """
@@ -129,7 +131,7 @@ class Error(Validator):
 def _validate_resource_location_consistency(
     body: ScimData,
     schema: BaseResourceSchema,
-    headers: dict[str, Any],
+    headers: Mapping[str, Any],
     presence_config: AttrPresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -139,11 +141,7 @@ def _validate_resource_location_consistency(
     if meta_location is Invalid or not location_header:
         return issues
 
-    if (
-        not meta_location
-        and not presence_config.allowed(meta_location_rep)
-        or location_header is None
-    ):
+    if not meta_location and not presence_config.allowed(meta_location_rep):
         return issues
 
     if meta_location != location_header:
@@ -177,7 +175,7 @@ def _validate_resource_output_body(
     expected_status_code: int,
     status_code: int,
     body: ScimData,
-    headers: dict[str, Any],
+    headers: Mapping[str, Any],
     presence_config: Optional[AttrPresenceConfig],
 ) -> ValidationIssues:
     issues = ValidationIssues()
@@ -277,15 +275,15 @@ class ResourceObjectGet(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
     def validate_response(
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         """
@@ -372,7 +370,7 @@ class ResourceObjectPut(Validator):
         """
         return self._schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP PUT** requests sent to **resource object** endpoints.
 
@@ -404,8 +402,8 @@ class ResourceObjectPut(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         """
@@ -493,7 +491,7 @@ class ResourcesPost(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP POST** requests sent to **resource type** endpoints.
 
@@ -521,8 +519,8 @@ class ResourcesPost(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         """
@@ -766,7 +764,7 @@ def _validate_resources_get_response(
             if resource.get("meta.version") is Missing:
                 issues.add_error(
                     issue=ValidationError.missing(),
-                    location=(*resources_location, i),
+                    location=(*resources_location, i, "meta", "version"),
                     proceed=True,
                 )
     return issues
@@ -868,15 +866,15 @@ class ResourcesGet(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
     def validate_response(
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         """
@@ -979,7 +977,7 @@ class SearchRequestPost(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP POST** query requests.
 
@@ -1004,8 +1002,8 @@ class SearchRequestPost(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         """
@@ -1113,7 +1111,7 @@ class ResourceObjectPatch(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP PATCH** requests sent to **resource object** endpoints.
 
@@ -1138,8 +1136,8 @@ class ResourceObjectPatch(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         """
@@ -1193,15 +1191,15 @@ class ResourceObjectDelete(Validator):
     Validator for **HTTP DELETE** operations performed against **resource object** endpoints.
     """
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
     def validate_response(
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs: Any,
     ) -> ValidationIssues:
         """
@@ -1327,7 +1325,7 @@ class BulkOperations(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[dict[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP POST** requests performed against bulk endpoint.
 
@@ -1367,24 +1365,15 @@ class BulkOperations(Validator):
         paths = normalized.get(self._request_schema.attrs.operations__path)
         data = normalized.get(self._request_schema.attrs.operations__data)
         methods = normalized.get(self._request_schema.attrs.operations__method)
-        if not all([paths, data, methods]):
-            return issues
-
         for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
-            if not all([path, method]):
-                continue
-
-            if method == "DELETE":
+            if not all([path, data_item, method]) or method == "DELETE":
                 continue
 
             if method == "POST":
                 resource_type_endpoint = path
             else:
                 resource_type_endpoint = f"/{path.split('/', 2)[1]}"
-            validator = self._validators[method].get(resource_type_endpoint)
-            if validator is None:
-                continue
-
+            validator = cast(Validator, self._validators[method].get(resource_type_endpoint))
             issues_ = validator.validate_request(body=data_item)
             data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)
             issues.merge(issues_.get(location=["body"]), location=data_item_location)
@@ -1394,8 +1383,8 @@ class BulkOperations(Validator):
         self,
         *,
         status_code: int,
-        body: Optional[dict[str, Any]] = None,
-        headers: Optional[dict[str, Any]] = None,
+        body: Optional[Mapping[str, Any]] = None,
+        headers: Optional[Mapping[str, Any]] = None,
         **kwargs,
     ) -> ValidationIssues:
         """
@@ -1451,7 +1440,7 @@ class BulkOperations(Validator):
         for i, (method, status, response, location, version) in enumerate(
             zip(methods, statuses, responses, locations, versions)
         ):
-            if not method:
+            if not all([method, status, response]):
                 continue
 
             response_location: tuple[Union[str, int], ...] = (
@@ -1481,9 +1470,6 @@ class BulkOperations(Validator):
                     if endpoint in location:
                         resource_validator = validator
                         break
-
-            if not (status and response):
-                continue
 
             status = int(status)
             if status >= 300:

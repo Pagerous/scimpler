@@ -4,6 +4,7 @@ from datetime import datetime
 import pytest
 
 from scimpler.config import ServiceProviderConfig
+from scimpler.data import ScimData
 from scimpler.data.attr_presence import AttrPresenceConfig
 from scimpler.data.attrs import DateTime
 from scimpler.data.filter import Filter
@@ -107,6 +108,44 @@ def test_resource_location_consistency_validation_fails_if_no_consistency(
         },
     )
     assert issues.to_dict() == expected_issues
+
+
+def test_resource_location_consistency_validation_is_not_checked_if_meta_location_excluded(
+    user_data_server, user_schema
+):
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
+    user_data_server["meta"].pop("location")
+
+    issues = validator.validate_response(
+        status_code=201,
+        body=user_data_server,
+        headers={
+            "Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904647",
+            "ETag": r'W/"3694e05e9dff591"',
+        },
+        presence_config=AttrPresenceConfig("RESPONSE", ["meta.location"], include=False),
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_resource_output_validation_fails_if_attr_presence_config_for_request(
+    user_data_server, user_schema
+):
+    validator = ResourcesPost(CONFIG, resource_schema=user_schema)
+
+    with pytest.raises(
+        ValueError, match="bad direction in attribute presence config for response validation"
+    ):
+        validator.validate_response(
+            status_code=201,
+            body=user_data_server,
+            headers={
+                "Location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904647",
+                "ETag": r'W/"3694e05e9dff591"',
+            },
+            presence_config=AttrPresenceConfig("REQUEST", ["meta.location"], include=False),
+        )
 
 
 def test_validate_resource_location_consistency__succeeds_if_consistency(
@@ -288,6 +327,43 @@ def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
     assert issues.to_dict() == expected
 
 
+@pytest.mark.parametrize(
+    ("filter_exp", "presence_config"),
+    (
+        (
+            'emails[value eq "sven@example.com"]',
+            AttrPresenceConfig("RESPONSE", attr_reps=["emails.value"], include=False),
+        ),
+        (
+            'emails eq "sven@example.com"',
+            AttrPresenceConfig("RESPONSE", attr_reps=["emails.value"], include=False),
+        ),
+        (
+            'name.familyName eq "Sven"',
+            AttrPresenceConfig("RESPONSE", attr_reps=["name.familyName"], include=False),
+        ),
+    ),
+)
+def test_resources_are_not_validated_for_filtering_if_attrs_not_requested(
+    filter_exp, list_user_data, user_schema, presence_config
+):
+    list_user_data = ScimData(list_user_data)
+    for resource in list_user_data["Resources"]:
+        resource.pop(presence_config.attr_reps[0])
+
+    filter_ = Filter.deserialize(filter_exp)
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=list_user_data,
+        filter=filter_,
+        presence_config=presence_config,
+    )
+
+    assert issues.to_dict() == {}
+
+
 def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schema(
     list_user_data, user_schema, group_schema
 ):
@@ -394,6 +470,24 @@ def test_validate_resources_sorted__not_sorted(list_user_data, user_schema):
     )
 
     assert issues.to_dict() == expected
+
+
+def test_validate_resources_sorting_not_validated_if_attr_excluded(list_user_data, user_schema):
+    attr_rep = AttrRep(attr="name", sub_attr="familyName")
+    list_user_data = ScimData(list_user_data)
+    for resource in list_user_data["Resources"]:
+        resource.pop(attr_rep)
+    sorter = Sorter(attr_rep, asc=False)
+
+    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    issues = validator.validate_response(
+        status_code=200,
+        sorter=sorter,
+        body=list_user_data,
+        presence_config=AttrPresenceConfig("RESPONSE", attr_reps=[attr_rep], include=False),
+    )
+
+    assert issues.to_dict(msg=True) == {}
 
 
 def test_validate_resources_sorted__not_sorted_by_extended_attr(list_user_data, user_schema):
@@ -776,7 +870,6 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server, us
     "validator_cls",
     (
         ResourcesGet,
-        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -804,6 +897,73 @@ def test_correct_list_response_passes_validation(validator_cls, list_user_data, 
     "validator_cls",
     (
         ResourcesGet,
+        SearchRequestPost,
+    ),
+)
+def test_missing_version_in_list_response_resources_is_not_validated_if_etag_not_supported(
+    validator_cls, list_user_data, user_schema
+):
+    list_user_data = ScimData(list_user_data)
+    list_user_data["Resources"][0].pop("meta.version")
+    list_user_data["Resources"][1].pop("meta.version")
+    validator = validator_cls(
+        ServiceProviderConfig.create(etag={"supported": False}), resource_schema=user_schema
+    )
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=list_user_data,
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+def test_resources_get_request_validation_does_nothing(list_user_data, user_schema):
+    validator = ResourcesGet(resource_schema=user_schema)
+
+    issues = validator.validate_request(
+        body={"what": "ever"},
+    )
+
+    assert issues.to_dict(msg=True) == {}
+
+
+@pytest.mark.parametrize(
+    "validator_cls",
+    (
+        ResourcesGet,
+        SearchRequestPost,
+    ),
+)
+def test_missing_version_in_list_response_resources_is_validated_if_etag_supported(
+    validator_cls, list_user_data, user_schema
+):
+    list_user_data = ScimData(list_user_data)
+    list_user_data["Resources"][0].pop("meta.version")
+    list_user_data["Resources"][1].pop("meta.version")
+    validator = validator_cls(
+        ServiceProviderConfig.create(etag={"supported": True}), resource_schema=user_schema
+    )
+    expected_issues = {
+        "body": {
+            "Resources": {
+                "0": {"meta": {"version": {"_errors": [{"code": 5}]}}},
+                "1": {"meta": {"version": {"_errors": [{"code": 5}]}}},
+            }
+        }
+    }
+
+    issues = validator.validate_response(
+        status_code=200,
+        body=list_user_data,
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+@pytest.mark.parametrize(
+    "validator_cls",
+    (
         ResourcesGet,
         SearchRequestPost,
     ),
@@ -830,7 +990,6 @@ def test_attributes_existence_is_validated_in_list_response(validator_cls, user_
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
         ResourcesGet,
         SearchRequestPost,
     ),
@@ -865,7 +1024,6 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
     "validator_cls",
     (
         ResourcesGet,
-        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -893,7 +1051,6 @@ def test_start_index_consistency_is_not_validated_if_bad_type(
     "validator_cls",
     (
         ResourcesGet,
-        ResourcesGet,
         SearchRequestPost,
     ),
 )
@@ -920,7 +1077,6 @@ def test_resources_are_not_validated_for_pagination_if_bad_type(
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
         ResourcesGet,
         SearchRequestPost,
     ),
@@ -957,7 +1113,6 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
         ResourcesGet,
         SearchRequestPost,
     ),
@@ -1932,6 +2087,25 @@ def test_resource_types_response_can_be_validated():
             ),
             True,
         ),
+        (
+            Filter.deserialize("name pr and unknown pr"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="display")],
+                include=True,
+            ),
+            True,
+        ),
+        (
+            Filter.deserialize("addresses eq 'Krakow'"),  # 'addresses' has no 'value'
+            AttrPresenceConfig(direction="RESPONSE"),
+            True,
+        ),
+        (
+            Filter.deserialize("emails eq 'user@example.com'"),  # 'emails' has 'value'
+            AttrPresenceConfig(direction="RESPONSE", attr_reps=["emails.value"], include=False),
+            False,
+        ),
     ),
 )
 def test_can_validate_filtering(filter_, checker, expected, user_schema):
@@ -2074,6 +2248,21 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
                 ],
                 include=True,
             ),
+            True,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="unknown")),
+            AttrPresenceConfig(direction="RESPONSE"),
+            True,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="addresses")),  # 'addresses' has no 'value'
+            AttrPresenceConfig(direction="RESPONSE"),
+            True,
+        ),
+        (
+            Sorter(attr_rep=AttrRep(attr="groups")),  # 'groups' has 'value', but no 'primary'
+            AttrPresenceConfig(direction="RESPONSE"),
             True,
         ),
     ),

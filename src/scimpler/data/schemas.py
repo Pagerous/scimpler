@@ -1,6 +1,6 @@
 import warnings
 from copy import copy
-from typing import Any, Iterable, MutableMapping, Optional, cast
+from typing import Any, Iterable, Mapping, MutableMapping, Optional, cast
 
 from typing_extensions import Self
 
@@ -103,7 +103,7 @@ class BaseSchema(metaclass=SchemaMeta):
                 attrs.extend(getattr(cls, "base_attrs"))
         return attrs
 
-    def deserialize(self, data: MutableMapping[str, Any]) -> ScimData:
+    def deserialize(self, data: Mapping[str, Any]) -> ScimData:
         """
         Deserializes the provided data according to the schema attributes and their deserialization
         logic. Unknown attributes are not included in the result.
@@ -116,7 +116,7 @@ class BaseSchema(metaclass=SchemaMeta):
                 deserialized.set(attr_rep, attr.deserialize(value))
         return self._deserialize(deserialized)
 
-    def serialize(self, data: MutableMapping[str, Any]) -> ScimData:
+    def serialize(self, data: Mapping[str, Any]) -> ScimData:
         """
         Serializes the provided data according to the schema attributes and their serialization
         logic. Unknown attributes are not included in the result.
@@ -129,7 +129,7 @@ class BaseSchema(metaclass=SchemaMeta):
                 serialized.set(attr_rep, attr.serialize(value))
         return self._serialize(serialized)
 
-    def filter(self, data: MutableMapping[str, Any], attr_filter: AttrFilter) -> ScimData:
+    def filter(self, data: Mapping[str, Any], attr_filter: AttrFilter) -> ScimData:
         """
         Filters the provided data according to the provided `attr_filter`.
         """
@@ -152,7 +152,7 @@ class BaseSchema(metaclass=SchemaMeta):
 
     def validate(
         self,
-        data: MutableMapping[str, Any],
+        data: Mapping[str, Any],
         presence_config: Optional[AttrPresenceConfig] = None,
         **kwargs: Any,
     ) -> ValidationIssues:

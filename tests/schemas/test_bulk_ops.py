@@ -18,6 +18,18 @@ def test_validation_bulk_request_operation_fails_if_no_method():
     assert issues.to_dict() == expected_issues
 
 
+def test_validation_bulk_request_operation_fails_if_invalid_data_type():
+    expected_issues = {"0": {"data": {"_errors": [{"code": 2}]}}}
+
+    issues = (
+        BulkRequestSchema(sub_schemas={})
+        .attrs.get("operations")
+        .validate([ScimData({"method": "PATCH", "path": "/Users/123", "data": 42})])
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_validation_bulk_request_operation_fails_if_unknown_method():
     expected_issues = {"0": {"method": {"_errors": [{"code": 9}]}}}
 
@@ -244,6 +256,31 @@ def test_validation_bulk_response_operation_fails_if_no_method():
         BulkResponseSchema(sub_schemas={}, error_schema=ErrorSchema())
         .attrs.get("operations")
         .validate([ScimData({"status": "200"})])
+    )
+
+    assert issues.to_dict() == expected_issues
+
+
+def test_validation_bulk_response_operation_fails_if_bad_response_type():
+    expected_issues = {"0": {"response": {"_errors": [{"code": 2}]}}}
+
+    issues = (
+        BulkResponseSchema(sub_schemas={}, error_schema=ErrorSchema())
+        .attrs.get("operations")
+        .validate(
+            [
+                ScimData(
+                    {
+                        "method": "PATCH",
+                        "response": 42,
+                        "status": "200",
+                        "location": (
+                            "https://example.com/v2/Users/b7c14771-226c-4d05-8860-134711653041"
+                        ),
+                    }
+                )
+            ]
+        )
     )
 
     assert issues.to_dict() == expected_issues

@@ -66,12 +66,20 @@ def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
                 )
                 item["path"] = Invalid
         data = item.get("data")
-        if method in ["POST", "PUT", "PATCH"] and data in [None, Missing]:
+        if data in [None, Missing]:
+            if method in ["POST", "PUT", "PATCH"]:
+                issues.add_error(
+                    issue=ValidationError.missing(),
+                    proceed=False,
+                    location=(i, "data"),
+                )
+        elif not isinstance(data, Mapping):
             issues.add_error(
-                issue=ValidationError.missing(),
+                issue=ValidationError.bad_type("complex"),
                 proceed=False,
                 location=(i, "data"),
             )
+            item["data"] = Invalid
     return issues
 
 
@@ -189,6 +197,7 @@ class BulkRequestSchema(BaseSchema):
                     proceed=False,
                     location=[path_rep.attr, i, path_rep.sub_attr],
                 )
+                data["Operations"][i]["path"] = Invalid
         return issues
 
     def _process(self, data: ScimData, method: str) -> ScimData:
@@ -251,12 +260,20 @@ def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
                     location=(i, "location"),
                 )
             response = item.get("response")
-            if response in [None, Missing] and int(status) >= 300:
+            if response in [None, Missing]:
+                if int(status) >= 300:
+                    issues.add_error(
+                        issue=ValidationError.missing(),
+                        proceed=False,
+                        location=(i, "response"),
+                    )
+            elif not isinstance(response, Mapping):
                 issues.add_error(
-                    issue=ValidationError.missing(),
+                    issue=ValidationError.bad_type("complex"),
                     proceed=False,
                     location=(i, "response"),
                 )
+                item["response"] = Invalid
         elif status in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
