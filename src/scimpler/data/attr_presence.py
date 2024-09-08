@@ -132,8 +132,11 @@ class AttrPresenceConfig:
             if isinstance(attr_rep, BoundedAttrRep) and isinstance(rep, BoundedAttrRep):
                 if attr_rep.schema == rep.schema and attr_rep.attr == rep.attr:
                     return True
-                return False
-            return True
+                continue
+            else:
+                if attr_rep.attr == rep.attr:
+                    return True
+            continue
 
         return False
 
@@ -143,6 +146,13 @@ class AttrPresenceConfig:
 
         for rep in self._attr_reps:
             if not rep.is_sub_attr:
+                continue
+
+            if (
+                isinstance(rep, BoundedAttrRep)
+                and isinstance(attr_rep, BoundedAttrRep)
+                and rep.schema != attr_rep.schema
+            ):
                 continue
 
             if attr_rep.attr == rep.attr and attr_rep.sub_attr != rep.sub_attr:

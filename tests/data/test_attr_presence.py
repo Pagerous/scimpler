@@ -1,5 +1,6 @@
 import pytest
 
+from scimpler.data import BoundedAttrRep
 from scimpler.data.attr_presence import (
     AttrPresenceConfig,
     DataInclusivity,
@@ -198,6 +199,36 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
                     AttrRep(attr="emails", sub_attr="primary"),
                 ],
                 include=True,
+            ),
+            True,
+        ),
+        (
+            AttrRep(attr="emails", sub_attr="value"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[
+                    AttrRep(attr="emails", sub_attr="type"),
+                ],
+                include=False,
+            ),
+            True,
+        ),
+        (
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="meta",
+                sub_attr="location",
+            ),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[
+                    BoundedAttrRep(
+                        schema="urn:ietf:params:scim:schemas:core:2.0:Group",
+                        attr="meta",
+                        sub_attr="location",
+                    ),
+                ],
+                include=False,
             ),
             True,
         ),

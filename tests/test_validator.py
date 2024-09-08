@@ -2094,6 +2094,15 @@ def test_resource_types_response_can_be_validated():
                 attr_reps=[AttrRep(attr="name", sub_attr="display")],
                 include=True,
             ),
+            False,
+        ),
+        (
+            Filter.deserialize("name pr and unknown pr"),
+            AttrPresenceConfig(
+                direction="RESPONSE",
+                attr_reps=[AttrRep(attr="name", sub_attr="display")],
+                include=False,
+            ),
             True,
         ),
         (
