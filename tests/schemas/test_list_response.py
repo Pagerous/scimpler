@@ -26,7 +26,7 @@ def test_validate_items_per_page_consistency__succeeds_if_correct_data(list_user
         items_per_page_=2,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resources_validation_fails_if_bad_type(list_user_data, user_schema):
@@ -55,7 +55,7 @@ def test_resources_validation_succeeds_for_correct_data(list_user_data, user_sch
 
     issues = schema.validate(list_user_data, AttrValuePresenceConfig("RESPONSE"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resources_validation_fails_if_bad_items_per_page_and_resource_type(

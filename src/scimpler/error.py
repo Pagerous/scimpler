@@ -440,7 +440,7 @@ class ValidationWarning:
 
 class ValidationIssueDict(TypedDict):
     code: int
-    error: NotRequired[str]
+    message: NotRequired[str]
     context: NotRequired[dict]
 
 
@@ -651,27 +651,27 @@ class ValidationIssues:
 
         return False
 
-    def to_dict(self, msg: bool = False, ctx: bool = False) -> dict:
+    def to_dict(self, message: bool = False, context: bool = False) -> dict:
         """
         Converts `ValidationIssues` to a dictionary.
         """
         output: dict = {}
-        self._set_dict("_errors", self._errors, output, msg=msg, ctx=ctx)
-        self._set_dict("_warnings", self._warnings, output, msg=msg, ctx=ctx)
+        self._set_dict("_errors", self._errors, output, message=message, context=context)
+        self._set_dict("_warnings", self._warnings, output, message=message, context=context)
         return output
 
     @staticmethod
     def _set_dict(
-        key: str, structure: dict, output: dict, msg: bool = False, ctx: bool = False
+        key: str, structure: dict, output: dict, message: bool = False, context: bool = False
     ) -> None:
         for location, issues in structure.items():
             if location:
-                ValidationIssues._set_dict_location(key, output, location, issues, msg, ctx)
+                ValidationIssues._set_dict_location(key, output, location, issues, message, context)
                 continue
 
             output[key] = []
             for issue in issues:
-                output[key].append(ValidationIssues._issue_to_dict(issue, msg=msg, ctx=ctx))
+                output[key].append(ValidationIssues._issue_to_dict(issue, msg=message, ctx=context))
 
     @staticmethod
     def _set_dict_location(
@@ -703,7 +703,7 @@ class ValidationIssues:
     ) -> ValidationIssueDict:
         output: ValidationIssueDict = {"code": issue.code}
         if msg:
-            output["error"] = issue.message
+            output["message"] = issue.message
         if ctx:
             output["context"] = issue.context
         return output

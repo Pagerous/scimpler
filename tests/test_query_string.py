@@ -140,4 +140,4 @@ def test_unknown_params_passed_to_service_provider_config_get_query_handler_vali
         }
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}

@@ -161,7 +161,7 @@ def test_validate_resource_type_consistency__fails_if_no_consistency():
 def test_validate_resource_type_consistency__succeeds_if_consistency():
     issues = validate_resource_type_consistency("User", "User")
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_adding_same_schema_extension_to_resource_fails():
@@ -317,7 +317,7 @@ def test_restricted_attributes_can_be_sent_with_request(user_data_client, user_s
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_presence_validation_fails_on_attr_not_requested_by_exclusion(user_schema):
@@ -512,7 +512,7 @@ def test_presence_validation_passes_if_not_provided_requested_optional_attribute
         ),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_presence_validation_fails_on_multivalued_complex_attr_not_requested_by_exclusion(
@@ -633,7 +633,7 @@ def test_presence_validation_succeeds_if_missing_required_field_from_non_require
         AttrValuePresenceConfig("RESPONSE"),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_has_value_none():
@@ -674,7 +674,7 @@ def test_sub_attributes_presence_is_not_validated_if_multivalued_root_attribute_
         ),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_presence_validation_fails_if_provided_same_attr_from_different_schema(
@@ -740,7 +740,7 @@ def test_presence_validation_passes_if_provided_same_attr_from_different_schema_
         ),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_registering_different_extensions_but_with_the_same_name_fails():

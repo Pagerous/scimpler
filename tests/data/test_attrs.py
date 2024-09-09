@@ -28,7 +28,7 @@ def test_validation_is_skipped_if_value_not_provided():
 
     issues = attr.validate(value=None)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_multi_valued_attribute_validation_fails_if_not_provided_list():
@@ -44,7 +44,7 @@ def test_multi_valued_attribute_validation_succeeds_if_provided_list_or_tuple():
 
     issues = attr.validate(["a", "b", "c"])
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_multi_valued_attribute_values_are_validate_separately():
@@ -165,7 +165,7 @@ def test_attribute_identifier_is_deserialized(
     input_, attr_rep_type, expected_schema, expected_attr, expected_sub_attr
 ):
     issues = AttrRepFactory.validate(input_)
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
     attr_rep = AttrRepFactory.deserialize(input_)
     assert isinstance(attr_rep, attr_rep_type)
@@ -431,7 +431,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
 def test_validate_bad_type(input_value, attr, expected_issues):
     issues = attr.validate(input_value)
 
-    assert issues.to_dict(ctx=True) == expected_issues
+    assert issues.to_dict(context=True) == expected_issues
 
 
 @pytest.mark.parametrize(
@@ -494,7 +494,7 @@ def test_validate_bad_type(input_value, attr, expected_issues):
 def test_validate_correct_type(input_value, attr):
     issues = attr.validate(input_value)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_complex_mv_attr_fails_if_multiple_primary_items():

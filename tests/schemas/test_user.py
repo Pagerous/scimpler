@@ -24,7 +24,7 @@ def test_correct_preferred_langauge_is_validated(user_data_client, user_schema):
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_bad_locale_is_validated(user_data_client, user_schema):
@@ -41,7 +41,7 @@ def test_correct_locale_is_validated(user_data_client, user_schema):
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_bad_timezone_is_validated(user_data_client, user_schema):
@@ -58,7 +58,7 @@ def test_correct_timezone_is_validated(user_data_client, user_schema):
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_bad_email_is_validated(user_data_client, user_schema):
@@ -75,7 +75,7 @@ def test_correct_email_is_validated(user_data_client, user_schema):
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_bad_phone_number_is_validated(user_data_client, user_schema):
@@ -92,7 +92,7 @@ def test_bad_phone_number_is_validated(user_data_client, user_schema):
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(ctx=True) == expected_issues
+    assert issues.to_dict(context=True) == expected_issues
 
 
 def test_correct_phone_number_is_validated(user_data_client, user_schema):
@@ -100,7 +100,7 @@ def test_correct_phone_number_is_validated(user_data_client, user_schema):
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_bad_country_is_validated(user_data_client, user_schema):
@@ -117,7 +117,7 @@ def test_correct_country_is_validated(user_data_client, user_schema):
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_country_is_not_validated_if_not_specified_validated(user_data_client, user_schema):
@@ -125,7 +125,7 @@ def test_country_is_not_validated_if_not_specified_validated(user_data_client, u
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_ims_value_is_canonicalized(user_data_client, user_schema):

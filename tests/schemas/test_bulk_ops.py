@@ -174,7 +174,7 @@ def test_validation_bulk_request_post_operation_succeeds():
         )
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_bulk_request_get_operation_succeeds():
@@ -184,7 +184,7 @@ def test_validation_bulk_request_get_operation_succeeds():
         .validate([ScimData({"method": "GET", "path": "/NiceResource/123"})])
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_bulk_request_put_operation_succeeds():
@@ -205,7 +205,7 @@ def test_validation_bulk_request_put_operation_succeeds():
         )
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_bulk_request_patch_operation_succeeds():
@@ -226,7 +226,7 @@ def test_validation_bulk_request_patch_operation_succeeds():
         )
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_bulk_request_delete_operation_succeeds():
@@ -246,7 +246,7 @@ def test_validation_bulk_request_delete_operation_succeeds():
         )
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_bulk_response_operation_fails_if_no_method():
@@ -396,7 +396,7 @@ def test_validation_bulk_response_operation_succeeds_if_no_location_for_post_fai
         )
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_bulk_response_operation_fails_if_no_response_for_failed_operation():

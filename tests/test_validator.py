@@ -126,7 +126,7 @@ def test_resource_location_consistency_validation_is_not_checked_if_meta_locatio
         presence_config=AttrValuePresenceConfig("RESPONSE", ["meta.location"], include=False),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_output_validation_fails_if_attr_value_presence_config_for_request(
@@ -161,7 +161,7 @@ def test_validate_resource_location_consistency__succeeds_if_consistency(
             "ETag": r'W/"3694e05e9dff591"',
         },
     )
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_number_of_resources_validation_fails_if_more_resources_than_total_results(
@@ -223,7 +223,7 @@ def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
         count=count,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_pagination_info_validation_fails_if_start_index_is_missing_when_pagination(
@@ -290,7 +290,7 @@ def test_validate_pagination_info_validation_succeeds_when_if_data_for_paginatio
         count=2,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 @pytest.mark.parametrize(
@@ -487,7 +487,7 @@ def test_validate_resources_sorting_not_validated_if_attr_excluded(list_user_dat
         presence_config=AttrValuePresenceConfig("RESPONSE", attr_reps=[attr_rep], include=False),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validate_resources_sorted__not_sorted_by_extended_attr(list_user_data, user_schema):
@@ -516,7 +516,7 @@ def test_correct_error_response_passes_validation(error_data):
 
     issues = validator.validate_response(status_code=400, body=error_data)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_error_status_consistency_is_not_validated_if_bad_status(error_data):
@@ -567,7 +567,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
         ),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_failure_on_missing_etag_header_when_etag_supported(
@@ -647,7 +647,7 @@ def test_response_is_validated_without_tag_and_version_if_etag_not_supported(
         },
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server, user_schema):
@@ -688,7 +688,7 @@ def test_service_object_resource_get_request_is_not_validated():
 
     issues = validator.validate_request(body={"some": "weird_stuff"})
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_validation_warning_for_missing_response_body_for_resources_post(user_schema):
@@ -710,7 +710,7 @@ def test_correct_resource_type_post_request_passes_validation(user_data_client, 
         body=user_data_client,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_type_post_request_parsing_fails_for_incorrect_data_passes_validation(
@@ -771,7 +771,7 @@ def test_correct_resource_object_put_request_passes_validation(user_data_client,
         body=user_data_client,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_object_put_request__fails_when_missing_required_field(
@@ -798,7 +798,7 @@ def test_correct_resource_object_put_response_passes_validation(user_data_server
         },
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_data_for_resource_object_put_request_can_be_deserialized(user_data_client, user_schema):
@@ -831,7 +831,7 @@ def test_correct_resource_type_post_response_passes_validation(user_data_server,
         },
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_type_post_request_data_can_be_deserialized(user_data_client, user_schema):
@@ -890,7 +890,7 @@ def test_correct_list_response_passes_validation(validator_cls, list_user_data, 
         ),
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 @pytest.mark.parametrize(
@@ -915,7 +915,7 @@ def test_missing_version_in_list_response_resources_is_not_validated_if_etag_not
         body=list_user_data,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resources_get_request_validation_does_nothing(list_user_data, user_schema):
@@ -925,7 +925,7 @@ def test_resources_get_request_validation_does_nothing(list_user_data, user_sche
         body={"what": "ever"},
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 @pytest.mark.parametrize(
@@ -1140,7 +1140,7 @@ def test_correct_search_request_passes_validation(user_schema):
         }
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_search_request_validation_fails_if_attributes_and_excluded_attributes_provided(
@@ -1195,7 +1195,7 @@ def test_correct_remove_operations_pass_validation(fake_schema):
         }
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
@@ -1238,7 +1238,7 @@ def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
         }
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_attr_value_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
@@ -1333,7 +1333,7 @@ def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attrib
         presence_config=None,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data(
@@ -1348,7 +1348,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data
         headers={"ETag": user_data_server["meta"]["version"]},
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_attributes(
@@ -1372,7 +1372,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_
         headers={"ETag": 'W/"3694e05e9dff591"'},
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_runtime_error_is_raised_if_patch_not_supported_and_resource_object_patch_object_created(
@@ -1398,7 +1398,7 @@ def test_resource_object_delete_response_validation_succeeds_if_status_204():
 
     issues = validator.validate_response(status_code=204)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_object_delete_request_validation_does_nothing():
@@ -1406,7 +1406,7 @@ def test_resource_object_delete_request_validation_does_nothing():
 
     issues = validator.validate_request()
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_not_implemented_error_is_raised_if_accessing_response_schema_for_delete():
@@ -1503,7 +1503,7 @@ def test_bulk_operations_request_is_valid_if_correct_data(
 
     issues = validator.validate_request(body=bulk_request_serialized)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_bulk_operations_request_validation_fails_for_bad_data(user_schema):
@@ -1641,7 +1641,7 @@ def test_bulk_operations_response_is_valid_if_correct_data(user_data_server, use
     }
 
     issues = validator.validate_response(body=data, status_code=200)
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
     assert validator.response_schema.serialize(data)
 
@@ -1879,7 +1879,7 @@ def test_service_provider_configuration_is_validated():
         },
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_group_output_is_validated_correctly(group_data_server, group_schema):
@@ -1894,7 +1894,7 @@ def test_group_output_is_validated_correctly(group_data_server, group_schema):
         },
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_schemas_output_can_be_validated(user_schema, group_schema):
@@ -1910,7 +1910,7 @@ def test_schemas_output_can_be_validated(user_schema, group_schema):
 
     issues = validator.validate_response(status_code=200, body=body)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_schema_response_can_be_validated(user_schema):
@@ -1925,7 +1925,7 @@ def test_schema_response_can_be_validated(user_schema):
         },
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_type_response_can_be_validated():
@@ -1958,7 +1958,7 @@ def test_resource_type_response_can_be_validated():
         },
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_resource_types_response_can_be_validated():
@@ -2004,7 +2004,7 @@ def test_resource_types_response_can_be_validated():
 
     issues = validator.validate_response(status_code=200, body=body)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 @pytest.mark.parametrize(
@@ -2326,7 +2326,7 @@ def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):
 
     issues = validator.validate_request(body=data)
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 @pytest.mark.parametrize(

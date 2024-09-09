@@ -98,27 +98,27 @@ def test_errors_can_be_popped_by_location_and_codes():
 
 def test_issues_can_be_converted_to_dict(issues):
     expected = {
-        "_errors": [{"code": 31, "error": "value or operation not supported", "context": {}}],
+        "_errors": [{"code": 31, "message": "value or operation not supported", "context": {}}],
         "a": {
             "b": {
                 "_errors": [
-                    {"code": 4, "error": "bad value content", "context": {}},
-                    {"code": 1, "error": "bad value syntax", "context": {}},
+                    {"code": 4, "message": "bad value content", "context": {}},
+                    {"code": 1, "message": "bad value syntax", "context": {}},
                 ],
                 "c": {
-                    "_errors": [{"code": 4, "error": "bad value content", "context": {}}],
+                    "_errors": [{"code": 4, "message": "bad value content", "context": {}}],
                 },
                 "d": {
-                    "_errors": [{"code": 1, "error": "bad value syntax", "context": {}}],
+                    "_errors": [{"code": 1, "message": "bad value syntax", "context": {}}],
                 },
             },
             "e": {
-                "_warnings": [{"code": 4, "error": "missing", "context": {}}],
+                "_warnings": [{"code": 4, "message": "missing", "context": {}}],
             },
         },
     }
 
-    actual = issues.to_dict(msg=True, ctx=True)
+    actual = issues.to_dict(message=True, context=True)
 
     assert actual == expected
 

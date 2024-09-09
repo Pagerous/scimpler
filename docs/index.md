@@ -49,7 +49,6 @@ config.set_service_provider_config(
 from scimpler import query_string, validator
 from scimpler.schemas import UserSchema
 
-
 query_string_handler = query_string.ResourceObjectPatch()
 val = validator.ResourceObjectPatch(resource_schema=UserSchema())
 
@@ -83,8 +82,8 @@ request_data = {
 query_string_issues = query_string_handler.validate(request_query_string)
 request_issues = val.validate_request(request_data)
 
-print("query_string_issues:\n", query_string_issues.to_dict(msg=True))
-print("request_issues:\n", request_issues.to_dict(msg=True))
+print("query_string_issues:\n", query_string_issues.to_dict(message=True))
+print("request_issues:\n", request_issues.to_dict(message=True))
 ```
 
 Output
@@ -94,7 +93,7 @@ query_string_issues:
   "attributes": {
     "1": {
       "_errors": [
-        {"code": 17, "error": "bad attribute name "bad^attributeName""}
+        {"code": 17, "message": "bad attribute name "bad^attributeName""}
       ]
     }
   }
@@ -106,20 +105,20 @@ request_issues:
     "Operations": {
       "1": {
         "value": {
-          "errors": [{"code": 2, "error": "bad type, expecting 'complex'"}]
+          "errors": [{"code": 2, "message": "bad type, expecting 'complex'"}]
         }
       },
       "2": {
         "path": {
-          "errors": [{"code": 28, "error": "unknown modification target"}]
+          "errors": [{"code": 28, "message": "unknown modification target"}]
         }
       }
       "3": {
         "path": {
-          "errors": [{"code": 1, "error": "bad value syntax"}]
+          "errors": [{"code": 1, "message": "bad value syntax"}]
         },
         "value": {
-          "errors": [{"code": 5, "error": "missing"}]
+          "errors": [{"code": 5, "message": "missing"}]
         }
       },
     }
@@ -175,7 +174,6 @@ from scimpler.data import AttrValuePresenceConfig
 from scimpler.schemas import UserSchema
 from scimpler import validator
 
-
 response_data = {
     "schemas": [
         "urn:ietf:params:scim:schemas:core:2.0:User",
@@ -216,7 +214,7 @@ response_issues = val.validate_response(
     )
 )
 
-print(response_issues.to_dict(msg=True))
+print(response_issues.to_dict(message=True))
 ```
 Output
 ```
@@ -224,23 +222,23 @@ Output
   "body": {
     "name": {
       "familyName": {
-        "_errors": [{"code": 7, "error": "must not be returned"}]
+        "_errors": [{"code": 7, "message": "must not be returned"}]
       }
     },
     "password": {
-      "_errors": [{"code": 7, "error": "must not be returned"}]
+      "_errors": [{"code": 7, "message": "must not be returned"}]
     },
     "emails": {
       "0": {
         "primary": {
-          "_errors": [{"code": 7, "error": "must not be returned"}]
+          "_errors": [{"code": 7, "message": "must not be returned"}]
         }
       }
     }
   },
   "status": {
     "_errors": [
-      {"code": 19, "error": "bad status code, expecting '200'"}
+      {"code": 19, "message": "bad status code, expecting '200'"}
     ]
   }
 }

@@ -34,7 +34,7 @@ def test_restricted_attributes_can_be_sent_with_request(user_schema):
         direction="REQUEST",
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_presence_validation_fails_on_attr_which_should_not_be_included_if_not_necessary(
@@ -80,7 +80,7 @@ def test_presence_validation_passes_if_not_provided_requested_optional_attribute
         inclusivity=DataInclusivity.INCLUDE,
     )
 
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
 
 def test_specifying_attribute_issued_by_service_provider_causes_validation_failure(user_schema):

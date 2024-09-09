@@ -91,7 +91,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(
     }
 
     issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
@@ -343,7 +343,7 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
     }
 
     issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.get("Operations")[0].get("value") == expected_value
@@ -409,7 +409,9 @@ def test_remove_operation__succeeds_if_correct_path(path, user_schema):
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
-    assert schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(msg=True) == {}
+    assert (
+        schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(message=True) == {}
+    )
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
@@ -432,7 +434,9 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
         "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
-    assert schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(msg=True) == {}
+    assert (
+        schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(message=True) == {}
+    )
 
     actual_data = schema.deserialize(input_data)
     assert actual_data.to_dict() == expected_data
@@ -794,9 +798,9 @@ def test_replace_operation_with_bad_complex_item_value_is_validated(user_schema)
                     "path": "emails[type eq 'home']",
                     "value": 42,
                 }
-            ]
+            ],
         },
-        AttrValuePresenceConfig("REQUEST")
+        AttrValuePresenceConfig("REQUEST"),
     )
 
     assert issues.to_dict() == expected_issues

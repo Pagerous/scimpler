@@ -71,7 +71,7 @@ from scimpler.data.schemas import ResourceSchema
 )
 def test_patch_path_parsing_failure(path, expected_issues):
     issues = PatchPath.validate(path)
-    assert issues.to_dict(ctx=True) == expected_issues
+    assert issues.to_dict(context=True) == expected_issues
 
     with pytest.raises(ValueError, match="invalid path expression"):
         PatchPath.deserialize(path)
@@ -129,7 +129,7 @@ def test_patch_path_parsing_failure(path, expected_issues):
 )
 def test_patch_path_deserialization_success(path, expected):
     issues = PatchPath.validate(path)
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
     deserialized = PatchPath.deserialize(path)
     assert deserialized == expected
@@ -179,7 +179,7 @@ def test_complex_filter_string_values_can_contain_anything(
     path, expected_filter_value, user_schema
 ):
     issues = PatchPath.validate(path)
-    assert issues.to_dict(msg=True) == {}
+    assert issues.to_dict(message=True) == {}
 
     deserialized = PatchPath.deserialize(path)
     assert deserialized({"value": expected_filter_value}, user_schema)

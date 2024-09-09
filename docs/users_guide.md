@@ -153,7 +153,7 @@ errors and validation warnings. Call `ValidationIssues.to_dict`, to have nice ov
 Every validation error and warning has [code](issue-codes.md). To see a message, pass `message` argument.
 
 ```python
->>> print(issues.to_dict(msg=True))
+>>> print(issues.to_dict(message=True))
 {"id": {"_errors": [{"code": 2, "message": "bad type, expecting 'string'"}]}}
 ```
 
@@ -201,7 +201,7 @@ issues = list_response.validate(data)
         "_errors": [
           {
             "code": 2,
-            "error": "bad type, expecting 'string'"
+            "message": "bad type, expecting 'string'"
           }
         ]
       }
@@ -211,7 +211,7 @@ issues = list_response.validate(data)
         "_errors": [
           {
             "code": 5,
-            "error": 'missing'
+            "message": 'missing'
           }
         ]
       },
@@ -221,7 +221,7 @@ issues = list_response.validate(data)
             "_errors": [
               {
                 "code": 2,
-                "error": "bad type, expecting 'string'"
+                "message": "bad type, expecting 'string'"
               }
             ]
           },
@@ -229,7 +229,7 @@ issues = list_response.validate(data)
             "_errors": [
               {
                 "code": 9,
-                "error": "must be one of: ['user', 'group']"
+                "message": "must be one of: ['user', 'group']"
               }
             ]
           }

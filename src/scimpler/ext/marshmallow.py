@@ -160,7 +160,7 @@ def _transform_errors_dict(input_dict: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, dict):
             transformed_value = _transform_errors_dict(value)
             if "_errors" in transformed_value and len(transformed_value) == 1:
-                output_dict[key] = [error["error"] for error in transformed_value["_errors"]]
+                output_dict[key] = [error["message"] for error in transformed_value["_errors"]]
             else:
                 output_dict[key] = transformed_value
         else:
@@ -179,7 +179,7 @@ def _validate_response(
     )
     if issues.has_errors():
         raise marshmallow.ValidationError(
-            message=_transform_errors_dict(issues.to_dict(msg=True)),
+            message=_transform_errors_dict(issues.to_dict(message=True)),
         )
 
 
@@ -187,7 +187,7 @@ def _validate_request(data: MutableMapping[str, Any], request_validator: Callabl
     issues = request_validator(body=data)
     if issues.has_errors():
         raise marshmallow.ValidationError(
-            message=_transform_errors_dict(issues.to_dict(msg=True)),
+            message=_transform_errors_dict(issues.to_dict(message=True)),
         )
 
 
