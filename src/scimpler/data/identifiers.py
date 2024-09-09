@@ -31,9 +31,9 @@ class AttrName(str):
         return cast(AttrName, str.__new__(cls, value))
 
     def __eq__(self, other: Any) -> bool:
-        if isinstance(other, str):
-            other = other.lower()
-        return self.lower() == other
+        if isinstance(other, AttrName):
+            return self.lower() == other.lower()
+        return str(self) == other
 
     def __hash__(self):
         return hash(self.lower())
