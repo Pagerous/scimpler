@@ -21,13 +21,12 @@ def validate_operations(value: list[ScimData]) -> ValidationIssues:
                 proceed=False,
                 location=[i, "path"],
             )
-        elif type_ in ["add", "replace"]:
-            if op_value in [None, Missing]:
-                issues.add_error(
-                    issue=ValidationError.missing(),
-                    proceed=False,
-                    location=[i, "value"],
-                )
+        elif type_ in ["add", "replace"] and op_value in [None, Missing]:
+            issues.add_error(
+                issue=ValidationError.missing(),
+                proceed=False,
+                location=[i, "value"],
+            )
     return issues
 
 
@@ -186,47 +185,48 @@ class PatchOpSchema(BaseSchema):
     def _validate_operation_value(
         self, attr: Optional[Attribute], path: Union[PatchPath, None, MissingType], value: Any
     ) -> ValidationIssues:
-        if not isinstance(path, PatchPath):
-            issues = self._resource_schema.validate(value)
-            issues.pop([27, 28, 29], location=["schemas"])
-            for attr_rep, attr in self._resource_schema.attrs:
-                parent_attr_value = value.get(attr_rep)
-                if parent_attr_value is Missing:
-                    continue
+        if isinstance(path, PatchPath):
+            return self._validate_update_attr_value(cast(Attribute, attr), value, path)
 
-                if attr.mutability == AttributeMutability.READ_ONLY:
+        issues = self._resource_schema.validate(value)
+        issues.pop([27, 28, 29], location=["schemas"])
+        for attr_rep, attr in self._resource_schema.attrs:
+            parent_attr_value = value.get(attr_rep)
+            if parent_attr_value is Missing:
+                continue
+
+            if attr.mutability == AttributeMutability.READ_ONLY:
+                issues.add_error(
+                    issue=ValidationError.attribute_can_not_be_modified(),
+                    proceed=False,
+                    location=attr_rep.location,
+                )
+                continue
+
+            if not isinstance(attr, Complex):
+                continue
+
+            sub_attr_err = False
+            attr_location = attr_rep.location
+            for sub_attr_name, sub_attr in attr.attrs:
+                if (
+                    sub_attr.mutability == AttributeMutability.READ_ONLY
+                    and parent_attr_value is not Invalid
+                    and parent_attr_value.get(sub_attr_name) is not Missing
+                ):
                     issues.add_error(
                         issue=ValidationError.attribute_can_not_be_modified(),
                         proceed=False,
-                        location=attr_rep.location,
+                        location=(*attr_location, sub_attr_name),
                     )
-                    continue
+                    sub_attr_err = True
 
-                if not isinstance(attr, Complex):
-                    continue
-
-                sub_attr_err = False
-                attr_location = attr_rep.location
-                for sub_attr_name, sub_attr in attr.attrs:
-                    if (
-                        sub_attr.mutability == AttributeMutability.READ_ONLY
-                        and parent_attr_value is not Invalid
-                        and parent_attr_value.get(sub_attr_name) is not Missing
-                    ):
-                        issues.add_error(
-                            issue=ValidationError.attribute_can_not_be_modified(),
-                            proceed=False,
-                            location=(*attr_location, sub_attr_name),
-                        )
-                        sub_attr_err = True
-
-                if not sub_attr_err:
-                    issues.merge(
-                        self._validate_complex_sub_attrs_presence(attr, parent_attr_value),
-                        location=attr_location,
-                    )
-            return issues
-        return self._validate_update_attr_value(cast(Attribute, attr), value, path)
+            if not sub_attr_err:
+                issues.merge(
+                    self._validate_complex_sub_attrs_presence(attr, parent_attr_value),
+                    location=attr_location,
+                )
+        return issues
 
     @staticmethod
     def _validate_update_attr_value(
@@ -251,9 +251,21 @@ class PatchOpSchema(BaseSchema):
             issues_ = attr.validate(attr_value)
         issues.merge(issues_)
 
-        if not issues_.can_proceed() or not isinstance(attr, Complex):
-            return issues
+        if issues_.can_proceed() and isinstance(attr, Complex):
+            issues.merge(
+                PatchOpSchema._validate_update_complex_sub_attr_value(
+                    attr, attr_value, updating_multivalued_items
+                )
+            )
+        return issues
 
+    @staticmethod
+    def _validate_update_complex_sub_attr_value(
+        attr: Complex,
+        attr_value: ScimData,
+        updating_multivalued_items: bool,
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
         can_validate_presence = True
         if updating_multivalued_items or not attr.multi_valued:
             for sub_attr_name, sub_attr in attr.attrs:

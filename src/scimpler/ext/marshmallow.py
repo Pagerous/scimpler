@@ -260,6 +260,27 @@ def _get_list_response_processors(
     return processors_
 
 
+def _transform_resource_data_for_loading(
+    scimpler_schema: ResourceSchema,
+    data: MutableMapping[str, Any],
+    original_data: MutableMapping[str, Any],
+) -> ScimData:
+    for extension_uri in scimpler_schema.extensions:
+        extension_uri_lower = extension_uri.lower()
+        for k in original_data:
+            if k.lower() != extension_uri_lower:
+                continue
+            key_parts = k.split(".")
+            if len(key_parts) == 1:
+                continue
+            extension_data = data
+            for part in key_parts:
+                extension_data = extension_data[part]
+            data.pop(key_parts[0])
+            data[k] = extension_data
+    return ScimData(data)
+
+
 def _get_resource_processors(
     scimpler_schema: ResourceSchema,
     processors: Processors,
@@ -270,19 +291,7 @@ def _get_resource_processors(
     def _post_load(
         _, data: MutableMapping[str, Any], original_data: MutableMapping[str, Any], **__
     ) -> ScimData:
-        for extension_uri in scimpler_schema.extensions:
-            extension_uri_lower = extension_uri.lower()
-            for k in original_data:
-                if k.lower() == extension_uri_lower:
-                    key_parts = k.split(".")
-                    if len(key_parts) == 1:
-                        continue
-                    extension_data = data
-                    for part in key_parts:
-                        extension_data = extension_data[part]
-                    data.pop(key_parts[0])
-                    data[k] = extension_data
-        return ScimData(data)
+        return _transform_resource_data_for_loading(scimpler_schema, data, original_data)
 
     def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
         return scimpler_schema.serialize(data)

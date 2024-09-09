@@ -12,6 +12,8 @@ from scimpler.data.attrs import (
 )
 from scimpler.data.schemas import BaseResourceSchema
 
+_supported_description = "A Boolean value specifying whether or not the operation is supported."
+
 
 class ServiceProviderConfigSchema(BaseResourceSchema):
     """
@@ -49,9 +51,7 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             sub_attributes=[
                 Boolean(
                     name="supported",
-                    description=(
-                        "A Boolean value specifying whether or not the operation is supported."
-                    ),
+                    description=_supported_description,
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )
@@ -65,9 +65,7 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             sub_attributes=[
                 Boolean(
                     name="supported",
-                    description=(
-                        "A Boolean value specifying whether or not the operation is supported."
-                    ),
+                    description=_supported_description,
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
@@ -92,9 +90,7 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             sub_attributes=[
                 Boolean(
                     name="supported",
-                    description=(
-                        "A Boolean value specifying whether or not the operation is supported."
-                    ),
+                    description=_supported_description,
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
@@ -120,9 +116,7 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             sub_attributes=[
                 Boolean(
                     name="supported",
-                    description=(
-                        "A Boolean value specifying whether or not the operation is supported."
-                    ),
+                    description=_supported_description,
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )
@@ -136,9 +130,7 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             sub_attributes=[
                 Boolean(
                     name="supported",
-                    description=(
-                        "A Boolean value specifying whether or not the operation is supported."
-                    ),
+                    description=_supported_description,
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )
@@ -154,9 +146,7 @@ class ServiceProviderConfigSchema(BaseResourceSchema):
             sub_attributes=[
                 Boolean(
                     name="supported",
-                    description=(
-                        "A Boolean value specifying whether or not the operation is supported."
-                    ),
+                    description=_supported_description,
                     required=True,
                     mutability=AttributeMutability.READ_ONLY,
                 )

@@ -25,7 +25,7 @@ class ResourceTypeSchema(BaseResourceSchema):
         String(
             name="id",
             description=(
-                "The resource type's server unique id. " "May be the same as the 'name' attribute."
+                "The resource type's server unique id. May be the same as the 'name' attribute."
             ),
             mutability=AttributeMutability.READ_ONLY,
             issuer=AttributeIssuer.SERVICE_PROVIDER,

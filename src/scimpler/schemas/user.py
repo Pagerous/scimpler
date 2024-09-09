@@ -21,9 +21,7 @@ from scimpler.data.attrs import (
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
-_ACCEPT_LANGUAGE_REGEX = re.compile(
-    r"\s*([a-z]{2})(?:-[A-Z]{2})?(?:\s*;q=([0-9]\.[0-9]))?(?:\s*,|$)"
-)
+_ACCEPT_LANGUAGE_REGEX = re.compile(r"\s*([a-z]{2})(?:-[A-Z]{2})?(?:\s*;q=(\d\.\d))?(?:\s*,|$)")
 
 
 def validate_preferred_language(value: str) -> ValidationIssues:
@@ -107,6 +105,13 @@ def validate_country(value: str) -> ValidationIssues:
 
 def process_ims_value(value: str) -> str:
     return re.sub(r"\s", "", value.lower())
+
+
+_display_description = "A human-readable name, primarily used for display purposes."
+_type_description = "A label indicating the attribute's function."
+_primary_description = (
+    "A Boolean value indicating the 'primary' or preferred attribute value for this attribute"
+)
 
 
 class UserSchema(ResourceSchema):
@@ -302,23 +307,16 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes.",
+                    description=_display_description,
                 ),
                 String(
                     name="type",
-                    description=(
-                        "A label indicating the attribute's function, e.g., 'work' " "or 'home'."
-                    ),
+                    description=_type_description,
                     canonical_values=["work", "home", "other"],
                 ),
                 Boolean(
                     name="primary",
-                    description=(
-                        "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute, "
-                        "e.g., the preferred mailing address or primary email address. "
-                        "The primary attribute value 'true' MUST appear no more than once."
-                    ),
+                    description=_primary_description,
                 ),
             ],
         ),
@@ -340,24 +338,16 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="type",
-                    description=(
-                        "A label indicating the attribute's function, "
-                        "e.g., 'work', 'home', 'mobile'."
-                    ),
+                    description=_type_description,
                     canonical_values=["work", "home", "mobile", "fax", "pager", "other"],
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes.",
+                    description=_display_description,
                 ),
                 Boolean(
                     name="primary",
-                    description=(
-                        "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute, "
-                        "e.g., the preferred phone number or primary phone number. "
-                        "The primary attribute value 'true' MUST appear no more than once."
-                    ),
+                    description=_primary_description,
                 ),
             ],
         ),
@@ -374,20 +364,15 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="type",
-                    description="A label indicating the attribute's function",
+                    description=_type_description,
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes.",
+                    description=_display_description,
                 ),
                 Boolean(
                     name="primary",
-                    description=(
-                        "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute, "
-                        "e.g., the preferred messenger or primary messenger. "
-                        "The primary attribute value 'true' MUST appear no more than once."
-                    ),
+                    description=_primary_description,
                 ),
             ],
         ),
@@ -402,24 +387,16 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="type",
-                    description=(
-                        "A label indicating the attribute's "
-                        "function, i.e., 'photo' or 'thumbnail'."
-                    ),
+                    description=_type_description,
                     canonical_values=["photo", "thumbnail"],
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes.",
+                    description=_display_description,
                 ),
                 Boolean(
                     name="primary",
-                    description=(
-                        "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute, "
-                        "e.g., the preferred photo or thumbnail. "
-                        "The primary attribute value 'true' MUST appear no more than once."
-                    ),
+                    description=_primary_description,
                 ),
             ],
         ),
@@ -468,9 +445,7 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="type",
-                    description=(
-                        "A label indicating the attribute's " "function, e.g., 'work' or 'home'."
-                    ),
+                    description=_type_description,
                     canonical_values=["work", "home", "other"],
                 ),
             ],
@@ -500,15 +475,12 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes.",
+                    description=_display_description,
                     mutability=AttributeMutability.READ_ONLY,
                 ),
                 String(
                     name="type",
-                    description=(
-                        "A label indicating the attribute's "
-                        "function, e.g., 'direct' or 'indirect'."
-                    ),
+                    description=_type_description,
                     canonical_values=["direct", "indirect"],
                     mutability=AttributeMutability.READ_ONLY,
                 ),
@@ -517,7 +489,7 @@ class UserSchema(ResourceSchema):
         Complex(
             name="entitlements",
             description=(
-                "A list of entitlements for the User that " "represent a thing the User has."
+                "A list of entitlements for the User that represent a thing the User has."
             ),
             multi_valued=True,
             sub_attributes=[
@@ -527,16 +499,12 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes.",
+                    description=_display_description,
                 ),
-                String(name="type", description="A label indicating the attribute's function."),
+                String(name="type", description=_type_description),
                 Boolean(
                     name="primary",
-                    description=(
-                        "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute. The primary "
-                        "attribute value 'true' MUST appear no more than once."
-                    ),
+                    description=_primary_description,
                 ),
             ],
         ),
@@ -554,16 +522,12 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes.",
+                    description=_display_description,
                 ),
-                String(name="type", description="A label indicating the attribute's function."),
+                String(name="type", description=_type_description),
                 Boolean(
                     name="primary",
-                    description=(
-                        "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute. The primary "
-                        "attribute value 'true' MUST appear no more than once."
-                    ),
+                    description=_primary_description,
                 ),
             ],
         ),
@@ -578,19 +542,15 @@ class UserSchema(ResourceSchema):
                 ),
                 String(
                     name="display",
-                    description="A human-readable name, primarily used for display purposes",
+                    description=_display_description,
                 ),
                 String(
                     name="type",
-                    description="A label indicating the attribute's function.",
+                    description=_type_description,
                 ),
                 Boolean(
                     name="primary",
-                    description=(
-                        "A Boolean value indicating the 'primary' "
-                        "or preferred attribute value for this attribute. The primary "
-                        "attribute value 'true' MUST appear no more than once."
-                    ),
+                    description=_primary_description,
                 ),
             ],
         ),
