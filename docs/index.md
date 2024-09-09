@@ -1,20 +1,20 @@
 # scimpler: makes SCIM integrations simpler
 
 
-The `scimpler` library makes it easier to ensure both Service Provider and Provisioning Client ends
+The `scimpler` makes it easier to ensure both Service Provider and Provisioning Client
 integrate with **SCIM 2.0** protocol flawlessly. It implements definitions, validation rules, and
-operations, as defined in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643) 
+operations, as specified in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643) 
 and [RFC-7644](https://www.rfc-editor.org/rfc/rfc7644).
 
 # Features
-- All schemas defined in SCIM protocol ready to use
+- All SCIM-defined resource and API message schemas
 - Custom resource schemas and extensions
-- Extending built-in resource schemas
 - SCIM requests and responses validation
-- Filter deserialization and filtering
-- Support for data sorting and pagination
-- Stateless data validation
-- Optional integration with [marshmallow](https://marshmallow.readthedocs.io/en/stable/) schemas
+- Filters with SCIM-defined and custom operators
+- Data sorting
+- Attribute-based data filtering
+- Convenient SCIM data access and composition
+- Optional integration with [marshmallow](api_reference/scimpler_ext/marshmallow.md) schemas
 
 # Installation
 
@@ -30,92 +30,217 @@ If you want to integrate with marshmallow, install `scimpler` with optional depe
 pip install "scimpler[marshmallow]"
 ```
 
-# Examples
-## User resource POST request validation
+# Quick start
+## Validate request
 
 ```python
+from scimpler import query_string, validator, config
 from scimpler.schemas import UserSchema
-from scimpler.validator import ResourcesPost
 
-validator = ResourcesPost(resource_schema=UserSchema())
 
-validation_issues = validator.validate_request(
-    body={
-        "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
-        "name": "Foo",
-    }
-).to_dict(msg=True)
+config.set_service_provider_config(
+    config.ServiceProviderConfig.create(
+        patch={"supported": True}
+    )
+)
+query_string_handler = query_string.ResourceObjectPatch()
+val = validator.ResourceObjectPatch(resource_schema=UserSchema())
 
-print(validation_issues)
+
+request_query_string = {
+    "attributes": "name,bad^attributeName"
+}
+request_data = {
+    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+    "Operations": [
+        {
+            "op": "add",
+            "path": "nickName",
+            "value": "Pagerous",
+        },
+        {
+            "op": "replace",
+            "path": "emails[type eq 'home']",
+            "value": 42,
+        },
+        {
+            "op": "remove",
+            "path": "name.nonExisting"
+        },
+        {
+            "op": "replace",
+            "path": "ims[ty"
+        }
+    ]
+}
+
+query_string_issues = query_string_handler.validate(request_query_string)
+request_issues = val.validate_request(request_data)
+
+print("query_string_issues:\n", query_string_issues.to_dict(msg=True))
+print("request_issues:\n", request_issues.to_dict(msg=True))
 ```
 
 Output
-```json
+```
+query_string_issues:
+{
+  "attributes": {
+    "1": {
+      "_errors": [
+        {"code": 17, "error": "bad attribute name "bad^attributeName""}
+      ]
+    }
+  }
+}
+
+request_issues:
 {
   "body": {
-    "userName": {"_errors": [{"code": 5, "error": "missing"}]},
-    "name": {"_errors": [{"code": 2, "error": "bad type, expecting 'complex'"}]}
+    "Operations": {
+      "1": {
+        "value": {
+          "errors": [{"code": 2, "error": "bad type, expecting 'complex'"}]
+        }
+      },
+      "2": {
+        "path": {
+          "errors": [{"code": 28, "error": "unknown modification target"}]
+        }
+      }
+      "3": {
+        "path": {
+          "errors": [{"code": 1, "error": "bad value syntax"}]
+        },
+        "value": {
+          "errors": [{"code": 5, "error": "missing"}]
+        }
+      },
+    }
   }
 }
 ```
 
-## Filter deserialization
+# Deserialize (or serialize) data
 
 ```python
-from scimpler.data import Filter
+from scimpler.schemas import UserSchema
 
-filter_ = Filter.deserialize(
-    "emails[type eq 'work' and value co '@example.com'] "
-    "or ims[type eq 'xmpp' and value co '@foo.com']"
-).to_dict()
+data = {
+    "schemas": [
+        "urn:ietf:params:scim:schemas:core:2.0:User",
+    ],
+    "externalId": "1",
+    "userName": "Pagerous",
+    "name": {
+        "formatted": "Arkadiusz Pajor",
+        "familyName": "Pajor",
+        "givenName": "Arkadiusz"
+    },
+    "profileUrl": "https://www.linkedin.com/in/arkadiusz-pajor/",
+    "emails": [
+        {
+            "value": "arkadiuszpajor97@gmail.com",
+            "type": "work",
+            "primary": True
+        }
+    ],
+}
+user = UserSchema()
+
+deserialized = user.deserialize(data)
+
+# convenient, case-insensitive data access
+print(deserialized["name.formatted"])
+print(deserialized["pRoFiLeUrL"])
+print(deserialized["emails"][0].get("display"))
+```
+Output
+```
+Arkadiusz Pajor
+https://www.linkedin.com/in/arkadiusz-pajor/
+Missing
 ```
 
-Output
+# Validate response
 
-```json
-{
-    "op": "or",
-    "sub_ops": [
+```python
+from scimpler.data import AttrValuePresenceConfig
+from scimpler.schemas import UserSchema
+from scimpler import validator
+
+
+response_data = {
+    "schemas": [
+        "urn:ietf:params:scim:schemas:core:2.0:User",
+    ],
+    "id": "1",
+    "externalId": "1",
+    "userName": "Pagerous",
+    "password": "12345678",
+    "name": {
+        "formatted": "Arkadiusz Pajor",
+        "familyName": "Pajor",
+        "givenName": "Arkadiusz"
+    },
+    "profileUrl": "https://www.linkedin.com/in/arkadiusz-pajor/",
+    "emails": [
         {
-            "attr": "emails",
-            "op": "complex",
-            "sub_op": {
-                "op": "and",
-                "sub_ops": [
-                    {
-                        "attr": "type",
-                        "op": "eq",
-                        "value": "work"
-                    },
-                    {
-                        "attr": "value",
-                        "op": "co",
-                        "value": "@example.com"
-                    }
-                ]
-            }
-        },
-        {
-            "attr": "ims",
-            "op": "complex",
-            "sub_op": {
-                "op": "and",
-                "sub_ops": [
-                    {
-                        "attr": "type",
-                        "op": "eq",
-                        "value": "xmpp"
-                    },
-                    {
-                        "attr": "value",
-                        "op": "co",
-                        "value": "@foo.com"
-                    }
-                ]
-            }
+            "value": "arkadiuszpajor97@gmail.com",
+            "type": "work",
+            "primary": True
         }
+    ],
+    "meta": {
+        "resourceType": "User",
+        "created": "1997-10-17T00:00:00",
+        "lastModified": "2024-09-09T22:13:00",
+        "location": "https://example.com/v2/Users/1",
+    }
+}
+val = validator.ResourceObjectGet(resource_schema=UserSchema())
+
+response_issues = val.validate_response(
+    status_code=201,
+    body=response_data,
+    presence_config=AttrValuePresenceConfig(
+        "RESPONSE",
+        attr_reps=["name.familyName", "emails.primary"],
+        include=False
+    )
+)
+
+print(response_issues.to_dict(msg=True))
+```
+Output
+```
+{
+  "body": {
+    "name": {
+      "familyName": {
+        "_errors": [{"code": 7, "error": "must not be returned"}]
+      }
+    },
+    "password": {
+      "_errors": [{"code": 7, "error": "must not be returned"}]
+    },
+    "emails": {
+      "0": {
+        "primary": {
+          "_errors": [{"code": 7, "error": "must not be returned"}]
+        }
+      }
+    }
+  },
+  "status": {
+    "_errors": [
+      {"code": 19, "error": "bad status code, expecting '200'"}
     ]
+  }
 }
 ```
+
+
+
 
 See [User's Guide](users_guide.md) for detailed features description. Want to know more? Check API Reference. 

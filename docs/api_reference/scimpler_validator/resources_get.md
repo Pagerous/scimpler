@@ -1,1 +1,0 @@
-::: scimpler.validator.ResourcesGet

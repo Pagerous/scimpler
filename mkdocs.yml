@@ -86,8 +86,8 @@ nav:
           - ResourceObjectGet: api_reference/scimpler_validator/resource_object_get.md
           - ResourceObjectPatch: api_reference/scimpler_validator/resource_object_patch.md
           - ResourceObjectPut: api_reference/scimpler_validator/resource_object_put.md
-          - ResourcesGet: api_reference/scimpler_validator/resources_get.md
           - ResourcesPost: api_reference/scimpler_validator/resources_post.md
+          - ResourcesQuery: api_reference/scimpler_validator/resources_query.md
           - SearchRequestPost: api_reference/scimpler_validator/search_request_post.md
       - scimpler.config: api_reference/scimpler_config.md
 
