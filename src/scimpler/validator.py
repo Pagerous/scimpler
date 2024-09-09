@@ -38,7 +38,7 @@ class Validator(abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """Validates requests."""
 
     @abc.abstractmethod
@@ -69,7 +69,7 @@ class Error(Validator):
         """
         return self._schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         raise NotImplementedError
 
     def validate_response(
@@ -275,7 +275,7 @@ class ResourceObjectGet(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
     def validate_response(
@@ -370,7 +370,7 @@ class ResourceObjectPut(Validator):
         """
         return self._schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP PUT** requests sent to **resource object** endpoints.
 
@@ -491,7 +491,7 @@ class ResourcesPost(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP POST** requests sent to **resource type** endpoints.
 
@@ -891,7 +891,7 @@ class ResourcesQuery(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
     def validate_response(
@@ -996,7 +996,7 @@ class SearchRequestPost(ResourcesQuery):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP POST** query requests.
 
@@ -1074,7 +1074,7 @@ class ResourceObjectPatch(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP PATCH** requests sent to **resource object** endpoints.
 
@@ -1154,7 +1154,7 @@ class ResourceObjectDelete(Validator):
     Validator for **HTTP DELETE** operations performed against **resource object** endpoints.
     """
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         return ValidationIssues()
 
     def validate_response(
@@ -1288,7 +1288,7 @@ class BulkOperations(Validator):
         """
         return self._response_schema
 
-    def validate_request(self, *, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
+    def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
         Validates the **HTTP POST** requests performed against bulk endpoint.
 

@@ -252,7 +252,7 @@ class PatchOpSchema(BaseSchema):
         )
 
         if updating_multivalued_items:
-            issues_ = attr.validate([attr_value])
+            issues_ = attr.validate([attr_value]).get(location=[0])
         else:
             issues_ = attr.validate(attr_value)
         issues.merge(issues_)

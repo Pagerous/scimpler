@@ -37,6 +37,7 @@ class QueryStringHandler(abc.ABC):
             Validation issues.
         """
         query_params = ScimData(query_params or {})
+        self._unify_attributes(query_params)
         query_params.set(
             "schemas",
             ["urn:ietf:params:scim:api:messages:2.0:SearchRequest"],
@@ -49,6 +50,12 @@ class QueryStringHandler(abc.ABC):
         for the specific HTTP operation. Unknown parameters are preserved.
         """
         query_params = ScimData(query_params or {})
+        self._unify_attributes(query_params)
+        query_params.update(self.schema.deserialize(query_params))
+        return query_params
+
+    @staticmethod
+    def _unify_attributes(query_params: MutableMapping[str, Any]) -> None:
         attributes = query_params.get("attributes")
         if isinstance(attributes, str):
             attributes = [item.strip() for item in attributes.split(",")]
@@ -57,8 +64,6 @@ class QueryStringHandler(abc.ABC):
         if isinstance(excluded_attributes, str):
             excluded_attributes = [item.strip() for item in excluded_attributes.split(",")]
             query_params["excludedAttributes"] = excluded_attributes
-        query_params.update(self.schema.deserialize(query_params))
-        return query_params
 
     def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
         """

@@ -777,3 +777,26 @@ def test_patch_path_operation_can_be_serialized(user_schema):
     actual = schema.serialize(deserialized)
 
     assert actual == expected
+
+
+def test_replace_operation_with_bad_complex_item_value_is_validated(user_schema):
+    schema = PatchOpSchema(resource_schema=user_schema)
+    expected_issues = {
+        "Operations": {"0": {"value": {"_errors": [{"code": 2}]}}},
+    }
+
+    issues = schema.validate(
+        {
+            "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+            "Operations": [
+                {
+                    "op": "replace",
+                    "path": "emails[type eq 'home']",
+                    "value": 42,
+                }
+            ]
+        },
+        AttrValuePresenceConfig("REQUEST")
+    )
+
+    assert issues.to_dict() == expected_issues
