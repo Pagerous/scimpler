@@ -1,7 +1,7 @@
-# scimpler: makes SCIM integrations simpler
+# scimpler: SCIM integrations made simpler
 
 
-The `scimpler` makes it easier to ensure both Service Provider and Provisioning Client
+`scimpler` makes it easier to ensure both Service Provider and Provisioning Client
 integrate with **SCIM 2.0** protocol flawlessly. It implements definitions, validation rules, and
 operations, as specified in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643) 
 and [RFC-7644](https://www.rfc-editor.org/rfc/rfc7644).
@@ -31,21 +31,27 @@ pip install "scimpler[marshmallow]"
 ```
 
 # Quick start
-## Validate request
+## Set Service Provider configuration
 
 ```python
-from scimpler import query_string, validator, config
-from scimpler.schemas import UserSchema
-
+from scimpler import config
 
 config.set_service_provider_config(
     config.ServiceProviderConfig.create(
         patch={"supported": True}
     )
 )
+```
+
+## Validate request
+
+```python
+from scimpler import query_string, validator
+from scimpler.schemas import UserSchema
+
+
 query_string_handler = query_string.ResourceObjectPatch()
 val = validator.ResourceObjectPatch(resource_schema=UserSchema())
-
 
 request_query_string = {
     "attributes": "name,bad^attributeName"
