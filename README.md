@@ -121,7 +121,7 @@ request_issues:
 }
 ```
 
-# Deserialize (or serialize) data
+## Deserialize (or serialize) data
 
 ```python
 from scimpler.schemas import UserSchema
@@ -162,7 +162,7 @@ https://www.linkedin.com/in/arkadiusz-pajor/
 Missing
 ```
 
-# Validate response
+## Validate response
 
 ```python
 from scimpler.data import AttrValuePresenceConfig
