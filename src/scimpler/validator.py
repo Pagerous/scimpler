@@ -579,13 +579,36 @@ def _validate_resources_sorted(
     sorter: Sorter,
     resources: list[ScimData],
     resource_schemas: Sequence[BaseResourceSchema],
+    resource_presence_config: AttrValuePresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
+    for resource, resource_schema in zip(resources, resource_schemas):
+        if not can_validate_sorting(sorter, resource_presence_config, resource_schema):
+            return issues
+
     if resources != sorter(resources, resource_schemas):
         issues.add_error(
             issue=ValidationError.resources_not_sorted(),
             proceed=True,
         )
+    return issues
+
+
+def _validate_etag_in_resources(
+    resources: list[ScimData],
+    resource_schemas: Sequence[BaseResourceSchema],
+) -> ValidationIssues:
+    issues = ValidationIssues()
+    for i, (resource, resource_schema) in enumerate(zip(resources, resource_schemas)):
+        if not isinstance(resource_schema, ResourceSchema):
+            continue
+
+        if resource.get("meta.version") is Missing:
+            issues.add_error(
+                issue=ValidationError.missing(),
+                location=[i, "meta", "version"],
+                proceed=True,
+            )
     return issues
 
 
@@ -649,14 +672,19 @@ def _validate_resources_filtered(
     filter_: Filter,
     resources: list[Any],
     resource_schemas: Sequence[BaseResourceSchema],
+    resource_presence_config: AttrValuePresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
+    for resource, resource_schema in zip(resources, resource_schemas):
+        if not can_validate_filtering(filter_, resource_presence_config, resource_schema):
+            return issues
+
     for i, (resource, schema) in enumerate(zip(resources, resource_schemas)):
         if not filter_(resource, schema):
             issues.add_error(
                 issue=ValidationError.resources_not_filtered(),
                 proceed=True,
-                location=(i,),
+                location=[i],
             )
     return issues
 
@@ -737,36 +765,33 @@ def _validate_resources_get_response(
 
     resource_schemas = cast(Sequence[BaseResourceSchema], schema.get_schemas(resources))
     if filter_ is not None:
-        for resource, resource_schema in zip(resources, resource_schemas):
-            if not can_validate_filtering(filter_, resource_presence_config, resource_schema):
-                break
-        else:
-            issues.merge(
-                issues=_validate_resources_filtered(filter_, resources, resource_schemas),
-                location=resources_location,
-            )
-
+        issues.merge(
+            issues=_validate_resources_filtered(
+                filter_=filter_,
+                resources=resources,
+                resource_schemas=resource_schemas,
+                resource_presence_config=resource_presence_config,
+            ),
+            location=resources_location,
+        )
     if sorter is not None:
-        for resource, resource_schema in zip(resources, resource_schemas):
-            if not can_validate_sorting(sorter, resource_presence_config, resource_schema):
-                break
-        else:
-            issues.merge(
-                issues=_validate_resources_sorted(sorter, resources, resource_schemas),
-                location=resources_location,
-            )
-
+        issues.merge(
+            issues=_validate_resources_sorted(
+                sorter=sorter,
+                resources=resources,
+                resource_schemas=resource_schemas,
+                resource_presence_config=resource_presence_config,
+            ),
+            location=resources_location,
+        )
     if config.etag.supported:
-        for i, (resource, resource_schema) in enumerate(zip(resources, resource_schemas)):
-            if not isinstance(resource_schema, ResourceSchema):
-                continue
-
-            if resource.get("meta.version") is Missing:
-                issues.add_error(
-                    issue=ValidationError.missing(),
-                    location=(*resources_location, i, "meta", "version"),
-                    proceed=True,
-                )
+        issues.merge(
+            issues=_validate_etag_in_resources(
+                resources=resources,
+                resource_schemas=resource_schemas,
+            ),
+            location=resources_location,
+        )
     return issues
 
 
@@ -823,7 +848,7 @@ def can_validate_sorting(
     return bool(value_allowed and primary_allowed)
 
 
-class ResourcesGet(Validator):
+class ResourcesQuery(Validator):
     """
     Validator for **HTTP GET** operations performed against **resource type** endpoints. It is
     able to handle different schemas in the same time, so can be used in **resource root** endpoint.
@@ -845,9 +870,9 @@ class ResourcesGet(Validator):
             >>> from scimpler.schemas import UserSchema, GroupSchema
             >>>
             >>> # for resource root endpoint
-            >>> root_validator = ResourcesGet(resource_schema=[UserSchema(), GroupSchema()])
+            >>> root_validator = ResourcesQuery(resource_schema=[UserSchema(), GroupSchema()])
             >>> # for specific resource type endpoint
-            >>> validator = ResourcesGet(resource_schema=UserSchema())
+            >>> validator = ResourcesQuery(resource_schema=UserSchema())
         """
         super().__init__(config)
         if isinstance(resource_schema, BaseResourceSchema):
@@ -926,7 +951,7 @@ class ResourcesGet(Validator):
         )
 
 
-class SearchRequestPost(Validator):
+class SearchRequestPost(ResourcesQuery):
     """
     Validator for **HTTP POST** query operations. It is  able to handle different schemas
     in the same time, so can be used in **resource root** endpoint.
@@ -952,14 +977,8 @@ class SearchRequestPost(Validator):
             >>> # for specific resource type endpoint
             >>> validator = SearchRequestPost(resource_schema=UserSchema())
         """
-        super().__init__(config)
-        if isinstance(resource_schema, ResourceSchema):
-            resource_schema = [resource_schema]
+        super().__init__(config, resource_schema=resource_schema)
         self._request_validation_schema = SearchRequestSchema.from_config(self.config)
-        self._response_validation_schema = ListResponseSchema(resource_schema)
-        self._response_schema = ListResponseSchema(
-            [item.clone(_resource_output_filter) for item in resource_schema]
-        )
 
     @property
     def request_schema(self) -> SearchRequestSchema:
@@ -997,62 +1016,6 @@ class SearchRequestPost(Validator):
             location=["body"],
         )
         return issues
-
-    def validate_response(
-        self,
-        *,
-        status_code: int,
-        body: Optional[Mapping[str, Any]] = None,
-        headers: Optional[Mapping[str, Any]] = None,
-        **kwargs,
-    ) -> ValidationIssues:
-        """
-        Validates the **HTTP GET** responses returned from **resource type** endpoints.
-
-        Except for body validation done by the inner `ListResponseSchema`, the validator checks if:
-
-        - returned `status_code` equals 200,
-        - `startIndex` in the body is lesser or equal to the provided `start_index`,
-        - `totalResults` greater or equal to number of `Resources`,
-        - `totalResults` differs from number of `Resources` when `count` is not specified,
-        - number of `Resources` is lesser or equal to the `count`, if specified,
-        - `startIndex` is specified in the body for pagination,
-        - `itemsPerPage` is specified in the body for pagination,
-        - `Resources` are filtered, according to the provided `filter`,
-        - `Resources` are sorted, according to the provided `sorter`,
-        - every resource contains `meta.version`, if `etag` is supported.
-
-        Filtering and sorting is not validated if attributes required to check filtering and
-        sorting are meant to be excluded due to `AttrValuePresenceConfig`.
-
-        Args:
-            status_code: Returned HTTP status code.
-            body: Returned body.
-            headers: Not used.
-
-        Keyword Args:
-            presence_config (Optional[AttrValuePresenceConfig]): If not provided, the default one
-                is used, with no attribute inclusivity and exclusivity specified. Applied on
-                `Resources` only.
-            start_index (Optional[int]): The 1-based index of the first query result.
-            count (Optional[int]): Specifies the desired number of query results per page.
-            filter (Optional[Filter]): Filter that was applied on `Resources`.
-            sorter (Optional[Sorter]): Sorter that was applied on `Resources`.
-
-        Returns:
-            Validation issues.
-        """
-        return _validate_resources_get_response(
-            schema=self._response_validation_schema,
-            config=self.config,
-            status_code=status_code,
-            body=ScimData(body or {}),
-            start_index=kwargs.get("start_index", 1),
-            count=kwargs.get("count"),
-            filter_=kwargs.get("filter"),
-            sorter=kwargs.get("sorter"),
-            resource_presence_config=kwargs.get("presence_config"),
-        )
 
 
 class ResourceObjectPatch(Validator):
@@ -1422,104 +1385,22 @@ class BulkOperations(Validator):
             issues=_validate_status_code(200, status_code),
             location=["status"],
         )
-        if normalized.get("Operations") is Invalid:
+        operations = normalized.get("Operations")
+        if operations is Invalid:
             return issues
 
         operations_location = body_location + self._response_schema.attrs.operations.location
-        status_rep = self._response_schema.attrs.operations__status
-        response_rep = self._response_schema.attrs.operations__response
-        location_rep = self._response_schema.attrs.operations__location
-        method_rep = self._request_schema.attrs.operations__method
-        version_rep = self._response_schema.attrs.operations__version
-        statuses = normalized.get(status_rep)
-        responses = normalized.get(response_rep)
-        locations = normalized.get(location_rep)
-        methods = normalized.get(method_rep)
-        versions = normalized.get(version_rep)
+        for i, operation in enumerate(operations):
+            issues.merge(
+                issues=self._validate_response_operation(operation, (*operations_location, i)),
+            )
         n_errors = 0
-        for i, (method, status, response, location, version) in enumerate(
-            zip(methods, statuses, responses, locations, versions)
-        ):
-            if not all([method, status, response]):
+        for operation in operations:
+            status = operation.get("status")
+            if not status:
                 continue
-
-            response_location: tuple[Union[str, int], ...] = (
-                *operations_location,
-                i,
-                response_rep.sub_attr,
-            )
-            status_location: tuple[Union[str, int], ...] = (
-                *operations_location,
-                i,
-                status_rep.sub_attr,
-            )
-            location_location: tuple[Union[str, int], ...] = (
-                *operations_location,
-                i,
-                location_rep.sub_attr,
-            )
-            version_location: tuple[Union[str, int], ...] = (
-                *operations_location,
-                i,
-                version_rep.sub_attr,
-            )
-
-            resource_validator = None
-            if location:
-                for endpoint, validator in self._validators[method].items():
-                    if endpoint in location:
-                        resource_validator = validator
-                        break
-
-            status = int(status)
-            if status >= 300:
+            if int(status) >= 300:
                 n_errors += 1
-                issues_ = self._error_validator.validate_response(
-                    status_code=status,
-                    body=response,
-                )
-                issues.merge(
-                    issues=issues_.get(location=["body"]),
-                    location=response_location,
-                )
-                issues.merge(
-                    issues=issues_.get(location=["status"]),
-                    location=status_location,
-                )
-            elif location and isinstance(resource_validator, Validator):
-                resource_version = response.get("meta.version")
-                issues_ = resource_validator.validate_response(
-                    body=response,
-                    status_code=status,
-                    headers={"Location": location, "ETag": resource_version},
-                )
-                meta_location_missmatch = issues_.pop([8], location=("body", "meta", "location"))
-                header_location_mismatch = issues_.pop([8], location=("headers", "Location"))
-                issues.merge(issues_.get(location=["body"]), location=response_location)
-                issues.merge(issues_.get(location=["status"]), location=status_location)
-                if meta_location_missmatch.has_errors() and header_location_mismatch.has_errors():
-                    issues.add_error(
-                        issue=ValidationError.must_be_equal_to("operation's location"),
-                        proceed=True,
-                        location=response_location + ("meta", "location"),
-                    )
-                    issues.add_error(
-                        issue=ValidationError.must_be_equal_to("'response.meta.location'"),
-                        proceed=True,
-                        location=location_location,
-                    )
-                if version and resource_version and version != resource_version:
-                    issues.add_error(
-                        issue=ValidationError.must_be_equal_to("operation's version"),
-                        proceed=True,
-                        location=response_location + ("meta", "version"),
-                    )
-                    issues.add_error(
-                        issue=ValidationError.must_be_equal_to("'response.meta.version'"),
-                        proceed=True,
-                        location=version_location,
-                    )
-
         fail_on_errors = kwargs.get("fail_on_errors")
         if fail_on_errors is not None and n_errors > fail_on_errors:
             issues.add_error(
@@ -1527,6 +1408,80 @@ class BulkOperations(Validator):
                 proceed=True,
                 location=operations_location,
             )
+        return issues
+
+    def _validate_response_operation(
+        self, operation: ScimData, operation_location: tuple
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        status = operation.get("status")
+        response = operation.get("response")
+        location = operation.get("location")
+        method = operation.get("method")
+        version = operation.get("version")
+
+        if not all([method, status, response]):
+            return issues
+
+        response_location: tuple[Union[str, int], ...] = (*operation_location, "response")
+        status_location: tuple[Union[str, int], ...] = (*operation_location, "status")
+        location_location: tuple[Union[str, int], ...] = (*operation_location, "location")
+        version_location: tuple[Union[str, int], ...] = (*operation_location, "version")
+
+        resource_validator = None
+        if location:
+            for endpoint, validator in self._validators[method].items():
+                if endpoint in location:
+                    resource_validator = validator
+                    break
+
+        status = int(status)
+        if status >= 300:
+            issues_ = self._error_validator.validate_response(
+                status_code=status,
+                body=response,
+            )
+            issues.merge(
+                issues=issues_.get(location=["body"]),
+                location=response_location,
+            )
+            issues.merge(
+                issues=issues_.get(location=["status"]),
+                location=status_location,
+            )
+        elif location and isinstance(resource_validator, Validator):
+            resource_version = response.get("meta.version")
+            issues_ = resource_validator.validate_response(
+                body=response,
+                status_code=status,
+                headers={"Location": location, "ETag": resource_version},
+            )
+            meta_location_mismatch = issues_.pop([8], location=("body", "meta", "location"))
+            header_location_mismatch = issues_.pop([8], location=("headers", "Location"))
+            issues.merge(issues_.get(location=["body"]), location=response_location)
+            issues.merge(issues_.get(location=["status"]), location=status_location)
+            if meta_location_mismatch.has_errors() and header_location_mismatch.has_errors():
+                issues.add_error(
+                    issue=ValidationError.must_be_equal_to("operation's location"),
+                    proceed=True,
+                    location=[*response_location, "meta", "location"],
+                )
+                issues.add_error(
+                    issue=ValidationError.must_be_equal_to("'response.meta.location'"),
+                    proceed=True,
+                    location=location_location,
+                )
+            if version and resource_version and version != resource_version:
+                issues.add_error(
+                    issue=ValidationError.must_be_equal_to("operation's version"),
+                    proceed=True,
+                    location=[*response_location, "meta", "version"],
+                )
+                issues.add_error(
+                    issue=ValidationError.must_be_equal_to("'response.meta.version'"),
+                    proceed=True,
+                    location=version_location,
+                )
         return issues
 
 

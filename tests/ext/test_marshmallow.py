@@ -21,7 +21,7 @@ from scimpler.validator import (
     BulkOperations,
     ResourceObjectGet,
     ResourceObjectPatch,
-    ResourcesGet,
+    ResourcesQuery,
     SearchRequestPost,
 )
 
@@ -347,7 +347,7 @@ def test_list_response_with_many_resource_schemas_can_be_dumped(
     list_data, list_data_deserialized, user_schema, group_schema
 ):
     initialize()
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(list_data_deserialized)
@@ -360,7 +360,7 @@ def test_list_response_for_many_resource_schemas_without_actual_resources_can_be
 ):
     initialize()
     data = {"schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"], "totalResults": 0}
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     loaded = schema_cls().load(data)
@@ -373,7 +373,7 @@ def test_list_response_for_many_resource_schemas_without_actual_resources_can_be
 ):
     initialize()
     data = {"schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"], "totalResults": 0}
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(data)
@@ -385,7 +385,7 @@ def test_creating_list_response_schema_for_response_without_context_fails(
     user_schema, group_schema
 ):
     initialize()
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator)
 
     with pytest.raises(
@@ -404,7 +404,7 @@ def test_loading_list_response_for_many_resource_schemas_with_unknown_resource_f
         "totalResults": 0,
         "Resources": [{"schemas": ["schema:for:tests"]}],
     }
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     with pytest.raises(marshmallow.ValidationError, match="unknown schema"):
@@ -422,7 +422,7 @@ def test_dumping_list_response_for_many_resource_schemas_with_unknown_resource_p
     }
     expected = data.copy()
     expected["Resources"] = [{}]
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(data)
@@ -434,7 +434,7 @@ def test_list_response_with_many_resource_schemas_can_be_loaded(
     list_data, list_data_deserialized, user_schema, group_schema
 ):
     initialize()
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     loaded = schema_cls().load(list_data)
@@ -446,7 +446,7 @@ def test_list_response_with_single_resource_schema_can_be_dumped(
     list_user_data, list_user_data_deserialized, user_schema, group_schema
 ):
     initialize()
-    validator = ResourcesGet(resource_schema=user_schema)
+    validator = ResourcesQuery(resource_schema=user_schema)
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(list_user_data_deserialized)
@@ -458,7 +458,7 @@ def test_list_response_with_single_resource_schema_can_be_loaded(
     list_user_data, list_user_data_deserialized, user_schema, group_schema
 ):
     initialize()
-    validator = ResourcesGet(resource_schema=user_schema)
+    validator = ResourcesQuery(resource_schema=user_schema)
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     loaded = schema_cls().load(list_user_data)
@@ -470,7 +470,7 @@ def test_list_response_loading_fails_if_validation_error(list_data, user_schema,
     initialize()
     list_data["Resources"][1]["id"] = 123
     list_data["Resources"][2]["meta"]["created"] = "123"
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
 
     with pytest.raises(
@@ -483,7 +483,7 @@ def test_list_response_can_be_validated(list_data, user_schema, group_schema):
     initialize()
     list_data["Resources"][1]["id"] = 123
     list_data["Resources"][2]["meta"]["created"] = "123"
-    validator = ResourcesGet(resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(resource_schema=[user_schema, group_schema])
     schema_cls = create_response_schema(validator, lambda: ResponseContext(status_code=200))
     expected_issues = {
         "body": {

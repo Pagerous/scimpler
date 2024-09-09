@@ -191,8 +191,8 @@ class PatchOpSchema(BaseSchema):
         issues = self._resource_schema.validate(value)
         issues.pop([27, 28, 29], location=["schemas"])
         for attr_rep, attr in self._resource_schema.attrs:
-            parent_attr_value = value.get(attr_rep)
-            if parent_attr_value is Missing:
+            attr_value = value.get(attr_rep)
+            if attr_value is Missing:
                 continue
 
             if attr.mutability == AttributeMutability.READ_ONLY:
@@ -206,25 +206,31 @@ class PatchOpSchema(BaseSchema):
             if not isinstance(attr, Complex):
                 continue
 
-            sub_attr_err = False
+            issues_ = PatchOpSchema._validate_complex_sub_attrs_update_mutability(attr, attr_value)
             attr_location = attr_rep.location
-            for sub_attr_name, sub_attr in attr.attrs:
-                if (
-                    sub_attr.mutability == AttributeMutability.READ_ONLY
-                    and parent_attr_value is not Invalid
-                    and parent_attr_value.get(sub_attr_name) is not Missing
-                ):
-                    issues.add_error(
-                        issue=ValidationError.attribute_can_not_be_modified(),
-                        proceed=False,
-                        location=(*attr_location, sub_attr_name),
-                    )
-                    sub_attr_err = True
-
-            if not sub_attr_err:
+            issues.merge(issues_, location=attr_rep.location)
+            if not issues_.has_errors():
                 issues.merge(
-                    self._validate_complex_sub_attrs_presence(attr, parent_attr_value),
+                    self._validate_complex_sub_attrs_presence(attr, attr_value),
                     location=attr_location,
+                )
+        return issues
+
+    @staticmethod
+    def _validate_complex_sub_attrs_update_mutability(
+        attr: Complex, attr_value: Any
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        for sub_attr_name, sub_attr in attr.attrs:
+            if (
+                sub_attr.mutability == AttributeMutability.READ_ONLY
+                and attr_value is not Invalid
+                and attr_value.get(sub_attr_name) is not Missing
+            ):
+                issues.add_error(
+                    issue=ValidationError.attribute_can_not_be_modified(),
+                    proceed=False,
+                    location=[sub_attr_name],
                 )
         return issues
 

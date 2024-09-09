@@ -23,8 +23,8 @@ from scimpler.validator import (
     ResourceObjectGet,
     ResourceObjectPatch,
     ResourceObjectPut,
-    ResourcesGet,
     ResourcesPost,
+    ResourcesQuery,
     SearchRequestPost,
     can_validate_filtering,
     can_validate_sorting,
@@ -168,7 +168,7 @@ def test_number_of_resources_validation_fails_if_more_resources_than_total_resul
     list_user_data, user_schema
 ):
     list_user_data["totalResults"] = 1
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -184,7 +184,7 @@ def test_number_of_resources_validation_fails_if_less_resources_than_total_resul
     list_user_data, user_schema
 ):
     list_user_data["totalResults"] = 3
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -199,7 +199,7 @@ def test_number_of_resources_validation_fails_if_less_resources_than_total_resul
 def test_number_of_resources_validation_fails_if_more_resources_than_specified_count(
     list_user_data, user_schema
 ):
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     expected = {"body": {"Resources": {"_errors": [{"code": 20}]}}}
 
     issues = validator.validate_response(
@@ -215,7 +215,7 @@ def test_number_of_resources_validation_fails_if_more_resources_than_specified_c
 def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
     count, list_user_data, user_schema
 ):
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -229,7 +229,7 @@ def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
 def test_pagination_info_validation_fails_if_start_index_is_missing_when_pagination(
     list_user_data, user_schema
 ):
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data["itemsPerPage"] = 1
     list_user_data.pop("startIndex")
@@ -247,7 +247,7 @@ def test_pagination_info_validation_fails_if_start_index_is_missing_when_paginat
 def test_resources_get_response_validation_fails_if_mismatch_in_start_index(
     list_user_data, user_schema
 ):
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     list_user_data["startIndex"] = 3
     expected = {"body": {"startIndex": {"_errors": [{"code": 4}]}}}
 
@@ -263,7 +263,7 @@ def test_resources_get_response_validation_fails_if_mismatch_in_start_index(
 def test_pagination_info_validation_fails_if_items_per_page_is_missing_when_pagination(
     list_user_data, user_schema
 ):
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data.pop("itemsPerPage")
     expected = {"body": {"itemsPerPage": {"_errors": [{"code": 5}]}}}
@@ -280,7 +280,7 @@ def test_pagination_info_validation_fails_if_items_per_page_is_missing_when_pagi
 def test_validate_pagination_info_validation_succeeds_when_if_data_for_pagination(
     list_user_data, user_schema
 ):
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     list_user_data["Resources"] = list_user_data["Resources"][:1]
     list_user_data["itemsPerPage"] = 1
 
@@ -316,7 +316,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
             }
         }
     }
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -352,7 +352,7 @@ def test_resources_are_not_validated_for_filtering_if_attrs_not_requested(
         resource.pop(presence_config.attr_reps[0])
 
     filter_ = Filter.deserialize(filter_exp)
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -383,7 +383,7 @@ def test_resources_are_not_validated_according_to_filter_and_sorter_if_bad_schem
             }
         }
     }
-    validator = ResourcesGet(CONFIG, resource_schema=[user_schema, group_schema])
+    validator = ResourcesQuery(CONFIG, resource_schema=[user_schema, group_schema])
 
     issues = validator.validate_response(
         status_code=200,
@@ -416,7 +416,7 @@ def test_validate_resources_filtered__case_sensitivity_matters(list_user_data, u
             }
         }
     }
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -447,7 +447,7 @@ def test_validate_resources_filtered__fields_from_schema_extensions_are_checked_
             }
         }
     }
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -462,7 +462,7 @@ def test_validate_resources_sorted__not_sorted(list_user_data, user_schema):
     sorter = Sorter(AttrRep(attr="name", sub_attr="familyName"), asc=False)
     expected = {"body": {"Resources": {"_errors": [{"code": 22}]}}}
 
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     issues = validator.validate_response(
         status_code=200,
         sorter=sorter,
@@ -479,7 +479,7 @@ def test_validate_resources_sorting_not_validated_if_attr_excluded(list_user_dat
         resource.pop(attr_rep)
     sorter = Sorter(attr_rep, asc=False)
 
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     issues = validator.validate_response(
         status_code=200,
         sorter=sorter,
@@ -501,7 +501,7 @@ def test_validate_resources_sorted__not_sorted_by_extended_attr(list_user_data, 
     )
     expected = {"body": {"Resources": {"_errors": [{"code": 22}]}}}
 
-    validator = ResourcesGet(CONFIG, resource_schema=user_schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=user_schema)
     issues = validator.validate_response(
         status_code=200,
         sorter=sorter,
@@ -869,7 +869,7 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server, us
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -896,7 +896,7 @@ def test_correct_list_response_passes_validation(validator_cls, list_user_data, 
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -919,7 +919,7 @@ def test_missing_version_in_list_response_resources_is_not_validated_if_etag_not
 
 
 def test_resources_get_request_validation_does_nothing(list_user_data, user_schema):
-    validator = ResourcesGet(resource_schema=user_schema)
+    validator = ResourcesQuery(resource_schema=user_schema)
 
     issues = validator.validate_request(
         body={"what": "ever"},
@@ -931,7 +931,7 @@ def test_resources_get_request_validation_does_nothing(list_user_data, user_sche
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -964,7 +964,7 @@ def test_missing_version_in_list_response_resources_is_validated_if_etag_support
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -990,7 +990,7 @@ def test_attributes_existence_is_validated_in_list_response(validator_cls, user_
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -1023,7 +1023,7 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -1050,7 +1050,7 @@ def test_start_index_consistency_is_not_validated_if_bad_type(
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -1077,7 +1077,7 @@ def test_resources_are_not_validated_for_pagination_if_bad_type(
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -1113,7 +1113,7 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
 @pytest.mark.parametrize(
     "validator_cls",
     (
-        ResourcesGet,
+        ResourcesQuery,
         SearchRequestPost,
     ),
 )
@@ -1884,7 +1884,7 @@ def test_group_output_is_validated_correctly(group_data_server, group_schema):
 
 def test_schemas_output_can_be_validated(user_schema, group_schema):
     schema = SchemaDefinitionSchema()
-    validator = ResourcesGet(CONFIG, resource_schema=schema)
+    validator = ResourcesQuery(CONFIG, resource_schema=schema)
     body = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 2,
@@ -1947,7 +1947,7 @@ def test_resource_type_response_can_be_validated():
 
 
 def test_resource_types_response_can_be_validated():
-    validator = ResourcesGet(CONFIG, resource_schema=ResourceTypeSchema())
+    validator = ResourcesQuery(CONFIG, resource_schema=ResourceTypeSchema())
     body = {
         "totalResults": 2,
         "itemsPerPage": 2,
