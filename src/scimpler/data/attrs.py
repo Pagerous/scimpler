@@ -106,32 +106,40 @@ class AttrFilter:
             else:
                 attr = item
 
-            if self._include is False and attr.name in self._direct_top_level:
+            attr = self._get_included_attr(attr)
+            if attr is None:
                 continue
-
-            if isinstance(attr, Complex):
-                attr = attr.clone(
-                    AttrFilter(
-                        attr_reps=self._complex_sub_attrs[attr.name],
-                        include=self._include,
-                        filter_=self._filter,
-                    )
-                )
-                # means no sub-attributes, so no need for complex attr at all
-                if len(list(attr.attrs)) == 0:
-                    continue
-            else:
-                if self._filter and not self._filter(attr):
-                    continue
-
-                if self._include is True and attr.name not in self._direct_top_level:
-                    continue
 
             if identity is None:
                 filtered.append(attr)
             else:
                 filtered.append((identity, attr))
         return filtered
+
+    def _get_included_attr(self, attr: "Attribute") -> Optional["Attribute"]:
+        if self._include is False and attr.name in self._direct_top_level:
+            return None
+
+        if isinstance(attr, Complex):
+            attr = attr.clone(
+                AttrFilter(
+                    attr_reps=self._complex_sub_attrs[attr.name],
+                    include=self._include,
+                    filter_=self._filter,
+                )
+            )
+            # means no sub-attributes, so no need for complex attr at all
+            if len(list(attr.attrs)) == 0:
+                return None
+            return attr
+
+        if self._filter and not self._filter(attr):
+            return None
+
+        if self._include is True and attr.name not in self._direct_top_level:
+            return None
+
+        return attr
 
 
 class AttributeMutability(str, Enum):
@@ -200,7 +208,7 @@ class Attribute(abc.ABC):
             required: Specifies if attribute is required.
             multi_valued: Specifies if attribute is multivalued.
             canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
+            restrict_canonical_values: Flag that indicates whether validation error should be
                 returned if provided value is not one of canonical values. If set to `False`,
                 the validation warning is returned instead. Has no effect if there are no canonical
                 values.
@@ -584,60 +592,13 @@ class Decimal(AttributeWithUniqueness):
     scim_type = SCIMType.DECIMAL
     base_types = (float, int)
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        uniqueness: Union[str, AttributeUniqueness] = "none",
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
-    ):
+    def __init__(self, name: str, **kwargs: Any):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
-            uniqueness: The uniqueness of the attribute.
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            uniqueness=uniqueness,
-            validators=validators,
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, **kwargs)
 
 
 @final
@@ -649,60 +610,14 @@ class Integer(AttributeWithUniqueness):
     scim_type = SCIMType.INTEGER
     base_types = (int,)
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        uniqueness: Union[str, AttributeUniqueness] = "none",
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
-    ):
+    def __init__(self, name: str, **kwargs: Any):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
-            uniqueness: The uniqueness of the attribute.
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive.
+
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            uniqueness=uniqueness,
-            validators=validators,
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, **kwargs)
 
 
 @final
@@ -718,62 +633,17 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
         self,
         name: str,
         *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        uniqueness: Union[str, AttributeUniqueness] = "none",
-        case_exact: bool = False,
         precis: precis_i18n.profile.Profile = get_profile("OpaqueString"),
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
+        **kwargs: Any,
     ):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
-            uniqueness: The uniqueness of the attribute.
-            case_exact: The sensitivity of the attribute.
             precis: PRECIS profile that should be applied for the string attribute, when
                 comparing values. By default, **OpaqueString** profile is used
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            uniqueness=uniqueness,
-            case_exact=case_exact,
-            validators=validators,
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, **kwargs)
         self._precis = precis
 
     @property
@@ -798,59 +668,19 @@ class Binary(AttributeWithCaseExact):
         self,
         name: str,
         *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
         url_safe: bool = False,
         omit_padding: bool = True,
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
+        **kwargs: Any,
     ):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
             url_safe: Flag that makes the attribute assuming values to be url-safe
             omit_padding: If set on `True` validated values can have the base64-encoding
                 padding omitted.
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            case_exact=True,
-            validators=validators,
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, **kwargs)
         self._url_safe = url_safe
         if self._url_safe:
             self._decoder = base64.urlsafe_b64decode
@@ -947,57 +777,13 @@ class DateTime(Attribute):
     scim_type = SCIMType.DATETIME
     base_types = (str,)
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
-    ):
+    def __init__(self, name: str, **kwargs: Any):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            validators=validators,
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, **kwargs)
 
     def _validate_value_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_value_type(value)
@@ -1027,58 +813,14 @@ class ExternalReference(Reference):
     Can be used to represent references to the external resources (e.g. photos).
     """
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
-    ):
+    def __init__(self, name: str, **kwargs: Any):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive, except for `reference_types`,
+                which is set to `"external"`.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            validators=validators,
-            reference_types=["external"],
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, reference_types=["external"], **kwargs)
 
     def _validate_value_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_value_type(value)
@@ -1099,58 +841,14 @@ class UriReference(Reference):
     Represents URI **reference**.
     """
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
-    ):
+    def __init__(self, name: str, **kwargs: Any):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive, except for `reference_types`,
+                which is set to `"uri"`.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            validators=validators,
-            reference_types=["uri"],
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, reference_types=["uri"], **kwargs)
 
 
 @final
@@ -1159,60 +857,14 @@ class ScimReference(Reference):
     Represents SCIM **reference**.
     """
 
-    def __init__(
-        self,
-        name: str,
-        *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        reference_types: Iterable[str],
-        validators: Optional[list[_AttributeValidator]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
-    ):
+    def __init__(self, name: str, *, reference_types: Iterable[str], **kwargs: Any):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
             reference_types: Specifies types of SCIM references accepted by the attribute.
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments base classes receive.
         """
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            validators=validators,
-            reference_types=reference_types,
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, reference_types=reference_types, **kwargs)
 
     def _validate_value_type(self, value: Any) -> ValidationIssues:
         issues = super()._validate_value_type(value)
@@ -1243,47 +895,24 @@ class Complex(Attribute):
         self,
         name: str,
         *,
-        description: str = "",
-        issuer: Union[str, AttributeIssuer] = AttributeIssuer.NOT_SPECIFIED,
-        required: bool = False,
-        multi_valued: bool = False,
-        canonical_values: Optional[Collection] = None,
-        restrict_canonical_values: bool = False,
-        mutability: Union[str, AttributeMutability] = "readWrite",
-        returned: Union[str, AttributeReturn] = "default",
-        validators: Optional[list[_AttributeValidator]] = None,
         sub_attributes: Optional[Collection[Attribute]] = None,
-        deserializer: Optional[_AttributeProcessor] = None,
-        serializer: Optional[_AttributeProcessor] = None,
+        **kwargs: Any,
     ):
         """
         Args:
             name: Name of the attribute. Must be valid attribute name.
-            description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
-            required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
-            canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
-                the validation warning is returned instead. Has no effect if there are no canonical
-                values.
-            mutability: Specifies attribute's mutability.
-            returned: Specifies attribute's `returned` characteristic.
             sub_attributes: Complex sub-attributes. All attributes but `Complex`
                 can be sub-attributes. If not specified, and the attribute is multivalued,
                 the default sub-attributes are used, as specified in
                 [RFC-7643, section 2.4](https://www.rfc-editor.org/rfc/rfc7643#section-2.4).
-            validators: Additional validators, which are run, if the initial, built-in validation
-                succeeds.
-            deserializer: Routine that defines attribute's value deserialization.
-            serializer: Routine that defines attribute's value serialization.
+            **kwargs: The same keyword arguments the base class receive.
         """
         for attr in sub_attributes or []:
             if isinstance(attr, Complex):
                 raise TypeError("complex attributes can not contain complex sub-attributes")
+
+        multi_valued = kwargs.get("multi_valued", False)
+        validators = kwargs.pop("validators", None)
 
         default_sub_attrs = (
             [
@@ -1309,20 +938,7 @@ class Complex(Attribute):
                 and _validate_type_value_pairs not in validators
             ):
                 validators.append(_validate_type_value_pairs)
-        super().__init__(
-            name=name,
-            description=description,
-            issuer=issuer,
-            required=required,
-            multi_valued=multi_valued,
-            canonical_values=canonical_values,
-            restrict_canonical_values=restrict_canonical_values,
-            mutability=mutability,
-            returned=returned,
-            validators=validators,
-            deserializer=deserializer,
-            serializer=serializer,
-        )
+        super().__init__(name=name, validators=validators, **kwargs)
 
     @property
     def attrs(self) -> "Attrs":

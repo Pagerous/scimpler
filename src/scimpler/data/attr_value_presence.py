@@ -133,10 +133,8 @@ class AttrValuePresenceConfig:
                 if attr_rep.schema == rep.schema and attr_rep.attr == rep.attr:
                     return True
                 continue
-            else:
-                if attr_rep.attr == rep.attr:
-                    return True
-            continue
+            elif attr_rep.attr == rep.attr:
+                return True
 
         return False
 
@@ -172,29 +170,30 @@ def validate_presence(
     if inclusivity:
         inclusivity = DataInclusivity(inclusivity)
     direction = DataDirection(direction)
-    issues = ValidationIssues()
     if value not in [None, "", [], Missing]:
-        if direction == DataDirection.REQUEST:
-            if attr.issuer == AttributeIssuer.SERVICE_PROVIDER and not ignore_issuer:
-                issues.add_error(
-                    issue=ValidationError.must_not_be_provided(),
-                    proceed=True,
-                )
-            return issues
+        return _validate_if_can_be_present(
+            attr=attr,
+            direction=direction,
+            ignore_issuer=ignore_issuer,
+            inclusivity=inclusivity,
+        )
+    return _validate_if_can_be_omitted(
+        attr=attr,
+        direction=direction,
+        ignore_issuer=ignore_issuer,
+        inclusivity=inclusivity,
+        required_by_schema=required_by_schema,
+    )
 
-        if attr.returned == AttributeReturn.NEVER:
-            issues.add_error(
-                issue=ValidationError.must_not_be_returned(),
-                proceed=True,
-            )
 
-        elif attr.returned != AttributeReturn.ALWAYS and inclusivity == DataInclusivity.EXCLUDE:
-            issues.add_error(
-                issue=ValidationError.must_not_be_returned(),
-                proceed=True,
-            )
-        return issues
-
+def _validate_if_can_be_omitted(
+    attr: Attribute,
+    direction: Union[str, DataDirection],
+    ignore_issuer: bool = False,
+    inclusivity: Optional[Union[str, DataInclusivity]] = None,
+    required_by_schema: bool = True,
+) -> ValidationIssues:
+    issues = ValidationIssues()
     if (
         attr.required
         # issued by the server, so skipping for data from client
@@ -211,5 +210,30 @@ def validate_presence(
         issues.add_error(
             issue=ValidationError.missing(),
             proceed=False,
+        )
+    return issues
+
+
+def _validate_if_can_be_present(
+    attr: Attribute,
+    direction: Union[str, DataDirection],
+    ignore_issuer: bool = False,
+    inclusivity: Optional[Union[str, DataInclusivity]] = None,
+) -> ValidationIssues:
+    issues = ValidationIssues()
+    if direction == DataDirection.REQUEST:
+        if attr.issuer == AttributeIssuer.SERVICE_PROVIDER and not ignore_issuer:
+            issues.add_error(
+                issue=ValidationError.must_not_be_provided(),
+                proceed=True,
+            )
+        return issues
+
+    if attr.returned == AttributeReturn.NEVER or (
+        attr.returned != AttributeReturn.ALWAYS and inclusivity == DataInclusivity.EXCLUDE
+    ):
+        issues.add_error(
+            issue=ValidationError.must_not_be_returned(),
+            proceed=True,
         )
     return issues

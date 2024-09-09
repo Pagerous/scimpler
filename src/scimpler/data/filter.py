@@ -46,12 +46,14 @@ TOperator = TypeVar("TOperator", bound=op.Operator)
 class _ValidatedComplexOperator:
     issues: ValidationIssues
     expression: str
+    placeholder: str
 
 
 @dataclass
 class _ValidatedGroupOperator:
     issues: ValidationIssues
     expression: str
+    placeholder: str
 
 
 class Filter(Generic[TOperator]):
@@ -137,8 +139,27 @@ class Filter(Generic[TOperator]):
         Returns:
             Validation issues.
         """
-        issues = ValidationIssues()
         filter_exp, placeholders = encode_strings(filter_exp)
+        issues = Filter._validate_complex_group_operators(filter_exp, placeholders)
+
+        if not issues.can_proceed():
+            for validated in placeholders.values():
+                if isinstance(validated, _ValidatedComplexOperator):
+                    issues.merge(issues=validated.issues)
+            return issues
+
+        for validated in placeholders.values():
+            if isinstance(validated, _ValidatedComplexOperator):
+                filter_exp = filter_exp.replace(validated.expression, validated.placeholder, 1)
+
+        issues.merge(Filter._validate_operator(filter_exp, placeholders))
+        return issues
+
+    @staticmethod
+    def _validate_complex_group_operators(
+        filter_exp: str, placeholders: dict[str, Any]
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
         bracket_open_index = None
         complex_attr_rep = ""
         filter_exp_iter_copy = filter_exp
@@ -155,105 +176,113 @@ class Filter(Generic[TOperator]):
                 else:
                     bracket_open_index = i
             elif char == "]":
-                if bracket_open_index is None:
-                    issues.add_error(
-                        issue=ValidationError.complex_attribute_bracket_not_opened_or_closed(),
-                        proceed=False,
+                issues.merge(
+                    Filter._validate_complex_group_operator(
+                        filter_exp=filter_exp_iter_copy,
+                        complex_attr_rep_exp=complex_attr_rep,
+                        placeholders=placeholders,
+                        bracket_open_index=bracket_open_index,
+                        string_pos=i,
                     )
-                else:
-                    sub_ops_exp = filter_exp_iter_copy[bracket_open_index + 1 : i]
-                    complex_attr_exp = f"{complex_attr_rep}[{sub_ops_exp}]"
-                    issues_ = ValidationIssues()
-                    if sub_ops_exp.strip() == "":
-                        issues_.add_error(
-                            issue=ValidationError.empty_complex_attribute_expression(
-                                complex_attr_rep
-                            ),
-                            proceed=False,
-                        )
-                    try:
-                        attr_rep = AttrRepFactory.deserialize(complex_attr_rep)
-                        if isinstance(attr_rep, AttrRep) and attr_rep.is_sub_attr:
-                            issues_.add_error(
-                                issue=ValidationError.complex_sub_attribute(
-                                    attr=attr_rep.attr, sub_attr=attr_rep.sub_attr
-                                ),
-                                proceed=False,
-                            )
-                    except ValueError:
-                        issues_.add_error(
-                            issue=ValidationError.bad_attribute_name(complex_attr_rep),
-                            proceed=False,
-                        )
-                    id_, placeholder = get_placeholder()
-                    if not issues_.can_proceed():
-                        placeholders[id_] = _ValidatedComplexOperator(
-                            issues=issues_,
-                            expression=complex_attr_exp,
-                        )
-                    else:
-                        placeholders[id_] = _ValidatedComplexOperator(
-                            issues=Filter._validate_operator(sub_ops_exp, placeholders),
-                            expression=complex_attr_exp,
-                        )
-                    filter_exp = filter_exp.replace(complex_attr_exp, placeholder, 1)
+                )
                 bracket_open_index = None
                 complex_attr_rep = ""
             elif bracket_open_index is None:
                 complex_attr_rep = ""
-
         if issues.can_proceed() and bracket_open_index is not None:
             issues.add_error(
                 issue=ValidationError.complex_attribute_bracket_not_opened_or_closed(),
                 proceed=False,
             )
+        return issues
 
-        if not issues.can_proceed():
-            for validated in placeholders.values():
-                if hasattr(validated, "issues"):
-                    issues.merge(issues=validated.issues)
-            return issues
-
-        issues.merge(Filter._validate_operator(filter_exp, placeholders))
+    @staticmethod
+    def _validate_complex_group_operator(
+        filter_exp: str,
+        complex_attr_rep_exp: str,
+        placeholders: dict[str, Any],
+        bracket_open_index: Optional[int],
+        string_pos: int,
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        if bracket_open_index is None:
+            issues.add_error(
+                issue=ValidationError.complex_attribute_bracket_not_opened_or_closed(),
+                proceed=False,
+            )
+        else:
+            sub_ops_exp = filter_exp[bracket_open_index + 1 : string_pos]
+            complex_attr_exp = f"{complex_attr_rep_exp}[{sub_ops_exp}]"
+            issues_ = ValidationIssues()
+            if sub_ops_exp.strip() == "":
+                issues_.add_error(
+                    issue=ValidationError.empty_complex_attribute_expression(complex_attr_rep_exp),
+                    proceed=False,
+                )
+            try:
+                attr_rep = AttrRepFactory.deserialize(complex_attr_rep_exp)
+                if isinstance(attr_rep, AttrRep) and attr_rep.is_sub_attr:
+                    issues_.add_error(
+                        issue=ValidationError.complex_sub_attribute(
+                            attr=attr_rep.attr, sub_attr=attr_rep.sub_attr
+                        ),
+                        proceed=False,
+                    )
+            except ValueError:
+                issues_.add_error(
+                    issue=ValidationError.bad_attribute_name(complex_attr_rep_exp),
+                    proceed=False,
+                )
+            id_, placeholder = get_placeholder()
+            if not issues_.can_proceed():
+                placeholders[id_] = _ValidatedComplexOperator(
+                    issues=issues_,
+                    expression=complex_attr_exp,
+                    placeholder=placeholder,
+                )
+            else:
+                placeholders[id_] = _ValidatedComplexOperator(
+                    issues=Filter._validate_operator(sub_ops_exp, placeholders),
+                    expression=complex_attr_exp,
+                    placeholder=placeholder,
+                )
         return issues
 
     @staticmethod
     def _validate_operator(exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
         issues = ValidationIssues()
-        bracket_open = False
+        is_bracket_open = False
         bracket_open_index = None
-        bracket_cnt = 0
+        placeholder_ids = []
+        bracket_count = 0
         op_exp_preprocessed = exp
         for i, char in enumerate(exp):
-            if char == "(":
-                if not bracket_open:
-                    bracket_open = True
-                    bracket_open_index = i
-                bracket_cnt += 1
-            elif char == ")":
-                if bracket_open:
-                    bracket_cnt -= 1
-                else:
-                    issues.add_error(
-                        issue=ValidationError.bracket_not_opened_or_closed(), proceed=False
-                    )
-            if bracket_open and bracket_cnt == 0:
-                group_op_exp = exp[bracket_open_index : i + 1]
-                issues_ = Filter._validate_operator(
-                    exp=group_op_exp[1:-1],  # without enclosing brackets
+            (is_bracket_open, bracket_open_index, bracket_count, placeholder_id) = (
+                Filter._process_grouping_operator_character(
+                    issues=issues,
+                    filter_exp=exp,
                     placeholders=placeholders,
+                    char=char,
+                    char_pos=i,
+                    is_bracket_open=is_bracket_open,
+                    bracket_open_index=bracket_open_index,
+                    bracket_count=bracket_count,
                 )
-                id_, placeholder = get_placeholder()
-                placeholders[id_] = _ValidatedGroupOperator(
-                    issues=issues_,
-                    expression=group_op_exp,
-                )
-                op_exp_preprocessed = op_exp_preprocessed.replace(group_op_exp, placeholder, 1)
-                bracket_open = False
-                bracket_open_index = None
+            )
+            if placeholder_id is not None:
+                placeholder_ids.append(placeholder_id)
 
-        if bracket_open and bracket_open_index is not None:
+        if is_bracket_open and bracket_open_index is not None:
             issues.add_error(issue=ValidationError.bracket_not_opened_or_closed(), proceed=False)
+
+        if not issues.can_proceed():
+            return issues
+
+        for placeholder_id in placeholder_ids:
+            validated = placeholders[placeholder_id]
+            op_exp_preprocessed = op_exp_preprocessed.replace(
+                validated.expression, validated.placeholder, 1
+            )
 
         op_exp_preprocessed = op_exp_preprocessed.strip()
         if op_exp_preprocessed == "":
@@ -268,6 +297,46 @@ class Filter(Generic[TOperator]):
             for error in errors:
                 error.scim_error = ScimErrorType.INVALID_FILTER
         return issues
+
+    @staticmethod
+    def _process_grouping_operator_character(
+        issues: ValidationIssues,
+        filter_exp: str,
+        placeholders: dict[str, Any],
+        char: str,
+        char_pos: int,
+        is_bracket_open: bool,
+        bracket_open_index: Optional[int],
+        bracket_count: int,
+    ):
+        placeholder_id = None
+        if char == "(":
+            if not is_bracket_open:
+                is_bracket_open = True
+                bracket_open_index = char_pos
+            bracket_count += 1
+        elif char == ")":
+            if is_bracket_open:
+                bracket_count -= 1
+            else:
+                issues.add_error(
+                    issue=ValidationError.bracket_not_opened_or_closed(), proceed=False
+                )
+        if is_bracket_open and bracket_count == 0:
+            group_op_exp = filter_exp[bracket_open_index : char_pos + 1]
+            issues_ = Filter._validate_operator(
+                exp=group_op_exp[1:-1],  # without enclosing brackets
+                placeholders=placeholders,
+            )
+            placeholder_id, placeholder = get_placeholder()
+            placeholders[placeholder_id] = _ValidatedGroupOperator(
+                issues=issues_,
+                expression=group_op_exp,
+                placeholder=placeholder,
+            )
+            is_bracket_open = False
+            bracket_open_index = None
+        return is_bracket_open, bracket_open_index, bracket_count, placeholder_id
 
     @staticmethod
     def _validate_op_or_exp(exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
@@ -323,50 +392,68 @@ class Filter(Generic[TOperator]):
         operands = []
         current_position = 0
         matches = list(regexp.finditer(exp))
-        for i, match in enumerate(matches):
-            left_operand = exp[current_position : match.start()]
+        for i, operand_match in enumerate(matches):
+            left_operand = exp[current_position : operand_match.start()]
             if i == len(matches) - 1:
-                right_operand = exp[match.end() :]
+                right_operand = exp[operand_match.end() :]
             else:
-                right_operand = exp[match.end() : matches[i + 1].start()]
+                right_operand = exp[operand_match.end() : matches[i + 1].start()]
 
-            invalid_exp = None
-            if left_operand == "":
-                if (placeholder := deserialize_placeholder(right_operand)) and (
-                    deserialized_op := placeholders.get(placeholder)
-                ):
-                    right_expression = deserialized_op.expression
-                else:
-                    right_expression = right_operand
-                invalid_exp = (match.group(0) + right_expression).strip()
-            elif right_operand == "":
-                if (placeholder := deserialize_placeholder(left_operand)) and (
-                    deserialized_op := placeholders.get(placeholder)
-                ):
-                    left_expression = deserialized_op.expression
-                else:
-                    left_expression = left_operand
-                invalid_exp = (left_expression + match.group(0)).strip()
-
-            if invalid_exp is not None:
-                issues.add_error(
-                    issue=ValidationError.missing_operand_for_operator(
-                        operator=operator_name,
-                        expression=decode_placeholders(invalid_exp, placeholders),
-                    ),
-                    proceed=False,
+            issues.merge(
+                issues=Filter._validate_operands_pair(
+                    left_operand=left_operand,
+                    right_operand=right_operand,
+                    op_name=operator_name,
+                    placeholders=placeholders,
                 )
+            )
 
             if i == 0:
                 operands.append(left_operand)
             operands.append(right_operand)
-            current_position = match.end()
+            current_position = operand_match.end()
 
         if not matches:
             operands = [exp]
 
         operands = [operand for operand in operands if operand != ""]
         return operands, issues
+
+    @staticmethod
+    def _validate_operands_pair(
+        left_operand: str,
+        right_operand: str,
+        op_name: str,
+        placeholders: dict[str, Any],
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        invalid_exp = None
+        if left_operand == "":
+            if (placeholder := deserialize_placeholder(right_operand)) and (
+                deserialized_op := placeholders.get(placeholder)
+            ):
+                right_expression = deserialized_op.expression
+            else:
+                right_expression = right_operand
+            invalid_exp = f"{op_name} {right_expression}".strip()
+        elif right_operand == "":
+            if (placeholder := deserialize_placeholder(left_operand)) and (
+                deserialized_op := placeholders.get(placeholder)
+            ):
+                left_expression = deserialized_op.expression
+            else:
+                left_expression = left_operand
+            invalid_exp = f"{left_expression} {op_name}".strip()
+
+        if invalid_exp is not None:
+            issues.add_error(
+                issue=ValidationError.missing_operand_for_operator(
+                    operator=op_name,
+                    expression=decode_placeholders(invalid_exp, placeholders),
+                ),
+                proceed=False,
+            )
+        return issues
 
     @staticmethod
     def _validate_op_attr_exp(attr_exp: str, placeholders: dict[str, Any]) -> ValidationIssues:
@@ -378,72 +465,91 @@ class Filter(Generic[TOperator]):
             return sub_or_complex.issues
 
         components = OP_REGEX.split(attr_exp)
-        op_: Optional[Union[Type[op.UnaryAttributeOperator], Type[op.BinaryAttributeOperator]]]
         if len(components) == 2:
-            op_exp = components[1].lower()
-            op_ = unary_operators.get(op_exp)
-            if op_ is None:
-                if op_exp in binary_operators:
-                    issues.add_error(
-                        issue=ValidationError.missing_operand_for_operator(
-                            operator=op_exp,
-                            expression=decode_placeholders(attr_exp, placeholders),
-                        ),
-                        proceed=False,
-                    )
-                else:
-                    issues.add_error(
-                        issue=ValidationError.unknown_operator(
-                            operator=decode_placeholders(components[1], placeholders),
-                            expression=decode_placeholders(attr_exp, placeholders),
-                        ),
-                        proceed=False,
-                    )
-            attr_rep = decode_placeholders(components[0], placeholders)
-            issues.merge(AttrRepFactory.validate(attr_rep))
+            issues.merge(
+                Filter._validate_unary_op_attr_exp(
+                    attr_exp=attr_exp,
+                    attr_rep_exp=components[0],
+                    op_exp=components[1],
+                    placeholders=placeholders,
+                )
+            )
             return issues
-
         elif len(components) == 3:
-            op_ = binary_operators.get(components[1].lower())
-            if op_ is None:
-                issues.add_error(
-                    issue=ValidationError.unknown_operator(
-                        operator=decode_placeholders(components[1], placeholders),
-                        expression=decode_placeholders(attr_exp, placeholders),
-                    ),
-                    proceed=False,
+            issues.merge(
+                Filter._validate_binary_op_attr_exp(
+                    attr_exp=attr_exp,
+                    attr_rep_exp=components[0],
+                    op_exp=components[1],
+                    value_exp=components[2],
+                    placeholders=placeholders,
                 )
-            attr_rep = decode_placeholders(components[0], placeholders)
-            issues.merge(AttrRepFactory.validate(attr_rep))
-            value = decode_placeholders(components[2], placeholders)
-            try:
-                value = deserialize_comparison_value(value)
-            except ValueError:
-                issues.add_error(
-                    issue=ValidationError.bad_operand(
-                        decode_placeholders(components[2], placeholders)
-                    ),
-                    proceed=False,
-                )
-
-            if not issues.can_proceed():
-                return issues
-
-            if op_ and type(value) not in op_.supported_types:
-                issues.add_error(
-                    issue=ValidationError.non_compatible_operand(value, op_.op),
-                    proceed=False,
-                )
-
-            if not issues.can_proceed():
-                return issues
-
+            )
             return issues
 
         issues.add_error(
             issue=ValidationError.unknown_expression(decode_placeholders(attr_exp, placeholders)),
             proceed=False,
         )
+        return issues
+
+    @staticmethod
+    def _validate_unary_op_attr_exp(
+        attr_exp: str, attr_rep_exp: str, op_exp: str, placeholders: dict[str, Any]
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        op_exp = op_exp.lower()
+        op_ = unary_operators.get(op_exp)
+        if op_ is None:
+            if op_exp in binary_operators:
+                issues.add_error(
+                    issue=ValidationError.missing_operand_for_operator(
+                        operator=op_exp,
+                        expression=decode_placeholders(attr_exp, placeholders),
+                    ),
+                    proceed=False,
+                )
+            else:
+                issues.add_error(
+                    issue=ValidationError.unknown_operator(
+                        operator=decode_placeholders(op_exp, placeholders),
+                        expression=decode_placeholders(attr_exp, placeholders),
+                    ),
+                    proceed=False,
+                )
+        attr_rep = decode_placeholders(attr_rep_exp, placeholders)
+        issues.merge(AttrRepFactory.validate(attr_rep))
+        return issues
+
+    @staticmethod
+    def _validate_binary_op_attr_exp(
+        attr_exp: str, attr_rep_exp: str, op_exp: str, value_exp: str, placeholders: dict[str, Any]
+    ) -> ValidationIssues:
+        issues = ValidationIssues()
+        op_ = binary_operators.get(op_exp.lower())
+        if op_ is None:
+            issues.add_error(
+                issue=ValidationError.unknown_operator(
+                    operator=decode_placeholders(op_exp, placeholders),
+                    expression=decode_placeholders(attr_exp, placeholders),
+                ),
+                proceed=False,
+            )
+        attr_rep = decode_placeholders(attr_rep_exp, placeholders)
+        issues.merge(AttrRepFactory.validate(attr_rep))
+        value = decode_placeholders(value_exp, placeholders)
+        try:
+            value = deserialize_comparison_value(value)
+        except ValueError:
+            issues.add_error(
+                issue=ValidationError.bad_operand(decode_placeholders(value_exp, placeholders)),
+                proceed=False,
+            )
+        if op_ and type(value) not in op_.supported_types:
+            issues.add_error(
+                issue=ValidationError.non_compatible_operand(value, op_.op),
+                proceed=False,
+            )
         return issues
 
     def serialize(self) -> str:
@@ -493,8 +599,8 @@ class Filter(Generic[TOperator]):
         """
         try:
             return cls._deserialize(filter_exp)
-        except Exception as e:
-            raise ValueError("invalid filter expression", e)
+        except Exception:
+            raise ValueError("invalid filter expression")
 
     @classmethod
     def _deserialize(cls, filter_exp: str) -> "Filter":
@@ -503,7 +609,7 @@ class Filter(Generic[TOperator]):
             complex_attr_rep = match.group(1)
             attr_rep = AttrRepFactory.deserialize(complex_attr_rep)
             if isinstance(attr_rep, AttrRep) and attr_rep.is_sub_attr:
-                raise
+                raise ValueError("invalid filter expression")
             sub_op_exp = match.group(2)
             deserialized_sub_op = cast(
                 Union[op.AttributeOperator, op.LogicalOperator],
