@@ -1782,7 +1782,15 @@ def test_bulk_operations_response_validation_fails_if_too_many_failed_operations
 ):
     validator = BulkOperations(CONFIG, resource_schemas=[user_schema])
 
-    expected_issues = {"body": {"Operations": {"_errors": [{"code": 27}]}}}
+    expected_issues = {
+        "body": {
+            "Operations": {
+                "_errors": [{"code": 27}],
+                "0": {"status": {"_errors": [{"code": 5}]}},
+                "1": {"status": {"_errors": [{"code": 5}]}},
+            }
+        }
+    }
 
     data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkResponse"],
@@ -1790,12 +1798,19 @@ def test_bulk_operations_response_validation_fails_if_too_many_failed_operations
             {
                 "method": "POST",
                 "bulkId": "qwerty",
-                "status": "400",
                 "response": {
                     "schemas": ["urn:ietf:params:scim:api:messages:2.0:Error"],
                     "scimType": "invalidSyntax",
                     "detail": "Request is unparsable, syntactically incorrect, or violates schema.",
                     "status": "400",
+                },
+            },
+            {
+                "method": "POST",
+                "bulkId": "qwerty",
+                "response": {
+                    "scimType": "invalidSyntax",
+                    "detail": "Request is unparsable, syntactically incorrect, or violates schema.",
                 },
             },
             {
@@ -2312,3 +2327,67 @@ def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):
     issues = validator.validate_request(body=data)
 
     assert issues.to_dict(msg=True) == {}
+
+
+@pytest.mark.parametrize(
+    ("operation_data", "operation_issues"),
+    (
+        (
+            {
+                "method": "UNKNOWN_METHOD",
+                "path": "/Users",
+                "bulkId": "qwerty",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                    "userName": "Alice",
+                },
+            },
+            {"method": {"_errors": [{"code": 9}]}},
+        ),
+        (
+            {
+                "method": "POST",
+                "path": "bad^path",
+                "bulkId": "qwerty",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+                    "userName": "Alice",
+                },
+            },
+            {"path": {"_errors": [{"code": 1}]}},
+        ),
+        (
+            {
+                "method": "POST",
+                "path": "/Users",
+                "bulkId": "qwerty",
+                "data": 42,
+            },
+            {"data": {"_errors": [{"code": 2}]}},
+        ),
+        (
+            {
+                "method": "DELETE",
+                "path": "/Users/123",
+                "bulkId": "qwerty",
+                "data": {"what": "ever"},
+            },
+            {},
+        ),
+    ),
+)
+def test_request_data_validation_in_bulk_request_is_skipped(
+    user_schema, group_schema, operation_data, operation_issues
+):
+    validator = BulkOperations(resource_schemas=[user_schema, group_schema])
+    expected_issues = {"body": {"Operations": {"0": operation_issues}}} if operation_issues else {}
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "Operations": [
+            operation_data,
+        ],
+    }
+
+    issues = validator.validate_request(body=data)
+
+    assert issues.to_dict() == expected_issues

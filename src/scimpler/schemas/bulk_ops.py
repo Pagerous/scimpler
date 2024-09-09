@@ -26,6 +26,9 @@ def validate_operation_method_existence(method: Any) -> ValidationIssues:
 def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
+        if item is Invalid:
+            continue
+
         method = item.get("method")
         issues.merge(
             issues=validate_operation_method_existence(method),
@@ -189,8 +192,7 @@ class BulkRequestSchema(BaseSchema):
                 resource_type_endpoint = path
             else:
                 resource_type_endpoint = f"/{path.split('/', 2)[1]}"
-            validator = self._sub_schemas[method].get(resource_type_endpoint)
-            if validator is None:
+            if resource_type_endpoint not in self._sub_schemas[method]:
                 issues.add_error(
                     issue=ValidationError.unknown_operation_resource(),
                     proceed=False,
@@ -237,6 +239,9 @@ class BulkRequestSchema(BaseSchema):
 def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
     issues = ValidationIssues()
     for i, item in enumerate(value):
+        if item is Invalid:
+            continue
+
         method = item.get("method")
         issues.merge(
             issues=validate_operation_method_existence(method),

@@ -1331,7 +1331,6 @@ class BulkOperations(Validator):
         for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
             if not all([path, data_item, method]) or method == "DELETE":
                 continue
-
             if method == "POST":
                 resource_type_endpoint = path
             else:
@@ -1398,7 +1397,12 @@ class BulkOperations(Validator):
         for operation in operations:
             status = operation.get("status")
             if not status:
+                if self._error_validator.response_schema.schemas == operation.get(
+                    "response.schemas"
+                ):
+                    n_errors += 1
                 continue
+
             if int(status) >= 300:
                 n_errors += 1
         fail_on_errors = kwargs.get("fail_on_errors")

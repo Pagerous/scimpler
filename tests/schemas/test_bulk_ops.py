@@ -452,6 +452,40 @@ def test_bulk_request_can_be_deserialized(user_schema):
     assert isinstance(deserialized["Operations"][0]["data"]["Operations"][0]["path"], PatchPath)
 
 
+def test_bad_bulk_request_operations_are_validated(user_schema):
+    schema = BulkRequestSchema(
+        sub_schemas={"PATCH": {user_schema.endpoint: PatchOpSchema(user_schema)}}
+    )
+    expected_issues = {
+        "Operations": {"1": {"_errors": [{"code": 2}]}, "2": {"_errors": [{"code": 2}]}}
+    }
+    data = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:BulkRequest"],
+        "Operations": [
+            {
+                "method": "PATCH",
+                "path": "/Users/123",
+                "data": {
+                    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+                    "Operations": [
+                        {
+                            "op": "add",
+                            "path": "emails",
+                            "value": {"type": "work", "value": "work@example.com"},
+                        }
+                    ],
+                },
+            },
+            42,
+            [],
+        ],
+    }
+
+    issues = schema.validate(data)
+
+    assert issues.to_dict() == expected_issues
+
+
 def test_get_schema_for_bulk_request_returns_none_for_operation_with_unsupported_method(
     user_schema,
 ):
@@ -488,3 +522,29 @@ def test_get_schema_for_bulk_returns_returns_none_for_operation_with_no_status(u
     }
 
     assert schema.get_schema(operation) is None
+
+
+def test_bad_operations_type_in_bulk_response_are_validated(user_schema):
+    schema = BulkResponseSchema(
+        sub_schemas={"PATCH": {user_schema.endpoint: user_schema}}, error_schema=ErrorSchema()
+    )
+    expected_issues = {
+        "Operations": {"1": {"_errors": [{"code": 2}]}, "2": {"_errors": [{"code": 2}]}}
+    }
+
+    issues = schema.validate(
+        {
+            "schemas": [schema.schema],
+            "Operations": [
+                {
+                    "method": "PATCH",
+                    "location": "https://www.example.com/Users/123",
+                    "status": "200",
+                },
+                42,
+                [],
+            ],
+        }
+    )
+
+    assert issues.to_dict() == expected_issues
