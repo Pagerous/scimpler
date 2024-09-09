@@ -242,8 +242,14 @@ def test_schemas_is_not_validated_further_if_bad_type(user_data_client, user_sch
 
 
 def test_invalid_schemas_items_are_detected(user_data_client, user_schema):
-    user_data_client["schemas"] = [user_schema.schema, 123]
-    expected_issues = {"schemas": {"_errors": [{"code": 13}], "1": {"_errors": [{"code": 2}]}}}
+    user_data_client["schemas"] = [user_schema.schema, 123, "bad^schema"]
+    expected_issues = {
+        "schemas": {
+            "_errors": [{"code": 13}],
+            "1": {"_errors": [{"code": 2}]},
+            "2": {"_errors": [{"code": 1}]},
+        }
+    }
 
     issues = user_schema.validate(user_data_client, AttrValuePresenceConfig("REQUEST"))
 
