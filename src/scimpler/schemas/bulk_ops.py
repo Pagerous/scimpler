@@ -38,33 +38,10 @@ def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
                 proceed=False,
                 location=(i, "bulkId"),
             )
-        path = item.get("path")
-        if path in [None, Missing]:
-            issues.add_error(
-                issue=ValidationError.missing(),
-                proceed=False,
-                location=[i, "path"],
-            )
-        else:
-            if method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path):
-                issues.add_error(
-                    issue=ValidationError.bad_value_syntax(),
-                    proceed=False,
-                    location=[i, "path"],
-                )
-                item["path"] = Invalid
-            elif method in [
-                "GET",
-                "PATCH",
-                "PUT",
-                "DELETE",
-            ] and not _RESOURCE_OBJECT_REGEX.fullmatch(path):
-                issues.add_error(
-                    issue=ValidationError.bad_value_syntax(),
-                    proceed=False,
-                    location=[i, "path"],
-                )
-                item["path"] = Invalid
+        issues.merge(
+            issues=_validate_operation_path(item),
+            location=[i, "path"],
+        )
         data = item.get("data")
         if data in [None, Missing]:
             if method in ["POST", "PUT", "PATCH"]:
@@ -80,6 +57,28 @@ def validate_request_operations(value: list[ScimData]) -> ValidationIssues:
                 location=(i, "data"),
             )
             item["data"] = Invalid
+    return issues
+
+
+def _validate_operation_path(operation: ScimData) -> ValidationIssues:
+    issues = ValidationIssues()
+    path = operation.get("path")
+    method = operation.get("method")
+    if path in [None, Missing]:
+        issues.add_error(
+            issue=ValidationError.missing(),
+            proceed=False,
+        )
+    else:
+        if (method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path)) or (
+            method in ["GET", "PATCH", "PUT", "DELETE"]
+            and not _RESOURCE_OBJECT_REGEX.fullmatch(path)
+        ):
+            issues.add_error(
+                issue=ValidationError.bad_value_syntax(),
+                proceed=False,
+            )
+            operation["path"] = Invalid
     return issues
 
 
@@ -259,27 +258,32 @@ def validate_response_operations(value: list[ScimData]) -> ValidationIssues:
                     proceed=False,
                     location=(i, "location"),
                 )
-            response = item.get("response")
-            if response in [None, Missing]:
-                if int(status) >= 300:
-                    issues.add_error(
-                        issue=ValidationError.missing(),
-                        proceed=False,
-                        location=(i, "response"),
-                    )
-            elif not isinstance(response, Mapping):
-                issues.add_error(
-                    issue=ValidationError.bad_type("complex"),
-                    proceed=False,
-                    location=(i, "response"),
-                )
-                item["response"] = Invalid
+            issues.merge(issues=_validate_operation_response(item), location=[i, "response"])
         elif status in [None, Missing]:
             issues.add_error(
                 issue=ValidationError.missing(),
                 proceed=False,
                 location=(i, "status"),
             )
+    return issues
+
+
+def _validate_operation_response(operation: ScimData) -> ValidationIssues:
+    issues = ValidationIssues()
+    response = operation.get("response")
+    status = operation.get("status")
+    if response in [None, Missing]:
+        if int(status) >= 300:
+            issues.add_error(
+                issue=ValidationError.missing(),
+                proceed=False,
+            )
+    elif not isinstance(response, Mapping):
+        issues.add_error(
+            issue=ValidationError.bad_type("complex"),
+            proceed=False,
+        )
+        operation["response"] = Invalid
     return issues
 
 
