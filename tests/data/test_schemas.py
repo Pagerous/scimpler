@@ -204,7 +204,7 @@ def test_data_can_be_filtered_according_to_attr_filter(user_data_client, user_sc
                 {
                     "value": "e9e30dba-f08f-4109-8486-d5c6a331660a",
                     "$ref": "../Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
-                    "display": "Tour Guides",
+                    "display": "Cleaning Staff",
                 },
                 {
                     "value": "fc348aa8-3835-40eb-a20b-c726e15c55b5",

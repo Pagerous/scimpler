@@ -1449,39 +1449,43 @@ class BulkOperations(Validator):
                 issues=issues_.get(location=["status"]),
                 location=status_location,
             )
-        elif location and isinstance(resource_validator, Validator):
-            resource_version = response.get("meta.version")
-            issues_ = resource_validator.validate_response(
-                body=response,
-                status_code=status,
-                headers={"Location": location, "ETag": resource_version},
+            return issues
+
+        if not location or not isinstance(resource_validator, Validator):
+            return issues
+
+        resource_version = response.get("meta.version")
+        issues_ = resource_validator.validate_response(
+            body=response,
+            status_code=status,
+            headers={"Location": location, "ETag": resource_version},
+        )
+        meta_location_mismatch = issues_.pop([8], location=("body", "meta", "location"))
+        header_location_mismatch = issues_.pop([8], location=("headers", "Location"))
+        issues.merge(issues_.get(location=["body"]), location=response_location)
+        issues.merge(issues_.get(location=["status"]), location=status_location)
+        if meta_location_mismatch.has_errors() and header_location_mismatch.has_errors():
+            issues.add_error(
+                issue=ValidationError.must_be_equal_to("operation's location"),
+                proceed=True,
+                location=[*response_location, "meta", "location"],
             )
-            meta_location_mismatch = issues_.pop([8], location=("body", "meta", "location"))
-            header_location_mismatch = issues_.pop([8], location=("headers", "Location"))
-            issues.merge(issues_.get(location=["body"]), location=response_location)
-            issues.merge(issues_.get(location=["status"]), location=status_location)
-            if meta_location_mismatch.has_errors() and header_location_mismatch.has_errors():
-                issues.add_error(
-                    issue=ValidationError.must_be_equal_to("operation's location"),
-                    proceed=True,
-                    location=[*response_location, "meta", "location"],
-                )
-                issues.add_error(
-                    issue=ValidationError.must_be_equal_to("'response.meta.location'"),
-                    proceed=True,
-                    location=location_location,
-                )
-            if version and resource_version and version != resource_version:
-                issues.add_error(
-                    issue=ValidationError.must_be_equal_to("operation's version"),
-                    proceed=True,
-                    location=[*response_location, "meta", "version"],
-                )
-                issues.add_error(
-                    issue=ValidationError.must_be_equal_to("'response.meta.version'"),
-                    proceed=True,
-                    location=version_location,
-                )
+            issues.add_error(
+                issue=ValidationError.must_be_equal_to("'response.meta.location'"),
+                proceed=True,
+                location=location_location,
+            )
+        if version and resource_version and version != resource_version:
+            issues.add_error(
+                issue=ValidationError.must_be_equal_to("operation's version"),
+                proceed=True,
+                location=[*response_location, "meta", "version"],
+            )
+            issues.add_error(
+                issue=ValidationError.must_be_equal_to("'response.meta.version'"),
+                proceed=True,
+                location=version_location,
+            )
         return issues
 
 

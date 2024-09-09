@@ -844,19 +844,16 @@ def test_attr_is_not_retrieved_if_bad_input(input_, user_schema):
 
 
 def test_attr_rep_is_hashable():
-    assert hash(AttrRep(attr="attr", sub_attr="sub_attr")) is not None
+    assert hash(AttrRep(attr="attr", sub_attr="sub_attr"))
 
 
 def test_bounded_attr_rep_is_hashable():
-    assert (
-        hash(
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                attr="name",
-                sub_attr="formatted",
-            )
+    assert hash(
+        BoundedAttrRep(
+            schema="urn:ietf:params:scim:schemas:core:2.0:User",
+            attr="name",
+            sub_attr="formatted",
         )
-        is not None
     )
 
 

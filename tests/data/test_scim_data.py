@@ -7,7 +7,7 @@ from scimpler.data.scim_data import Invalid, InvalidType, Missing, MissingType, 
 @pytest.mark.parametrize(
     ("attr_rep", "expected"),
     (
-        (AttrRep(attr="id"), "2819c223-7f76-453a-919d-413861904646"),
+        (AttrRep(attr="id"), "2819c223-7f76-453a-919d-413861904645"),
         (
             BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
             "bjensen@example.com",
@@ -245,7 +245,7 @@ def test_missing_type_repr():
 
 
 def test_non_string_keys_are_excluded_from_data():
-    data = {"a": "b", 1: 2, True: False}
+    data = {"a": "b", 1: 2, False: True}
     data = ScimData(data)
 
     assert data.to_dict() == {"a": "b"}

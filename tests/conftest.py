@@ -138,8 +138,8 @@ def set_service_provider_config_():
 def user_data_client():
     return {
         "schemas": [
-            "urn:ietf:params:scim:schemas:core:2.0:User",
-            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User",
+            UserSchema.schema,
+            EnterpriseUserSchemaExtension.schema,
         ],
         "externalId": "1",
         "userName": "bjensen@example.com",
@@ -201,7 +201,7 @@ def user_data_client():
             {
                 "value": "e9e30dba-f08f-4109-8486-d5c6a331660a",
                 "$ref": "../Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
-                "display": "Tour Guides",
+                "display": "Cleaning Staff",
             },
             {
                 "value": "fc348aa8-3835-40eb-a20b-c726e15c55b5",
@@ -238,7 +238,7 @@ def user_data_client():
                 )
             }
         ],
-        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+        EnterpriseUserSchemaExtension.schema: {
             "employeeNumber": "1",
             "costCenter": "4130",
             "organization": "Universal Studios",
@@ -256,13 +256,13 @@ def user_data_client():
 @pytest.fixture
 def user_data_server(user_data_client):
     data = deepcopy(user_data_client)
-    data["id"] = "2819c223-7f76-453a-919d-413861904646"
+    data["id"] = "2819c223-7f76-453a-919d-413861904645"
     data["meta"] = {
         "resourceType": "User",
         "created": "2010-01-23T04:56:22+00:00",
         "lastModified": "2010-01-23T04:56:22+00:00",
         "version": r'W/"3694e05e9dff591"',
-        "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904646",
+        "location": "https://example.com/v2/Users/2819c223-7f76-453a-919d-413861904645",
     }
     data.pop("password")
     return data
@@ -271,9 +271,7 @@ def user_data_server(user_data_client):
 @pytest.fixture
 def list_user_data(user_data_server):
     resources = [deepcopy(user_data_server), deepcopy(user_data_server)]
-    resources[0]["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]["manager"][
-        "displayName"
-    ] = "Jan Kowalski"
+    resources[0][EnterpriseUserSchemaExtension.schema]["manager"]["displayName"] = "Jan Kowalski"
     resources[1]["id"] = "2819c223-7f76-453a-919d-413861904645"
     resources[1]["externalId"] = "2"
     resources[1]["userName"] = "sven"
@@ -290,9 +288,7 @@ def list_user_data(user_data_server):
             "type": "home",
         },
     ]
-    resources[1]["urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"]["employeeNumber"] = (
-        "2"
-    )
+    resources[1][EnterpriseUserSchemaExtension.schema]["employeeNumber"] = "2"
     return {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
         "totalResults": 2,
@@ -309,7 +305,7 @@ def list_data(list_user_data):
         {
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],
             "id": "e9e30dba-f08f-4109-8486-d5c6a331660a",
-            "displayName": "Tour Guides",
+            "displayName": "Users",
             "members": [
                 {
                     "value": "2819c223-7f76-453a-919d-413861904646",
@@ -326,7 +322,7 @@ def list_data(list_user_data):
                 "location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
                 "resourceType": "Group",
                 "created": "2011-05-13T04:42:34+00:00",
-                "lastModified": "2011-05-13T04:42:34+00:00",
+                "lastModified": "2011-05-20T04:42:34+00:00",
                 "version": 'W/"3694e05e9dff594"',
             },
         }
@@ -358,7 +354,7 @@ def bulk_request_serialized():
                 "bulkId": "qwerty",
                 "data": {
                     "schemas": [
-                        "urn:ietf:params:scim:schemas:core:2.0:User",
+                        UserSchema.schema,
                     ],
                     "userName": "Alice",
                 },
@@ -369,7 +365,7 @@ def bulk_request_serialized():
                 "version": 'W/"3694e05e9dff591"',
                 "data": {
                     "schemas": [
-                        "urn:ietf:params:scim:schemas:core:2.0:User",
+                        UserSchema.schema,
                     ],
                     "id": "b7c14771-226c-4d05-8860-134711653041",
                     "userName": "Bob",
@@ -430,7 +426,7 @@ def group_data_server():
             "location": "https://example.com/v2/Groups/e9e30dba-f08f-4109-8486-d5c6a331660a",
             "resourceType": "Group",
             "created": "2011-05-13T04:42:34+00:00",
-            "lastModified": "2011-05-13T04:42:34+00:00",
+            "lastModified": "2011-05-20T04:42:34+00:00",
             "version": 'W/"3694e05e9dff594"',
         },
     }
