@@ -11,6 +11,9 @@ nav:
           - AttrFilter: api_reference/scimpler_data/attr_filter.md
           - AttrName: api_reference/scimpler_data/attr_name.md
           - AttrValuePresenceConfig: api_reference/scimpler_data/attr_value_presence_config.md
+          - Attribute: api_reference/scimpler_data/attribute.md
+          - AttributeWithCaseExact: api_reference/scimpler_data/attribute_with_case_exact.md
+          - AttributeWithUniqueness: api_reference/scimpler_data/attribute_with_uniqueness.md
           - AttrRep: api_reference/scimpler_data/attr_rep.md
           - AttrRepFactory: api_reference/scimpler_data/attr_rep_factory.md
           - Attrs: api_reference/scimpler_data/attrs.md

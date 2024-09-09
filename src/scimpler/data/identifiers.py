@@ -255,7 +255,7 @@ class AttrRepFactory:
 
         match = _ATTR_REP.fullmatch(value)
         if match is None:
-            raise
+            raise ValueError(f"{value!r} is not valid attribute representation")
 
         schema, attr = match.group(1), match.group(2)
         schema = schema[:-1] if schema else ""
