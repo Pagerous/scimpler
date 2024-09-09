@@ -522,19 +522,33 @@ class ValidationIssues:
         Retrieves validation issues for the specified `location`, or all of them if not specified.
         The returned issues can be filtered by `error_codes` and `warning_codes`.
         """
-        copy = ValidationIssues()
         location = tuple(location or tuple())
+        copy = ValidationIssues()
+        copy._errors = self._get_errors(error_codes, location)
+        copy._warnings = self._get_warnings(warning_codes, location)
+        copy._stop_proceeding = self._get_stop_proceeding(error_codes, location)
+        return copy
 
-        errors_copy = {}
+    def _get_errors(
+        self,
+        error_codes: Optional[Collection[int]],
+        location: tuple[Union[str, int], ...],
+    ) -> dict[tuple[str, ...], list[ValidationError]]:
+        output_errors = {}
         for location_, errors in self._errors.items():
             if location_[: len(location)] != location:
                 continue
             errors = [error for error in errors if error_codes is None or error.code in error_codes]
             if errors:
-                errors_copy[location_[len(location) :]] = errors
-        copy._errors = errors_copy
+                output_errors[location_[len(location) :]] = errors
+        return output_errors
 
-        warnings_copy = {}
+    def _get_warnings(
+        self,
+        warning_codes: Optional[Collection[int]],
+        location: tuple[Union[str, int], ...],
+    ) -> dict[tuple[str, ...], list[ValidationWarning]]:
+        output_warnings = {}
         for location_, warnings in self._warnings.items():
             if location_[: len(location)] != location:
                 continue
@@ -544,19 +558,22 @@ class ValidationIssues:
                 if warning_codes is None or warning.code in warning_codes
             ]
             if warnings:
-                warnings_copy[location_[len(location) :]] = warnings
-        copy._warnings = warnings_copy
+                output_warnings[location_[len(location) :]] = warnings
+        return output_warnings
 
-        stop_proceeding_copy = {}
+    def _get_stop_proceeding(
+        self,
+        error_codes: Optional[Collection[int]],
+        location: tuple[Union[str, int], ...],
+    ) -> dict[tuple[str, ...], set[int]]:
+        output_stop_proceeding = {}
         for location_, codes in self._stop_proceeding.items():
             if location_[: len(location)] != location:
                 continue
-            codes = {code for code in codes if not error_codes or code in error_codes}
+            codes = {code for code in codes if error_codes is None or code in error_codes}
             if codes:
-                stop_proceeding_copy[location_[len(location) :]] = codes
-        copy._stop_proceeding = stop_proceeding_copy
-
-        return copy
+                output_stop_proceeding[location_[len(location) :]] = codes
+        return output_stop_proceeding
 
     def pop(
         self,
@@ -570,35 +587,39 @@ class ValidationIssues:
         is popped.
         """
         location = tuple(location or tuple())
-
         popped = self.get(
             error_codes=error_codes or [],
             warning_codes=warning_codes or [],
             location=location,
         )
-
         for location_, errors in popped.errors:
-            original_location = (*location, *location_)
-            for error in errors:
-                self._errors[original_location].remove(error)
-                if error.code in self._stop_proceeding.get(original_location, set()):
-                    self._stop_proceeding[original_location].remove(error.code)
-
-            if not self._errors[original_location]:
-                self._errors.pop(original_location)
-
-            if not self._stop_proceeding.get(original_location, set()):
-                self._stop_proceeding.pop(original_location, None)
-
+            self._remove_errors(errors=errors, location=(*location, *location_))
         for location_, warnings in popped.warnings:
-            original_location = (*location, *location_)
-            for warning in warnings:
-                self._warnings[original_location].remove(warning)
-
-            if not self._warnings[original_location]:
-                self._warnings.pop(original_location)
-
+            self._remove_warnings(warnings=warnings, location=(*location, *location_))
         return popped
+
+    def _remove_errors(
+        self, errors: list[ValidationError], location: tuple[Union[str, int], ...]
+    ) -> None:
+        for error in errors:
+            self._errors[location].remove(error)
+            if error.code in self._stop_proceeding.get(location, set()):
+                self._stop_proceeding[location].remove(error.code)
+
+        if not self._errors[location]:
+            self._errors.pop(location)
+
+        if not self._stop_proceeding.get(location, set()):
+            self._stop_proceeding.pop(location, None)
+
+    def _remove_warnings(
+        self, warnings: list[ValidationWarning], location: tuple[Union[str, int], ...]
+    ) -> None:
+        for warning in warnings:
+            self._warnings[location].remove(warning)
+
+        if not self._warnings[location]:
+            self._warnings.pop(location)
 
     def can_proceed(self, *locations: Sequence[Union[str, int]]) -> bool:
         """
@@ -635,34 +656,44 @@ class ValidationIssues:
         Converts `ValidationIssues` to a dictionary.
         """
         output: dict = {}
-        self._to_dict("_errors", self._errors, output, msg=msg, ctx=ctx)
-        self._to_dict("_warnings", self._warnings, output, msg=msg, ctx=ctx)
+        self._set_dict("_errors", self._errors, output, msg=msg, ctx=ctx)
+        self._set_dict("_warnings", self._warnings, output, msg=msg, ctx=ctx)
         return output
 
     @staticmethod
-    def _to_dict(
+    def _set_dict(
         key: str, structure: dict, output: dict, msg: bool = False, ctx: bool = False
-    ) -> dict:
-        for location, errors in structure.items():
+    ) -> None:
+        for location, issues in structure.items():
             if location:
-                current_level = output
-                for i, part in enumerate(location):
-                    part = str(part)
-                    if part not in current_level:
-                        current_level[part] = {}
-                    if i == len(location) - 1:
-                        current_level[part][key] = []
-                        for error in errors:
-                            current_level[part][key].append(
-                                ValidationIssues._issue_to_dict(error, msg=msg, ctx=ctx)
-                            )
-                    current_level = current_level[part]
-            else:
-                output[key] = []
-                for error in errors:
-                    output[key].append(ValidationIssues._issue_to_dict(error, msg=msg, ctx=ctx))
+                ValidationIssues._set_dict_location(key, output, location, issues, msg, ctx)
+                continue
 
-        return output
+            output[key] = []
+            for issue in issues:
+                output[key].append(ValidationIssues._issue_to_dict(issue, msg=msg, ctx=ctx))
+
+    @staticmethod
+    def _set_dict_location(
+        key: str,
+        output: dict,
+        location: Sequence[Union[str, int]],
+        issues: Sequence[Union[ValidationError, ValidationWarning]],
+        msg: bool = False,
+        ctx: bool = False,
+    ) -> None:
+        current_level = output
+        for i, part in enumerate(location):
+            part = str(part)
+            if part not in current_level:
+                current_level[part] = {}
+            if i == len(location) - 1:
+                current_level[part][key] = []
+                for issue in issues:
+                    current_level[part][key].append(
+                        ValidationIssues._issue_to_dict(issue, msg=msg, ctx=ctx)
+                    )
+            current_level = current_level[part]
 
     @staticmethod
     def _issue_to_dict(

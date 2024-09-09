@@ -4,6 +4,8 @@ import operator
 from abc import ABC
 from typing import Any, Generator, Generic, Mapping, Optional, TypeVar, Union, final
 
+from typing_extensions import override
+
 from scimpler._registry import register_binary_operator, register_unary_operator
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.identifiers import AttrRep
@@ -73,31 +75,17 @@ class And(LogicalOperator):
 
     op: str = "and"
 
+    @override
     def match(
         self,
         value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        """
-        Tests a given `value` against the operator and returns `True`
-        if it matches, `False` otherwise.
-
-        Args:
-            value: The value to test.
-            schema_or_complex: Schema or `Complex` attribute that describes the value.
-
-        Returns:
-            Flag indicating whether the value matches the operator.
-        """
         value = value or ScimData()
         for match in self._collect_matches(value, schema_or_complex):
             if not match:
                 return False
         return True
-
-    @property
-    def sub_operators(self) -> list[Operator]:
-        return self._sub_operators
 
 
 @final
@@ -108,22 +96,12 @@ class Or(LogicalOperator):
 
     op: str = "or"
 
+    @override
     def match(
         self,
         value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        """
-        Tests a given `value` against the operator and returns `True`
-        if it matches, `False` otherwise.
-
-        Args:
-            value: The value to test.
-            schema_or_complex: Schema or `Complex` attribute that describes the value.
-
-        Returns:
-            Flag indicating whether the value matches the operator.
-        """
         value = value or ScimData()
         for match in self._collect_matches(value, schema_or_complex):
             if match:
@@ -142,22 +120,12 @@ class Not(LogicalOperator):
     def __init__(self, sub_operator: Operator):
         super().__init__(sub_operator)
 
+    @override
     def match(
         self,
         value: Optional[ScimData],
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
-        """
-        Tests a given `value` against the operator and returns `True`
-        if it matches, `False` otherwise.
-
-        Args:
-            value: The value to test.
-            schema_or_complex: Schema or `Complex` attribute that describes the value.
-
-        Returns:
-            Flag indicating whether the value matches the operator.
-        """
         return not next(self._collect_matches(value, schema_or_complex))
 
 
@@ -320,9 +288,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         Implements operator's logic for matching the provided value.
         """
 
-    def _get_values_for_comparison(
-        self, value: Any, attr: Attribute
-    ) -> Optional[list[tuple[Any, Any]]]:
+    def _get_values(self, value: Any, attr: Attribute) -> Optional[list[tuple[Any, Any]]]:
         if attr.scim_type not in self.supported_scim_types:
             return None
 
@@ -344,24 +310,35 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if isinstance(op_value, attr.base_types):
             op_value = attr.deserialize(op_value)
 
-        if isinstance(attr, AttributeWithCaseExact):
-            if isinstance(attr, String):
-                try:
-                    value = [
-                        attr.precis.enforce(item) if isinstance(item, str) else item
-                        for item in value
-                    ]
-                    if isinstance(op_value, str):
-                        op_value = attr.precis.enforce(op_value)
-                except UnicodeEncodeError:
-                    return None
-            if attr.case_exact:
-                return [(item, op_value) for item in value]
+        if not isinstance(attr, AttributeWithCaseExact):
+            return [(item, op_value) for item in value]
 
-            if isinstance(op_value, str):
-                op_value = op_value.lower()
-            return [(item.lower() if isinstance(item, str) else item, op_value) for item in value]
-        return [(item, op_value) for item in value]
+        return self._get_values_for_attr_with_case_exact(
+            attr=attr,
+            op_value=op_value,
+            attr_value=value,
+        )
+
+    @staticmethod
+    def _get_values_for_attr_with_case_exact(
+        attr: AttributeWithCaseExact, op_value: Any, attr_value: list[Any]
+    ) -> Optional[list[tuple[Any, Any]]]:
+        if isinstance(attr, String):
+            try:
+                attr_value = [
+                    attr.precis.enforce(item) if isinstance(item, str) else item
+                    for item in attr_value
+                ]
+                if isinstance(op_value, str):
+                    op_value = attr.precis.enforce(op_value)
+            except UnicodeEncodeError:
+                return None
+        if attr.case_exact:
+            return [(item, op_value) for item in attr_value]
+
+        if isinstance(op_value, str):
+            op_value = op_value.lower()
+        return [(item.lower() if isinstance(item, str) else item, op_value) for item in attr_value]
 
     def match(
         self,
@@ -389,7 +366,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr_value in [None, Missing, Invalid]:
             return False
 
-        values = self._get_values_for_comparison(attr_value, attr)
+        values = self._get_values(attr_value, attr)
 
         if values is None:
             return False

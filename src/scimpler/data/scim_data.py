@@ -223,24 +223,30 @@ class ScimData(MutableMapping):
 
         if not isinstance(key, (_SchemaKey, _AttrKey)):
             key = self._normalize(key)
-
         if isinstance(key, _SchemaKey):
-            extension = self._lower_case_to_original.get(key.schema.lower())
-            if extension is None:
-                extension = key.schema
-                self._lower_case_to_original[key.schema.lower()] = key.schema
-            self._data[extension] = value
+            self._set_extension_schema_uri(key, value)
             return
-
-        elif isinstance(key, _BoundedAttrKey) and key.extension:
-            extension = self._lower_case_to_original.get(key.schema.lower())
-            if extension is None:
-                extension = key.schema
-                self._lower_case_to_original[key.schema.lower()] = extension
-                self._data[extension] = ScimData()
-            self._data[extension].set(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), value)
+        if isinstance(key, _BoundedAttrKey) and key.extension:
+            self._set_extension_attr(key, value)
             return
+        self._set_base_attr(key, value)
 
+    def _set_extension_schema_uri(self, key: _SchemaKey, value: Any) -> None:
+        extension = self._lower_case_to_original.get(key.schema.lower())
+        if extension is None:
+            extension = key.schema
+            self._lower_case_to_original[key.schema.lower()] = key.schema
+        self._data[extension] = value
+
+    def _set_extension_attr(self, key: _BoundedAttrKey, value: Any) -> None:
+        extension = self._lower_case_to_original.get(key.schema.lower())
+        if extension is None:
+            extension = key.schema
+            self._lower_case_to_original[key.schema.lower()] = extension
+            self._data[extension] = ScimData()
+        self._data[extension].set(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), value)
+
+    def _set_base_attr(self, key: _AttrKey, value: Any) -> None:
         if not key.sub_attr:
             if original_key := self._lower_case_to_original.get(key.attr.lower()):
                 self._data.pop(original_key, None)
@@ -335,19 +341,25 @@ class ScimData(MutableMapping):
         """
         if not isinstance(key, (_SchemaKey, _AttrKey)):
             key = self._normalize(key)
-
         if isinstance(key, _SchemaKey):
-            extension = self._lower_case_to_original.get(key.schema.lower())
-            if extension is None:
-                return default
-            return self._data.get(extension, default)
-
+            return self._get_extension_schema_uri(key, default)
         if isinstance(key, _BoundedAttrKey) and key.extension:
-            extension = self._lower_case_to_original.get(key.schema.lower())
-            if extension is None:
-                return default
-            return self._data[extension].get(_AttrKey(attr=key.attr, sub_attr=key.sub_attr))
+            return self._get_extension_attr(key, default)
+        return self._get_base_attr(key, default)
 
+    def _get_extension_schema_uri(self, key: _SchemaKey, default: Any) -> Any:
+        extension = self._lower_case_to_original.get(key.schema.lower())
+        if extension is None:
+            return default
+        return self._data.get(extension, default)
+
+    def _get_extension_attr(self, key: _BoundedAttrKey, default: Any) -> Any:
+        extension = self._lower_case_to_original.get(key.schema.lower())
+        if extension is None:
+            return default
+        return self._data[extension].get(_AttrKey(attr=key.attr, sub_attr=key.sub_attr))
+
+    def _get_base_attr(self, key: _AttrKey, default: Any) -> Any:
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
             return default
@@ -374,21 +386,25 @@ class ScimData(MutableMapping):
 
         if not isinstance(key, (_SchemaKey, _AttrKey)):
             key = self._normalize(key)
-
         if isinstance(key, _SchemaKey):
-            extension = self._lower_case_to_original.get(key.schema.lower())
-            if extension is None:
-                return default
-            return self._data.pop(extension, default)
-
+            return self._pop_extension_schema_uri(key, default)
         elif isinstance(key, _BoundedAttrKey) and key.extension:
-            extension = self._lower_case_to_original.get(key.schema.lower())
-            if extension is None:
-                return default
-            return self._data[extension].pop(
-                _AttrKey(attr=key.attr, sub_attr=key.sub_attr), default
-            )
+            return self._pop_extension_attr(key, default)
+        return self._pop_base_attr(key, default)
 
+    def _pop_extension_schema_uri(self, key: _SchemaKey, default: Any) -> Any:
+        extension = self._lower_case_to_original.get(key.schema.lower())
+        if extension is None:
+            return default
+        return self._data.pop(extension, default)
+
+    def _pop_extension_attr(self, key: _BoundedAttrKey, default: Any) -> Any:
+        extension = self._lower_case_to_original.get(key.schema.lower())
+        if extension is None:
+            return default
+        return self._data[extension].pop(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), default)
+
+    def _pop_base_attr(self, key: _AttrKey, default: Any) -> Any:
         attr = self._lower_case_to_original.get(key.attr.lower())
         if attr is None:
             return default

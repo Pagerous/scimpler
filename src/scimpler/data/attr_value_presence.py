@@ -132,7 +132,6 @@ class AttrValuePresenceConfig:
             if isinstance(attr_rep, BoundedAttrRep) and isinstance(rep, BoundedAttrRep):
                 if attr_rep.schema == rep.schema and attr_rep.attr == rep.attr:
                     return True
-                continue
             elif attr_rep.attr == rep.attr:
                 return True
 

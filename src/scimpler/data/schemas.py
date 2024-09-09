@@ -165,8 +165,8 @@ class BaseSchema(metaclass=SchemaMeta):
         - if base schema is included,
         - if all provided schemas are known.
 
-        Optionally, one can pass `AttrValuePresenceConfig`, so attribute requiredness, returnability,
-        and issuer is checked, depending on the data flow direction.
+        Optionally, one can pass `AttrValuePresenceConfig`, so attribute requiredness,
+        returnability, and issuer is checked, depending on the data flow direction.
 
         Extended built-in validation logic is supplied with `_validate` method, implemented
         in subclasses.
@@ -271,53 +271,16 @@ class BaseSchema(metaclass=SchemaMeta):
         presence_config: AttrValuePresenceConfig,
         required_by_schema: bool,
     ) -> ValidationIssues:
-        issues = ValidationIssues()
         if isinstance(attr, Complex):
-            issues_ = self._validate_attr_value_presence(
+            return self._validate_presence_complex(
                 attr=attr,
                 attr_rep=attr_rep,
                 value=value,
                 presence_config=presence_config,
                 required_by_schema=required_by_schema,
             )
-            issues.merge(issues_)
-            if issues_.has_errors():
-                return issues
 
-            for sub_attr_name, sub_attr in attr.attrs:
-                bounded_sub_attr_rep = BoundedAttrRep(
-                    schema=attr_rep.schema,
-                    attr=attr_rep.attr,
-                    sub_attr=sub_attr_name,
-                )
-                if attr.multi_valued:
-                    if not value:
-                        continue
-
-                    for i, item in enumerate(value):
-                        issues.merge(
-                            self._validate_attr_value_presence(
-                                attr=sub_attr,
-                                attr_rep=bounded_sub_attr_rep,
-                                value=item.get(sub_attr_name),
-                                presence_config=presence_config,
-                                required_by_schema=required_by_schema,
-                            ),
-                            location=[i, sub_attr_name],
-                        )
-                else:
-                    issues.merge(
-                        self._validate_attr_value_presence(
-                            attr=sub_attr,
-                            attr_rep=bounded_sub_attr_rep,
-                            value=value.get(sub_attr_name) if value else Missing,
-                            presence_config=presence_config,
-                            required_by_schema=required_by_schema,
-                        ),
-                        location=[sub_attr_name],
-                    )
-            return issues
-
+        issues = ValidationIssues()
         if attr.multi_valued and value:
             for i, item in enumerate(value):
                 issues.merge(
@@ -340,6 +303,58 @@ class BaseSchema(metaclass=SchemaMeta):
                 required_by_schema=required_by_schema,
             ),
         )
+        return issues
+
+    def _validate_presence_complex(
+        self,
+        attr: Complex,
+        attr_rep: BoundedAttrRep,
+        value: Any,
+        presence_config: AttrValuePresenceConfig,
+        required_by_schema: bool,
+    ) -> ValidationIssues:
+        issues = self._validate_attr_value_presence(
+            attr=attr,
+            attr_rep=attr_rep,
+            value=value,
+            presence_config=presence_config,
+            required_by_schema=required_by_schema,
+        )
+        if issues.has_errors():
+            return issues
+
+        for sub_attr_name, sub_attr in attr.attrs:
+            bounded_sub_attr_rep = BoundedAttrRep(
+                schema=attr_rep.schema,
+                attr=attr_rep.attr,
+                sub_attr=sub_attr_name,
+            )
+            if attr.multi_valued:
+                if not value:
+                    continue
+
+                for i, item in enumerate(value):
+                    issues.merge(
+                        self._validate_attr_value_presence(
+                            attr=sub_attr,
+                            attr_rep=bounded_sub_attr_rep,
+                            value=item.get(sub_attr_name),
+                            presence_config=presence_config,
+                            required_by_schema=required_by_schema,
+                        ),
+                        location=[i, sub_attr_name],
+                    )
+            else:
+                issues.merge(
+                    self._validate_attr_value_presence(
+                        attr=sub_attr,
+                        attr_rep=bounded_sub_attr_rep,
+                        value=value.get(sub_attr_name) if value else Missing,
+                        presence_config=presence_config,
+                        required_by_schema=required_by_schema,
+                    ),
+                    location=[sub_attr_name],
+                )
         return issues
 
     @staticmethod
@@ -378,21 +393,7 @@ class BaseSchema(metaclass=SchemaMeta):
             return DataInclusivity.EXCLUDE
 
         if isinstance(attr, Complex):
-            # handling "children", so if they exist within
-            # attr_reps, the presence check is delegated to them
-            for rep in presence_config.attr_reps:
-                if attr_rep.attr != rep.attr:
-                    continue
-
-                if isinstance(rep, BoundedAttrRep):
-                    if attr_rep == (BoundedAttrRep(schema=rep.schema, attr=rep.attr)):
-                        return None
-                else:
-                    return None
-
-            if presence_config.include:
-                return DataInclusivity.EXCLUDE
-            return DataInclusivity.INCLUDE
+            return BaseSchema._get_inclusivity_complex(attr_rep, presence_config)
 
         if not attr_rep.is_sub_attr:
             return None
@@ -403,6 +404,34 @@ class BaseSchema(metaclass=SchemaMeta):
             # and potential errors should be delegated to it
             return None
 
+        return BaseSchema._get_inclusivity_based_on_siblings(attr_rep, presence_config)
+
+    @staticmethod
+    def _get_inclusivity_complex(
+        attr_rep: BoundedAttrRep,
+        presence_config: AttrValuePresenceConfig,
+    ) -> Optional[DataInclusivity]:
+        # handling "children", so if they exist within
+        # attr_reps, the presence check is delegated to them
+        for rep in presence_config.attr_reps:
+            if attr_rep.attr != rep.attr:
+                continue
+
+            if isinstance(rep, BoundedAttrRep):
+                if attr_rep == (BoundedAttrRep(schema=rep.schema, attr=rep.attr)):
+                    return None
+            else:
+                return None
+
+        if presence_config.include:
+            return DataInclusivity.EXCLUDE
+        return DataInclusivity.INCLUDE
+
+    @staticmethod
+    def _get_inclusivity_based_on_siblings(
+        attr_rep: BoundedAttrRep,
+        presence_config: AttrValuePresenceConfig,
+    ) -> Optional[DataInclusivity]:
         # handling "siblings", so if other sub-attributes
         # of the same complex attribute are included in attr_reps
         for rep in presence_config.attr_reps:
@@ -413,12 +442,13 @@ class BaseSchema(metaclass=SchemaMeta):
                 isinstance(rep, BoundedAttrRep)
                 and rep.schema == attr_rep.schema
                 and rep.attr == attr_rep.attr
+                and rep.sub_attr != attr_rep.sub_attr
             ):
                 if presence_config.include:
                     return DataInclusivity.EXCLUDE
                 return DataInclusivity.INCLUDE
 
-            if rep.attr == attr_rep.attr:
+            if rep.attr == attr_rep.attr and rep.sub_attr != attr_rep.sub_attr:
                 if presence_config.include:
                     return DataInclusivity.EXCLUDE
                 return DataInclusivity.INCLUDE
