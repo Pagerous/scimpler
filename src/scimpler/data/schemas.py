@@ -202,23 +202,36 @@ class BaseSchema(metaclass=SchemaMeta):
 
     def _validate_schemas_field(self, data: ScimData) -> ValidationIssues:
         issues = ValidationIssues()
-        provided_schemas = data.get(self._attrs.schemas)
-        main_schema = self.schema.lower()
-        provided_schemas = [item.lower() for item in provided_schemas if item is not Invalid]
-        if len(provided_schemas) > len(set(provided_schemas)):
+        provided_schemas = data.get("schemas")
+        valid_schemas_parsed = []
+        for i, item in enumerate(provided_schemas):
+            if item is Invalid:
+                continue
+            try:
+                parsed = SchemaUri(item)
+                provided_schemas[i] = parsed
+                valid_schemas_parsed.append(parsed)
+            except ValueError:
+                issues.add_error(
+                    issue=ValidationError.bad_value_syntax(),
+                    location=[i],
+                    proceed=False,
+                )
+                provided_schemas[i] = Invalid
+
+        if len(valid_schemas_parsed) > len(set(valid_schemas_parsed)):
             issues.add_error(
                 issue=ValidationError.duplicated_values(),
                 proceed=True,
             )
 
-        known_schemas = [item.lower() for item in self.schemas]
         main_schema_included = False
         mismatch = False
-        for schema in provided_schemas:
-            if schema == main_schema:
+        for schema in valid_schemas_parsed:
+            if schema == self.schema:
                 main_schema_included = True
 
-            elif schema not in known_schemas and not mismatch:
+            elif schema not in self.schemas and not mismatch:
                 issues.add_error(
                     issue=ValidationError.unknown_schema(),
                     proceed=True,
@@ -635,7 +648,7 @@ class ResourceSchema(BaseResourceSchema):
                 schema during presence checks. If the extension is not required and some of
                 its attributes are required, they are not considered required in the base schema.
         """
-        if extension.schema in map(lambda x: x.lower(), self.schemas):
+        if extension.schema in self.schemas:
             raise ValueError(f"schema {extension.schema!r} already in {self.name!r} resource")
         if extension.name.lower() in self._schema_extensions:
             raise RuntimeError(f"extension {extension.name!r} already in resource")
@@ -677,19 +690,15 @@ class ResourceSchema(BaseResourceSchema):
         return issues
 
     def _validate_schemas_field(self, data: ScimData) -> ValidationIssues:
-        provided_schemas = data.get(self.attrs.schemas)
         issues = super()._validate_schemas_field(data)
-        known_schemas = [item.lower() for item in self.schemas]
-        provided_schemas = [item.lower() for item in provided_schemas if item is not Invalid]
-        reported_missing = set()
+        provided_schemas = data.get("schemas")
         for k, v in data.items():
-            k_lower = k.lower()
-            if k_lower in known_schemas and k_lower not in provided_schemas:
+            possible_schema = SchemaUri(k)
+            if possible_schema in self.schemas and possible_schema not in provided_schemas:
                 issues.add_error(
                     issue=ValidationError.missing_schema_extension(k),
                     proceed=True,
                 )
-                reported_missing.add(k_lower)
         return issues
 
     def _is_attr_required_by_schema(

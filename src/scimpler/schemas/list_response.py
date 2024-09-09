@@ -2,6 +2,7 @@ from typing import Any, Iterable, Mapping, Optional, Union
 
 from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import Attribute, Integer, Unknown
+from scimpler.data.identifiers import SchemaUri
 from scimpler.data.schemas import BaseResourceSchema, BaseSchema
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
@@ -182,9 +183,7 @@ class ListResponseSchema(BaseSchema):
         resource = ScimData(resource)
         schemas_value = resource.get("schemas")
         if isinstance(schemas_value, list) and len(schemas_value) > 0:
-            schemas_value = {
-                item.lower() if isinstance(item, str) else item for item in schemas_value
-            }
+            schemas_value = {SchemaUri(item) for item in schemas_value if isinstance(item, str)}
             for schema in self._contained_schemas:
                 if schema.schema in schemas_value:
                     return schema
