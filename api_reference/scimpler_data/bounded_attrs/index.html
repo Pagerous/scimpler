@@ -1,0 +1,3582 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="simpler SCIM integrations">
+      
+      
+        <meta name="author" content="Arkadiusz Pajor">
+      
+      
+      
+        <link rel="prev" href="../bounded_attr_rep/">
+      
+      
+        <link rel="next" href="../complex/">
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.34">
+    
+    
+      
+        <title>BoundedAttrs - scimpler</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.35f28582.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#scimpler.data.BoundedAttrs" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="scimpler" class="md-header__button md-logo" aria-label="scimpler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            scimpler
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              BoundedAttrs
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Pagerous/scimple" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scimpler
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="scimpler" class="md-nav__button md-logo" aria-label="scimpler" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    scimpler
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Pagerous/scimple" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    scimpler
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../users_guide/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    User's Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    API Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    scimpler.data
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            scimpler.data
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attr_filter/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AttrFilter
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attr_name/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AttrName
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attr_value_presence_config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AttrValuePresenceConfig
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attribute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Attribute
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attribute_with_case_exact/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AttributeWithCaseExact
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attribute_with_uniqueness/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AttributeWithUniqueness
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attr_rep/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AttrRep
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attr_rep_factory/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    AttrRepFactory
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../attrs/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Attrs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../binary/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Binary
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../boolean/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Boolean
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bounded_attr_rep/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    BoundedAttrRep
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    BoundedAttrs
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    BoundedAttrs
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      BoundedAttrs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Attributes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.core_attrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      core_attrs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.extensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      extensions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.__getattr__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __getattr__
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      clone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.extend" class="md-nav__link">
+    <span class="md-ellipsis">
+      extend
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.get" class="md-nav__link">
+    <span class="md-ellipsis">
+      get
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.get_by_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_by_path
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../complex/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Complex
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../datetime/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DateTime
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decimal/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Decimal
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../external_reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ExternalReference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../filter/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Filter
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integer/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Integer
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../patch_path/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PatchPath
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resource_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema_extension/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SchemaExtension
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema_uri/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SchemaUri
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scim_data/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ScimData
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scim_reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ScimReference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../string/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    String
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sorter/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Sorter
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../uri_reference/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    UriReference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_2" id="__nav_3_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    scimpler.data.operator
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_2">
+            <span class="md-nav__icon md-icon"></span>
+            scimpler.data.operator
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/and/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    And
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/binary_attribute_operator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    BinaryAttributeOperator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/complex_attribute_operator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ComplexAttributeOperator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/contains/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contains
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/ends_with/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    EndsWith
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/equal/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Equal
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/greater_than/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    GreaterThan
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/greater_than_or_equal/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    GreaterThanOrEqual
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/lesser_than/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    LesserThan
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/lesser_than_or_equal/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    LesserThanOrEqual
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/not/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Not
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/not_equal/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    NotEqual
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/or/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Or
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/present/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Present
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/starts_with/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    StartsWith
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data_operator/unary_attribute_operator/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    UnaryAttributeOperator
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_3" id="__nav_3_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    scimpler.error
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_3">
+            <span class="md-nav__icon md-icon"></span>
+            scimpler.error
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_error/validation_error/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ValidationError
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_error/validation_issues/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ValidationIssues
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_error/validation_warning/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ValidationWarning
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_4" id="__nav_3_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    scimpler.ext
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_4">
+            <span class="md-nav__icon md-icon"></span>
+            scimpler.ext
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_ext/marshmallow/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    marshmallow
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_5" id="__nav_3_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    scimpler.query_string
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_5">
+            <span class="md-nav__icon md-icon"></span>
+            scimpler.query_string
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_query_string/resource_object_get/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceObjectGet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_query_string/resource_object_patch/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceObjectPatch
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_query_string/resource_object_put/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceObjectPut
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_query_string/resource_types_get/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceTypesGet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_query_string/resources_get/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourcesGet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_query_string/resources_post/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourcesPost
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_query_string/schemas_get/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SchemasGet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_6" id="__nav_3_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    scimpler.schemas
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_6">
+            <span class="md-nav__icon md-icon"></span>
+            scimpler.schemas
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/bulk_request_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    BulkRequestSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/bulk_response_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    BulkResponseSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/enterprise_user_schema_extension/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    EnterpriseUserSchemaExtension
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/error_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ErrorSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/group_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    GroupSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/list_response_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ListResponseSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/patch_op_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PatchOpSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/resource_type_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceTypeSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/schema_definition_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SchemaDefinitionSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/search_request_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SearchRequestSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/service_provider_config_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ServiceProviderConfigSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_schemas/user_schema/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    UserSchema
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_7" id="__nav_3_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    scimpler.validator
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_7">
+            <span class="md-nav__icon md-icon"></span>
+            scimpler.validator
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/bulk_operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    BulkOperations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/error/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Error
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/resource_object_delete/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceObjectDelete
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/resource_object_get/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceObjectGet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/resource_object_patch/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceObjectPatch
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/resource_object_put/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourceObjectPut
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/resources_post/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourcesPost
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/resources_query/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResourcesQuery
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_validator/search_request_post/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SearchRequestPost
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_config/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    scimpler.config
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../compliance/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Compliance
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      BoundedAttrs
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs-attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      Attributes
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Attributes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.core_attrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      core_attrs
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.extensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      extensions
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Functions
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.__getattr__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __getattr__
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.clone" class="md-nav__link">
+    <span class="md-ellipsis">
+      clone
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.extend" class="md-nav__link">
+    <span class="md-ellipsis">
+      extend
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.get" class="md-nav__link">
+    <span class="md-ellipsis">
+      get
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scimpler.data.BoundedAttrs.get_by_path" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_by_path
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>BoundedAttrs</h1>
+
+<div class="doc doc-object doc-class">
+
+
+
+<a id="scimpler.data.BoundedAttrs"></a>
+    <div class="doc doc-contents first">
+
+
+        <p>Represents iterable collection of attributes bounded to a specific schema.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>schema</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>A SCIM schema attributes belong to.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><a class="autorefs autorefs-internal" title="scimpler.data.identifiers.SchemaUri" href="../schema_uri/#scimpler.data.SchemaUri">SchemaUri</a></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>attrs</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Attributes bound to the schema.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="typing.Optional">Optional</span>[<span title="typing.Iterable">Iterable</span>[<a class="autorefs autorefs-internal" title="scimpler.data.attrs.Attribute" href="../attribute/#scimpler.data.attrs.Attribute">Attribute</a>]]</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>common_attrs</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Names of attributes that belong to the schema, but not exclusively.
+For example, <code>id</code>, <code>meta</code>, and <code>externalId</code> are such attributes, defined in every
+resource schema. Used to determine core attributes:
+core attrs = all attrs - common attrs.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="typing.Optional">Optional</span>[<span title="typing.Iterable">Iterable</span>[str]]</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+        <p>It is possible to iterate through the attributes stored in the instance.</p>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="language-pycon highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_attrs</span> <span class="o">=</span> <span class="n">BoundedAttrs</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="n">schema</span><span class="o">=</span><span class="n">SchemaUri</span><span class="p">(</span><span class="s2">&quot;my:resource:schema&quot;</span><span class="p">),</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="n">attrs</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span>        <span class="n">String</span><span class="p">(</span><span class="s2">&quot;myString&quot;</span><span class="p">),</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span>        <span class="n">Complex</span><span class="p">(</span><span class="s2">&quot;myComplex&quot;</span><span class="p">,</span> <span class="n">sub_attributes</span><span class="o">=</span><span class="p">[</span><span class="n">Integer</span><span class="p">(</span><span class="s2">&quot;myInteger&quot;</span><span class="p">)])</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="p">],</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="go">&gt;&gt;&gt;)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">attr_rep</span><span class="p">,</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">bounded_attrs</span><span class="p">:</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="nb">print</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">,</span> <span class="n">attr</span><span class="p">)</span>
+</span></code></pre></div>
+
+                  <details class="quote">
+                    <summary>Source code in <code>src/scimpler/data/attrs.py</code></summary>
+                    <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1160">1160</a></span>
+<span class="normal"><a href="#__codelineno-0-1161">1161</a></span>
+<span class="normal"><a href="#__codelineno-0-1162">1162</a></span>
+<span class="normal"><a href="#__codelineno-0-1163">1163</a></span>
+<span class="normal"><a href="#__codelineno-0-1164">1164</a></span>
+<span class="normal"><a href="#__codelineno-0-1165">1165</a></span>
+<span class="normal"><a href="#__codelineno-0-1166">1166</a></span>
+<span class="normal"><a href="#__codelineno-0-1167">1167</a></span>
+<span class="normal"><a href="#__codelineno-0-1168">1168</a></span>
+<span class="normal"><a href="#__codelineno-0-1169">1169</a></span>
+<span class="normal"><a href="#__codelineno-0-1170">1170</a></span>
+<span class="normal"><a href="#__codelineno-0-1171">1171</a></span>
+<span class="normal"><a href="#__codelineno-0-1172">1172</a></span>
+<span class="normal"><a href="#__codelineno-0-1173">1173</a></span>
+<span class="normal"><a href="#__codelineno-0-1174">1174</a></span>
+<span class="normal"><a href="#__codelineno-0-1175">1175</a></span>
+<span class="normal"><a href="#__codelineno-0-1176">1176</a></span>
+<span class="normal"><a href="#__codelineno-0-1177">1177</a></span>
+<span class="normal"><a href="#__codelineno-0-1178">1178</a></span>
+<span class="normal"><a href="#__codelineno-0-1179">1179</a></span>
+<span class="normal"><a href="#__codelineno-0-1180">1180</a></span>
+<span class="normal"><a href="#__codelineno-0-1181">1181</a></span>
+<span class="normal"><a href="#__codelineno-0-1182">1182</a></span>
+<span class="normal"><a href="#__codelineno-0-1183">1183</a></span>
+<span class="normal"><a href="#__codelineno-0-1184">1184</a></span>
+<span class="normal"><a href="#__codelineno-0-1185">1185</a></span>
+<span class="normal"><a href="#__codelineno-0-1186">1186</a></span>
+<span class="normal"><a href="#__codelineno-0-1187">1187</a></span>
+<span class="normal"><a href="#__codelineno-0-1188">1188</a></span>
+<span class="normal"><a href="#__codelineno-0-1189">1189</a></span>
+<span class="normal"><a href="#__codelineno-0-1190">1190</a></span>
+<span class="normal"><a href="#__codelineno-0-1191">1191</a></span>
+<span class="normal"><a href="#__codelineno-0-1192">1192</a></span>
+<span class="normal"><a href="#__codelineno-0-1193">1193</a></span>
+<span class="normal"><a href="#__codelineno-0-1194">1194</a></span>
+<span class="normal"><a href="#__codelineno-0-1195">1195</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1160"><a id="__codelineno-0-1160" name="__codelineno-0-1160"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+</span><span id="__span-0-1161"><a id="__codelineno-0-1161" name="__codelineno-0-1161"></a>    <span class="bp">self</span><span class="p">,</span>
+</span><span id="__span-0-1162"><a id="__codelineno-0-1162" name="__codelineno-0-1162"></a>    <span class="n">schema</span><span class="p">:</span> <span class="n">SchemaUri</span><span class="p">,</span>
+</span><span id="__span-0-1163"><a id="__codelineno-0-1163" name="__codelineno-0-1163"></a>    <span class="n">attrs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="n">Attribute</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-1164"><a id="__codelineno-0-1164" name="__codelineno-0-1164"></a>    <span class="n">common_attrs</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-1165"><a id="__codelineno-0-1165" name="__codelineno-0-1165"></a><span class="p">):</span>
+</span><span id="__span-0-1166"><a id="__codelineno-0-1166" name="__codelineno-0-1166"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_schema</span> <span class="o">=</span> <span class="n">schema</span>
+</span><span id="__span-0-1167"><a id="__codelineno-0-1167" name="__codelineno-0-1167"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_core_attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">BoundedAttrRep</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-0-1168"><a id="__codelineno-0-1168" name="__codelineno-0-1168"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_base_attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">BoundedAttrRep</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-0-1169"><a id="__codelineno-0-1169" name="__codelineno-0-1169"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_common_attrs</span> <span class="o">=</span> <span class="p">{</span><span class="n">AttrName</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="p">(</span><span class="n">common_attrs</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">())}</span>
+</span><span id="__span-0-1170"><a id="__codelineno-0-1170" name="__codelineno-0-1170"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_extensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">SchemaUri</span><span class="p">,</span> <span class="n">BoundedAttrs</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-0-1171"><a id="__codelineno-0-1171" name="__codelineno-0-1171"></a>
+</span><span id="__span-0-1172"><a id="__codelineno-0-1172" name="__codelineno-0-1172"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">BoundedAttrRep</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="__span-0-1173"><a id="__codelineno-0-1173" name="__codelineno-0-1173"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_bounded_complex_sub_attrs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">BoundedAttrRep</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="n">BoundedAttrRep</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__span-0-1174"><a id="__codelineno-0-1174" name="__codelineno-0-1174"></a>        <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+</span><span id="__span-0-1175"><a id="__codelineno-0-1175" name="__codelineno-0-1175"></a>    <span class="p">)</span>
+</span><span id="__span-0-1176"><a id="__codelineno-0-1176" name="__codelineno-0-1176"></a>
+</span><span id="__span-0-1177"><a id="__codelineno-0-1177" name="__codelineno-0-1177"></a>    <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">attrs</span> <span class="ow">or</span> <span class="p">[]:</span>
+</span><span id="__span-0-1178"><a id="__codelineno-0-1178" name="__codelineno-0-1178"></a>        <span class="n">attr_rep</span> <span class="o">=</span> <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1179"><a id="__codelineno-0-1179" name="__codelineno-0-1179"></a>            <span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="p">,</span>
+</span><span id="__span-0-1180"><a id="__codelineno-0-1180" name="__codelineno-0-1180"></a>            <span class="n">attr</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="__span-0-1181"><a id="__codelineno-0-1181" name="__codelineno-0-1181"></a>        <span class="p">)</span>
+</span><span id="__span-0-1182"><a id="__codelineno-0-1182" name="__codelineno-0-1182"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="p">[</span><span class="n">attr_rep</span><span class="p">]</span> <span class="o">=</span> <span class="n">attr</span>
+</span><span id="__span-0-1183"><a id="__codelineno-0-1183" name="__codelineno-0-1183"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_base_attrs</span><span class="p">[</span><span class="n">attr_rep</span><span class="p">]</span> <span class="o">=</span> <span class="n">attr</span>
+</span><span id="__span-0-1184"><a id="__codelineno-0-1184" name="__codelineno-0-1184"></a>        <span class="k">if</span> <span class="n">attr</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_common_attrs</span><span class="p">:</span>
+</span><span id="__span-0-1185"><a id="__codelineno-0-1185" name="__codelineno-0-1185"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_core_attrs</span><span class="p">[</span><span class="n">attr_rep</span><span class="p">]</span> <span class="o">=</span> <span class="n">attr</span>
+</span><span id="__span-0-1186"><a id="__codelineno-0-1186" name="__codelineno-0-1186"></a>
+</span><span id="__span-0-1187"><a id="__codelineno-0-1187" name="__codelineno-0-1187"></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attr</span><span class="p">,</span> <span class="n">Complex</span><span class="p">):</span>
+</span><span id="__span-0-1188"><a id="__codelineno-0-1188" name="__codelineno-0-1188"></a>            <span class="bp">self</span><span class="o">.</span><span class="n">_bounded_complex_sub_attrs</span><span class="p">[</span><span class="n">attr_rep</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-0-1189"><a id="__codelineno-0-1189" name="__codelineno-0-1189"></a>                <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1190"><a id="__codelineno-0-1190" name="__codelineno-0-1190"></a>                    <span class="n">schema</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+</span><span id="__span-0-1191"><a id="__codelineno-0-1191" name="__codelineno-0-1191"></a>                    <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1192"><a id="__codelineno-0-1192" name="__codelineno-0-1192"></a>                    <span class="n">sub_attr</span><span class="o">=</span><span class="n">sub_attr_name</span><span class="p">,</span>
+</span><span id="__span-0-1193"><a id="__codelineno-0-1193" name="__codelineno-0-1193"></a>                <span class="p">):</span> <span class="n">sub_attr</span>
+</span><span id="__span-0-1194"><a id="__codelineno-0-1194" name="__codelineno-0-1194"></a>                <span class="k">for</span> <span class="n">sub_attr_name</span><span class="p">,</span> <span class="n">sub_attr</span> <span class="ow">in</span> <span class="n">attr</span><span class="o">.</span><span class="n">attrs</span>
+</span><span id="__span-0-1195"><a id="__codelineno-0-1195" name="__codelineno-0-1195"></a>            <span class="p">}</span>
+</span></code></pre></div></td></tr></table></div>
+                  </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+<h2 id="scimpler.data.BoundedAttrs-attributes">Attributes</h2>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="scimpler.data.BoundedAttrs.core_attrs" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">core_attrs</span><span class="p">:</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">BoundedAttrRep</span><span class="p">,</span> <span class="n">Attribute</span><span class="p">]]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Iterator that goes through the core attributes of the schema.</p>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="scimpler.data.BoundedAttrs.extensions" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extensions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">SchemaUri</span><span class="p">,</span> <span class="n">BoundedAttrs</span><span class="p">]</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-property"><code>property</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Associated extensions.</p>
+    </div>
+
+</div>
+
+<h2 id="scimpler.data.BoundedAttrs-functions">Functions</h2>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="scimpler.data.BoundedAttrs.__getattr__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__getattr__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns bounded attribute representation, given only an attribute name.
+Searches through attributes defined in the schema, then in the extensions.
+First matching result is returned, so if a schema extension defines an attribute
+with the same name as base schema, it is not accessible.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>name</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Name of the attribute. A sub-attribute can be specified as well, using <code>__</code>
+to separate the attribute name and the sub-attribute name, for example:
+name__formatted</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code>str</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="language-pycon highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_attrs</span> <span class="o">=</span> <span class="n">BoundedAttrs</span><span class="p">(</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="n">schema</span><span class="o">=</span><span class="n">SchemaUri</span><span class="p">(</span><span class="s2">&quot;my:resource:schema&quot;</span><span class="p">),</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="n">attrs</span><span class="o">=</span><span class="p">[</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="gp">&gt;&gt;&gt; </span>        <span class="n">String</span><span class="p">(</span><span class="s2">&quot;myString&quot;</span><span class="p">),</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="gp">&gt;&gt;&gt; </span>        <span class="n">Complex</span><span class="p">(</span><span class="s2">&quot;myComplex&quot;</span><span class="p">,</span> <span class="n">sub_attributes</span><span class="o">=</span><span class="p">[</span><span class="n">Integer</span><span class="p">(</span><span class="s2">&quot;myInteger&quot;</span><span class="p">)])</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="gp">&gt;&gt;&gt; </span>    <span class="p">],</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="go">&gt;&gt;&gt;)</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="gp">&gt;&gt;&gt;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_attrs</span><span class="o">.</span><span class="n">myString</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="go">BoundedAttrRep(my:resource_schema:myString)</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="gp">&gt;&gt;&gt; </span><span class="n">bounded_attrs</span><span class="o">.</span><span class="n">myComplex__myInteger</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="go">BoundedAttrRep(my:resource_schema:myComplex.myInteger)</span>
+</span></code></pre></div>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RAISES</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code>AttributeError</code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If bounded attribute is not found</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code>ValueError</code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If provided attribute name is not valid</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><a class="autorefs autorefs-internal" title="scimpler.data.identifiers.BoundedAttrRep" href="../bounded_attr_rep/#scimpler.data.BoundedAttrRep">BoundedAttrRep</a></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>Bounded attribute representation for the given (sub-)attribute name</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>src/scimpler/data/attrs.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1197">1197</a></span>
+<span class="normal"><a href="#__codelineno-0-1198">1198</a></span>
+<span class="normal"><a href="#__codelineno-0-1199">1199</a></span>
+<span class="normal"><a href="#__codelineno-0-1200">1200</a></span>
+<span class="normal"><a href="#__codelineno-0-1201">1201</a></span>
+<span class="normal"><a href="#__codelineno-0-1202">1202</a></span>
+<span class="normal"><a href="#__codelineno-0-1203">1203</a></span>
+<span class="normal"><a href="#__codelineno-0-1204">1204</a></span>
+<span class="normal"><a href="#__codelineno-0-1205">1205</a></span>
+<span class="normal"><a href="#__codelineno-0-1206">1206</a></span>
+<span class="normal"><a href="#__codelineno-0-1207">1207</a></span>
+<span class="normal"><a href="#__codelineno-0-1208">1208</a></span>
+<span class="normal"><a href="#__codelineno-0-1209">1209</a></span>
+<span class="normal"><a href="#__codelineno-0-1210">1210</a></span>
+<span class="normal"><a href="#__codelineno-0-1211">1211</a></span>
+<span class="normal"><a href="#__codelineno-0-1212">1212</a></span>
+<span class="normal"><a href="#__codelineno-0-1213">1213</a></span>
+<span class="normal"><a href="#__codelineno-0-1214">1214</a></span>
+<span class="normal"><a href="#__codelineno-0-1215">1215</a></span>
+<span class="normal"><a href="#__codelineno-0-1216">1216</a></span>
+<span class="normal"><a href="#__codelineno-0-1217">1217</a></span>
+<span class="normal"><a href="#__codelineno-0-1218">1218</a></span>
+<span class="normal"><a href="#__codelineno-0-1219">1219</a></span>
+<span class="normal"><a href="#__codelineno-0-1220">1220</a></span>
+<span class="normal"><a href="#__codelineno-0-1221">1221</a></span>
+<span class="normal"><a href="#__codelineno-0-1222">1222</a></span>
+<span class="normal"><a href="#__codelineno-0-1223">1223</a></span>
+<span class="normal"><a href="#__codelineno-0-1224">1224</a></span>
+<span class="normal"><a href="#__codelineno-0-1225">1225</a></span>
+<span class="normal"><a href="#__codelineno-0-1226">1226</a></span>
+<span class="normal"><a href="#__codelineno-0-1227">1227</a></span>
+<span class="normal"><a href="#__codelineno-0-1228">1228</a></span>
+<span class="normal"><a href="#__codelineno-0-1229">1229</a></span>
+<span class="normal"><a href="#__codelineno-0-1230">1230</a></span>
+<span class="normal"><a href="#__codelineno-0-1231">1231</a></span>
+<span class="normal"><a href="#__codelineno-0-1232">1232</a></span>
+<span class="normal"><a href="#__codelineno-0-1233">1233</a></span>
+<span class="normal"><a href="#__codelineno-0-1234">1234</a></span>
+<span class="normal"><a href="#__codelineno-0-1235">1235</a></span>
+<span class="normal"><a href="#__codelineno-0-1236">1236</a></span>
+<span class="normal"><a href="#__codelineno-0-1237">1237</a></span>
+<span class="normal"><a href="#__codelineno-0-1238">1238</a></span>
+<span class="normal"><a href="#__codelineno-0-1239">1239</a></span>
+<span class="normal"><a href="#__codelineno-0-1240">1240</a></span>
+<span class="normal"><a href="#__codelineno-0-1241">1241</a></span>
+<span class="normal"><a href="#__codelineno-0-1242">1242</a></span>
+<span class="normal"><a href="#__codelineno-0-1243">1243</a></span>
+<span class="normal"><a href="#__codelineno-0-1244">1244</a></span>
+<span class="normal"><a href="#__codelineno-0-1245">1245</a></span>
+<span class="normal"><a href="#__codelineno-0-1246">1246</a></span>
+<span class="normal"><a href="#__codelineno-0-1247">1247</a></span>
+<span class="normal"><a href="#__codelineno-0-1248">1248</a></span>
+<span class="normal"><a href="#__codelineno-0-1249">1249</a></span>
+<span class="normal"><a href="#__codelineno-0-1250">1250</a></span>
+<span class="normal"><a href="#__codelineno-0-1251">1251</a></span>
+<span class="normal"><a href="#__codelineno-0-1252">1252</a></span>
+<span class="normal"><a href="#__codelineno-0-1253">1253</a></span>
+<span class="normal"><a href="#__codelineno-0-1254">1254</a></span>
+<span class="normal"><a href="#__codelineno-0-1255">1255</a></span>
+<span class="normal"><a href="#__codelineno-0-1256">1256</a></span>
+<span class="normal"><a href="#__codelineno-0-1257">1257</a></span>
+<span class="normal"><a href="#__codelineno-0-1258">1258</a></span>
+<span class="normal"><a href="#__codelineno-0-1259">1259</a></span>
+<span class="normal"><a href="#__codelineno-0-1260">1260</a></span>
+<span class="normal"><a href="#__codelineno-0-1261">1261</a></span>
+<span class="normal"><a href="#__codelineno-0-1262">1262</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1197"><a id="__codelineno-0-1197" name="__codelineno-0-1197"></a><span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BoundedAttrRep</span><span class="p">:</span>
+</span><span id="__span-0-1198"><a id="__codelineno-0-1198" name="__codelineno-0-1198"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-0-1199"><a id="__codelineno-0-1199" name="__codelineno-0-1199"></a><span class="sd">    Returns bounded attribute representation, given only an attribute name.</span>
+</span><span id="__span-0-1200"><a id="__codelineno-0-1200" name="__codelineno-0-1200"></a><span class="sd">    Searches through attributes defined in the schema, then in the extensions.</span>
+</span><span id="__span-0-1201"><a id="__codelineno-0-1201" name="__codelineno-0-1201"></a><span class="sd">    First matching result is returned, so if a schema extension defines an attribute</span>
+</span><span id="__span-0-1202"><a id="__codelineno-0-1202" name="__codelineno-0-1202"></a><span class="sd">    with the same name as base schema, it is not accessible.</span>
+</span><span id="__span-0-1203"><a id="__codelineno-0-1203" name="__codelineno-0-1203"></a>
+</span><span id="__span-0-1204"><a id="__codelineno-0-1204" name="__codelineno-0-1204"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-1205"><a id="__codelineno-0-1205" name="__codelineno-0-1205"></a><span class="sd">        name: Name of the attribute. A sub-attribute can be specified as well, using `__`</span>
+</span><span id="__span-0-1206"><a id="__codelineno-0-1206" name="__codelineno-0-1206"></a><span class="sd">            to separate the attribute name and the sub-attribute name, for example:</span>
+</span><span id="__span-0-1207"><a id="__codelineno-0-1207" name="__codelineno-0-1207"></a><span class="sd">            name__formatted</span>
+</span><span id="__span-0-1208"><a id="__codelineno-0-1208" name="__codelineno-0-1208"></a>
+</span><span id="__span-0-1209"><a id="__codelineno-0-1209" name="__codelineno-0-1209"></a><span class="sd">    Examples:</span>
+</span><span id="__span-0-1210"><a id="__codelineno-0-1210" name="__codelineno-0-1210"></a><span class="sd">        &gt;&gt;&gt; bounded_attrs = BoundedAttrs(</span>
+</span><span id="__span-0-1211"><a id="__codelineno-0-1211" name="__codelineno-0-1211"></a><span class="sd">        &gt;&gt;&gt;     schema=SchemaUri(&quot;my:resource:schema&quot;),</span>
+</span><span id="__span-0-1212"><a id="__codelineno-0-1212" name="__codelineno-0-1212"></a><span class="sd">        &gt;&gt;&gt;     attrs=[</span>
+</span><span id="__span-0-1213"><a id="__codelineno-0-1213" name="__codelineno-0-1213"></a><span class="sd">        &gt;&gt;&gt;         String(&quot;myString&quot;),</span>
+</span><span id="__span-0-1214"><a id="__codelineno-0-1214" name="__codelineno-0-1214"></a><span class="sd">        &gt;&gt;&gt;         Complex(&quot;myComplex&quot;, sub_attributes=[Integer(&quot;myInteger&quot;)])</span>
+</span><span id="__span-0-1215"><a id="__codelineno-0-1215" name="__codelineno-0-1215"></a><span class="sd">        &gt;&gt;&gt;     ],</span>
+</span><span id="__span-0-1216"><a id="__codelineno-0-1216" name="__codelineno-0-1216"></a><span class="sd">        &gt;&gt;&gt;)</span>
+</span><span id="__span-0-1217"><a id="__codelineno-0-1217" name="__codelineno-0-1217"></a><span class="sd">        &gt;&gt;&gt;</span>
+</span><span id="__span-0-1218"><a id="__codelineno-0-1218" name="__codelineno-0-1218"></a><span class="sd">        &gt;&gt;&gt; bounded_attrs.myString</span>
+</span><span id="__span-0-1219"><a id="__codelineno-0-1219" name="__codelineno-0-1219"></a><span class="sd">        BoundedAttrRep(my:resource_schema:myString)</span>
+</span><span id="__span-0-1220"><a id="__codelineno-0-1220" name="__codelineno-0-1220"></a><span class="sd">        &gt;&gt;&gt; bounded_attrs.myComplex__myInteger</span>
+</span><span id="__span-0-1221"><a id="__codelineno-0-1221" name="__codelineno-0-1221"></a><span class="sd">        BoundedAttrRep(my:resource_schema:myComplex.myInteger)</span>
+</span><span id="__span-0-1222"><a id="__codelineno-0-1222" name="__codelineno-0-1222"></a>
+</span><span id="__span-0-1223"><a id="__codelineno-0-1223" name="__codelineno-0-1223"></a>
+</span><span id="__span-0-1224"><a id="__codelineno-0-1224" name="__codelineno-0-1224"></a><span class="sd">    Raises:</span>
+</span><span id="__span-0-1225"><a id="__codelineno-0-1225" name="__codelineno-0-1225"></a><span class="sd">        AttributeError: If bounded attribute is not found</span>
+</span><span id="__span-0-1226"><a id="__codelineno-0-1226" name="__codelineno-0-1226"></a><span class="sd">        ValueError: If provided attribute name is not valid</span>
+</span><span id="__span-0-1227"><a id="__codelineno-0-1227" name="__codelineno-0-1227"></a>
+</span><span id="__span-0-1228"><a id="__codelineno-0-1228" name="__codelineno-0-1228"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-1229"><a id="__codelineno-0-1229" name="__codelineno-0-1229"></a><span class="sd">        Bounded attribute representation for the given (sub-)attribute name</span>
+</span><span id="__span-0-1230"><a id="__codelineno-0-1230" name="__codelineno-0-1230"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-1231"><a id="__codelineno-0-1231" name="__codelineno-0-1231"></a>    <span class="n">parts</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;__&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+</span><span id="__span-0-1232"><a id="__codelineno-0-1232" name="__codelineno-0-1232"></a>    <span class="n">n_parts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span>
+</span><span id="__span-0-1233"><a id="__codelineno-0-1233" name="__codelineno-0-1233"></a>    <span class="n">attr_name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span><span id="__span-0-1234"><a id="__codelineno-0-1234" name="__codelineno-0-1234"></a>    <span class="n">attr_rep</span> <span class="o">=</span> <span class="n">BoundedAttrRep</span><span class="p">(</span><span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="n">attr_name</span><span class="p">)</span>
+</span><span id="__span-0-1235"><a id="__codelineno-0-1235" name="__codelineno-0-1235"></a>    <span class="k">if</span> <span class="n">attr</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">):</span>
+</span><span id="__span-0-1236"><a id="__codelineno-0-1236" name="__codelineno-0-1236"></a>        <span class="n">attr_rep</span> <span class="o">=</span> <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1237"><a id="__codelineno-0-1237" name="__codelineno-0-1237"></a>            <span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="p">,</span>
+</span><span id="__span-0-1238"><a id="__codelineno-0-1238" name="__codelineno-0-1238"></a>            <span class="n">attr</span><span class="o">=</span><span class="n">attr</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="__span-0-1239"><a id="__codelineno-0-1239" name="__codelineno-0-1239"></a>        <span class="p">)</span>
+</span><span id="__span-0-1240"><a id="__codelineno-0-1240" name="__codelineno-0-1240"></a>        <span class="k">if</span> <span class="n">n_parts</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+</span><span id="__span-0-1241"><a id="__codelineno-0-1241" name="__codelineno-0-1241"></a>            <span class="k">return</span> <span class="n">attr_rep</span>
+</span><span id="__span-0-1242"><a id="__codelineno-0-1242" name="__codelineno-0-1242"></a>
+</span><span id="__span-0-1243"><a id="__codelineno-0-1243" name="__codelineno-0-1243"></a>        <span class="n">sub_attr_rep</span> <span class="o">=</span> <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1244"><a id="__codelineno-0-1244" name="__codelineno-0-1244"></a>            <span class="n">schema</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+</span><span id="__span-0-1245"><a id="__codelineno-0-1245" name="__codelineno-0-1245"></a>            <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1246"><a id="__codelineno-0-1246" name="__codelineno-0-1246"></a>            <span class="n">sub_attr</span><span class="o">=</span><span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+</span><span id="__span-0-1247"><a id="__codelineno-0-1247" name="__codelineno-0-1247"></a>        <span class="p">)</span>
+</span><span id="__span-0-1248"><a id="__codelineno-0-1248" name="__codelineno-0-1248"></a>        <span class="k">if</span> <span class="n">sub_attr</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bounded_complex_sub_attrs</span><span class="p">[</span><span class="n">attr_rep</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">sub_attr_rep</span><span class="p">):</span>
+</span><span id="__span-0-1249"><a id="__codelineno-0-1249" name="__codelineno-0-1249"></a>            <span class="k">return</span> <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1250"><a id="__codelineno-0-1250" name="__codelineno-0-1250"></a>                <span class="n">schema</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+</span><span id="__span-0-1251"><a id="__codelineno-0-1251" name="__codelineno-0-1251"></a>                <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1252"><a id="__codelineno-0-1252" name="__codelineno-0-1252"></a>                <span class="n">sub_attr</span><span class="o">=</span><span class="n">sub_attr</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+</span><span id="__span-0-1253"><a id="__codelineno-0-1253" name="__codelineno-0-1253"></a>            <span class="p">)</span>
+</span><span id="__span-0-1254"><a id="__codelineno-0-1254" name="__codelineno-0-1254"></a>
+</span><span id="__span-0-1255"><a id="__codelineno-0-1255" name="__codelineno-0-1255"></a>    <span class="k">for</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extensions</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+</span><span id="__span-0-1256"><a id="__codelineno-0-1256" name="__codelineno-0-1256"></a>        <span class="k">if</span> <span class="n">attr_rep_extension</span> <span class="o">:=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">attrs</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+</span><span id="__span-0-1257"><a id="__codelineno-0-1257" name="__codelineno-0-1257"></a>            <span class="k">return</span> <span class="n">attr_rep_extension</span>
+</span><span id="__span-0-1258"><a id="__codelineno-0-1258" name="__codelineno-0-1258"></a>
+</span><span id="__span-0-1259"><a id="__codelineno-0-1259" name="__codelineno-0-1259"></a>    <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+</span><span id="__span-0-1260"><a id="__codelineno-0-1260" name="__codelineno-0-1260"></a>        <span class="sa">f</span><span class="s2">&quot;attribute </span><span class="si">{</span><span class="n">name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;__&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;.&#39;</span><span class="p">)</span><span class="si">!r}</span><span class="s2"> &quot;</span>
+</span><span id="__span-0-1261"><a id="__codelineno-0-1261" name="__codelineno-0-1261"></a>        <span class="sa">f</span><span class="s2">&quot;does not exist within </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="si">!r}</span><span class="s2"> and its extensions&quot;</span>
+</span><span id="__span-0-1262"><a id="__codelineno-0-1262" name="__codelineno-0-1262"></a>    <span class="p">)</span>
+</span></code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="scimpler.data.BoundedAttrs.clone" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">clone</span><span class="p">(</span><span class="n">attr_filter</span><span class="p">,</span> <span class="n">ignore_filter</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Clones <code>BoundedAttrs</code> according to a provided attribute filter. All attributes, including
+sub-attributes of complex attributes, are subject of filtration. Extensions are filtered
+as well.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>attr_filter</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Attribute filter, used to determine which attributes and sub-attributes
+should be included in the clone.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><a class="autorefs autorefs-internal" title="scimpler.data.attrs.AttrFilter" href="../attr_filter/#scimpler.data.AttrFilter">AttrFilter</a></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>ignore_filter</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Names of the common or core attributes that should be included
+in the clone, regardless the filter.</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="typing.Optional">Optional</span>[<span title="typing.Iterable">Iterable</span>[str]]</code>
+                  </span>
+                  <span class="doc-param-default">
+                    <b>DEFAULT:</b>
+                      <code>None</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RETURNS</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <span class="doc-returns-annotation">
+                    <code><a class="autorefs autorefs-internal" title="scimpler.data.attrs.BoundedAttrs" href="#scimpler.data.BoundedAttrs">BoundedAttrs</a></code>
+                </span>
+            </td>
+            <td class="doc-returns-details">
+              <div class="doc-md-description">
+                <p>Cloned <code>BoundedAttrs</code> with inner attributes, optionally filtered by <code>attr_filter</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+            <details class="quote">
+              <summary>Source code in <code>src/scimpler/data/attrs.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1297">1297</a></span>
+<span class="normal"><a href="#__codelineno-0-1298">1298</a></span>
+<span class="normal"><a href="#__codelineno-0-1299">1299</a></span>
+<span class="normal"><a href="#__codelineno-0-1300">1300</a></span>
+<span class="normal"><a href="#__codelineno-0-1301">1301</a></span>
+<span class="normal"><a href="#__codelineno-0-1302">1302</a></span>
+<span class="normal"><a href="#__codelineno-0-1303">1303</a></span>
+<span class="normal"><a href="#__codelineno-0-1304">1304</a></span>
+<span class="normal"><a href="#__codelineno-0-1305">1305</a></span>
+<span class="normal"><a href="#__codelineno-0-1306">1306</a></span>
+<span class="normal"><a href="#__codelineno-0-1307">1307</a></span>
+<span class="normal"><a href="#__codelineno-0-1308">1308</a></span>
+<span class="normal"><a href="#__codelineno-0-1309">1309</a></span>
+<span class="normal"><a href="#__codelineno-0-1310">1310</a></span>
+<span class="normal"><a href="#__codelineno-0-1311">1311</a></span>
+<span class="normal"><a href="#__codelineno-0-1312">1312</a></span>
+<span class="normal"><a href="#__codelineno-0-1313">1313</a></span>
+<span class="normal"><a href="#__codelineno-0-1314">1314</a></span>
+<span class="normal"><a href="#__codelineno-0-1315">1315</a></span>
+<span class="normal"><a href="#__codelineno-0-1316">1316</a></span>
+<span class="normal"><a href="#__codelineno-0-1317">1317</a></span>
+<span class="normal"><a href="#__codelineno-0-1318">1318</a></span>
+<span class="normal"><a href="#__codelineno-0-1319">1319</a></span>
+<span class="normal"><a href="#__codelineno-0-1320">1320</a></span>
+<span class="normal"><a href="#__codelineno-0-1321">1321</a></span>
+<span class="normal"><a href="#__codelineno-0-1322">1322</a></span>
+<span class="normal"><a href="#__codelineno-0-1323">1323</a></span>
+<span class="normal"><a href="#__codelineno-0-1324">1324</a></span>
+<span class="normal"><a href="#__codelineno-0-1325">1325</a></span>
+<span class="normal"><a href="#__codelineno-0-1326">1326</a></span>
+<span class="normal"><a href="#__codelineno-0-1327">1327</a></span>
+<span class="normal"><a href="#__codelineno-0-1328">1328</a></span>
+<span class="normal"><a href="#__codelineno-0-1329">1329</a></span>
+<span class="normal"><a href="#__codelineno-0-1330">1330</a></span>
+<span class="normal"><a href="#__codelineno-0-1331">1331</a></span>
+<span class="normal"><a href="#__codelineno-0-1332">1332</a></span>
+<span class="normal"><a href="#__codelineno-0-1333">1333</a></span>
+<span class="normal"><a href="#__codelineno-0-1334">1334</a></span>
+<span class="normal"><a href="#__codelineno-0-1335">1335</a></span>
+<span class="normal"><a href="#__codelineno-0-1336">1336</a></span>
+<span class="normal"><a href="#__codelineno-0-1337">1337</a></span>
+<span class="normal"><a href="#__codelineno-0-1338">1338</a></span>
+<span class="normal"><a href="#__codelineno-0-1339">1339</a></span>
+<span class="normal"><a href="#__codelineno-0-1340">1340</a></span>
+<span class="normal"><a href="#__codelineno-0-1341">1341</a></span>
+<span class="normal"><a href="#__codelineno-0-1342">1342</a></span>
+<span class="normal"><a href="#__codelineno-0-1343">1343</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1297"><a id="__codelineno-0-1297" name="__codelineno-0-1297"></a><span class="k">def</span> <span class="nf">clone</span><span class="p">(</span>
+</span><span id="__span-0-1298"><a id="__codelineno-0-1298" name="__codelineno-0-1298"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">attr_filter</span><span class="p">:</span> <span class="n">AttrFilter</span><span class="p">,</span> <span class="n">ignore_filter</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Iterable</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-0-1299"><a id="__codelineno-0-1299" name="__codelineno-0-1299"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;BoundedAttrs&quot;</span><span class="p">:</span>
+</span><span id="__span-0-1300"><a id="__codelineno-0-1300" name="__codelineno-0-1300"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-0-1301"><a id="__codelineno-0-1301" name="__codelineno-0-1301"></a><span class="sd">    Clones `BoundedAttrs` according to a provided attribute filter. All attributes, including</span>
+</span><span id="__span-0-1302"><a id="__codelineno-0-1302" name="__codelineno-0-1302"></a><span class="sd">    sub-attributes of complex attributes, are subject of filtration. Extensions are filtered</span>
+</span><span id="__span-0-1303"><a id="__codelineno-0-1303" name="__codelineno-0-1303"></a><span class="sd">    as well.</span>
+</span><span id="__span-0-1304"><a id="__codelineno-0-1304" name="__codelineno-0-1304"></a>
+</span><span id="__span-0-1305"><a id="__codelineno-0-1305" name="__codelineno-0-1305"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-1306"><a id="__codelineno-0-1306" name="__codelineno-0-1306"></a><span class="sd">        attr_filter: Attribute filter, used to determine which attributes and sub-attributes</span>
+</span><span id="__span-0-1307"><a id="__codelineno-0-1307" name="__codelineno-0-1307"></a><span class="sd">            should be included in the clone.</span>
+</span><span id="__span-0-1308"><a id="__codelineno-0-1308" name="__codelineno-0-1308"></a><span class="sd">        ignore_filter: Names of the common or core attributes that should be included</span>
+</span><span id="__span-0-1309"><a id="__codelineno-0-1309" name="__codelineno-0-1309"></a><span class="sd">            in the clone, regardless the filter.</span>
+</span><span id="__span-0-1310"><a id="__codelineno-0-1310" name="__codelineno-0-1310"></a>
+</span><span id="__span-0-1311"><a id="__codelineno-0-1311" name="__codelineno-0-1311"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-1312"><a id="__codelineno-0-1312" name="__codelineno-0-1312"></a><span class="sd">        Cloned `BoundedAttrs` with inner attributes, optionally filtered by `attr_filter`.</span>
+</span><span id="__span-0-1313"><a id="__codelineno-0-1313" name="__codelineno-0-1313"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-1314"><a id="__codelineno-0-1314" name="__codelineno-0-1314"></a>    <span class="n">filtered_attrs</span> <span class="o">=</span> <span class="n">attr_filter</span><span class="p">(</span>
+</span><span id="__span-0-1315"><a id="__codelineno-0-1315" name="__codelineno-0-1315"></a>        <span class="n">attrs</span><span class="o">=</span><span class="p">(</span>
+</span><span id="__span-0-1316"><a id="__codelineno-0-1316" name="__codelineno-0-1316"></a>            <span class="n">attr</span>
+</span><span id="__span-0-1317"><a id="__codelineno-0-1317" name="__codelineno-0-1317"></a>            <span class="k">for</span> <span class="n">attr_rep</span><span class="p">,</span> <span class="n">attr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+</span><span id="__span-0-1318"><a id="__codelineno-0-1318" name="__codelineno-0-1318"></a>            <span class="k">if</span> <span class="n">attr_rep</span><span class="o">.</span><span class="n">schema</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extensions</span>
+</span><span id="__span-0-1319"><a id="__codelineno-0-1319" name="__codelineno-0-1319"></a>        <span class="p">)</span>
+</span><span id="__span-0-1320"><a id="__codelineno-0-1320" name="__codelineno-0-1320"></a>    <span class="p">)</span>
+</span><span id="__span-0-1321"><a id="__codelineno-0-1321" name="__codelineno-0-1321"></a>    <span class="n">to_include</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="__span-0-1322"><a id="__codelineno-0-1322" name="__codelineno-0-1322"></a>    <span class="k">for</span> <span class="n">attr_name</span> <span class="ow">in</span> <span class="n">ignore_filter</span> <span class="ow">or</span> <span class="p">[]:</span>
+</span><span id="__span-0-1323"><a id="__codelineno-0-1323" name="__codelineno-0-1323"></a>        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">filtered_attrs</span><span class="p">:</span>
+</span><span id="__span-0-1324"><a id="__codelineno-0-1324" name="__codelineno-0-1324"></a>            <span class="k">if</span> <span class="n">attr</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">attr_name</span><span class="p">:</span>
+</span><span id="__span-0-1325"><a id="__codelineno-0-1325" name="__codelineno-0-1325"></a>                <span class="k">break</span>
+</span><span id="__span-0-1326"><a id="__codelineno-0-1326" name="__codelineno-0-1326"></a>        <span class="k">else</span><span class="p">:</span>
+</span><span id="__span-0-1327"><a id="__codelineno-0-1327" name="__codelineno-0-1327"></a>            <span class="k">if</span> <span class="p">(</span><span class="n">BoundedAttrRep</span><span class="p">(</span><span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="p">,</span> <span class="n">attr</span><span class="o">=</span><span class="n">attr_name</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_base_attrs</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+</span><span id="__span-0-1328"><a id="__codelineno-0-1328" name="__codelineno-0-1328"></a>                <span class="n">attr_to_include</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr_name</span><span class="p">)</span>
+</span><span id="__span-0-1329"><a id="__codelineno-0-1329" name="__codelineno-0-1329"></a>            <span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1330"><a id="__codelineno-0-1330" name="__codelineno-0-1330"></a>                <span class="n">to_include</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">attr_to_include</span><span class="p">)</span>
+</span><span id="__span-0-1331"><a id="__codelineno-0-1331" name="__codelineno-0-1331"></a>
+</span><span id="__span-0-1332"><a id="__codelineno-0-1332" name="__codelineno-0-1332"></a>    <span class="n">filtered_attrs</span> <span class="o">=</span> <span class="n">to_include</span> <span class="o">+</span> <span class="n">filtered_attrs</span>
+</span><span id="__span-0-1333"><a id="__codelineno-0-1333" name="__codelineno-0-1333"></a>    <span class="n">cloned</span> <span class="o">=</span> <span class="n">BoundedAttrs</span><span class="p">(</span>
+</span><span id="__span-0-1334"><a id="__codelineno-0-1334" name="__codelineno-0-1334"></a>        <span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="p">,</span>
+</span><span id="__span-0-1335"><a id="__codelineno-0-1335" name="__codelineno-0-1335"></a>        <span class="n">attrs</span><span class="o">=</span><span class="n">filtered_attrs</span><span class="p">,</span>
+</span><span id="__span-0-1336"><a id="__codelineno-0-1336" name="__codelineno-0-1336"></a>        <span class="n">common_attrs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_common_attrs</span><span class="p">,</span>
+</span><span id="__span-0-1337"><a id="__codelineno-0-1337" name="__codelineno-0-1337"></a>    <span class="p">)</span>
+</span><span id="__span-0-1338"><a id="__codelineno-0-1338" name="__codelineno-0-1338"></a>    <span class="k">for</span> <span class="n">schema</span><span class="p">,</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extensions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+</span><span id="__span-0-1339"><a id="__codelineno-0-1339" name="__codelineno-0-1339"></a>        <span class="n">cloned</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+</span><span id="__span-0-1340"><a id="__codelineno-0-1340" name="__codelineno-0-1340"></a>            <span class="n">schema</span><span class="o">=</span><span class="n">schema</span><span class="p">,</span>
+</span><span id="__span-0-1341"><a id="__codelineno-0-1341" name="__codelineno-0-1341"></a>            <span class="n">attrs</span><span class="o">=</span><span class="n">attrs</span><span class="o">.</span><span class="n">clone</span><span class="p">(</span><span class="n">attr_filter</span><span class="p">),</span>
+</span><span id="__span-0-1342"><a id="__codelineno-0-1342" name="__codelineno-0-1342"></a>        <span class="p">)</span>
+</span><span id="__span-0-1343"><a id="__codelineno-0-1343" name="__codelineno-0-1343"></a>    <span class="k">return</span> <span class="n">cloned</span>
+</span></code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="scimpler.data.BoundedAttrs.extend" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extend</span><span class="p">(</span><span class="n">schema</span><span class="p">,</span> <span class="n">attrs</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Extends bounded attributes with provided attributes, associated with a provided schema.
+Args:
+    schema: Extension schema URI.
+    attrs: Extension attributes.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/scimpler/data/attrs.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1285">1285</a></span>
+<span class="normal"><a href="#__codelineno-0-1286">1286</a></span>
+<span class="normal"><a href="#__codelineno-0-1287">1287</a></span>
+<span class="normal"><a href="#__codelineno-0-1288">1288</a></span>
+<span class="normal"><a href="#__codelineno-0-1289">1289</a></span>
+<span class="normal"><a href="#__codelineno-0-1290">1290</a></span>
+<span class="normal"><a href="#__codelineno-0-1291">1291</a></span>
+<span class="normal"><a href="#__codelineno-0-1292">1292</a></span>
+<span class="normal"><a href="#__codelineno-0-1293">1293</a></span>
+<span class="normal"><a href="#__codelineno-0-1294">1294</a></span>
+<span class="normal"><a href="#__codelineno-0-1295">1295</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1285"><a id="__codelineno-0-1285" name="__codelineno-0-1285"></a><span class="k">def</span> <span class="nf">extend</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">schema</span><span class="p">:</span> <span class="n">SchemaUri</span><span class="p">,</span> <span class="n">attrs</span><span class="p">:</span> <span class="s2">&quot;BoundedAttrs&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1286"><a id="__codelineno-0-1286" name="__codelineno-0-1286"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-0-1287"><a id="__codelineno-0-1287" name="__codelineno-0-1287"></a><span class="sd">    Extends bounded attributes with provided attributes, associated with a provided schema.</span>
+</span><span id="__span-0-1288"><a id="__codelineno-0-1288" name="__codelineno-0-1288"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-1289"><a id="__codelineno-0-1289" name="__codelineno-0-1289"></a><span class="sd">        schema: Extension schema URI.</span>
+</span><span id="__span-0-1290"><a id="__codelineno-0-1290" name="__codelineno-0-1290"></a><span class="sd">        attrs: Extension attributes.</span>
+</span><span id="__span-0-1291"><a id="__codelineno-0-1291" name="__codelineno-0-1291"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-1292"><a id="__codelineno-0-1292" name="__codelineno-0-1292"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_extensions</span><span class="p">[</span><span class="n">schema</span><span class="p">]</span> <span class="o">=</span> <span class="n">attrs</span>
+</span><span id="__span-0-1293"><a id="__codelineno-0-1293" name="__codelineno-0-1293"></a>    <span class="k">for</span> <span class="n">attr_rep</span><span class="p">,</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">attrs</span><span class="p">:</span>
+</span><span id="__span-0-1294"><a id="__codelineno-0-1294" name="__codelineno-0-1294"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="p">[</span><span class="n">attr_rep</span><span class="p">]</span> <span class="o">=</span> <span class="n">attr</span>
+</span><span id="__span-0-1295"><a id="__codelineno-0-1295" name="__codelineno-0-1295"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_bounded_complex_sub_attrs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">attrs</span><span class="o">.</span><span class="n">_bounded_complex_sub_attrs</span><span class="p">)</span>
+</span></code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="scimpler.data.BoundedAttrs.get" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns an attribute, given its name or (bounded) representation.
+If string is provided, it must be valid attribute name. If <code>AttrRep</code> is provided (unbounded
+attribute representation), then the core schema and extensions are checked,
+and first matching result is returned.</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>attr_rep</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>Representation of the attribute to be returned</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><span title="typing.Union">Union</span>[str, <a class="autorefs autorefs-internal" title="scimpler.data.identifiers.AttrRep" href="../attr_rep/#scimpler.data.AttrRep">AttrRep</a>]</code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">RAISES</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+              <span class="doc-raises-annotation">
+                  <code>ValueError</code>
+              </span>
+            </td>
+            <td class="doc-raises-details">
+              <div class="doc-md-description">
+                <p>If provided attribute name is not valid</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+        <p>Returns: Attribute, if found, None otherwise.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/scimpler/data/attrs.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1345">1345</a></span>
+<span class="normal"><a href="#__codelineno-0-1346">1346</a></span>
+<span class="normal"><a href="#__codelineno-0-1347">1347</a></span>
+<span class="normal"><a href="#__codelineno-0-1348">1348</a></span>
+<span class="normal"><a href="#__codelineno-0-1349">1349</a></span>
+<span class="normal"><a href="#__codelineno-0-1350">1350</a></span>
+<span class="normal"><a href="#__codelineno-0-1351">1351</a></span>
+<span class="normal"><a href="#__codelineno-0-1352">1352</a></span>
+<span class="normal"><a href="#__codelineno-0-1353">1353</a></span>
+<span class="normal"><a href="#__codelineno-0-1354">1354</a></span>
+<span class="normal"><a href="#__codelineno-0-1355">1355</a></span>
+<span class="normal"><a href="#__codelineno-0-1356">1356</a></span>
+<span class="normal"><a href="#__codelineno-0-1357">1357</a></span>
+<span class="normal"><a href="#__codelineno-0-1358">1358</a></span>
+<span class="normal"><a href="#__codelineno-0-1359">1359</a></span>
+<span class="normal"><a href="#__codelineno-0-1360">1360</a></span>
+<span class="normal"><a href="#__codelineno-0-1361">1361</a></span>
+<span class="normal"><a href="#__codelineno-0-1362">1362</a></span>
+<span class="normal"><a href="#__codelineno-0-1363">1363</a></span>
+<span class="normal"><a href="#__codelineno-0-1364">1364</a></span>
+<span class="normal"><a href="#__codelineno-0-1365">1365</a></span>
+<span class="normal"><a href="#__codelineno-0-1366">1366</a></span>
+<span class="normal"><a href="#__codelineno-0-1367">1367</a></span>
+<span class="normal"><a href="#__codelineno-0-1368">1368</a></span>
+<span class="normal"><a href="#__codelineno-0-1369">1369</a></span>
+<span class="normal"><a href="#__codelineno-0-1370">1370</a></span>
+<span class="normal"><a href="#__codelineno-0-1371">1371</a></span>
+<span class="normal"><a href="#__codelineno-0-1372">1372</a></span>
+<span class="normal"><a href="#__codelineno-0-1373">1373</a></span>
+<span class="normal"><a href="#__codelineno-0-1374">1374</a></span>
+<span class="normal"><a href="#__codelineno-0-1375">1375</a></span>
+<span class="normal"><a href="#__codelineno-0-1376">1376</a></span>
+<span class="normal"><a href="#__codelineno-0-1377">1377</a></span>
+<span class="normal"><a href="#__codelineno-0-1378">1378</a></span>
+<span class="normal"><a href="#__codelineno-0-1379">1379</a></span>
+<span class="normal"><a href="#__codelineno-0-1380">1380</a></span>
+<span class="normal"><a href="#__codelineno-0-1381">1381</a></span>
+<span class="normal"><a href="#__codelineno-0-1382">1382</a></span>
+<span class="normal"><a href="#__codelineno-0-1383">1383</a></span>
+<span class="normal"><a href="#__codelineno-0-1384">1384</a></span>
+<span class="normal"><a href="#__codelineno-0-1385">1385</a></span>
+<span class="normal"><a href="#__codelineno-0-1386">1386</a></span>
+<span class="normal"><a href="#__codelineno-0-1387">1387</a></span>
+<span class="normal"><a href="#__codelineno-0-1388">1388</a></span>
+<span class="normal"><a href="#__codelineno-0-1389">1389</a></span>
+<span class="normal"><a href="#__codelineno-0-1390">1390</a></span>
+<span class="normal"><a href="#__codelineno-0-1391">1391</a></span>
+<span class="normal"><a href="#__codelineno-0-1392">1392</a></span>
+<span class="normal"><a href="#__codelineno-0-1393">1393</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1345"><a id="__codelineno-0-1345" name="__codelineno-0-1345"></a><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr_rep</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">AttrRep</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Attribute</span><span class="p">]:</span>
+</span><span id="__span-0-1346"><a id="__codelineno-0-1346" name="__codelineno-0-1346"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-0-1347"><a id="__codelineno-0-1347" name="__codelineno-0-1347"></a><span class="sd">    Returns an attribute, given its name or (bounded) representation.</span>
+</span><span id="__span-0-1348"><a id="__codelineno-0-1348" name="__codelineno-0-1348"></a><span class="sd">    If string is provided, it must be valid attribute name. If `AttrRep` is provided (unbounded</span>
+</span><span id="__span-0-1349"><a id="__codelineno-0-1349" name="__codelineno-0-1349"></a><span class="sd">    attribute representation), then the core schema and extensions are checked,</span>
+</span><span id="__span-0-1350"><a id="__codelineno-0-1350" name="__codelineno-0-1350"></a><span class="sd">    and first matching result is returned.</span>
+</span><span id="__span-0-1351"><a id="__codelineno-0-1351" name="__codelineno-0-1351"></a>
+</span><span id="__span-0-1352"><a id="__codelineno-0-1352" name="__codelineno-0-1352"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-1353"><a id="__codelineno-0-1353" name="__codelineno-0-1353"></a><span class="sd">        attr_rep: Representation of the attribute to be returned</span>
+</span><span id="__span-0-1354"><a id="__codelineno-0-1354" name="__codelineno-0-1354"></a>
+</span><span id="__span-0-1355"><a id="__codelineno-0-1355" name="__codelineno-0-1355"></a><span class="sd">    Raises:</span>
+</span><span id="__span-0-1356"><a id="__codelineno-0-1356" name="__codelineno-0-1356"></a><span class="sd">        ValueError: If provided attribute name is not valid</span>
+</span><span id="__span-0-1357"><a id="__codelineno-0-1357" name="__codelineno-0-1357"></a>
+</span><span id="__span-0-1358"><a id="__codelineno-0-1358" name="__codelineno-0-1358"></a><span class="sd">    Returns: Attribute, if found, None otherwise.</span>
+</span><span id="__span-0-1359"><a id="__codelineno-0-1359" name="__codelineno-0-1359"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-1360"><a id="__codelineno-0-1360" name="__codelineno-0-1360"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="__span-0-1361"><a id="__codelineno-0-1361" name="__codelineno-0-1361"></a>        <span class="n">attr_rep</span> <span class="o">=</span> <span class="n">AttrRepFactory</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">)</span>
+</span><span id="__span-0-1362"><a id="__codelineno-0-1362" name="__codelineno-0-1362"></a>
+</span><span id="__span-0-1363"><a id="__codelineno-0-1363" name="__codelineno-0-1363"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">,</span> <span class="n">BoundedAttrRep</span><span class="p">):</span>
+</span><span id="__span-0-1364"><a id="__codelineno-0-1364" name="__codelineno-0-1364"></a>        <span class="n">top_level_rep</span> <span class="o">=</span> <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1365"><a id="__codelineno-0-1365" name="__codelineno-0-1365"></a>            <span class="n">schema</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+</span><span id="__span-0-1366"><a id="__codelineno-0-1366" name="__codelineno-0-1366"></a>            <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1367"><a id="__codelineno-0-1367" name="__codelineno-0-1367"></a>        <span class="p">)</span>
+</span><span id="__span-0-1368"><a id="__codelineno-0-1368" name="__codelineno-0-1368"></a>        <span class="n">attr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">top_level_rep</span><span class="p">)</span>
+</span><span id="__span-0-1369"><a id="__codelineno-0-1369" name="__codelineno-0-1369"></a>        <span class="k">if</span> <span class="n">attr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">attr_rep</span><span class="o">.</span><span class="n">is_sub_attr</span><span class="p">:</span>
+</span><span id="__span-0-1370"><a id="__codelineno-0-1370" name="__codelineno-0-1370"></a>            <span class="k">return</span> <span class="n">attr</span>
+</span><span id="__span-0-1371"><a id="__codelineno-0-1371" name="__codelineno-0-1371"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bounded_complex_sub_attrs</span><span class="p">[</span><span class="n">top_level_rep</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">)</span>
+</span><span id="__span-0-1372"><a id="__codelineno-0-1372" name="__codelineno-0-1372"></a>
+</span><span id="__span-0-1373"><a id="__codelineno-0-1373" name="__codelineno-0-1373"></a>    <span class="n">top_level_rep</span> <span class="o">=</span> <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1374"><a id="__codelineno-0-1374" name="__codelineno-0-1374"></a>        <span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="p">,</span>
+</span><span id="__span-0-1375"><a id="__codelineno-0-1375" name="__codelineno-0-1375"></a>        <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1376"><a id="__codelineno-0-1376" name="__codelineno-0-1376"></a>    <span class="p">)</span>
+</span><span id="__span-0-1377"><a id="__codelineno-0-1377" name="__codelineno-0-1377"></a>    <span class="k">if</span> <span class="n">attr</span> <span class="o">:=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">top_level_rep</span><span class="p">):</span>
+</span><span id="__span-0-1378"><a id="__codelineno-0-1378" name="__codelineno-0-1378"></a>        <span class="k">if</span> <span class="ow">not</span> <span class="n">attr_rep</span><span class="o">.</span><span class="n">is_sub_attr</span><span class="p">:</span>
+</span><span id="__span-0-1379"><a id="__codelineno-0-1379" name="__codelineno-0-1379"></a>            <span class="k">return</span> <span class="n">attr</span>
+</span><span id="__span-0-1380"><a id="__codelineno-0-1380" name="__codelineno-0-1380"></a>
+</span><span id="__span-0-1381"><a id="__codelineno-0-1381" name="__codelineno-0-1381"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bounded_complex_sub_attrs</span><span class="p">[</span><span class="n">top_level_rep</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+</span><span id="__span-0-1382"><a id="__codelineno-0-1382" name="__codelineno-0-1382"></a>            <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1383"><a id="__codelineno-0-1383" name="__codelineno-0-1383"></a>                <span class="n">schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_schema</span><span class="p">,</span>
+</span><span id="__span-0-1384"><a id="__codelineno-0-1384" name="__codelineno-0-1384"></a>                <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1385"><a id="__codelineno-0-1385" name="__codelineno-0-1385"></a>                <span class="n">sub_attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">sub_attr</span><span class="p">,</span>
+</span><span id="__span-0-1386"><a id="__codelineno-0-1386" name="__codelineno-0-1386"></a>            <span class="p">)</span>
+</span><span id="__span-0-1387"><a id="__codelineno-0-1387" name="__codelineno-0-1387"></a>        <span class="p">)</span>
+</span><span id="__span-0-1388"><a id="__codelineno-0-1388" name="__codelineno-0-1388"></a>
+</span><span id="__span-0-1389"><a id="__codelineno-0-1389" name="__codelineno-0-1389"></a>    <span class="k">for</span> <span class="n">attrs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extensions</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+</span><span id="__span-0-1390"><a id="__codelineno-0-1390" name="__codelineno-0-1390"></a>        <span class="k">if</span> <span class="n">attr</span> <span class="o">:=</span> <span class="n">attrs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">):</span>
+</span><span id="__span-0-1391"><a id="__codelineno-0-1391" name="__codelineno-0-1391"></a>            <span class="k">return</span> <span class="n">attr</span>
+</span><span id="__span-0-1392"><a id="__codelineno-0-1392" name="__codelineno-0-1392"></a>
+</span><span id="__span-0-1393"><a id="__codelineno-0-1393" name="__codelineno-0-1393"></a>    <span class="k">return</span> <span class="kc">None</span>
+</span></code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="scimpler.data.BoundedAttrs.get_by_path" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_by_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns an attribute, given a patch path. The syntax of the path must correspond with the
+actual attribute. For example, patch path deserialized from <code>name[formatted eq 'John Doe']</code>
+would yield no results, because <em>name</em> is not multivalued attribute (assuming User schema).</p>
+
+
+<table>
+      <thead>
+        <tr>
+          <th><span class="doc-section-title">PARAMETER</span></th>
+          <th><span>DESCRIPTION</span></th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>path</code></td>
+            <td class="doc-param-details">
+              <div class="doc-md-description">
+                <p>path deserialized from the value, which is usually sent in resource PATCH requests</p>
+              </div>
+              <p>
+                  <span class="doc-param-annotation">
+                    <b>TYPE:</b>
+                      <code><a class="autorefs autorefs-internal" title="scimpler.data.patch_path.PatchPath" href="../patch_path/#scimpler.data.PatchPath">PatchPath</a></code>
+                  </span>
+              </p>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+        <p>Returns: Attribute, if found, None otherwise.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>src/scimpler/data/attrs.py</code></summary>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1395">1395</a></span>
+<span class="normal"><a href="#__codelineno-0-1396">1396</a></span>
+<span class="normal"><a href="#__codelineno-0-1397">1397</a></span>
+<span class="normal"><a href="#__codelineno-0-1398">1398</a></span>
+<span class="normal"><a href="#__codelineno-0-1399">1399</a></span>
+<span class="normal"><a href="#__codelineno-0-1400">1400</a></span>
+<span class="normal"><a href="#__codelineno-0-1401">1401</a></span>
+<span class="normal"><a href="#__codelineno-0-1402">1402</a></span>
+<span class="normal"><a href="#__codelineno-0-1403">1403</a></span>
+<span class="normal"><a href="#__codelineno-0-1404">1404</a></span>
+<span class="normal"><a href="#__codelineno-0-1405">1405</a></span>
+<span class="normal"><a href="#__codelineno-0-1406">1406</a></span>
+<span class="normal"><a href="#__codelineno-0-1407">1407</a></span>
+<span class="normal"><a href="#__codelineno-0-1408">1408</a></span>
+<span class="normal"><a href="#__codelineno-0-1409">1409</a></span>
+<span class="normal"><a href="#__codelineno-0-1410">1410</a></span>
+<span class="normal"><a href="#__codelineno-0-1411">1411</a></span>
+<span class="normal"><a href="#__codelineno-0-1412">1412</a></span>
+<span class="normal"><a href="#__codelineno-0-1413">1413</a></span>
+<span class="normal"><a href="#__codelineno-0-1414">1414</a></span>
+<span class="normal"><a href="#__codelineno-0-1415">1415</a></span>
+<span class="normal"><a href="#__codelineno-0-1416">1416</a></span>
+<span class="normal"><a href="#__codelineno-0-1417">1417</a></span>
+<span class="normal"><a href="#__codelineno-0-1418">1418</a></span>
+<span class="normal"><a href="#__codelineno-0-1419">1419</a></span>
+<span class="normal"><a href="#__codelineno-0-1420">1420</a></span>
+<span class="normal"><a href="#__codelineno-0-1421">1421</a></span>
+<span class="normal"><a href="#__codelineno-0-1422">1422</a></span>
+<span class="normal"><a href="#__codelineno-0-1423">1423</a></span>
+<span class="normal"><a href="#__codelineno-0-1424">1424</a></span>
+<span class="normal"><a href="#__codelineno-0-1425">1425</a></span>
+<span class="normal"><a href="#__codelineno-0-1426">1426</a></span>
+<span class="normal"><a href="#__codelineno-0-1427">1427</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1395"><a id="__codelineno-0-1395" name="__codelineno-0-1395"></a><span class="k">def</span> <span class="nf">get_by_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="s2">&quot;PatchPath&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Attribute</span><span class="p">]:</span>
+</span><span id="__span-0-1396"><a id="__codelineno-0-1396" name="__codelineno-0-1396"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-0-1397"><a id="__codelineno-0-1397" name="__codelineno-0-1397"></a><span class="sd">    Returns an attribute, given a patch path. The syntax of the path must correspond with the</span>
+</span><span id="__span-0-1398"><a id="__codelineno-0-1398" name="__codelineno-0-1398"></a><span class="sd">    actual attribute. For example, patch path deserialized from `name[formatted eq &#39;John Doe&#39;]`</span>
+</span><span id="__span-0-1399"><a id="__codelineno-0-1399" name="__codelineno-0-1399"></a><span class="sd">    would yield no results, because _name_ is not multivalued attribute (assuming User schema).</span>
+</span><span id="__span-0-1400"><a id="__codelineno-0-1400" name="__codelineno-0-1400"></a>
+</span><span id="__span-0-1401"><a id="__codelineno-0-1401" name="__codelineno-0-1401"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-1402"><a id="__codelineno-0-1402" name="__codelineno-0-1402"></a><span class="sd">        path: path deserialized from the value, which is usually sent in resource PATCH requests</span>
+</span><span id="__span-0-1403"><a id="__codelineno-0-1403" name="__codelineno-0-1403"></a>
+</span><span id="__span-0-1404"><a id="__codelineno-0-1404" name="__codelineno-0-1404"></a><span class="sd">    Returns: Attribute, if found, None otherwise.</span>
+</span><span id="__span-0-1405"><a id="__codelineno-0-1405" name="__codelineno-0-1405"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-1406"><a id="__codelineno-0-1406" name="__codelineno-0-1406"></a>    <span class="n">attr_rep</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">attr_rep</span>
+</span><span id="__span-0-1407"><a id="__codelineno-0-1407" name="__codelineno-0-1407"></a>    <span class="n">attr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">)</span>
+</span><span id="__span-0-1408"><a id="__codelineno-0-1408" name="__codelineno-0-1408"></a>    <span class="k">if</span> <span class="n">attr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">has_filter</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">attr</span><span class="o">.</span><span class="n">multi_valued</span><span class="p">):</span>
+</span><span id="__span-0-1409"><a id="__codelineno-0-1409" name="__codelineno-0-1409"></a>        <span class="k">return</span> <span class="kc">None</span>
+</span><span id="__span-0-1410"><a id="__codelineno-0-1410" name="__codelineno-0-1410"></a>
+</span><span id="__span-0-1411"><a id="__codelineno-0-1411" name="__codelineno-0-1411"></a>    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">sub_attr_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1412"><a id="__codelineno-0-1412" name="__codelineno-0-1412"></a>        <span class="k">return</span> <span class="n">attr</span>
+</span><span id="__span-0-1413"><a id="__codelineno-0-1413" name="__codelineno-0-1413"></a>
+</span><span id="__span-0-1414"><a id="__codelineno-0-1414" name="__codelineno-0-1414"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">,</span> <span class="n">BoundedAttrRep</span><span class="p">):</span>
+</span><span id="__span-0-1415"><a id="__codelineno-0-1415" name="__codelineno-0-1415"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+</span><span id="__span-0-1416"><a id="__codelineno-0-1416" name="__codelineno-0-1416"></a>            <span class="n">BoundedAttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1417"><a id="__codelineno-0-1417" name="__codelineno-0-1417"></a>                <span class="n">schema</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
+</span><span id="__span-0-1418"><a id="__codelineno-0-1418" name="__codelineno-0-1418"></a>                <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1419"><a id="__codelineno-0-1419" name="__codelineno-0-1419"></a>                <span class="n">sub_attr</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">sub_attr_name</span><span class="p">,</span>
+</span><span id="__span-0-1420"><a id="__codelineno-0-1420" name="__codelineno-0-1420"></a>            <span class="p">)</span>
+</span><span id="__span-0-1421"><a id="__codelineno-0-1421" name="__codelineno-0-1421"></a>        <span class="p">)</span>
+</span><span id="__span-0-1422"><a id="__codelineno-0-1422" name="__codelineno-0-1422"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+</span><span id="__span-0-1423"><a id="__codelineno-0-1423" name="__codelineno-0-1423"></a>        <span class="n">AttrRep</span><span class="p">(</span>
+</span><span id="__span-0-1424"><a id="__codelineno-0-1424" name="__codelineno-0-1424"></a>            <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
+</span><span id="__span-0-1425"><a id="__codelineno-0-1425" name="__codelineno-0-1425"></a>            <span class="n">sub_attr</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">sub_attr_name</span><span class="p">,</span>
+</span><span id="__span-0-1426"><a id="__codelineno-0-1426" name="__codelineno-0-1426"></a>        <span class="p">)</span>
+</span><span id="__span-0-1427"><a id="__codelineno-0-1427" name="__codelineno-0-1427"></a>    <span class="p">)</span>
+</span></code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.07f07601.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.56dfad97.min.js"></script>
+      
+    
+  </body>
+</html>
