@@ -467,7 +467,7 @@ class ScimData(MutableMapping):
         output: dict[str, Any] = {}
         for key, value in self._data.items():
             if isinstance(value, ScimData):
-                output[key] = value.to_dict()
+                output[str(key)] = value.to_dict()
             elif isinstance(value, list):
                 value_output = []
                 for item in value:
@@ -475,9 +475,9 @@ class ScimData(MutableMapping):
                         value_output.append(item.to_dict())
                     else:
                         value_output.append(item)
-                output[key] = value_output
+                output[str(key)] = value_output
             else:
-                output[key] = value
+                output[str(key)] = value
         return output
 
     def __eq__(self, other: Any) -> bool:

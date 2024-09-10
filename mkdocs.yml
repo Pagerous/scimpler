@@ -70,6 +70,7 @@ nav:
       - scimpler.schemas:
           - BulkRequestSchema: api_reference/scimpler_schemas/bulk_request_schema.md
           - BulkResponseSchema: api_reference/scimpler_schemas/bulk_response_schema.md
+          - EnterpriseUserSchemaExtension: api_reference/scimpler_schemas/enterprise_user_schema_extension.md
           - ErrorSchema: api_reference/scimpler_schemas/error_schema.md
           - GroupSchema: api_reference/scimpler_schemas/group_schema.md
           - ListResponseSchema: api_reference/scimpler_schemas/list_response_schema.md
