@@ -1,4 +1,10 @@
 # scimpler: SCIM integrations made simpler
+![GitHub CI](https://github.com/Pagerous/scimpler/actions/workflows/ci.yaml/badge.svg)
+[![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=Pagerous_scimpler&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=Pagerous_scimpler)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Pagerous_scimpler&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Pagerous_scimpler)
+[![Reliability Rating](https://sonarcloud.io/api/project_badges/measure?project=Pagerous_scimpler&metric=reliability_rating)](https://sonarcloud.io/summary/new_code?id=Pagerous_scimpler)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=Pagerous_scimpler&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=Pagerous_scimpler)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=Pagerous_scimpler&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=Pagerous_scimpler)
 
 `scimpler` makes it easier to ensure both Service Provider and Provisioning Client
 integrate with **SCIM 2.0** protocol flawlessly. It implements definitions, validation rules, and
