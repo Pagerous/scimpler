@@ -569,6 +569,38 @@ filter_(  # False
 )
 ```
 
+It is possible to define custom unary and binary operators. It is enough to inherit from
+[`UnaryAttributeOperator`](api_reference/scimpler_data_operator/unary_attribute_operator.md) or 
+[`BinaryAttributeOperator`](api_reference/scimpler_data_operator/binary_attribute_operator.md).
+These will be automatically available and supported when parsing `PATCH` operation paths.
+
+```python
+from scimpler.data.operator import (
+    BinaryAttributeOperator,
+    UnaryAttributeOperator,
+)
+
+
+class Regex(BinaryAttributeOperator):
+    op = "re"
+    supported_scim_types = {"string"}
+    supported_types = {str}
+
+    @staticmethod
+    def operator(attr_value: Any, op_value: Any) -> bool:
+        return bool(re.fullmatch(op_value, attr_value))
+
+
+class IsNice(UnaryAttributeOperator):
+    op = "isNice"
+    supported_scim_types = {"string"}
+    supported_types = {str}
+
+    @staticmethod
+    def operator(value: Any) -> bool:
+        return value == "Nice"
+```
+
 
 ## Sorting
 

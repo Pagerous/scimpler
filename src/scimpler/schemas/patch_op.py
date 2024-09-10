@@ -136,7 +136,7 @@ class PatchOpSchema(BaseSchema):
                 )
             if attr.required:
                 issues.add_error(
-                    issue=ValidationError.attribute_can_not_be_deleted(),
+                    issue=ValidationError.attribute_can_not_be_removed(),
                     proceed=True,
                     location=path_location,
                 )
@@ -145,7 +145,7 @@ class PatchOpSchema(BaseSchema):
         parent_attr = cast(Attribute, self._resource_schema.attrs.get(path.attr_rep))
         if attr.required and not attr.multi_valued:
             issues.add_error(
-                issue=ValidationError.attribute_can_not_be_deleted(),
+                issue=ValidationError.attribute_can_not_be_removed(),
                 proceed=True,
                 location=path_location,
             )

@@ -139,14 +139,12 @@ class ValidationError:
         20: "bad number of resources, {reason}",
         21: "does not match the filter",
         22: "resources are not sorted",
-        23: "value must be resource type endpoint",
-        24: "value must be resource object endpoint",
         25: "unknown bulk operation resource",
         26: "too many operations in bulk (max {max})",
         27: "too many errors in bulk (max {max})",
         28: "unknown modification target",
         29: "attribute can not be modified",
-        30: "attribute can not be deleted",
+        30: "attribute can not be removed",
         31: "value or operation not supported",
         # Error codes specific to filter validation
         100: "one of brackets is not opened / closed",
@@ -304,7 +302,7 @@ class ValidationError:
         return cls(code=29, scim_error=scim_error)
 
     @classmethod
-    def attribute_can_not_be_deleted(cls, scim_error: str = ScimErrorType.MUTABILITY):
+    def attribute_can_not_be_removed(cls, scim_error: str = ScimErrorType.MUTABILITY):
         return cls(code=30, scim_error=scim_error)
 
     @classmethod
