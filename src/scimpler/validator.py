@@ -708,6 +708,9 @@ def _validate_resources_get_response(
     start_index_location = body_location + start_index_rep.location
 
     resource_presence_config = resource_presence_config or AttrValuePresenceConfig("RESPONSE")
+    if resource_presence_config.direction != "RESPONSE":
+        raise ValueError("bad direction in attribute presence config for list resources validation")
+
     issues_ = schema.validate(
         data=body,
         presence_config=AttrValuePresenceConfig("RESPONSE"),

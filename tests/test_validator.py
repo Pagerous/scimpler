@@ -1913,6 +1913,26 @@ def test_schemas_output_can_be_validated(user_schema, group_schema):
     assert issues.to_dict(message=True) == {}
 
 
+def test_passing_presence_config_for_request_when_validating_list_response_fails(
+    user_schema, group_schema
+):
+    validator = ResourcesQuery(resource_schema=user_schema)
+    body = {
+        "schemas": ["urn:ietf:params:scim:api:messages:2.0:ListResponse"],
+        "totalResults": 0,
+    }
+
+    with pytest.raises(
+        ValueError,
+        match="bad direction in attribute presence config for list resources validation",
+    ):
+        validator.validate_response(
+            status_code=200,
+            body=body,
+            presence_config=AttrValuePresenceConfig("REQUEST"),
+        )
+
+
 def test_schema_response_can_be_validated(user_schema):
     schema = SchemaDefinitionSchema()
     validator = ResourceObjectGet(CONFIG, resource_schema=schema)
