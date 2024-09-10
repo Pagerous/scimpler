@@ -22,7 +22,7 @@ and [RFC-7644](https://www.rfc-editor.org/rfc/rfc7644).
 - Optional integration with [marshmallow](https://pagerous.github.io/scimpler/api_reference/scimpler_ext/marshmallow/) schemas
 
 
-## <p style="text-align:center;">[See documentation](https://pagerous.github.io/scimpler/)</p>
+### **[See documentation](https://pagerous.github.io/scimpler/)**
 
 
 # Installation
