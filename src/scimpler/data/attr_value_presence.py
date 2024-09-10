@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Collection, Optional, Union
+from typing import Any, Collection, Mapping, Optional, Union
 
 from scimpler.data.attrs import Attribute, AttributeIssuer, AttributeReturn
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
@@ -69,6 +69,31 @@ class AttrValuePresenceConfig:
     @property
     def ignore_issuer(self) -> list[AttrRep]:
         return self._ignore_issuer
+
+    @classmethod
+    def from_data(cls, data: Mapping) -> "AttrValuePresenceConfig":
+        """
+        Creates `AttrValuePresenceConfig` from `data`. Searches for `attributes` or
+        `excludedAttributes` and uses their values as `attr_reps`. Direction is always `RESPONSE`.
+
+        Examples:
+            >>> presence_config = AttrValuePresenceConfig.from_data(
+            >>>     {"excludedAttributes": ["userName", "name.formatted"]}
+            >>> )
+            >>>
+            >>> assert presence_config.direction == "RESPONSE"
+            >>> assert presence_config.include is False
+            >>> assert presence_config.attr_reps == [AttrRep("userName"), AttrRep("name.formatted")]
+        """
+        attr_reps = data.get("attributes")
+        if attr_reps:
+            include = True
+        else:
+            attr_reps = data.get("excludedAttributes")
+            include = False
+        if attr_reps:
+            return AttrValuePresenceConfig("RESPONSE", attr_reps, include)
+        return AttrValuePresenceConfig("RESPONSE")
 
     def allowed(self, attr_rep: AttrRep) -> bool:
         """

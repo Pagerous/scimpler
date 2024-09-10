@@ -236,3 +236,41 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
 )
 def test_allowed(attr_rep, presence_config, expected):
     assert presence_config.allowed(attr_rep) == expected
+
+
+@pytest.mark.parametrize(
+    ("data", "expected_attr_reps", "expected_include"),
+    (
+        (
+            {"attributes": ["userName", "name.formatted"]},
+            [AttrRep("userName"), AttrRep("name", "formatted")],
+            True,
+        ),
+        (
+            {"excludedAttributes": ["userName", "name.formatted"]},
+            [AttrRep("userName"), AttrRep("name", "formatted")],
+            False,
+        ),
+        (
+            {"dummy": "value"},
+            [],
+            None,
+        ),
+        (
+            {
+                "attributes": ["userName", "name.formatted"],
+                "excludedAttributes": ["nickName"],  # ignored if there are 'attributes'
+            },
+            [AttrRep("userName"), AttrRep("name", "formatted")],
+            True,
+        ),
+    ),
+)
+def test_attr_value_presence_config_can_be_created_from_data(
+    data, expected_attr_reps, expected_include
+):
+    presence_config = AttrValuePresenceConfig.from_data(data)
+
+    assert presence_config.attr_reps == expected_attr_reps
+    assert presence_config.include == expected_include
+    assert presence_config.direction == "RESPONSE"
