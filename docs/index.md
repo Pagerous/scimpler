@@ -1,6 +1,5 @@
 # scimpler: SCIM integrations made simpler
 
-
 `scimpler` makes it easier to ensure both Service Provider and Provisioning Client
 integrate with **SCIM 2.0** protocol flawlessly. It implements definitions, validation rules, and
 operations, as specified in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643) 

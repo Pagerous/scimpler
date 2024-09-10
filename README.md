@@ -19,7 +19,11 @@ and [RFC-7644](https://www.rfc-editor.org/rfc/rfc7644).
 - Data sorting
 - Attribute-based data filtering
 - Convenient SCIM data access and composition
-- Optional integration with [marshmallow](docs/api_reference/scimpler_ext/marshmallow.md) schemas
+- Optional integration with [marshmallow](https://pagerous.github.io/scimpler/api_reference/scimpler_ext/marshmallow/) schemas
+
+
+## <p style="text-align:center;">[See documentation](https://pagerous.github.io/scimpler/)</p>
+
 
 # Installation
 
