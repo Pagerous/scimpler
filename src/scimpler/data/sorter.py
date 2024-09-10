@@ -2,6 +2,7 @@ import functools
 from collections.abc import MutableMapping
 from typing import Any, Iterable, Optional, Sequence, Union
 
+from scimpler.data import AttrRepFactory
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.schemas import BaseResourceSchema
 from scimpler.data.scim_data import AttrRep, Missing, ScimData
@@ -52,13 +53,15 @@ class Sorter:
     Sorter implementing sorting logic, as specified in RFC-7644.
     """
 
-    def __init__(self, attr_rep: AttrRep, asc: bool = True):
+    def __init__(self, attr_rep: Union[str, AttrRep], asc: bool = True):
         """
         Args:
             attr_rep: The representation of the attribute by which the data should be sorted.
             asc: If set to `True`, it enables ascending sorting. Descending otherwise.
         """
-        self._attr_rep = attr_rep
+        self._attr_rep = (
+            attr_rep if isinstance(attr_rep, AttrRep) else AttrRepFactory.deserialize(attr_rep)
+        )
         self._asc = asc
         self._default_value = AlwaysLastKey()
 

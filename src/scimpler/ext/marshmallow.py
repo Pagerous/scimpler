@@ -681,9 +681,7 @@ def create_response_schema(
     Args:
        validator: The validator to create the schema from.
        context_provider: Callable that returns `ResponseContext`, so parameters required
-          for response validation. It is impossible to pass them once `marshmallow.Schema` is
-          created.
-
+          for response validation (like status_code, attribute value presence config, etc.).
 
     Examples:
         >>> from scimpler.data import AttrValuePresenceConfig

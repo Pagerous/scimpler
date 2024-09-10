@@ -1,4 +1,4 @@
-from scimpler.data import ScimDatafrom scimpler.data import ResourceSchema`scimpler` provides functionalities that can be used both on Service Provider
+`scimpler` provides functionalities that can be used both on Service Provider
 and Provisioning client sides. It is agnostic to any existing web frameworks,
 so it probably will not work out of the box in your case. However, most of the hard work has already been
 done for you. **SCIM 2.0** protocol exactly specifies how the entities may, should, and
@@ -572,7 +572,171 @@ filter_(  # False
 
 ## Sorting
 
+Data in `scimpler` can be sorted in a way specified in RFC-7644. Sorting is implemented by 
+[`Sorter`](api_reference/scimpler_data/sorter.md). It sorts the provided data according to 
+the configuration and the provided schemas. It is able to perform sorting of data items that belong 
+to the same schema, or to different schemas (e.g. `UserSchema` and `GroupSchema`).
+
+Sorting is performed in line with value types semantics. For "string" attributes,
+case-sensitivity and PRECIS profile is respected.
+
+If the data item misses the attribute the data is sorted by, it is ordered last
+(if ascending sorting).
+
+```python
+from scimpler.data import AttrRep, Sorter
+from scimpler.schemas import GroupSchema, UserSchema
+
+
+group, user = GroupSchema(), UserSchema()
+sorter = Sorter(attr_rep="externalId", asc=True)
+print(
+    sorter(
+        [{"externalId": "2"}, {"externalId": "1"}, {"externalId": "3"}],
+        [user, group, user],
+    )
+)
+```
+```
+[{"externalId": "1"}, {"externalId": "2"}, {"externalId": "3"}]
+```
+
 ## Request and response validation
+`scimpler` provides reach request and response validations, for every endpoint and operation
+defined in SCIM protocol.
+
+Exemplary request validation:
+```python
+from scimpler import query_string, validator
+from scimpler.schemas import UserSchema
+
+query_string_handler = query_string.ResourceObjectPatch()
+val = validator.ResourceObjectPatch(resource_schema=UserSchema())
+
+request_query_string = {
+    "attributes": "name,bad^attributeName"
+}
+request_data = {
+    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+    "Operations": [
+        {
+            "op": "add",
+            "path": "nickName",
+            "value": "Pagerous",
+        },
+        {
+            "op": "replace",
+            "path": "emails[type eq 'home']",
+            "value": 42,
+        },
+        {
+            "op": "remove",
+            "path": "name.nonExisting"
+        },
+        {
+            "op": "replace",
+            "path": "ims[ty"
+        }
+    ]
+}
+
+query_string_issues = query_string_handler.validate(request_query_string)
+request_issues = val.validate_request(request_data)
+```
+
+Exemplary response validation (you probably want to do it in tests, not production environment):
+```python
+from scimpler.data import AttrValuePresenceConfig
+from scimpler.schemas import UserSchema
+from scimpler import validator
+
+response_data = {
+    "schemas": [
+        "urn:ietf:params:scim:schemas:core:2.0:User",
+    ],
+    "id": "1",
+    "externalId": "1",
+    "userName": "Pagerous",
+    "password": "12345678",
+    "name": {
+        "formatted": "Arkadiusz Pajor",
+        "familyName": "Pajor",
+        "givenName": "Arkadiusz"
+    },
+    "profileUrl": "https://www.linkedin.com/in/arkadiusz-pajor/",
+    "emails": [
+        {
+            "value": "arkadiuszpajor97@gmail.com",
+            "type": "work",
+            "primary": True
+        }
+    ],
+    "meta": {
+        "resourceType": "User",
+        "created": "1997-10-17T00:00:00",
+        "lastModified": "2024-09-09T22:13:00",
+        "location": "https://example.com/v2/Users/1",
+    }
+}
+val = validator.ResourceObjectGet(resource_schema=UserSchema())
+
+response_issues = val.validate_response(
+    status_code=201,
+    body=response_data,
+    presence_config=AttrValuePresenceConfig(
+        "RESPONSE",
+        attr_reps=["name.familyName", "emails.primary"],
+        include=False
+    )
+)
+```
+
+The error handling and selection of correct error response must be done by the implementer.
+
+See [API Reference](api_reference/scimpler_validator/bulk_operations.md) for more information.
 
 ## Integrations
 ### marshmallow
+`scimpler` can be integrated with `marshmallow` for request and response validation.
+
+```python
+from scimpler import validator
+from scimpler.ext.marshmallow import create_request_schema
+from scimpler.schemas import UserSchema
+
+
+schema_cls = create_request_schema(
+    validator.ResourceObjectPatch(resource_schema=UserSchema())
+)
+schema = schema_cls()
+
+schema.load(...)
+schema.dump(...)
+```
+
+Returned object is `marshmallow.Schema`, but internally the actual validation is done by
+original `scimpler` schemas.
+
+To create response schema, you need to also provide callable that returns `scimpler.ext.marshmallow.ResponseContext`.
+It is required to pass additional things needed for validation (status code, headers, 
+attribute value presence config, filter, sorter, etc.), because `validate`, `load`, and `dump` 
+do not allow to pass them directly.
+
+
+```python
+from scimpler import validator
+from scimpler.ext.marshmallow import create_response_schema, ResponseContext
+from scimpler.schemas import ListResponseSchema, UserSchema
+
+
+schema_cls = create_response_schema(
+    validator.ListResponseSchema(resource_schema=UserSchema()),
+    context_provider=lambda: ResponseContext(
+        status_code=get_status_code(),
+        filter_=get_request_filter(),
+    )
+)
+schema = schema_cls()
+```
+
+All parameters required by the specific validator are listed in the corresponding [API Reference](api_reference/scimpler_validator/resources_query.md).
