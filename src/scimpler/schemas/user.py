@@ -3,7 +3,6 @@ import zoneinfo
 
 import iso3166
 import phonenumbers
-import precis_i18n
 
 from scimpler.data.attrs import (
     Attribute,
@@ -143,7 +142,7 @@ class UserSchema(ResourceSchema):
                 "userName value. This identifier MUST be unique across "
                 "the service provider's entire set of Users."
             ),
-            precis=precis_i18n.get_profile("UsernameCaseMapped"),
+            precis="UsernameCaseMapped",
             required=True,
             uniqueness=AttributeUniqueness.SERVER,
         ),

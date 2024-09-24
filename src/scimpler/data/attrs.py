@@ -633,7 +633,7 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
         self,
         name: str,
         *,
-        precis: precis_i18n.profile.Profile = get_profile("OpaqueString"),
+        precis: str = "OpaqueString",
         **kwargs: Any,
     ):
         """
@@ -644,7 +644,7 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
             **kwargs: The same keyword arguments base classes receive.
         """
         super().__init__(name=name, **kwargs)
-        self._precis = precis
+        self._precis: precis_i18n.profile.Profile = get_profile(precis)
 
     @property
     def precis(self) -> precis_i18n.profile.Profile:
