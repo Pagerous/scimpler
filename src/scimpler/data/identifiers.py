@@ -91,6 +91,9 @@ class AttrRep:
         return f"{self.__class__.__name__}({str(self)})"
 
     def __eq__(self, other: Any) -> bool:
+        if isinstance(other, str):
+            other = AttrRepFactory.deserialize(other)
+
         if not isinstance(other, AttrRep):
             return False
 
@@ -163,6 +166,9 @@ class BoundedAttrRep(AttrRep):
         self._extension = is_extension
 
     def __eq__(self, other: Any) -> bool:
+        if isinstance(other, str):
+            other = AttrRepFactory.deserialize(other)
+
         parent_equals = super().__eq__(other)
         if not isinstance(other, BoundedAttrRep):
             return parent_equals

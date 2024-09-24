@@ -69,7 +69,17 @@ def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
             ),
             False,
         ),
-        (AttrRep(attr="attr"), "attr", False),
+        (AttrRep(attr="attr"), "attr", True),
+        (
+            BoundedAttrRep(
+                schema="urn:ietf:params:scim:schemas:core:2.0:User",
+                attr="name",
+                sub_attr="givenName",
+            ),
+            "urn:ietf:params:scim:schemas:core:2.0:user:NAME.GivenName",
+            True,
+        ),
+        (AttrRep(attr="attr"), 1, False),
     ),
 )
 def test_attr_rep_can_be_compared(attr_1, attr_2, expected):
