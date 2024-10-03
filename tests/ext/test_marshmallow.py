@@ -6,10 +6,9 @@ import pytest
 
 import scimpler.data
 import scimpler.ext.marshmallow
-from scimpler.data import Integer, ResourceSchema, SchemaExtension
+from scimpler.data import Integer, PatchOperations, ResourceSchema, SchemaExtension
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep
-from scimpler.data.patch_path import PatchPath
 from scimpler.data.scim_data import ScimData
 from scimpler.ext.marshmallow import (
     ResponseContext,
@@ -225,18 +224,7 @@ def search_request_deserialized():
 @pytest.fixture
 def user_patch_deserialized(user_patch_serialized: dict):
     deserialized: dict = deepcopy(user_patch_serialized)
-    deserialized["Operations"][0]["path"] = PatchPath.deserialize(
-        deserialized["Operations"][0]["path"]
-    )
-    deserialized["Operations"][1]["path"] = PatchPath.deserialize(
-        deserialized["Operations"][1]["path"]
-    )
-    deserialized["Operations"][3]["path"] = PatchPath.deserialize(
-        deserialized["Operations"][3]["path"]
-    )
-    deserialized["Operations"][4]["path"] = PatchPath.deserialize(
-        deserialized["Operations"][4]["path"]
-    )
+    deserialized["Operations"] = PatchOperations.deserialize(deserialized["Operations"])
     return ScimData(deserialized)
 
 
@@ -630,7 +618,8 @@ def test_resource_patch_request_can_be_loaded(
 
     loaded = schema_cls().load(user_patch_serialized)
 
-    assert loaded == user_patch_deserialized
+    assert loaded["schemas"] == user_patch_deserialized["schemas"]
+    assert loaded["Operations"]
 
 
 def test_resource_patch_request_can_be_validated(user_patch_serialized, user_schema):

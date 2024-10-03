@@ -3,6 +3,7 @@ from copy import deepcopy
 import pytest
 
 from scimpler.config import ServiceProviderConfig, set_service_provider_config
+from scimpler.data import PatchOperations
 from scimpler.data.attrs import (
     AttrFilter,
     AttributeIssuer,
@@ -17,7 +18,7 @@ from scimpler.data.attrs import (
     String,
     UriReference,
 )
-from scimpler.data.patch_path import PatchPath
+from scimpler.data.patch import PatchPath
 from scimpler.data.schemas import ResourceSchema
 from scimpler.data.scim_data import ScimData
 from scimpler.schemas import GroupSchema, UserSchema
@@ -395,11 +396,8 @@ def bulk_request_serialized():
 @pytest.fixture
 def bulk_request_deserialized(bulk_request_serialized: dict):
     deserialized: dict = deepcopy(bulk_request_serialized)
-    deserialized["Operations"][2]["data"]["Operations"][0]["path"] = PatchPath.deserialize(
-        deserialized["Operations"][2]["data"]["Operations"][0]["path"]
-    )
-    deserialized["Operations"][2]["data"]["Operations"][1]["path"] = PatchPath.deserialize(
-        deserialized["Operations"][2]["data"]["Operations"][1]["path"]
+    deserialized["Operations"][2]["data"]["Operations"] = PatchOperations.deserialize(
+        deserialized["Operations"][2]["data"]["Operations"]
     )
     return ScimData(deserialized)
 

@@ -1,6 +1,6 @@
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Optional, Union
 
 from scimpler._registry import schemas
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep, SchemaUri
@@ -218,8 +218,10 @@ class ScimData(MutableMapping):
         """
         if isinstance(value, Mapping):
             value = ScimData(value)
-        elif not isinstance(value, str) and isinstance(value, Iterable):
-            value = [ScimData(item) if isinstance(item, Mapping) else item for item in value]
+        elif isinstance(value, (tuple, list)):
+            value = type(value)(
+                [ScimData(item) if isinstance(item, Mapping) else item for item in value]
+            )
 
         if not isinstance(key, (_SchemaKey, _AttrKey)):
             key = self._normalize(key)

@@ -449,7 +449,7 @@ def test_bulk_request_can_be_deserialized(user_schema):
 
     deserialized = schema.deserialize(data)
 
-    assert isinstance(deserialized["Operations"][0]["data"]["Operations"][0]["path"], PatchPath)
+    assert isinstance(deserialized["Operations"][0]["data"]["Operations"][0].path, PatchPath)
 
 
 def test_bad_bulk_request_operations_are_validated(user_schema):

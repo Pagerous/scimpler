@@ -5,7 +5,7 @@ from scimpler.data.attrs import AttributeMutability, String
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep
 from scimpler.data.operator import ComplexAttributeOperator, Equal
-from scimpler.data.patch_path import PatchPath
+from scimpler.data.patch import PatchPath
 from scimpler.data.schemas import ResourceSchema, SchemaExtension
 from scimpler.data.scim_data import Invalid, ScimData
 from scimpler.schemas.patch_op import PatchOpSchema
@@ -31,7 +31,7 @@ from scimpler.schemas.patch_op import PatchOpSchema
         (
             [
                 ScimData({"op": "add", "path": "userName", "value": "bjensen"}),
-                ScimData({"op": "add", "value": None}),
+                ScimData({"op": "add"}),
             ],
             {"1": {"value": {"_errors": [{"code": 5}]}}},
         ),
@@ -70,31 +70,24 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(
             }
         ],
     }
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [
-            {
-                "op": op,
-                "value": {
-                    "name": {
-                        "formatted": "Ms. Barbara J Jensen III",
-                    },
-                    "userName": "bjensen",
-                    "emails": [{"value": "bjensen@example.com", "type": "work"}],
-                    "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
-                        "department": "Tour Operations",
-                        "manager": {"value": "10", "$ref": "/Users/10"},
-                    },
-                },
-            }
-        ],
+    expected_operation_value = {
+        "name": {
+            "formatted": "Ms. Barbara J Jensen III",
+        },
+        "userName": "bjensen",
+        "emails": [{"value": "bjensen@example.com", "type": "work"}],
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User": {
+            "department": "Tour Operations",
+            "manager": {"value": "10", "$ref": "/Users/10"},
+        },
     }
 
     issues = schema.validate(input_data, AttrValuePresenceConfig("REQUEST"))
     assert issues.to_dict(message=True) == {}
 
     actual_data = schema.deserialize(input_data)
-    assert actual_data.to_dict() == expected_data
+    assert actual_data["Operations"][0].type == op
+    assert actual_data["Operations"][0].value == expected_operation_value
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
@@ -346,8 +339,8 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
     assert issues.to_dict(message=True) == {}
 
     actual_data = schema.deserialize(input_data)
-    assert actual_data.get("Operations")[0].get("value") == expected_value
-    assert actual_data.get("Operations")[0].get("path") == expected_path
+    assert actual_data.get("Operations")[0].value == expected_value
+    assert actual_data.get("Operations")[0].path == expected_path
 
 
 @pytest.mark.parametrize("op", ("add", "replace"))
@@ -401,20 +394,19 @@ def test_remove_operation__succeeds_if_correct_path(path, user_schema):
             {
                 "op": "remove",
                 "path": path,
+                "value": "dummy",
             }
         ],
-    }
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
     }
 
     assert (
         schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(message=True) == {}
     )
 
-    actual_data = schema.deserialize(input_data)
-    assert actual_data.to_dict() == expected_data
+    deserialized = schema.deserialize(input_data)
+    assert deserialized["Operations"][0].path == PatchPath.deserialize(path)
+    assert deserialized["Operations"][0].type == "remove"
+    assert deserialized["Operations"][0].value is None
 
 
 def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribute(fake_schema):
@@ -429,17 +421,14 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
             }
         ],
     }
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
-    }
 
     assert (
         schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict(message=True) == {}
     )
 
-    actual_data = schema.deserialize(input_data)
-    assert actual_data.to_dict() == expected_data
+    deserialized = schema.deserialize(input_data)
+    assert deserialized["Operations"][0].type == "remove"
+    assert deserialized["Operations"][0].path == PatchPath.deserialize(path)
 
 
 @pytest.mark.parametrize(
@@ -472,17 +461,15 @@ def test_remove_operation__fails_if_attribute_is_readonly_or_required(
             }
         ],
     }
-    expected_data = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [{"op": "remove", "path": PatchPath.deserialize(path)}],
-    }
     expected_issues = {"Operations": {"0": {"path": {"_errors": expected_path_issue_codes}}}}
 
     assert (
         patch_schema.validate(input_data, AttrValuePresenceConfig("REQUEST")).to_dict()
         == expected_issues
     )
-    assert patch_schema.deserialize(input_data).to_dict() == expected_data
+
+    deserialized = patch_schema.deserialize(input_data)
+    assert deserialized["Operations"][0].path == PatchPath.deserialize(path)
 
 
 def test_validate_empty_body(user_schema):
@@ -517,8 +504,8 @@ def test_value_is_removed_if_remove_operation_during_deserialization(user_schema
 
     deserialized = schema.deserialize(data)
 
-    assert "value" in deserialized.get("Operations")[0].to_dict()
-    assert "value" not in deserialized.get("Operations")[1].to_dict()
+    assert deserialized["Operations"][0].value is not None
+    assert deserialized["Operations"][1].value is None
 
 
 def test_operation_value_is_not_validated_if_bad_path(user_schema):
@@ -767,20 +754,15 @@ def test_patch_op_deserialization_fails_if_bad_target(user_schema):
 
 def test_patch_path_operation_can_be_serialized(user_schema):
     schema = PatchOpSchema(user_schema)
-    deserialized = {
-        "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
-        "Operations": [
-            {"op": "add", "path": PatchPath.deserialize("nickName"), "value": "johndoe"}
-        ],
-    }
-    expected = {
+    data = {
         "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
         "Operations": [{"op": "add", "path": "nickName", "value": "johndoe"}],
     }
+    deserialized = schema.deserialize(data)
 
     actual = schema.serialize(deserialized)
 
-    assert actual == expected
+    assert actual == data
 
 
 def test_replace_operation_with_bad_complex_item_value_is_validated(user_schema):

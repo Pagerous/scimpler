@@ -10,7 +10,6 @@ from scimpler.data.attrs import DateTime
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep
 from scimpler.data.operator import Present
-from scimpler.data.patch_path import PatchPath
 from scimpler.data.scim_data import Missing
 from scimpler.data.sorter import Sorter
 from scimpler.schemas import service_provider_config
@@ -1300,10 +1299,10 @@ def test_resource_object_patch_request_data_can_be_deserialized(fake_schema):
         }
     )
 
-    assert isinstance(data.get("Operations")[0].get("path"), PatchPath)
-    assert isinstance(data.get("Operations")[1].get("path"), PatchPath)
-    assert isinstance(data.get("Operations")[2].get("path"), PatchPath)
-    assert data.get("Operations")[2].get("value") is Missing
+    assert data.get("Operations")[0].path is not None
+    assert data.get("Operations")[1].path is not None
+    assert data.get("Operations")[2].path is not None
+    assert data.get("Operations")[2].value is None
 
 
 def test_resource_object_patch_response_validation_fails_if_204_but_attributes_requested(

@@ -1,12 +1,16 @@
+from collections.abc import Sequence
 from copy import copy
-from typing import Any, MutableMapping, Optional
+from enum import Enum
+from typing import Any, Iterable, Iterator, Mapping, Optional
+
+from typing_extensions import Self
 
 from scimpler.data.attrs import Complex
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.data.operator import ComplexAttributeOperator
 from scimpler.data.schemas import ResourceSchema
-from scimpler.data.scim_data import ScimData
+from scimpler.data.scim_data import Missing, ScimData
 from scimpler.data.utils import decode_placeholders, encode_strings
 from scimpler.error import ScimErrorType, ValidationError, ValidationIssues
 
@@ -276,7 +280,7 @@ class PatchPath:
         if self._filter is None:
             raise AttributeError("path has no value selection filter")
 
-        if isinstance(value, MutableMapping):
+        if isinstance(value, Mapping):
             value = ScimData(value)
 
         value = [value]
@@ -295,3 +299,110 @@ class PatchPath:
                 sub_attributes=[value_attr],
             ),
         )
+
+
+class PatchOperationType(str, Enum):
+    ADD = "add"
+    REPLACE = "replace"
+    REMOVE = "remove"
+
+
+class PatchOperation:
+    def __init__(self, type_: PatchOperationType, path: Optional[PatchPath], value: Any) -> None:
+        self._type = PatchOperationType(type_)
+        if type_ == PatchOperationType.REMOVE:
+            if path is None:
+                raise ValueError("'path' must be specified for remove operation")
+            value = None
+        self._path = path
+        self._value = value
+
+    @property
+    def type(self) -> PatchOperationType:
+        return self._type
+
+    @property
+    def path(self) -> Optional[PatchPath]:
+        return self._path
+
+    @property
+    def value(self) -> Any:
+        return self._value
+
+    @classmethod
+    def validate(cls, data: Mapping) -> ValidationIssues:
+        data = ScimData(data)
+        issues = ValidationIssues()
+        type_ = data.get("op")
+        path = data.get("path")
+        if path:
+            issues.merge(PatchPath.validate(path), location=["path"])
+        elif type_ == "remove":
+            issues.add_error(
+                issue=ValidationError.missing(),
+                proceed=False,
+                location=["path"],
+            )
+        elif type_ in ["add", "replace"] and data.get("value") is Missing:
+            issues.add_error(
+                issue=ValidationError.missing(),
+                proceed=False,
+                location=["value"],
+            )
+        return issues
+
+    @classmethod
+    def deserialize(cls, data: Mapping) -> Self:
+        data = ScimData(data)
+        type_ = data.get("op", "").lower()
+        path_exp = data.get("path")
+        path = PatchPath.deserialize(path_exp) if path_exp else None
+        return cls(type_, path, data.get("value", None))
+
+    def serialize(self) -> ScimData:
+        data = {
+            "op": self._type.value,
+        }
+        if self._path is not None:
+            data["path"] = self._path.serialize()
+        if self._value is not None and self._type != PatchOperationType.REMOVE:
+            data["value"] = self._value
+        return ScimData(data)
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, PatchOperation):
+            return False
+        return self._type == other.type and self._path == other.path and self.value == other.value
+
+
+class PatchOperations:
+    def __init__(self, operations: Sequence[PatchOperation]) -> None:
+        self._operations = list(operations)
+
+    def __getitem__(self, index: int) -> PatchOperation:
+        return self._operations[index]
+
+    def __iter__(self) -> Iterator[PatchOperation]:
+        return iter(self._operations)
+
+    @classmethod
+    def validate(cls, data: Iterable[Mapping]) -> ValidationIssues:
+        issues = ValidationIssues()
+        for i, operation in enumerate(data):
+            issues.merge(
+                PatchOperation.validate(operation),
+                location=[i],
+            )
+        return issues
+
+    @classmethod
+    def deserialize(cls, data: Iterable[Mapping]) -> Self:
+        return cls([PatchOperation.deserialize(operation) for operation in data])
+
+    def serialize(self) -> list[ScimData]:
+        return [operation.serialize() for operation in self._operations]
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, PatchOperations):
+            return False
+        return self._operations == other._operations

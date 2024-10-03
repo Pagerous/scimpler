@@ -3,30 +3,17 @@ from typing import Any, Optional, Union, cast
 
 from scimpler.data.attr_value_presence import validate_presence
 from scimpler.data.attrs import Attribute, AttributeMutability, Complex, String, Unknown
-from scimpler.data.patch_path import PatchPath
+from scimpler.data.patch import PatchOperation, PatchOperations, PatchPath
 from scimpler.data.schemas import BaseSchema, ResourceSchema
 from scimpler.data.scim_data import Invalid, Missing, MissingType, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 
 
 def validate_operations(value: list[ScimData]) -> ValidationIssues:
-    issues = ValidationIssues()
-    for i, item in enumerate(value):
-        type_ = item.get("op")
-        path = item.get("path")
-        op_value = item.get("value")
-        if type_ == "remove" and path in [None, Missing]:
-            issues.add_error(
-                issue=ValidationError.missing(),
-                proceed=False,
-                location=[i, "path"],
-            )
-        elif type_ in ["add", "replace"] and op_value in [None, Missing]:
-            issues.add_error(
-                issue=ValidationError.missing(),
-                proceed=False,
-                location=[i, "value"],
-            )
+    issues = PatchOperations.validate(value)
+    for i in range(len(value)):
+        if not issues.can_proceed((i, "path")):
+            value[i]["path"] = Invalid
     return issues
 
 
@@ -56,6 +43,8 @@ class PatchOpSchema(BaseSchema):
             required=True,
             multi_valued=True,
             validators=[validate_operations],
+            serializer=lambda o: o.serialize(),
+            deserializer=PatchOperations.deserialize,
             sub_attributes=[
                 String(
                     "op",
@@ -63,12 +52,7 @@ class PatchOpSchema(BaseSchema):
                     restrict_canonical_values=True,
                     required=True,
                 ),
-                String(
-                    "path",
-                    validators=[PatchPath.validate],
-                    deserializer=PatchPath.deserialize,
-                    serializer=lambda path: path.serialize(),
-                ),
+                String("path"),
                 Unknown("value"),
             ],
         )
@@ -321,44 +305,40 @@ class PatchOpSchema(BaseSchema):
 
     def _serialize(self, data: ScimData) -> ScimData:
         processed = []
-        for operation in data.get(self.attrs.operations):
-            op = operation.get("op")
-            path = operation.get("path")
-            value = operation.get("value")
-            processed_operation = {"op": op}
-            if op in ["add", "replace"] and value not in [None, Missing]:
-                processed_operation["value"] = self._process_operation_value(
-                    path=path,
+        operations = data.get("Operations")
+        if not operations:
+            return data
+
+        for operation in operations:
+            if (value := operation.get("value", None)) is not None:
+                operation["value"] = self._process_operation_value(
+                    path=operation.get("path"),
                     value=value,
                     method="serialize",
                 )
-            if path:
-                processed_operation["path"] = path
-
-            processed.append(ScimData(processed_operation))
-        data.set(self.attrs.operations, processed)
+            processed.append(operation)
+        data.set("Operations", processed)
         return data
 
     def _deserialize(self, data: ScimData) -> ScimData:
-        ops = data.get(self.attrs.operations__op)
-        paths = data.get(self.attrs.operations__path)
-        values = data.get(self.attrs.operations__value)
-        processed = []
-        for op, path, value in zip(ops, paths, values):
-            processed_operation = {"op": op}
-            if op in ["add", "replace"]:
-                if value in [None, Missing]:
-                    processed_operation["value"] = None
-                else:
-                    processed_operation["value"] = self._process_operation_value(
-                        path=path,
-                        value=value,
+        operations: PatchOperations = data.get("Operations")
+        new_operations = []
+        for operation in operations:
+            if operation.value is None:
+                new_operations.append(operation)
+                continue
+            new_operations.append(
+                PatchOperation(
+                    type_=operation.type,
+                    path=operation.path,
+                    value=self._process_operation_value(
+                        path=operation.path,
+                        value=operation.value,
                         method="deserialize",
-                    )
-            if path:
-                processed_operation["path"] = path
-            processed.append(ScimData(processed_operation))
-        data.set(self.attrs.operations, processed)
+                    ),
+                )
+            )
+        data.set("Operations", PatchOperations(new_operations))
         return data
 
     def get_value_schema(

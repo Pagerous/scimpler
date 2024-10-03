@@ -36,7 +36,7 @@ from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 if TYPE_CHECKING:
-    from scimpler.data.patch_path import PatchPath
+    from scimpler.data.patch import PatchPath
 
 
 TAttrFilterInput = TypeVar(

@@ -3,7 +3,7 @@ import pytest
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep
 from scimpler.data.operator import ComplexAttributeOperator, Equal
-from scimpler.data.patch_path import PatchPath
+from scimpler.data.patch import PatchPath
 from scimpler.data.schemas import ResourceSchema
 
 
