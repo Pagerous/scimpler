@@ -36,7 +36,7 @@ from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 if TYPE_CHECKING:
-    from scimpler.data.patch_path import PatchPath
+    from scimpler.data.patch import PatchPath
 
 
 TAttrFilterInput = TypeVar(
@@ -1408,20 +1408,7 @@ class BoundedAttrs:
         if attr is None or (path.has_filter and not attr.multi_valued):
             return None
 
-        if path.sub_attr_name is None:
+        if path.sub_attr_rep is None:
             return attr
 
-        if isinstance(attr_rep, BoundedAttrRep):
-            return self.get(
-                BoundedAttrRep(
-                    schema=attr_rep.schema,
-                    attr=attr_rep.attr,
-                    sub_attr=path.sub_attr_name,
-                )
-            )
-        return self.get(
-            AttrRep(
-                attr=attr_rep.attr,
-                sub_attr=path.sub_attr_name,
-            )
-        )
+        return self.get(path.sub_attr_rep)

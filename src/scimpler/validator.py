@@ -1051,13 +1051,7 @@ class ResourceObjectPatch(Validator):
         if not self.config.patch.supported:
             raise RuntimeError("patch operation is not supported")
         self._schema = PatchOpSchema(resource_schema)
-        self._request_schema = PatchOpSchema(
-            resource_schema.clone(
-                attr_filter=AttrFilter(
-                    filter_=lambda attr: attr.mutability != AttributeMutability.READ_ONLY,
-                )
-            )
-        )
+        self._request_schema = PatchOpSchema(resource_schema)
         self._resource_schema = resource_schema
         self._response_schema = resource_schema.clone(_resource_output_filter)
 

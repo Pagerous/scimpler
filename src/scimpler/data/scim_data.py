@@ -1,6 +1,6 @@
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Optional, Union
 
 from scimpler._registry import schemas
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep, SchemaUri
@@ -218,7 +218,7 @@ class ScimData(MutableMapping):
         """
         if isinstance(value, Mapping):
             value = ScimData(value)
-        elif not isinstance(value, str) and isinstance(value, Iterable):
+        elif isinstance(value, list):
             value = [ScimData(item) if isinstance(item, Mapping) else item for item in value]
 
         if not isinstance(key, (_SchemaKey, _AttrKey)):
@@ -455,10 +455,14 @@ class ScimData(MutableMapping):
                 sub_attr=value.sub_attr if value.is_sub_attr else None,
                 extension=value.extension,
             )
-        return _AttrKey(
-            attr=str(value.attr),
-            sub_attr=str(value.sub_attr) if value.is_sub_attr else None,
-        )
+
+        if isinstance(value, AttrRep):
+            return _AttrKey(
+                attr=str(value.attr),
+                sub_attr=str(value.sub_attr) if value.is_sub_attr else None,
+            )
+
+        raise TypeError(f"unsupported key type for SCIM data: {type(value).__name__}")
 
     def to_dict(self) -> dict[str, Any]:
         """
