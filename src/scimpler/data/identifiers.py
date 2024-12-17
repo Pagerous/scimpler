@@ -102,6 +102,13 @@ class AttrRep:
     def __hash__(self):
         return hash((self._attr, self._sub_attr))
 
+    def create_sub_attr_rep(self, sub_attr: str) -> "AttrRep":
+        """
+        Creates a representation of a sub-attribute, based on
+        the representation of the parent attribute.
+        """
+        return AttrRep(attr=self._attr, sub_attr=sub_attr)
+
     @property
     def attr(self) -> AttrName:
         """
@@ -177,6 +184,13 @@ class BoundedAttrRep(AttrRep):
 
     def __hash__(self):
         return hash((self._attr, self._schema, self._sub_attr))
+
+    def create_sub_attr_rep(self, sub_attr: str) -> "BoundedAttrRep":
+        """
+        Creates a representation of a sub-attribute, based on
+        the representation of the parent attribute.
+        """
+        return BoundedAttrRep(schema=self._schema, attr=self._attr, sub_attr=sub_attr)
 
     @property
     def schema(self) -> SchemaUri:

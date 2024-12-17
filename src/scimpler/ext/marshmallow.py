@@ -4,9 +4,10 @@ from typing import Any, Callable, Iterable, Optional, Protocol, Union, cast
 
 import marshmallow
 
-from scimpler.data import attrs
+from scimpler.data import PatchOperations, attrs
 from scimpler.data.attrs import Attribute, BoundedAttrs
 from scimpler.data.identifiers import AttrName, AttrRep, BoundedAttrRep
+from scimpler.data.patch import PatchOperation, Remove, UpdateOperation
 from scimpler.data.schemas import BaseResourceSchema, BaseSchema, ResourceSchema
 from scimpler.data.scim_data import Missing, ScimData
 from scimpler.schemas import (
@@ -149,8 +150,8 @@ def _get_field(attr: Attribute) -> marshmallow.fields.Field:
             field = marshmallow.fields.Nested(_get_complex_sub_fields(attr.attrs))
         else:
             field = _marshmallow_field_by_attr_type[type(attr)]()
-    if attr.multi_valued:
-        field = marshmallow.fields.List(field)
+        if attr.multi_valued:
+            field = marshmallow.fields.List(field)
     return field
 
 
@@ -311,10 +312,48 @@ def _deserialize_patch_op(
     scimpler_schema: PatchOpSchema,
     data: MutableMapping[str, Any],
 ) -> ScimData:
-    values = [operation.pop("value", Missing) for operation in data.get("Operations", [])]
+    values = [operation.pop("value", None) for operation in data.get("Operations", [])]
     deserialized = scimpler_schema.deserialize(data)
-    for operation, value in zip(deserialized.get("Operations", []), values):
-        if value is Missing:
+    operations = deserialized.get("Operations")
+    if operations:
+        new_operations: list[PatchOperation] = []
+        for operation, value in zip(operations, values):
+            if isinstance(operation, Remove):
+                new_operations.append(operation)
+            elif isinstance(operation, UpdateOperation):
+                new_operations.append(
+                    type(operation)(
+                        path=operation.path,
+                        value=_create_schema(
+                            scimpler_schema=scimpler_schema.get_value_schema(
+                                path=operation.path,
+                                value=value,
+                            ),
+                            processors=Processors(validator=None),
+                            context_provider=None,
+                        )().load(value),
+                    )
+                )
+        deserialized["Operations"] = PatchOperations(new_operations)
+    return deserialized
+
+
+def _serialize_patch_op(scimpler_schema: PatchOpSchema, data: MutableMapping[str, Any]) -> ScimData:
+    operations = data.get("Operations")
+    values = []
+    if operations:
+        values = [getattr(operation, "value", None) for operation in operations]
+        no_value_operations: list[PatchOperation] = []
+        for operation in operations:
+            if isinstance(operation, Remove):
+                no_value_operations.append(operation)
+            elif isinstance(operation, UpdateOperation):
+                no_value_operations.append(type(operation)(path=operation.path, value=None))
+        data["Operations"] = PatchOperations(no_value_operations)
+
+    serialized = scimpler_schema.serialize(data)
+    for operation, value in zip(serialized.get("Operations", []), values):
+        if value in [None, Missing]:
             continue
         value_schema = _create_schema(
             scimpler_schema=scimpler_schema.get_value_schema(
@@ -324,8 +363,8 @@ def _deserialize_patch_op(
             processors=Processors(validator=None),
             context_provider=None,
         )
-        operation.set("value", value_schema().load(value))
-    return deserialized
+        operation["value"] = value_schema().dump(value)
+    return serialized
 
 
 def _get_patch_op_processors(
@@ -346,21 +385,7 @@ def _get_patch_op_processors(
         return ScimData(data)
 
     def _pre_dump(_, data: MutableMapping[str, Any], **__) -> ScimData:
-        values = [operation.pop("value", None) for operation in data.get("Operations", [])]
-        serialized = scimpler_schema.serialize(data)
-        for operation, value in zip(serialized.get("Operations", []), values):
-            if value in [None, Missing]:
-                continue
-            value_schema = _create_schema(
-                scimpler_schema=scimpler_schema.get_value_schema(
-                    path=operation.get("path"),
-                    value=value,
-                ),
-                processors=Processors(validator=None),
-                context_provider=None,
-            )
-            operation["value"] = value_schema().dump(value)
-        return serialized
+        return _serialize_patch_op(scimpler_schema, data)
 
     processors_["_pre_load"] = marshmallow.pre_load(_pre_load)
     processors_["_post_load"] = marshmallow.post_load(_post_load)

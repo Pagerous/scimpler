@@ -16,6 +16,7 @@ Check below topics to learn more about `scimpler`.
 [Working with data](users_guide.md#working-with-data)<br>
 [Filtering](users_guide.md#filtering)<br>
 [Sorting](users_guide.md#sorting)<br>
+[Patching resources](users_guide.md#patching-resources)<br>
 [Request and response validation](users_guide.md#request-and-response-validation)<br>
 [Integrations](users_guide.md#integrations)
 
@@ -726,6 +727,86 @@ response_issues = val.validate_response(
 The error handling and selection of correct error response must be done by the implementer.
 
 See [API Reference](api_reference/scimpler_validator/bulk_operations.md) for more information.
+
+## Patching resources
+In SCIM, the resources are patched via PATCH endpoints. `scimpler` provides `ResourceObjectPatch` (see above) that
+can handle the request data deserialization.
+
+```python
+from scimpler import query_string, validator
+from scimpler.data import PatchOperations
+from scimpler.schemas import UserSchema
+
+query_string_handler = query_string.ResourceObjectPatch()
+user_schema = UserSchema()
+val = validator.ResourceObjectPatch(resource_schema=user_schema)
+
+request_data = {
+    "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
+    "Operations": [
+        {
+            "op": "add",
+            "path": "nickName",
+            "value": "Pagerous",
+        },
+        {
+            "op": "replace",
+            "path": "emails[type eq 'home'].value",
+            "value": "home@mail.com"
+        },
+    ]
+}
+
+deserialized = val.request_schema.deserialize(request_data)
+operations: PatchOperations = deserialized.get("Operations")
+```
+
+The deserialized operations can be applied on any mapping:
+
+```python
+current_data = {
+    "id": "42",
+    "emails": [
+        {
+            "type": "work",
+            "value": "work@mail.com"
+        },
+        {
+            "type": "home",
+            "value": "private@mail.com",
+        }
+    ]
+}
+
+updated_data = operations.apply(current_data, user_schema)
+```
+
+The result is:
+
+```
+{
+    "id": "42",
+    "nickName": "Pagerous",
+    "emails": [
+        {
+            "type": "work",
+            "value": "work@mail.com"
+        },
+        {
+            "type": "home",
+            "value": "home@mail.com",
+        }
+    ]
+}
+```
+All operations are applied at once. If you want to apply them one by one, it is possible too:
+
+```python
+updated_data = current_data
+for operation in operations:
+    updated_data = operation.apply(updated_data, user_schema, check_mutability=True)
+```
+
 
 ## Integrations
 ### marshmallow

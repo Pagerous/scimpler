@@ -8,6 +8,7 @@ nav:
   - User's Guide: users_guide.md
   - API Reference:
       - scimpler.data:
+          - Add: api_reference/scimpler_data/add.md
           - AttrFilter: api_reference/scimpler_data/attr_filter.md
           - AttrName: api_reference/scimpler_data/attr_name.md
           - AttrValuePresenceConfig: api_reference/scimpler_data/attr_value_presence_config.md
@@ -27,7 +28,10 @@ nav:
           - ExternalReference: api_reference/scimpler_data/external_reference.md
           - Filter: api_reference/scimpler_data/filter.md
           - Integer: api_reference/scimpler_data/integer.md
+          - PatchOperations: api_reference/scimpler_data/patch_operations.md
           - PatchPath: api_reference/scimpler_data/patch_path.md
+          - Remove: api_reference/scimpler_data/remove.md
+          - Replace: api_reference/scimpler_data/replace.md
           - ResourceSchema: api_reference/scimpler_data/resource_schema.md
           - SchemaExtension: api_reference/scimpler_data/schema_extension.md
           - SchemaUri: api_reference/scimpler_data/schema_uri.md
