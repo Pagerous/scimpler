@@ -1,7 +1,6 @@
 from copy import deepcopy
 
 import pytest
-
 from scimpler.config import ServiceProviderConfig, set_service_provider_config
 from scimpler.data import PatchOperations
 from scimpler.data.attrs import (

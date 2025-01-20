@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data import PatchPath
 from scimpler.data.scim_data import ScimData
 from scimpler.schemas import ErrorSchema, PatchOpSchema

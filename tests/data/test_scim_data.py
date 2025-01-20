@@ -1,12 +1,11 @@
 import pytest
-
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep, SchemaUri
 from scimpler.data.scim_data import Invalid, InvalidType, Missing, MissingType, ScimData
 
 
 @pytest.mark.parametrize(
     ("attr_rep", "expected"),
-    (
+    [
         (AttrRep(attr="id"), "2819c223-7f76-453a-919d-413861904645"),
         (
             BoundedAttrRep(schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="userName"),
@@ -23,14 +22,6 @@ from scimpler.data.scim_data import Invalid, InvalidType, Missing, MissingType, 
         (
             AttrRep(attr="name", sub_attr="givenName"),
             "Barbara",
-        ),
-        (
-            BoundedAttrRep(
-                schema="urn:ietf:params:scim:schemas:core:2.0:User",
-                attr="name",
-                sub_attr="familyName",
-            ),
-            "Jensen",
         ),
         (
             BoundedAttrRep(
@@ -62,7 +53,7 @@ from scimpler.data.scim_data import Invalid, InvalidType, Missing, MissingType, 
             ),
             "John Smith",
         ),
-    ),
+    ],
 )
 def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_data_server):
     actual = ScimData(user_data_server).get(attr_rep)
@@ -72,7 +63,7 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
 
 @pytest.mark.parametrize(
     ("key", "value", "expected"),
-    (
+    [
         (
             AttrRep(attr="id"),
             "2819c223-7f76-453a-919d-413861904646",
@@ -140,7 +131,7 @@ def test_value_from_scim_data_data_can_be_retrieved(attr_rep, expected, user_dat
                 }
             },
         ),
-    ),
+    ],
 )
 def test_value_can_be_inserted_to_scim_data_data(key, value, expected):
     data = ScimData()
@@ -259,7 +250,7 @@ def test_data_repr():
 
 @pytest.mark.parametrize(
     ("data", "attr_rep", "expected", "remaining"),
-    (
+    [
         (
             {"a": 1, "b": 2, "c": 3},
             AttrRep(attr="a"),
@@ -348,7 +339,7 @@ def test_data_repr():
             Missing,
             Missing,
         ),
-    ),
+    ],
 )
 def test_entry_can_be_popped_from_data(data, attr_rep, expected, remaining):
     data = ScimData(data)
@@ -366,7 +357,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
 
 @pytest.mark.parametrize(
     ("data_1", "data_2", "expected"),
-    (
+    [
         (
             ScimData(),
             ScimData(),
@@ -439,7 +430,7 @@ def test_schema_uri_creation_fails_if_bad_uri():
             ),
             False,
         ),
-    ),
+    ],
 )
 def test_data_can_be_compared(data_1, data_2, expected):
     assert (data_1 == data_2) is expected

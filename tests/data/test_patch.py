@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data import PatchOperations
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrName, AttrRep
@@ -17,7 +16,7 @@ from scimpler.data.schemas import ResourceSchema
 
 @pytest.mark.parametrize(
     ("path", "expected_issues"),
-    (
+    [
         ("bad^attr", {"_errors": [{"code": 17, "context": {"attribute": "bad^attr"}}]}),
         (
             "good_attr.bad^sub_attr",
@@ -28,10 +27,6 @@ from scimpler.data.schemas import ResourceSchema
         ("attr[[]", {"_errors": [{"code": 1, "context": {}}]}),
         ("attr[]]", {"_errors": [{"code": 1, "context": {}}]}),
         ("attr[]", {"_errors": [{"code": 108, "context": {"attribute": "attr"}}]}),
-        (
-            "attr.sub_attr[value eq 1]",
-            {"_errors": [{"code": 102, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
-        ),
         (
             "attr.sub_attr[value eq 1]",
             {"_errors": [{"code": 102, "context": {"attr": "attr", "sub_attr": "sub_attr"}}]},
@@ -75,7 +70,7 @@ from scimpler.data.schemas import ResourceSchema
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_patch_path_parsing_failure(path, expected_issues):
     issues = PatchPath.validate(path)
@@ -87,7 +82,7 @@ def test_patch_path_parsing_failure(path, expected_issues):
 
 @pytest.mark.parametrize(
     ("path", "expected"),
-    (
+    [
         (
             "members",
             PatchPath(
@@ -133,7 +128,7 @@ def test_patch_path_parsing_failure(path, expected_issues):
                 ),
             ),
         ),
-    ),
+    ],
 )
 def test_patch_path_deserialization_success(path, expected):
     issues = PatchPath.validate(path)
@@ -145,7 +140,7 @@ def test_patch_path_deserialization_success(path, expected):
 
 @pytest.mark.parametrize(
     "kwargs",
-    (
+    [
         {
             "attr_rep": AttrRep(attr="attr", sub_attr="sub_attr"),
             "sub_attr_name": None,
@@ -166,22 +161,22 @@ def test_patch_path_deserialization_success(path, expected):
                 )
             ),
         },
-    ),
+    ],
 )
 def test_patch_path_object_construction_fails_if_broken_constraints(kwargs):
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError):  # noqa: PT011
         PatchPath(**kwargs)
 
 
 @pytest.mark.parametrize(
     ("path", "expected_filter_value"),
-    (
+    [
         (
             'emails[value eq "id eq 1 and attr neq 2"]',
             "id eq 1 and attr neq 2",
         ),
         ('emails[value eq "ims[type eq "work"]"]', 'ims[type eq "work"]'),
-    ),
+    ],
 )
 def test_complex_filter_string_values_can_contain_anything(
     path, expected_filter_value, user_schema
@@ -195,7 +190,7 @@ def test_complex_filter_string_values_can_contain_anything(
 
 @pytest.mark.parametrize(
     ("path", "data", "schema", "expected"),
-    (
+    [
         (
             PatchPath.deserialize("emails[type eq 'work']"),
             {"type": "work", "value": "my@example.com"},
@@ -244,7 +239,7 @@ def test_complex_filter_string_values_can_contain_anything(
             "fake_schema",
             False,
         ),
-    ),
+    ],
     indirect=["schema"],
 )
 def test_check_if_data_matches_path(path, data, schema: ResourceSchema, expected):
@@ -273,7 +268,7 @@ def test_patch_path_repr():
 
 @pytest.mark.parametrize(
     ("path_1", "path_2", "expected"),
-    (
+    [
         (
             PatchPath.deserialize("userName"),
             PatchPath.deserialize("userName"),
@@ -319,7 +314,7 @@ def test_patch_path_repr():
             "userName",
             False,
         ),
-    ),
+    ],
 )
 def test_patch_path_can_be_compared(path_1, path_2, expected):
     assert (path_1 == path_2) is expected
@@ -343,18 +338,18 @@ def test_creating_patch_path_with_bad_filter_operator_fails():
 
 @pytest.mark.parametrize(
     "patch_path",
-    (
+    [
         "userName",
         "name.formatted",
         "emails[type eq 'work']",
         "emails[type eq 'work'].display",
-    ),
+    ],
 )
 def test_patch_path_can_be_serialized(patch_path):
     assert PatchPath.deserialize(patch_path).serialize() == patch_path
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_adds_val_for_simple_singular_attr(op_cls, user_schema):
     operations = PatchOperations([op_cls(PatchPath.deserialize("nickName"), "Pagerous")])
     data = {}
@@ -364,7 +359,7 @@ def test_update_op_adds_val_for_simple_singular_attr(op_cls, user_schema):
     assert actual == {"nickName": "Pagerous"}
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_replaces_existing_val_for_simple_singular_attr(op_cls, user_schema):
     operations = PatchOperations([op_cls(PatchPath.deserialize("nickName"), "Pagerous")])
     data = {"nickname": "NonPagerous"}
@@ -392,7 +387,7 @@ def test_add_op_does_not_filter_duplicates_for_simple_mv_attr(fake_schema):
     assert actual == {"str_mv": ["a", "b", "b", "c"]}
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_adds_val_for_singular_sub_attr_of_complex_attr(op_cls, user_schema):
     operations = PatchOperations(
         [op_cls(PatchPath.deserialize("name"), {"formatted": "John Wick"})]
@@ -404,7 +399,7 @@ def test_update_op_adds_val_for_singular_sub_attr_of_complex_attr(op_cls, user_s
     assert actual == {"name": {"formatted": "John Wick"}}
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_replaces_existing_val_for_singular_sub_attr_of_complex_attr(op_cls, user_schema):
     operations = PatchOperations([op_cls(PatchPath.deserialize("name.formatted"), "John Wick")])
     data = {"name": {"formatted": "John Doe"}}
@@ -436,7 +431,7 @@ def test_add_op_does_not_filter_duplicate_values_for_mv_sub_attr_of_singular_com
 
 @pytest.mark.parametrize(
     "op_value",
-    ([{"type": "work", "value": "work@mail.com"}], {"type": "work", "value": "work@mail.com"}),
+    [[{"type": "work", "value": "work@mail.com"}], {"type": "work", "value": "work@mail.com"}],
 )
 def test_add_op_adds_val_for_mv_complex_attribute(user_schema, op_value):
     operations = PatchOperations([Add(PatchPath.deserialize("emails"), op_value)])
@@ -454,10 +449,10 @@ def test_add_op_adds_val_for_mv_complex_attribute(user_schema, op_value):
 
 @pytest.mark.parametrize(
     "op_value",
-    (
+    [
         [{"type": "home", "value": "home@mail.com", "primary": True}],
         {"type": "home", "value": "home@mail.com", "primary": True},
-    ),
+    ],
 )
 def test_add_op_does_not_merge_complex_items_with_same_sub_attrs(user_schema, op_value):
     operations = PatchOperations([Add(PatchPath.deserialize("emails"), op_value)])
@@ -571,7 +566,7 @@ def test_add_op_does_not_filter_duplicates_for_sub_attr_values_of_mv_complex_att
     }
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_replaces_values_of_mv_simple_attr_if_filter_matches(
     op_cls,
     fake_schema,
@@ -610,7 +605,7 @@ def test_add_op_fails_if_no_filter_matches_for_mv_simple_attr(
         operations.apply(data, fake_schema)
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_add_op_adds_val_for_singular_sub_attr_of_complex_attr__sub_attr_in_path(
     op_cls,
     user_schema,
@@ -630,7 +625,7 @@ def test_add_op_adds_val_for_singular_sub_attr_of_complex_attr__sub_attr_in_path
     assert actual == {"name": {"formatted": "John Wick"}}
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_add_op_replaces_val_for_singular_sub_attr_of_complex_attr__sub_attr_in_path(
     op_cls,
     user_schema,
@@ -686,7 +681,7 @@ def test_add_op_does_not_filter_duplicates_for_mv_sub_attr_of_complex_attr__sub_
     assert actual == {"c_str_mv": {"str": ["a", "b", "b", "c"]}}
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_replaces_val_for_existing_singular_sub_attr_of_mv_complex_attr__sub_attr_in_path(
     op_cls,
     user_schema,
@@ -712,7 +707,7 @@ def test_update_op_replaces_val_for_existing_singular_sub_attr_of_mv_complex_att
     assert actual == {"emails": [{"type": "work"}, {"type": "work"}, {"type": "work"}]}
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_does_not_add_values_for_singular_sub_attr_if_no_mv_complex_attr_items(
     op_cls,
     user_schema,
@@ -763,7 +758,7 @@ def test_add_op_adds_val_for_existing_mv_sub_attr_of_mv_complex_attr__sub_attr_i
     }
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_add_op_does_not_add_values_for_mv_sub_attr_if_no_mv_complex_attr_items(
     op_cls,
     fake_schema,
@@ -783,7 +778,7 @@ def test_add_op_does_not_add_values_for_mv_sub_attr_if_no_mv_complex_attr_items(
     assert actual == {}
 
 
-@pytest.mark.parametrize("op_cls", (Add, Replace))
+@pytest.mark.parametrize("op_cls", [Add, Replace])
 def test_update_op_replaces_val_for_singular_sub_attr_of_filtered_mv_complex_attr__sub_attr_in_path(
     op_cls,
     user_schema,
@@ -946,7 +941,7 @@ def test_replace_op_replaces_val_for_mv_sub_attr_of_singular_complex_attr(fake_s
 
 @pytest.mark.parametrize(
     "op_value",
-    ([{"type": "work", "value": "work@mail.com"}], {"type": "work", "value": "work@mail.com"}),
+    [[{"type": "work", "value": "work@mail.com"}], {"type": "work", "value": "work@mail.com"}],
 )
 def test_replace_op_replaces_val_for_mv_complex_attribute(user_schema, op_value):
     operations = PatchOperations([Replace(PatchPath.deserialize("emails"), op_value)])

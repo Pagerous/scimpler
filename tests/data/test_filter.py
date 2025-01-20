@@ -2,7 +2,6 @@ import re
 from typing import Any
 
 import pytest
-
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
 from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
@@ -10,12 +9,12 @@ from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperat
 
 @pytest.mark.parametrize(
     "attr",
-    (
+    [
         "userName",
         "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-    ),
+    ],
 )
-@pytest.mark.parametrize("operator", ("eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"))
+@pytest.mark.parametrize("operator", ["eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"])
 def test_deserialize_basic_binary_attribute_filter(attr, operator):
     expected = {"op": operator, "attr": attr, "value": "bjensen"}
     filter_exp = f'{attr} {operator} "bjensen"'
@@ -30,12 +29,12 @@ def test_deserialize_basic_binary_attribute_filter(attr, operator):
 
 @pytest.mark.parametrize(
     "full_attr",
-    (
+    [
         "name.formatted",
         "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
-    ),
+    ],
 )
-@pytest.mark.parametrize("operator", ("eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"))
+@pytest.mark.parametrize("operator", ["eq", "ne", "co", "sw", "ew", "gt", "ge", "lt", "le"])
 def test_deserialize_basic_binary_complex_attribute_filter(full_attr, operator):
     attr = AttrRepFactory.deserialize(full_attr)
     expected = {
@@ -55,12 +54,12 @@ def test_deserialize_basic_binary_complex_attribute_filter(full_attr, operator):
 
 @pytest.mark.parametrize(
     "attr",
-    (
+    [
         "userName",
         "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-    ),
+    ],
 )
-@pytest.mark.parametrize("operator", ("pr",))
+@pytest.mark.parametrize("operator", ["pr"])
 def test_deserialize_basic_unary_attribute_filter(attr, operator):
     expected = {
         "op": operator,
@@ -78,12 +77,12 @@ def test_deserialize_basic_unary_attribute_filter(attr, operator):
 
 @pytest.mark.parametrize(
     "full_attr",
-    (
+    [
         "name.formatted",
         "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
-    ),
+    ],
 )
-@pytest.mark.parametrize("operator", ("pr",))
+@pytest.mark.parametrize("operator", ["pr"])
 def test_deserialize_basic_unary_attribute_filter_with_complex_attribute(full_attr, operator):
     attr = AttrRepFactory.deserialize(full_attr)
     expected = {
@@ -102,12 +101,12 @@ def test_deserialize_basic_unary_attribute_filter_with_complex_attribute(full_at
 
 @pytest.mark.parametrize(
     "attr",
-    (
+    [
         "userName",
         "urn:ietf:params:scim:schemas:core:2.0:User:userName",
-    ),
+    ],
 )
-@pytest.mark.parametrize("sequence", ("  ", "\t\t", "\n", " \t", "\t ", "\n\n", " \n", "\n "))
+@pytest.mark.parametrize("sequence", ["  ", "\t\t", "\n", " \t", "\t ", "\n\n", " \n", "\n "])
 def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(attr, sequence):
     expected = {"op": "eq", "attr": attr, "value": f"bjen{sequence}sen"}
     filter_exp = f'{attr}{sequence}{sequence}eq{sequence}"bjen{sequence}sen"'
@@ -122,12 +121,12 @@ def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter(a
 
 @pytest.mark.parametrize(
     "full_attr",
-    (
+    [
         "name.formatted",
         "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
-    ),
+    ],
 )
-@pytest.mark.parametrize("sequence", ("  ", "\t\t", "\n", " \t", "\t ", "\n\n", " \n", "\n "))
+@pytest.mark.parametrize("sequence", ["  ", "\t\t", "\n", " \t", "\t ", "\n\n", " \n", "\n "])
 def test_any_sequence_of_whitespaces_between_tokens_has_no_influence_on_filter_with_complex_attr(
     full_attr, sequence
 ):
@@ -785,7 +784,7 @@ def test_gargantuan_filter():
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected"),
-    (
+    [
         (
             'userName eq "bjensen"',
             {
@@ -1056,7 +1055,7 @@ def test_gargantuan_filter():
                 ],
             },
         ),
-    ),
+    ],
 )
 def test_rfc_7644_exemplary_filter(filter_exp, expected):
     issues = Filter.validate(filter_exp)
@@ -1068,7 +1067,7 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             'userName eq "user123" and (id eq 1 or display co "user"',
             {"_errors": [{"code": 100}]},
@@ -1123,7 +1122,7 @@ def test_rfc_7644_exemplary_filter(filter_exp, expected):
             'emails[type eq "work") and display co "@example.com" or value co "@example"]',
             {"_errors": [{"code": 100}]},
         ),
-    ),
+    ],
 )
 def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -1135,7 +1134,7 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected"),
-    (
+    [
         (
             'userName eq "use(r123" and display co "us)er"',
             {
@@ -1166,7 +1165,7 @@ def test_number_of_group_brackets_must_match(filter_exp, expected_issues):
                 ],
             },
         ),
-    ),
+    ],
 )
 def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_exp, expected):
     issues = Filter.validate(filter_exp)
@@ -1178,7 +1177,7 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             'emails[type eq "work" and display co "@example.com" or value co "@example"',
             {"_errors": [{"code": 101}]},
@@ -1193,7 +1192,7 @@ def test_group_bracket_characters_are_ignored_when_inside_string_value(filter_ex
             'emails type eq "work"] and ims type eq "work"]',
             {"_errors": [{"code": 101}, {"code": 101}]},
         ),
-    ),
+    ],
 )
 def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -1205,7 +1204,7 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_is
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected"),
-    (
+    [
         (
             'userName eq "use[r123" and display co "us]er"',
             {
@@ -1236,7 +1235,7 @@ def test_number_of_complex_attribute_brackets_must_match(filter_exp, expected_is
                 ],
             },
         ),
-    ),
+    ],
 )
 def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_value(
     filter_exp, expected
@@ -1250,7 +1249,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             'userName eq "user123" and',
             {
@@ -1685,7 +1684,7 @@ def test_complex_attribute_bracket_characters_are_ignored_when_inside_string_val
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -1697,7 +1696,7 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             "apple banana",
             {
@@ -1775,7 +1774,7 @@ def test_missing_operand_for_operator_causes_parsing_issues(filter_exp, expected
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_unknown_operator_causes_parsing_issues(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -1797,7 +1796,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             'emai..ls[type eq "work"]',
             {"_errors": [{"code": 17, "context": {"attribute": "emai..ls"}}]},
@@ -1925,7 +1924,7 @@ def test_putting_complex_attribute_operator_inside_other_complex_attribute_opera
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -1937,7 +1936,7 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             "emails[]",
             {
@@ -1983,7 +1982,7 @@ def test_attribute_name_must_comform_abnf_rules(filter_exp, expected_issues):
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -1995,7 +1994,7 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             '[type eq "work"]',
             {
@@ -2033,7 +2032,7 @@ def test_lack_of_expression_inside_complex_attribute_is_discovered(filter_exp, e
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_lack_of_top_level_complex_attribute_name_is_discovered(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -2045,10 +2044,10 @@ def test_lack_of_top_level_complex_attribute_name_is_discovered(filter_exp, expe
 
 @pytest.mark.parametrize(
     "filter_exp",
-    (
+    [
         'emails[type eq "work" and ims[type eq "home"]]',
         'emails[type eq "work"] and ims[type eq "home" and phones[type eq "work"]]',
-    ),
+    ],
 )
 def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discovered(
     filter_exp,
@@ -2063,7 +2062,7 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         ("", {"_errors": [{"code": 105}]}),
         ("()", {"_errors": [{"code": 105}]}),
         ('userName eq "John" and ()', {"_errors": [{"code": 105}]}),
@@ -2090,7 +2089,7 @@ def test_presence_of_complex_attribute_inside_other_complex_attribute_is_discove
             '() or userName eq "John" and emails[() or type eq "work" and ()] and ()',
             {"_errors": [{"code": 105}, {"code": 105}, {"code": 105}, {"code": 105}]},
         ),
-    ),
+    ],
 )
 def test_no_expression_is_discovered(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -2102,14 +2101,14 @@ def test_no_expression_is_discovered(filter_exp, expected_issues):
 
 @pytest.mark.parametrize(
     "filter_exp",
-    (
+    [
         'userName EQ "John"',
         'userName Eq "John"',
         'userName eQ "John"',
         "userName PR",
         "userName pR",
         "userName Pr",
-    ),
+    ],
 )
 def test_operators_are_case_insensitive(filter_exp):
     issues = Filter.validate(filter_exp)
@@ -2120,7 +2119,7 @@ def test_operators_are_case_insensitive(filter_exp):
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected"),
-    (
+    [
         (
             'attr eq "John"',
             {
@@ -2177,7 +2176,7 @@ def test_operators_are_case_insensitive(filter_exp):
                 "value": None,
             },
         ),
-    ),
+    ],
 )
 def test_parsing_attr_value(filter_exp, expected):
     issues = Filter.validate(filter_exp)
@@ -2189,7 +2188,7 @@ def test_parsing_attr_value(filter_exp, expected):
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             "userName eq blabla",
             {
@@ -2254,7 +2253,7 @@ def test_parsing_attr_value(filter_exp, expected):
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
     issues = Filter.validate(filter_exp)
@@ -2266,7 +2265,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected_issues"),
-    (
+    [
         (
             "userName gt true",
             {
@@ -2365,7 +2364,7 @@ def test_bad_comparison_values_are_discovered(filter_exp, expected_issues):
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_binary_operator_non_compatible_comparison_values_are_discovered(
     filter_exp, expected_issues
@@ -2389,7 +2388,7 @@ def test_complex_sub_attribute_is_discovered():
 
 @pytest.mark.parametrize(
     ("filter_exp", "expected"),
-    (
+    [
         (
             'attr eq "id eq 1 and value neq 2" and other_attr eq "id eq 1 or value neq 2"',
             {
@@ -2432,7 +2431,7 @@ def test_complex_sub_attribute_is_discovered():
                 },
             },
         ),
-    ),
+    ],
 )
 def test_placing_filters_in_string_values_does_not_break_parsing(filter_exp, expected):
     issues = Filter.validate(filter_exp)

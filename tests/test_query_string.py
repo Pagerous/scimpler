@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep
 from scimpler.query_string import (
@@ -11,17 +10,18 @@ from scimpler.query_string import (
     ResourceTypesGet,
     SchemasGet,
 )
+
 from tests.conftest import CONFIG
 
 
 @pytest.mark.parametrize(
     "deserializer",
-    (
+    [
         ResourceObjectGet(),
         ResourcesPost(),
         ResourceObjectPut(),
         ResourceObjectPatch(),
-    ),
+    ],
 )
 def test_presence_config_is_deserialized_from_query_params(deserializer):
     deserialized = deserializer.deserialize(query_params={"attributes": ["name.familyName"]})
@@ -119,7 +119,7 @@ def test_resources_get_query_params_is_validated():
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("handler", (SchemasGet, ResourceTypesGet))
+@pytest.mark.parametrize("handler", [SchemasGet, ResourceTypesGet])
 def test_passing_filter_to_service_provider_config_get_query_handler_fails_on_validation(handler):
     expected_issues = {"filter": {"_errors": [{"code": 31}]}}
 
@@ -132,7 +132,7 @@ def test_passing_filter_to_service_provider_config_get_query_handler_fails_on_va
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("handler", (SchemasGet, ResourceTypesGet))
+@pytest.mark.parametrize("handler", [SchemasGet, ResourceTypesGet])
 def test_unknown_params_passed_to_service_provider_config_get_query_handler_validation(handler):
     issues = handler(CONFIG).validate(
         {

@@ -494,8 +494,4 @@ class ScimData(MutableMapping):
         if len(self) != len(other):
             return False
 
-        for key, value in self._data.items():
-            if other.get(key) != value:
-                return False
-
-        return True
+        return all(other.get(key) == value for key, value in self._data.items())

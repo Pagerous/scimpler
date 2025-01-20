@@ -1,7 +1,6 @@
 from typing import Any, Optional
 
 import pytest
-
 from scimpler.data import ScimData
 from scimpler.data.operator import (
     AttributeOperator,

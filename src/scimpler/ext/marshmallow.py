@@ -96,7 +96,7 @@ def initialize(
     Raises:
         RuntimeError: When attempt to initialize the extension second time.
     """
-    global _marshmallow_field_by_attr_type, _initialized
+    global _initialized  # noqa: PLW0603
     if _auto_initialized:
         raise RuntimeError(
             "marshmallow extension has been automatically initialized with default field mapping; "
@@ -117,10 +117,7 @@ def _get_fields(
     field_by_attr_rep = field_by_attr_rep or {}
     fields_: dict[str, marshmallow.fields.Field] = {}
     for attr_rep, attr in attrs_:
-        if attr_rep in field_by_attr_rep:
-            field = field_by_attr_rep[attr_rep]
-        else:
-            field = _get_field(attr)
+        field = field_by_attr_rep[attr_rep] if attr_rep in field_by_attr_rep else _get_field(attr)
         fields_[str(attr_rep.attr)] = field
     return fields_
 
@@ -768,7 +765,7 @@ def create_request_schema(validator: Validator) -> type[marshmallow.Schema]:
 
 
 def _ensure_initialized():
-    global _auto_initialized
+    global _auto_initialized  # noqa: PLW0603
     if not _initialized:
         initialize()
         _auto_initialized = True

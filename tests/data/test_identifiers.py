@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data.identifiers import AttrRep, BoundedAttrRep
 
 
@@ -22,7 +21,7 @@ def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
 
 @pytest.mark.parametrize(
     ("attr_1", "attr_2", "expected"),
-    (
+    [
         (AttrRep(attr="attr"), AttrRep(attr="ATTR"), True),
         (AttrRep(attr="abc"), AttrRep(attr="cba"), False),
         (
@@ -80,7 +79,7 @@ def test_bounded_attr_creation_fails_if_bad_sub_attr_name():
             True,
         ),
         (AttrRep(attr="attr"), 1, False),
-    ),
+    ],
 )
 def test_attr_rep_can_be_compared(attr_1, attr_2, expected):
     assert (attr_1 == attr_2) is expected

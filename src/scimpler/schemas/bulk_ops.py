@@ -72,22 +72,20 @@ def _validate_operation_path(operation: ScimData) -> ValidationIssues:
             issue=ValidationError.missing(),
             proceed=False,
         )
-    else:
-        if (method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path)) or (
-            method in ["GET", "PATCH", "PUT", "DELETE"]
-            and not _RESOURCE_OBJECT_REGEX.fullmatch(path)
-        ):
-            issues.add_error(
-                issue=ValidationError.bad_value_syntax(),
-                proceed=False,
-            )
-            operation["path"] = Invalid
+    elif (method == "POST" and not _RESOURCE_TYPE_REGEX.fullmatch(path)) or (
+        method in ["GET", "PATCH", "PUT", "DELETE"] and not _RESOURCE_OBJECT_REGEX.fullmatch(path)
+    ):
+        issues.add_error(
+            issue=ValidationError.bad_value_syntax(),
+            proceed=False,
+        )
+        operation["path"] = Invalid
     return issues
 
 
 def process_request_operations(value: list[ScimData]) -> list[ScimData]:
     value = deepcopy(value)
-    for i, item in enumerate(value):
+    for item in value:
         method = item.get("method")
         if method in ["GET", "DELETE"]:
             item.pop("data")
@@ -185,13 +183,10 @@ class BulkRequestSchema(BaseSchema):
         if not all([paths, methods]):
             return issues
 
-        for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
+        for i, (path, _, method) in enumerate(zip(paths, data, methods)):
             if not all([path, method]):
                 continue
-            if method == "POST":
-                resource_type_endpoint = path
-            else:
-                resource_type_endpoint = f"/{path.split('/', 2)[1]}"
+            resource_type_endpoint = path if method == "POST" else f"/{path.split('/', 2)[1]}"
             if resource_type_endpoint not in self._sub_schemas[method]:
                 issues.add_error(
                     issue=ValidationError.unknown_operation_resource(),
@@ -387,7 +382,7 @@ class BulkResponseSchema(BaseSchema):
             if not method:
                 continue
             if location:
-                for endpoint, validator in self._sub_schemas[method].items():
+                for endpoint in self._sub_schemas[method]:
                     if endpoint in location:
                         break
                 else:

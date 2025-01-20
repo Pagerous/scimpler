@@ -82,10 +82,7 @@ class And(LogicalOperator):
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         value = value or ScimData()
-        for match in self._collect_matches(value, schema_or_complex):
-            if not match:
-                return False
-        return True
+        return all(match for match in self._collect_matches(value, schema_or_complex))
 
 
 @final
@@ -103,10 +100,7 @@ class Or(LogicalOperator):
         schema_or_complex: TSchemaOrComplex,
     ) -> bool:
         value = value or ScimData()
-        for match in self._collect_matches(value, schema_or_complex):
-            if match:
-                return True
-        return False
+        return any(match for match in self._collect_matches(value, schema_or_complex))
 
 
 @final
@@ -216,7 +210,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
         if attr.multi_valued:
             if isinstance(attr_value, list):
                 match = any(
-                    [self.operator(item) for item in attr_value if self.is_type_supported(item)]
+                    self.operator(item) for item in attr_value if self.is_type_supported(item)
                 )
             else:
                 match = False
@@ -247,7 +241,7 @@ class Present(UnaryAttributeOperator):
         Implements operator's logic for matching the provided value.
         """
         if isinstance(value, Mapping):
-            return any([Present.operator(val) for val in value.values()])
+            return any(Present.operator(val) for val in value.values())
         if isinstance(value, str):
             return value != ""
         return value not in [None, Missing]

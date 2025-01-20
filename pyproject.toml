@@ -18,7 +18,6 @@ marshmallow = ["marshmallow"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8"
-isort = "^5.12.0"
 pytest-cov = "^4.1.0"
 mypy = "^1.10.0"
 ruff = "^0.4.8"
@@ -34,5 +33,55 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 line-length = 100
 
-[tool.isort]
-profile = "black"
+[tool.ruff.lint]
+select = [
+    # Pyflakes
+    "F",
+    # pycodestyle
+    "E", "W",
+    # pep8-naming
+    "N",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-builtins
+    "A",
+    # flake8-comprehensions
+    "C4",
+    # flake8-datetime
+    "DTZ",
+    # flake8-pie
+    "PIE",
+    # flake8-pytest-style
+    "PT",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # pylint
+    "PL",
+]
+
+ignore = [
+    "PT004",  # pytest-missing-fixture-name-underscore
+    "PT005",  # pytest-incorrect-fixture-name-underscore
+    "B009",  # get-attr-with-constant
+    "B010",  # set-attr-with-constant
+    "N818",  # error-suffix-on-exception-name
+    "PLC0414", # useless-import-alias; conflicting with F401 recommendation
+    "PLR0913",  # too-many-args
+    "PLW2901",
+    "PLR2004",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/test_*.py" = [
+    "PLR2004",  # magic-value-comparison
+    "E501",  # line-too-long; it's better for test names to be explanatory enough
+    "DTZ",  # if code has date/time issues, the test must follow
+    "PLR0913",  # too-many-arguments; complex tests accept many fixutres and that's fine
+]
+
+[tool.ruff.lint.flake8-pytest-style]
+fixture-parentheses = false

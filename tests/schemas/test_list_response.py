@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.scim_data import ScimData
@@ -96,7 +95,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(
 
 @pytest.mark.parametrize(
     ("data", "schema"),
-    (
+    [
         (
             [
                 ScimData(
@@ -142,7 +141,7 @@ def test_resources_validation_fails_if_unknown_schema_in_resource(
             ],
             None,
         ),
-    ),
+    ],
     indirect=["schema"],
 )
 def test_get_schema_for_resources(data, schema, user_schema):
@@ -154,8 +153,8 @@ def test_get_schema_for_resources(data, schema, user_schema):
 
 
 @pytest.mark.parametrize(
-    ("data",),
-    (
+    "data",
+    [
         (
             [
                 ScimData(
@@ -164,7 +163,7 @@ def test_get_schema_for_resources(data, schema, user_schema):
                         "userName": "bjensen",
                     }
                 )
-            ],
+            ]
         ),
         (
             [
@@ -173,7 +172,7 @@ def test_get_schema_for_resources(data, schema, user_schema):
                         "urn:ietf:params:scim:schemas:core:2.0:User:userName": "bjensen",
                     }
                 )
-            ],
+            ]
         ),
         (
             [
@@ -182,7 +181,7 @@ def test_get_schema_for_resources(data, schema, user_schema):
                         "userName": "bjensen",
                     }
                 )
-            ],
+            ]
         ),
         (
             [
@@ -194,9 +193,9 @@ def test_get_schema_for_resources(data, schema, user_schema):
                         }
                     }
                 )
-            ],
+            ]
         ),
-    ),
+    ],
 )
 def test_get_schema_for_resources__returns_schema_for_bad_data_if_single_schema(data, user_schema):
     list_schema = list_response.ListResponseSchema([user_schema])

@@ -2,7 +2,6 @@ from copy import deepcopy
 from datetime import datetime
 
 import pytest
-
 from scimpler.config import ServiceProviderConfig
 from scimpler.data import ScimData
 from scimpler.data.attr_value_presence import AttrValuePresenceConfig
@@ -28,12 +27,13 @@ from scimpler.validator import (
     can_validate_filtering,
     can_validate_sorting,
 )
+
 from tests.conftest import CONFIG
 
 
 @pytest.mark.parametrize(
     ("status_code", "expected"),
-    (
+    [
         (
             404,
             {
@@ -42,7 +42,7 @@ from tests.conftest import CONFIG
             },
         ),
         (400, {}),
-    ),
+    ],
 )
 def test_validate_error_status_code_consistency(status_code, expected):
     validator = Error()
@@ -210,7 +210,7 @@ def test_number_of_resources_validation_fails_if_more_resources_than_specified_c
     assert issues.to_dict() == expected
 
 
-@pytest.mark.parametrize("count", (2, None))
+@pytest.mark.parametrize("count", [2, None])
 def test_number_of_resources_validation_succeeds_if_correct_number_of_resources(
     count, list_user_data, user_schema
 ):
@@ -294,11 +294,11 @@ def test_validate_pagination_info_validation_succeeds_when_if_data_for_paginatio
 
 @pytest.mark.parametrize(
     "filter_exp",
-    (
+    [
         'emails[value eq "sven@example.com"]',
         'emails eq "sven@example.com"',
         'name.familyName eq "Sven"',
-    ),
+    ],
 )
 def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
     filter_ = Filter.deserialize(filter_exp)
@@ -328,7 +328,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
 
 @pytest.mark.parametrize(
     ("filter_exp", "presence_config"),
-    (
+    [
         (
             'emails[value eq "sven@example.com"]',
             AttrValuePresenceConfig("RESPONSE", attr_reps=["emails.value"], include=False),
@@ -341,7 +341,7 @@ def test_validate_resources_filtered(filter_exp, list_user_data, user_schema):
             'name.familyName eq "Sven"',
             AttrValuePresenceConfig("RESPONSE", attr_reps=["name.familyName"], include=False),
         ),
-    ),
+    ],
 )
 def test_resources_are_not_validated_for_filtering_if_attrs_not_requested(
     filter_exp, list_user_data, user_schema, presence_config
@@ -605,7 +605,7 @@ def test_validation_failure_on_missing_meta_version_when_etag_supported(
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("etag_supported", (True, False))
+@pytest.mark.parametrize("etag_supported", [True, False])
 def test_validation_failure_on_etag_and_meta_version_mismatch(
     etag_supported, user_data_server, user_schema
 ):
@@ -867,10 +867,10 @@ def test_resource_type_post_response_data_can_be_serialized(user_data_server, us
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_correct_list_response_passes_validation(validator_cls, list_user_data, user_schema):
     list_user_data["Resources"][0].pop("name")
@@ -894,10 +894,10 @@ def test_correct_list_response_passes_validation(validator_cls, list_user_data, 
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_missing_version_in_list_response_resources_is_not_validated_if_etag_not_supported(
     validator_cls, list_user_data, user_schema
@@ -929,10 +929,10 @@ def test_resources_get_request_validation_does_nothing(list_user_data, user_sche
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_missing_version_in_list_response_resources_is_validated_if_etag_supported(
     validator_cls, list_user_data, user_schema
@@ -962,10 +962,10 @@ def test_missing_version_in_list_response_resources_is_validated_if_etag_support
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_attributes_existence_is_validated_in_list_response(validator_cls, user_schema):
     expected_issues = {
@@ -988,10 +988,10 @@ def test_attributes_existence_is_validated_in_list_response(validator_cls, user_
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_attributes_presence_is_validated_in_resources_in_list_response(validator_cls, user_schema):
     expected_issues = {
@@ -1021,10 +1021,10 @@ def test_attributes_presence_is_validated_in_resources_in_list_response(validato
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_start_index_consistency_is_not_validated_if_bad_type(
     validator_cls, list_user_data, user_schema
@@ -1048,10 +1048,10 @@ def test_start_index_consistency_is_not_validated_if_bad_type(
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_resources_are_not_validated_for_pagination_if_bad_type(
     validator_cls, list_user_data, user_schema
@@ -1075,10 +1075,10 @@ def test_resources_are_not_validated_for_pagination_if_bad_type(
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resources_has_issues(
     validator_cls, list_user_data, user_schema
@@ -1111,10 +1111,10 @@ def test_resources_are_not_validated_for_filtering_and_sorting_if_one_of_resourc
 
 @pytest.mark.parametrize(
     "validator_cls",
-    (
+    [
         ResourcesQuery,
         SearchRequestPost,
-    ),
+    ],
 )
 def test_resources_response_data_can_be_serialized(validator_cls, list_user_data, user_schema):
     validator = validator_cls(resource_schema=user_schema)
@@ -1197,7 +1197,7 @@ def test_correct_remove_operations_pass_validation(fake_schema):
     assert issues.to_dict(message=True) == {}
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
     validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
@@ -2028,7 +2028,7 @@ def test_resource_types_response_can_be_validated():
 
 @pytest.mark.parametrize(
     ("filter_", "checker", "expected"),
-    (
+    [
         (
             Filter.deserialize("userName pr"),
             AttrValuePresenceConfig(
@@ -2151,7 +2151,7 @@ def test_resource_types_response_can_be_validated():
             ),
             False,
         ),
-    ),
+    ],
 )
 def test_can_validate_filtering(filter_, checker, expected, user_schema):
     assert can_validate_filtering(filter_, checker, user_schema) is expected
@@ -2195,7 +2195,7 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
 
 @pytest.mark.parametrize(
     ("sorter", "checker", "expected"),
-    (
+    [
         (
             Sorter(attr_rep=AttrRep(attr="userName")),
             AttrValuePresenceConfig(
@@ -2310,7 +2310,7 @@ def test_can_validate_filtering_with_bounded_attributes(user_schema):
             AttrValuePresenceConfig(direction="RESPONSE"),
             True,
         ),
-    ),
+    ],
 )
 def test_can_validate_sorting(sorter, checker, expected, user_schema):
     assert can_validate_sorting(sorter, checker, user_schema) == expected
@@ -2350,7 +2350,7 @@ def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):
 
 @pytest.mark.parametrize(
     ("operation_data", "operation_issues"),
-    (
+    [
         (
             {
                 "method": "UNKNOWN_METHOD",
@@ -2393,7 +2393,7 @@ def test_bulk_request_with_bulk_ids_is_validated(user_schema, group_schema):
             },
             {},
         ),
-    ),
+    ],
 )
 def test_request_data_validation_in_bulk_request_is_skipped(
     user_schema, group_schema, operation_data, operation_issues

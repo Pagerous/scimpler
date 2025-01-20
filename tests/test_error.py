@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.error import ValidationError, ValidationIssues, ValidationWarning
 
 

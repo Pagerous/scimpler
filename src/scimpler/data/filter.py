@@ -600,7 +600,7 @@ class Filter(Generic[TOperator]):
         try:
             return cls._deserialize(filter_exp)
         except Exception:
-            raise ValueError("invalid filter expression")
+            raise ValueError("invalid filter expression") from None
 
     @classmethod
     def _deserialize(cls, filter_exp: str) -> "Filter":

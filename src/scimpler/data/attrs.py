@@ -976,7 +976,7 @@ class Complex(Attribute):
         attr_filter: AttrFilter,
     ) -> ScimData:
         filtered = ScimData()
-        for name, attr in attr_filter(self.attrs):
+        for name, _ in attr_filter(self.attrs):
             if (value := data.get(name)) is not Missing:
                 filtered.set(name, value)
         return filtered
