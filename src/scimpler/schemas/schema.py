@@ -237,8 +237,8 @@ class SchemaDefinitionSchema(BaseResourceSchema):
             schema.attrs if isinstance(schema, SchemaExtension) else schema.attrs.core_attrs,
         )
         output: dict[str, Any] = {
-            "id": schema.schema,
             "schemas": self.schemas,
+            "id": schema.schema,
             "name": schema.name,
             "description": schema.description,
             "attributes": [attr.to_dict() for _, attr in attrs],

@@ -1,6 +1,15 @@
 import warnings
 from copy import copy
-from typing import Any, Iterable, Mapping, MutableMapping, Optional, Union, cast
+from typing import (
+    Any,
+    Iterable,
+    Mapping,
+    MutableMapping,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from typing_extensions import Self
 
@@ -22,6 +31,7 @@ from scimpler.data.attrs import (
     DateTime,
     String,
     UriReference,
+    create_attribute_from_schema_rep,
 )
 from scimpler.data.identifiers import BoundedAttrRep, SchemaUri
 from scimpler.data.scim_data import Invalid, Missing, ScimData
@@ -762,3 +772,46 @@ class SchemaExtension:
         Attributes that belong to the extension.
         """
         return self._attrs
+
+
+_T = TypeVar("_T", bound=Union[ResourceSchema, SchemaExtension])
+
+
+def create_from_rep(
+    base_cls: type[_T],
+    schema_rep: Mapping[str, Any],
+    **kwargs,
+) -> type[_T]:
+    """
+    Creates `ResourceSchema` or `SchemaExtension` subclass, based on
+    the `schema_rep`. The `schema_rep` must be compliant with SCIM Schema
+    Definition, as specified in [RFC-7643](https://www.rfc-editor.org/rfc/rfc7643#section-7).
+
+    Additional parameters, not present in SCIM Schema Definition must
+    be passed in `kwargs`.
+
+    Examples:
+        >>> schema_cls = create_from_rep(
+        >>>     base_cls=ResourceSchema,
+        >>>     schema_rep={...},
+        >>>     endpoint="/MyResources"
+        >>> )
+        >>>
+        >>> assert issubclass(schema_cls, ResourceSchema)
+
+    """
+    schema_rep = ScimData(schema_rep)
+    attrs = []
+    for attribute_schema_rep in schema_rep["attributes"]:
+        attrs.append(create_attribute_from_schema_rep(attribute_schema_rep))
+
+    name = schema_rep["name"]
+    kwargs.update(
+        {
+            "schema": schema_rep["id"],
+            "name": name,
+            "description": schema_rep["description"],
+            "base_attrs": attrs,
+        }
+    )
+    return cast(type[_T], type(name, (base_cls,), kwargs))
