@@ -12,6 +12,7 @@ from typing import (
     Collection,
     Iterable,
     Iterator,
+    Mapping,
     MutableMapping,
     Optional,
     TypeVar,
@@ -725,6 +726,44 @@ class Binary(AttributeWithCaseExact):
         return issues
 
 
+@final
+class DateTime(Attribute):
+    """
+    Represents **dateTime** attribute.
+    """
+
+    scim_type = SCIMType.DATETIME
+    base_types = (str,)
+
+    def __init__(self, name: str, **kwargs: Any):
+        """
+        Args:
+            name: Name of the attribute. Must be valid attribute name.
+            **kwargs: The same keyword arguments base classes receive.
+        """
+        super().__init__(name=name, **kwargs)
+
+    def _validate_value_type(self, value: Any) -> ValidationIssues:
+        issues = super()._validate_value_type(value)
+        if not issues.can_proceed():
+            return issues
+        value = self._deserialize_xsd_datetime(value)
+        if value is None:
+            issues.add_error(
+                issue=ValidationError.bad_value_syntax(),
+                proceed=False,
+            )
+            return issues
+        return issues
+
+    @staticmethod
+    def _deserialize_xsd_datetime(value: str) -> Optional[datetime]:
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+
+
 class Reference(AttributeWithCaseExact, abc.ABC):
     """
     Base class for all reference attributes.
@@ -766,44 +805,6 @@ class Reference(AttributeWithCaseExact, abc.ABC):
 
     def __eq__(self, other):
         return super().__eq__(other) and set(self.reference_types) == set(other.reference_types)
-
-
-@final
-class DateTime(Attribute):
-    """
-    Represents **dateTime** attribute.
-    """
-
-    scim_type = SCIMType.DATETIME
-    base_types = (str,)
-
-    def __init__(self, name: str, **kwargs: Any):
-        """
-        Args:
-            name: Name of the attribute. Must be valid attribute name.
-            **kwargs: The same keyword arguments base classes receive.
-        """
-        super().__init__(name=name, **kwargs)
-
-    def _validate_value_type(self, value: Any) -> ValidationIssues:
-        issues = super()._validate_value_type(value)
-        if not issues.can_proceed():
-            return issues
-        value = self._deserialize_xsd_datetime(value)
-        if value is None:
-            issues.add_error(
-                issue=ValidationError.bad_value_syntax(),
-                proceed=False,
-            )
-            return issues
-        return issues
-
-    @staticmethod
-    def _deserialize_xsd_datetime(value: str) -> Optional[datetime]:
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
 
 
 @final
@@ -1412,3 +1413,77 @@ class BoundedAttrs:
             return attr
 
         return self.get(path.sub_attr_rep)
+
+
+def create_attribute_from_schema_rep(schema_rep: Mapping[str, Any]) -> Attribute:
+    schema_rep = ScimData(schema_rep)
+    type_ = schema_rep["type"]
+    attr_cls: type[Attribute]
+    if type_ == "integer":
+        attr_cls = Integer
+    elif type_ == "decimal":
+        attr_cls = Decimal
+    elif type_ == "boolean":
+        attr_cls = Boolean
+    elif type_ == "string":
+        attr_cls = String
+    elif type_ == "binary":
+        attr_cls = Binary
+    elif type_ == "dateTime":
+        attr_cls = DateTime
+    elif type_ == "reference":
+        reference_types = schema_rep["referenceTypes"]
+        if "external" in reference_types:
+            attr_cls = ExternalReference
+        elif "uri" in reference_types:
+            attr_cls = UriReference
+        else:
+            attr_cls = ScimReference
+    elif type_ == "complex":
+        attr_cls = Complex
+    else:
+        raise ValueError(f"unknown attribute type {type_!r}")
+
+    return attr_cls(**_create_attribute_kwargs(schema_rep))
+
+
+def _create_attribute_kwargs(schema_rep: ScimData) -> dict:
+    type_ = schema_rep["type"]
+    kwargs = {
+        "name": schema_rep["name"],
+        "multi_valued": schema_rep["multiValued"],
+        "required": schema_rep["required"],
+        "returned": schema_rep["returned"],
+        "mutability": schema_rep["mutability"],
+    }
+    description = schema_rep.get("description", None)
+    if description is not None:
+        kwargs["description"] = description
+
+    canonical_values = schema_rep.get("canonicalValues", None)
+    if canonical_values is not None:
+        kwargs["canonical_values"] = canonical_values
+
+    if type_ in ["integer", "decimal", "string"]:
+        uniqueness = schema_rep.get("uniqueness", None)
+        if uniqueness is not None:
+            kwargs["uniqueness"] = uniqueness
+
+    if type_ in ["string", "binary", "reference"]:
+        case_exact = schema_rep.get("caseExact", None)
+        if case_exact is not None:
+            kwargs["case_exact"] = case_exact
+
+    if type_ == "reference":
+        reference_types = schema_rep["referenceTypes"]
+        if reference_types not in [["external"], ["uri"]]:
+            kwargs["reference_types"] = reference_types
+
+    if type_ == "complex":
+        sub_attributes = schema_rep.get("subAttributes", [])
+        if sub_attributes:
+            kwargs["sub_attributes"] = [
+                create_attribute_from_schema_rep(sub_attribute_schema_rep)
+                for sub_attribute_schema_rep in sub_attributes
+            ]
+    return kwargs

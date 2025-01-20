@@ -23,6 +23,7 @@ nav:
           - BoundedAttrRep: api_reference/scimpler_data/bounded_attr_rep.md
           - BoundedAttrs: api_reference/scimpler_data/bounded_attrs.md
           - Complex: api_reference/scimpler_data/complex.md
+          - create_from_rep: api_reference/scimpler_data/create_from_rep.md
           - DateTime: api_reference/scimpler_data/datetime.md
           - Decimal: api_reference/scimpler_data/decimal.md
           - ExternalReference: api_reference/scimpler_data/external_reference.md

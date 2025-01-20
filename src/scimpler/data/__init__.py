@@ -24,7 +24,7 @@ from scimpler.data.identifiers import (
     SchemaUri,
 )
 from scimpler.data.patch import Add, PatchOperations, PatchPath, Remove, Replace
-from scimpler.data.schemas import ResourceSchema, SchemaExtension
+from scimpler.data.schemas import ResourceSchema, SchemaExtension, create_from_rep
 from scimpler.data.scim_data import Missing, ScimData
 from scimpler.data.sorter import Sorter
 
@@ -45,6 +45,7 @@ __all__ = [
     "Boolean",
     "BoundedAttrs",
     "Complex",
+    "create_from_rep",
     "DateTime",
     "Decimal",
     "ExternalReference",
