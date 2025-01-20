@@ -335,6 +335,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../add/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Add
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../attr_filter/" class="md-nav__link">
         
   
@@ -872,11 +893,74 @@
   
   
     <li class="md-nav__item">
+      <a href="../patch_operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PatchOperations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../patch_path/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     PatchPath
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remove/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Remove
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../replace/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Replace
   </span>
   
 
@@ -3437,7 +3521,7 @@ would yield no results, because <em>name</em> is not multivalued attribute (assu
               <p>
                   <span class="doc-param-annotation">
                     <b>TYPE:</b>
-                      <code><a class="autorefs autorefs-internal" title="scimpler.data.patch_path.PatchPath" href="../patch_path/#scimpler.data.PatchPath">PatchPath</a></code>
+                      <code><a class="autorefs autorefs-internal" title="scimpler.data.patch.PatchPath" href="../patch_path/#scimpler.data.PatchPath">PatchPath</a></code>
                   </span>
               </p>
             </td>
@@ -3467,20 +3551,7 @@ would yield no results, because <em>name</em> is not multivalued attribute (assu
 <span class="normal"><a href="#__codelineno-0-1411">1411</a></span>
 <span class="normal"><a href="#__codelineno-0-1412">1412</a></span>
 <span class="normal"><a href="#__codelineno-0-1413">1413</a></span>
-<span class="normal"><a href="#__codelineno-0-1414">1414</a></span>
-<span class="normal"><a href="#__codelineno-0-1415">1415</a></span>
-<span class="normal"><a href="#__codelineno-0-1416">1416</a></span>
-<span class="normal"><a href="#__codelineno-0-1417">1417</a></span>
-<span class="normal"><a href="#__codelineno-0-1418">1418</a></span>
-<span class="normal"><a href="#__codelineno-0-1419">1419</a></span>
-<span class="normal"><a href="#__codelineno-0-1420">1420</a></span>
-<span class="normal"><a href="#__codelineno-0-1421">1421</a></span>
-<span class="normal"><a href="#__codelineno-0-1422">1422</a></span>
-<span class="normal"><a href="#__codelineno-0-1423">1423</a></span>
-<span class="normal"><a href="#__codelineno-0-1424">1424</a></span>
-<span class="normal"><a href="#__codelineno-0-1425">1425</a></span>
-<span class="normal"><a href="#__codelineno-0-1426">1426</a></span>
-<span class="normal"><a href="#__codelineno-0-1427">1427</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1395"><a id="__codelineno-0-1395" name="__codelineno-0-1395"></a><span class="k">def</span> <span class="nf">get_by_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="s2">&quot;PatchPath&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Attribute</span><span class="p">]:</span>
+<span class="normal"><a href="#__codelineno-0-1414">1414</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1395"><a id="__codelineno-0-1395" name="__codelineno-0-1395"></a><span class="k">def</span> <span class="nf">get_by_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="s2">&quot;PatchPath&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Attribute</span><span class="p">]:</span>
 </span><span id="__span-0-1396"><a id="__codelineno-0-1396" name="__codelineno-0-1396"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 </span><span id="__span-0-1397"><a id="__codelineno-0-1397" name="__codelineno-0-1397"></a><span class="sd">    Returns an attribute, given a patch path. The syntax of the path must correspond with the</span>
 </span><span id="__span-0-1398"><a id="__codelineno-0-1398" name="__codelineno-0-1398"></a><span class="sd">    actual attribute. For example, patch path deserialized from `name[formatted eq &#39;John Doe&#39;]`</span>
@@ -3496,23 +3567,10 @@ would yield no results, because <em>name</em> is not multivalued attribute (assu
 </span><span id="__span-0-1408"><a id="__codelineno-0-1408" name="__codelineno-0-1408"></a>    <span class="k">if</span> <span class="n">attr</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">has_filter</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">attr</span><span class="o">.</span><span class="n">multi_valued</span><span class="p">):</span>
 </span><span id="__span-0-1409"><a id="__codelineno-0-1409" name="__codelineno-0-1409"></a>        <span class="k">return</span> <span class="kc">None</span>
 </span><span id="__span-0-1410"><a id="__codelineno-0-1410" name="__codelineno-0-1410"></a>
-</span><span id="__span-0-1411"><a id="__codelineno-0-1411" name="__codelineno-0-1411"></a>    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">sub_attr_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-0-1411"><a id="__codelineno-0-1411" name="__codelineno-0-1411"></a>    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">sub_attr_rep</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
 </span><span id="__span-0-1412"><a id="__codelineno-0-1412" name="__codelineno-0-1412"></a>        <span class="k">return</span> <span class="n">attr</span>
 </span><span id="__span-0-1413"><a id="__codelineno-0-1413" name="__codelineno-0-1413"></a>
-</span><span id="__span-0-1414"><a id="__codelineno-0-1414" name="__codelineno-0-1414"></a>    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">attr_rep</span><span class="p">,</span> <span class="n">BoundedAttrRep</span><span class="p">):</span>
-</span><span id="__span-0-1415"><a id="__codelineno-0-1415" name="__codelineno-0-1415"></a>        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-</span><span id="__span-0-1416"><a id="__codelineno-0-1416" name="__codelineno-0-1416"></a>            <span class="n">BoundedAttrRep</span><span class="p">(</span>
-</span><span id="__span-0-1417"><a id="__codelineno-0-1417" name="__codelineno-0-1417"></a>                <span class="n">schema</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">schema</span><span class="p">,</span>
-</span><span id="__span-0-1418"><a id="__codelineno-0-1418" name="__codelineno-0-1418"></a>                <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
-</span><span id="__span-0-1419"><a id="__codelineno-0-1419" name="__codelineno-0-1419"></a>                <span class="n">sub_attr</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">sub_attr_name</span><span class="p">,</span>
-</span><span id="__span-0-1420"><a id="__codelineno-0-1420" name="__codelineno-0-1420"></a>            <span class="p">)</span>
-</span><span id="__span-0-1421"><a id="__codelineno-0-1421" name="__codelineno-0-1421"></a>        <span class="p">)</span>
-</span><span id="__span-0-1422"><a id="__codelineno-0-1422" name="__codelineno-0-1422"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
-</span><span id="__span-0-1423"><a id="__codelineno-0-1423" name="__codelineno-0-1423"></a>        <span class="n">AttrRep</span><span class="p">(</span>
-</span><span id="__span-0-1424"><a id="__codelineno-0-1424" name="__codelineno-0-1424"></a>            <span class="n">attr</span><span class="o">=</span><span class="n">attr_rep</span><span class="o">.</span><span class="n">attr</span><span class="p">,</span>
-</span><span id="__span-0-1425"><a id="__codelineno-0-1425" name="__codelineno-0-1425"></a>            <span class="n">sub_attr</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">sub_attr_name</span><span class="p">,</span>
-</span><span id="__span-0-1426"><a id="__codelineno-0-1426" name="__codelineno-0-1426"></a>        <span class="p">)</span>
-</span><span id="__span-0-1427"><a id="__codelineno-0-1427" name="__codelineno-0-1427"></a>    <span class="p">)</span>
+</span><span id="__span-0-1414"><a id="__codelineno-0-1414" name="__codelineno-0-1414"></a>    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">sub_attr_rep</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>

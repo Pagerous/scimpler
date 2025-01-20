@@ -333,6 +333,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../../scimpler_data/add/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Add
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../scimpler_data/attr_filter/" class="md-nav__link">
         
   
@@ -732,11 +753,74 @@
   
   
     <li class="md-nav__item">
+      <a href="../../scimpler_data/patch_operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PatchOperations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../scimpler_data/patch_path/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     PatchPath
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data/remove/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Remove
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../scimpler_data/replace/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Replace
   </span>
   
 
@@ -2536,7 +2620,13 @@
 
             <details class="quote">
               <summary>Source code in <code>src/scimpler/validator.py</code></summary>
-              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1163">1163</a></span>
+              <div class="language-python highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-1157">1157</a></span>
+<span class="normal"><a href="#__codelineno-0-1158">1158</a></span>
+<span class="normal"><a href="#__codelineno-0-1159">1159</a></span>
+<span class="normal"><a href="#__codelineno-0-1160">1160</a></span>
+<span class="normal"><a href="#__codelineno-0-1161">1161</a></span>
+<span class="normal"><a href="#__codelineno-0-1162">1162</a></span>
+<span class="normal"><a href="#__codelineno-0-1163">1163</a></span>
 <span class="normal"><a href="#__codelineno-0-1164">1164</a></span>
 <span class="normal"><a href="#__codelineno-0-1165">1165</a></span>
 <span class="normal"><a href="#__codelineno-0-1166">1166</a></span>
@@ -2559,42 +2649,36 @@
 <span class="normal"><a href="#__codelineno-0-1183">1183</a></span>
 <span class="normal"><a href="#__codelineno-0-1184">1184</a></span>
 <span class="normal"><a href="#__codelineno-0-1185">1185</a></span>
-<span class="normal"><a href="#__codelineno-0-1186">1186</a></span>
-<span class="normal"><a href="#__codelineno-0-1187">1187</a></span>
-<span class="normal"><a href="#__codelineno-0-1188">1188</a></span>
-<span class="normal"><a href="#__codelineno-0-1189">1189</a></span>
-<span class="normal"><a href="#__codelineno-0-1190">1190</a></span>
-<span class="normal"><a href="#__codelineno-0-1191">1191</a></span>
-<span class="normal"><a href="#__codelineno-0-1192">1192</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1163"><a id="__codelineno-0-1163" name="__codelineno-0-1163"></a><span class="k">def</span> <span class="nf">validate_response</span><span class="p">(</span>
-</span><span id="__span-0-1164"><a id="__codelineno-0-1164" name="__codelineno-0-1164"></a>    <span class="bp">self</span><span class="p">,</span>
-</span><span id="__span-0-1165"><a id="__codelineno-0-1165" name="__codelineno-0-1165"></a>    <span class="o">*</span><span class="p">,</span>
-</span><span id="__span-0-1166"><a id="__codelineno-0-1166" name="__codelineno-0-1166"></a>    <span class="n">status_code</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-</span><span id="__span-0-1167"><a id="__codelineno-0-1167" name="__codelineno-0-1167"></a>    <span class="n">body</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-1168"><a id="__codelineno-0-1168" name="__codelineno-0-1168"></a>    <span class="n">headers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="__span-0-1169"><a id="__codelineno-0-1169" name="__codelineno-0-1169"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
-</span><span id="__span-0-1170"><a id="__codelineno-0-1170" name="__codelineno-0-1170"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValidationIssues</span><span class="p">:</span>
-</span><span id="__span-0-1171"><a id="__codelineno-0-1171" name="__codelineno-0-1171"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="__span-0-1172"><a id="__codelineno-0-1172" name="__codelineno-0-1172"></a><span class="sd">    Validates the **HTTP DELETE** responses returned from **resource object** endpoints.</span>
-</span><span id="__span-0-1173"><a id="__codelineno-0-1173" name="__codelineno-0-1173"></a>
-</span><span id="__span-0-1174"><a id="__codelineno-0-1174" name="__codelineno-0-1174"></a><span class="sd">    It only validates if provided `status_code` equals 204.</span>
+<span class="normal"><a href="#__codelineno-0-1186">1186</a></span></pre></div></td><td class="code"><div><pre><span></span><code><span id="__span-0-1157"><a id="__codelineno-0-1157" name="__codelineno-0-1157"></a><span class="k">def</span> <span class="nf">validate_response</span><span class="p">(</span>
+</span><span id="__span-0-1158"><a id="__codelineno-0-1158" name="__codelineno-0-1158"></a>    <span class="bp">self</span><span class="p">,</span>
+</span><span id="__span-0-1159"><a id="__codelineno-0-1159" name="__codelineno-0-1159"></a>    <span class="o">*</span><span class="p">,</span>
+</span><span id="__span-0-1160"><a id="__codelineno-0-1160" name="__codelineno-0-1160"></a>    <span class="n">status_code</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+</span><span id="__span-0-1161"><a id="__codelineno-0-1161" name="__codelineno-0-1161"></a>    <span class="n">body</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-1162"><a id="__codelineno-0-1162" name="__codelineno-0-1162"></a>    <span class="n">headers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-0-1163"><a id="__codelineno-0-1163" name="__codelineno-0-1163"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+</span><span id="__span-0-1164"><a id="__codelineno-0-1164" name="__codelineno-0-1164"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ValidationIssues</span><span class="p">:</span>
+</span><span id="__span-0-1165"><a id="__codelineno-0-1165" name="__codelineno-0-1165"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="__span-0-1166"><a id="__codelineno-0-1166" name="__codelineno-0-1166"></a><span class="sd">    Validates the **HTTP DELETE** responses returned from **resource object** endpoints.</span>
+</span><span id="__span-0-1167"><a id="__codelineno-0-1167" name="__codelineno-0-1167"></a>
+</span><span id="__span-0-1168"><a id="__codelineno-0-1168" name="__codelineno-0-1168"></a><span class="sd">    It only validates if provided `status_code` equals 204.</span>
+</span><span id="__span-0-1169"><a id="__codelineno-0-1169" name="__codelineno-0-1169"></a>
+</span><span id="__span-0-1170"><a id="__codelineno-0-1170" name="__codelineno-0-1170"></a><span class="sd">    Args:</span>
+</span><span id="__span-0-1171"><a id="__codelineno-0-1171" name="__codelineno-0-1171"></a><span class="sd">        status_code: Returned HTTP status code.</span>
+</span><span id="__span-0-1172"><a id="__codelineno-0-1172" name="__codelineno-0-1172"></a><span class="sd">        body: Not used.</span>
+</span><span id="__span-0-1173"><a id="__codelineno-0-1173" name="__codelineno-0-1173"></a><span class="sd">        headers: Not Used.</span>
+</span><span id="__span-0-1174"><a id="__codelineno-0-1174" name="__codelineno-0-1174"></a><span class="sd">        **kwargs: Not used.</span>
 </span><span id="__span-0-1175"><a id="__codelineno-0-1175" name="__codelineno-0-1175"></a>
-</span><span id="__span-0-1176"><a id="__codelineno-0-1176" name="__codelineno-0-1176"></a><span class="sd">    Args:</span>
-</span><span id="__span-0-1177"><a id="__codelineno-0-1177" name="__codelineno-0-1177"></a><span class="sd">        status_code: Returned HTTP status code.</span>
-</span><span id="__span-0-1178"><a id="__codelineno-0-1178" name="__codelineno-0-1178"></a><span class="sd">        body: Not used.</span>
-</span><span id="__span-0-1179"><a id="__codelineno-0-1179" name="__codelineno-0-1179"></a><span class="sd">        headers: Not Used.</span>
-</span><span id="__span-0-1180"><a id="__codelineno-0-1180" name="__codelineno-0-1180"></a><span class="sd">        **kwargs: Not used.</span>
-</span><span id="__span-0-1181"><a id="__codelineno-0-1181" name="__codelineno-0-1181"></a>
-</span><span id="__span-0-1182"><a id="__codelineno-0-1182" name="__codelineno-0-1182"></a><span class="sd">    Returns:</span>
-</span><span id="__span-0-1183"><a id="__codelineno-0-1183" name="__codelineno-0-1183"></a><span class="sd">        Validation issues.</span>
-</span><span id="__span-0-1184"><a id="__codelineno-0-1184" name="__codelineno-0-1184"></a><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="__span-0-1185"><a id="__codelineno-0-1185" name="__codelineno-0-1185"></a>    <span class="n">issues</span> <span class="o">=</span> <span class="n">ValidationIssues</span><span class="p">()</span>
-</span><span id="__span-0-1186"><a id="__codelineno-0-1186" name="__codelineno-0-1186"></a>    <span class="k">if</span> <span class="n">status_code</span> <span class="o">!=</span> <span class="mi">204</span><span class="p">:</span>
-</span><span id="__span-0-1187"><a id="__codelineno-0-1187" name="__codelineno-0-1187"></a>        <span class="n">issues</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
-</span><span id="__span-0-1188"><a id="__codelineno-0-1188" name="__codelineno-0-1188"></a>            <span class="n">issue</span><span class="o">=</span><span class="n">ValidationError</span><span class="o">.</span><span class="n">bad_status_code</span><span class="p">(</span><span class="mi">204</span><span class="p">),</span>
-</span><span id="__span-0-1189"><a id="__codelineno-0-1189" name="__codelineno-0-1189"></a>            <span class="n">proceed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="__span-0-1190"><a id="__codelineno-0-1190" name="__codelineno-0-1190"></a>            <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">],</span>
-</span><span id="__span-0-1191"><a id="__codelineno-0-1191" name="__codelineno-0-1191"></a>        <span class="p">)</span>
-</span><span id="__span-0-1192"><a id="__codelineno-0-1192" name="__codelineno-0-1192"></a>    <span class="k">return</span> <span class="n">issues</span>
+</span><span id="__span-0-1176"><a id="__codelineno-0-1176" name="__codelineno-0-1176"></a><span class="sd">    Returns:</span>
+</span><span id="__span-0-1177"><a id="__codelineno-0-1177" name="__codelineno-0-1177"></a><span class="sd">        Validation issues.</span>
+</span><span id="__span-0-1178"><a id="__codelineno-0-1178" name="__codelineno-0-1178"></a><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="__span-0-1179"><a id="__codelineno-0-1179" name="__codelineno-0-1179"></a>    <span class="n">issues</span> <span class="o">=</span> <span class="n">ValidationIssues</span><span class="p">()</span>
+</span><span id="__span-0-1180"><a id="__codelineno-0-1180" name="__codelineno-0-1180"></a>    <span class="k">if</span> <span class="n">status_code</span> <span class="o">!=</span> <span class="mi">204</span><span class="p">:</span>
+</span><span id="__span-0-1181"><a id="__codelineno-0-1181" name="__codelineno-0-1181"></a>        <span class="n">issues</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+</span><span id="__span-0-1182"><a id="__codelineno-0-1182" name="__codelineno-0-1182"></a>            <span class="n">issue</span><span class="o">=</span><span class="n">ValidationError</span><span class="o">.</span><span class="n">bad_status_code</span><span class="p">(</span><span class="mi">204</span><span class="p">),</span>
+</span><span id="__span-0-1183"><a id="__codelineno-0-1183" name="__codelineno-0-1183"></a>            <span class="n">proceed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-0-1184"><a id="__codelineno-0-1184" name="__codelineno-0-1184"></a>            <span class="n">location</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">],</span>
+</span><span id="__span-0-1185"><a id="__codelineno-0-1185" name="__codelineno-0-1185"></a>        <span class="p">)</span>
+</span><span id="__span-0-1186"><a id="__codelineno-0-1186" name="__codelineno-0-1186"></a>    <span class="k">return</span> <span class="n">issues</span>
 </span></code></pre></div></td></tr></table></div>
             </details>
     </div>

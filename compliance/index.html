@@ -329,6 +329,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/add/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Add
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api_reference/scimpler_data/attr_filter/" class="md-nav__link">
         
   
@@ -728,11 +749,74 @@
   
   
     <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/patch_operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PatchOperations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api_reference/scimpler_data/patch_path/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     PatchPath
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/remove/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Remove
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/replace/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Replace
   </span>
   
 
@@ -2851,7 +2935,7 @@ and <a href="https://www.rfc-editor.org/rfc/rfc7644">RFC7644</a> (sometimes reda
 it is supported by the packaged classes and functions.</p>
 <p><code>scimpler</code> provides almost stateless validation (it uses few in-memory registries for smooth usage),
 so it works best for syntax and part of semantics validation. Any behavior that spans on multiple
-SCIM operations (e.g., value uniqueness)m or requires to correlate requests with responses, is not
+SCIM operations (e.g., value uniqueness) or requires to correlate requests with responses, is not
 validated and should be ensured by you. </p>
 <p>The <img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /> symbol means that the desired behavior is validated / supported. The <img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /> symbol means the opposite. 
 No symbol means the statement is irrelevant or too abstract and can not be efficiently validated / supported.</p>
@@ -5055,22 +5139,22 @@ No symbol means the statement is irrelevant or too abstract and can not be effic
 <tr>
 <td>The body of each HTTP PATCH request <strong>MUST</strong> contain the <code>schemas</code> attribute with the URI value of <code>urn:ietf:params:scim:api:messages:2.0:PatchOp</code>.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>The body of an HTTP PATCH request <strong>MUST</strong> contain the attribute <code>Operations</code>, whose value is an array of one or more PATCH operations.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>Each PATCH operation object <strong>MUST</strong> have exactly one <code>op</code> member, whose value indicates the operation to perform and <strong>MAY</strong> be one of <code>add</code>, <code>remove</code>, or <code>replace</code>.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH operation, the <code>path</code> attribute value is a String containing an attribute path describing the target of the operation. The <code>path</code> attribute is OPTIONAL for <code>add</code> and <code>replace</code> and is REQUIRED for <code>remove</code> operations.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH operation, the <code>path</code> attribute is described by the ABNF syntax rule:<br><code>PATH = attrPath / valuePath [subAttr]</code></td>
@@ -5080,12 +5164,12 @@ No symbol means the statement is irrelevant or too abstract and can not be effic
 <tr>
 <td>Each PATCH operation against an attribute <strong>MUST</strong> be compatible with the attribute's mutability and schema. A client <strong>MUST NOT</strong> modify an attribute that has mutability <code>readOnly</code> or <code>immutable</code>. However, a client <strong>MAY</strong> <code>add</code> a value to an <code>immutable</code> attribute if the attribute had no previous value.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>An operation that is not compatible with an attribute's mutability or schema <strong>SHALL</strong> return the appropriate HTTP response status code and a JSON detail error response.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>For multi-valued attributes, a PATCH operation that sets a value's <code>primary</code> sub-attribute to <code>true</code> <strong>SHALL</strong> cause the server to automatically set <code>primary</code> to <code>false</code> for any other values in the array.</td>
@@ -5110,32 +5194,32 @@ No symbol means the statement is irrelevant or too abstract and can not be effic
 <tr>
 <td>The PATCH <code>add</code> operation <strong>MUST</strong> contain a <code>value</code> member whose content specifies the value to be added. The value <strong>MAY</strong> be a quoted value, or it may be a JSON object containing the sub-attributes of the complex attribute specified in the operation's <code>path</code>.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>If <code>path</code> in PATCH <code>add</code> is omitted, the target location is assumed to be the resource itself. The <code>value</code> parameter contains a set of attributes to be added to the resource.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>add</code> operation, if the target location does not exist, the attribute and value are added.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>add</code> operation, if the target location specifies a complex attribute, a set of sub-attributes <strong>SHALL</strong> be specified in the <code>value</code> parameter.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>add</code> operation, if the target location specifies a multi-valued attribute, a new value is added to the attribute.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>add</code> operation, if the target location specifies a single-valued attribute, the existing value is replaced.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>add</code> operation, if the target location already contains the value specified, no changes <strong>SHOULD</strong> be made to the resource, and a success response <strong>SHOULD</strong> be returned. Unless other operations change the resource, this operation <strong>SHALL NOT</strong> change the modify timestamp of the resource.</td>
@@ -5145,47 +5229,47 @@ No symbol means the statement is irrelevant or too abstract and can not be effic
 <tr>
 <td>In the PATCH <code>remove</code> operation, if <code>path</code> is unspecified, the operation fails with HTTP status code 400 and a <code>scimType</code> error code of <code>noTarget</code>.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>remove</code> operation, if the target location is a single-value attribute, the attribute and its associated value is removed, and the attribute <strong>SHALL</strong> be considered unassigned.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>remove</code> operation, if the target location is a multi-valued attribute and no filter is specified, the attribute and all values are removed, and the attribute <strong>SHALL</strong> be considered unassigned.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>remove</code> operation, if the target location is a multi-valued attribute and a complex filter is specified comparing a <code>value</code>, the values matched by the filter are removed. If no other values remain after removal of the selected values, the multi-valued attribute <strong>SHALL</strong> be considered unassigned.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>remove</code> operation, if the target location is a complex multi-valued attribute and a complex filter is specified based on the attribute's sub-attributes, the matching records are removed. Sub-attributes whose values have been removed <strong>SHALL</strong> be considered unassigned. If the complex multi-valued attribute has no remaining records, the attribute <strong>SHALL</strong> be considered unassigned.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>remove</code> operation, if an attribute is removed or becomes unassigned and is defined as a required attribute or a read-only attribute, the server <strong>SHALL</strong> return an HTTP response status code and a JSON detail error response, with a <code>scimType</code> error code of <code>mutability</code>.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>replace</code> operation, if the <code>path</code> parameter is omitted, the target is assumed to be the resource itself. In this case, the <code>value</code> attribute <strong>SHALL</strong> contain a list of one or more attributes that are to be replaced.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>replace</code> operation, if the target location specifies an attribute that does not exist, the service provider <strong>SHALL</strong> treat the operation as an <code>add</code>.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>replace</code> operation, if the target location specifies a complex attribute, a set of sub-attributes <strong>SHALL</strong> be specified in the <code>value</code> parameter, which replaces any existing values or adds where an attribute did not previously exist. Sub-attributes that are not specified in the <code>value</code> parameter are left unchanged.</td>
 <td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 <tr>
 <td>In the PATCH <code>replace</code> operation, if the target location is a multi-valued attribute and a value selection (<code>valuePath</code>) filter is specified that matches one or more values of the multi-valued attribute, then all matching record values <strong>SHALL</strong> be replaced.</td>
@@ -5200,7 +5284,7 @@ No symbol means the statement is irrelevant or too abstract and can not be effic
 <tr>
 <td>In the PATCH <code>replace</code> operation, if the target location is a multi-valued attribute for which a value selection filter (<code>valuePath</code>) has been supplied and no record match was made, the service provider <strong>SHALL</strong> indicate failure by returning HTTP status code 400 and a <code>scimType</code> error code of <code>noTarget</code>.</td>
 <td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
-<td style="text-align: center;"><img alt="❌" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/274c.svg" title=":x:" /></td>
+<td style="text-align: center;"><img alt="✔" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.0.3/assets/svg/2714.svg" title=":heavy_check_mark:" /></td>
 </tr>
 </tbody>
 </table>

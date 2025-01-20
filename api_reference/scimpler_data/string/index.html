@@ -335,6 +335,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../add/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Add
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../attr_filter/" class="md-nav__link">
         
   
@@ -734,11 +755,74 @@
   
   
     <li class="md-nav__item">
+      <a href="../patch_operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PatchOperations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../patch_path/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     PatchPath
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remove/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Remove
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../replace/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Replace
   </span>
   
 
@@ -2784,11 +2868,11 @@ comparing values. By default, <strong>OpaqueString</strong> profile is used</p>
               <p>
                   <span class="doc-param-annotation">
                     <b>TYPE:</b>
-                      <code><span title="precis_i18n.profile.Profile">Profile</span></code>
+                      <code>str</code>
                   </span>
                   <span class="doc-param-default">
                     <b>DEFAULT:</b>
-                      <code><span title="precis_i18n.get_profile">get_profile</span>(&#39;OpaqueString&#39;)</code>
+                      <code>&#39;OpaqueString&#39;</code>
                   </span>
               </p>
             </td>
@@ -2835,7 +2919,7 @@ comparing values. By default, <strong>OpaqueString</strong> profile is used</p>
 </span><span id="__span-0-633"><a id="__codelineno-0-633" name="__codelineno-0-633"></a>    <span class="bp">self</span><span class="p">,</span>
 </span><span id="__span-0-634"><a id="__codelineno-0-634" name="__codelineno-0-634"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="__span-0-635"><a id="__codelineno-0-635" name="__codelineno-0-635"></a>    <span class="o">*</span><span class="p">,</span>
-</span><span id="__span-0-636"><a id="__codelineno-0-636" name="__codelineno-0-636"></a>    <span class="n">precis</span><span class="p">:</span> <span class="n">precis_i18n</span><span class="o">.</span><span class="n">profile</span><span class="o">.</span><span class="n">Profile</span> <span class="o">=</span> <span class="n">get_profile</span><span class="p">(</span><span class="s2">&quot;OpaqueString&quot;</span><span class="p">),</span>
+</span><span id="__span-0-636"><a id="__codelineno-0-636" name="__codelineno-0-636"></a>    <span class="n">precis</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;OpaqueString&quot;</span><span class="p">,</span>
 </span><span id="__span-0-637"><a id="__codelineno-0-637" name="__codelineno-0-637"></a>    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
 </span><span id="__span-0-638"><a id="__codelineno-0-638" name="__codelineno-0-638"></a><span class="p">):</span>
 </span><span id="__span-0-639"><a id="__codelineno-0-639" name="__codelineno-0-639"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2846,7 +2930,7 @@ comparing values. By default, <strong>OpaqueString</strong> profile is used</p>
 </span><span id="__span-0-644"><a id="__codelineno-0-644" name="__codelineno-0-644"></a><span class="sd">        **kwargs: The same keyword arguments base classes receive.</span>
 </span><span id="__span-0-645"><a id="__codelineno-0-645" name="__codelineno-0-645"></a><span class="sd">    &quot;&quot;&quot;</span>
 </span><span id="__span-0-646"><a id="__codelineno-0-646" name="__codelineno-0-646"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="__span-0-647"><a id="__codelineno-0-647" name="__codelineno-0-647"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_precis</span> <span class="o">=</span> <span class="n">precis</span>
+</span><span id="__span-0-647"><a id="__codelineno-0-647" name="__codelineno-0-647"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_precis</span><span class="p">:</span> <span class="n">precis_i18n</span><span class="o">.</span><span class="n">profile</span><span class="o">.</span><span class="n">Profile</span> <span class="o">=</span> <span class="n">get_profile</span><span class="p">(</span><span class="n">precis</span><span class="p">)</span>
 </span></code></pre></div></td></tr></table></div>
                   </details>
 

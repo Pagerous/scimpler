@@ -16,7 +16,7 @@
         <link rel="prev" href="..">
       
       
-        <link rel="next" href="../api_reference/scimpler_data/attr_filter/">
+        <link rel="next" href="../api_reference/scimpler_data/add/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -346,6 +346,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#patching-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Patching resources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#integrations" class="md-nav__link">
     <span class="md-ellipsis">
       Integrations
@@ -446,6 +455,27 @@
             scimpler.data
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/add/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Add
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -853,11 +883,74 @@
   
   
     <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/patch_operations/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PatchOperations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api_reference/scimpler_data/patch_path/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     PatchPath
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/remove/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Remove
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/scimpler_data/replace/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Replace
   </span>
   
 
@@ -2445,6 +2538,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#patching-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Patching resources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#integrations" class="md-nav__link">
     <span class="md-ellipsis">
       Integrations
@@ -2503,6 +2605,7 @@ that any requirement specified by the protocol that requires <em>state</em> is n
 <a href="./#working-with-data">Working with data</a><br>
 <a href="./#filtering">Filtering</a><br>
 <a href="./#sorting">Sorting</a><br>
+<a href="./#patching-resources">Patching resources</a><br>
 <a href="./#request-and-response-validation">Request and response validation</a><br>
 <a href="./#integrations">Integrations</a></p>
 <h2 id="schema-definition">Schema definition</h2>
@@ -3114,21 +3217,89 @@ defined in SCIM protocol.</p>
 </span></code></pre></div></p>
 <p>The error handling and selection of correct error response must be done by the implementer.</p>
 <p>See <a href="../api_reference/scimpler_validator/bulk_operations/">API Reference</a> for more information.</p>
+<h2 id="patching-resources">Patching resources</h2>
+<p>In SCIM, the resources are patched via PATCH endpoints. <code>scimpler</code> provides <code>ResourceObjectPatch</code> (see above) that
+can handle the request data deserialization.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="kn">from</span> <span class="nn">scimpler</span> <span class="kn">import</span> <span class="n">query_string</span><span class="p">,</span> <span class="n">validator</span>
+</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="kn">from</span> <span class="nn">scimpler.data</span> <span class="kn">import</span> <span class="n">PatchOperations</span>
+</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="kn">from</span> <span class="nn">scimpler.schemas</span> <span class="kn">import</span> <span class="n">UserSchema</span>
+</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>
+</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a><span class="n">query_string_handler</span> <span class="o">=</span> <span class="n">query_string</span><span class="o">.</span><span class="n">ResourceObjectPatch</span><span class="p">()</span>
+</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a><span class="n">user_schema</span> <span class="o">=</span> <span class="n">UserSchema</span><span class="p">()</span>
+</span><span id="__span-33-7"><a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a><span class="n">val</span> <span class="o">=</span> <span class="n">validator</span><span class="o">.</span><span class="n">ResourceObjectPatch</span><span class="p">(</span><span class="n">resource_schema</span><span class="o">=</span><span class="n">user_schema</span><span class="p">)</span>
+</span><span id="__span-33-8"><a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a>
+</span><span id="__span-33-9"><a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a><span class="n">request_data</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-33-10"><a id="__codelineno-33-10" name="__codelineno-33-10" href="#__codelineno-33-10"></a>    <span class="s2">&quot;schemas&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;urn:ietf:params:scim:api:messages:2.0:PatchOp&quot;</span><span class="p">],</span>
+</span><span id="__span-33-11"><a id="__codelineno-33-11" name="__codelineno-33-11" href="#__codelineno-33-11"></a>    <span class="s2">&quot;Operations&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span id="__span-33-12"><a id="__codelineno-33-12" name="__codelineno-33-12" href="#__codelineno-33-12"></a>        <span class="p">{</span>
+</span><span id="__span-33-13"><a id="__codelineno-33-13" name="__codelineno-33-13" href="#__codelineno-33-13"></a>            <span class="s2">&quot;op&quot;</span><span class="p">:</span> <span class="s2">&quot;add&quot;</span><span class="p">,</span>
+</span><span id="__span-33-14"><a id="__codelineno-33-14" name="__codelineno-33-14" href="#__codelineno-33-14"></a>            <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;nickName&quot;</span><span class="p">,</span>
+</span><span id="__span-33-15"><a id="__codelineno-33-15" name="__codelineno-33-15" href="#__codelineno-33-15"></a>            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;Pagerous&quot;</span><span class="p">,</span>
+</span><span id="__span-33-16"><a id="__codelineno-33-16" name="__codelineno-33-16" href="#__codelineno-33-16"></a>        <span class="p">},</span>
+</span><span id="__span-33-17"><a id="__codelineno-33-17" name="__codelineno-33-17" href="#__codelineno-33-17"></a>        <span class="p">{</span>
+</span><span id="__span-33-18"><a id="__codelineno-33-18" name="__codelineno-33-18" href="#__codelineno-33-18"></a>            <span class="s2">&quot;op&quot;</span><span class="p">:</span> <span class="s2">&quot;replace&quot;</span><span class="p">,</span>
+</span><span id="__span-33-19"><a id="__codelineno-33-19" name="__codelineno-33-19" href="#__codelineno-33-19"></a>            <span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;emails[type eq &#39;home&#39;].value&quot;</span><span class="p">,</span>
+</span><span id="__span-33-20"><a id="__codelineno-33-20" name="__codelineno-33-20" href="#__codelineno-33-20"></a>            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;home@mail.com&quot;</span>
+</span><span id="__span-33-21"><a id="__codelineno-33-21" name="__codelineno-33-21" href="#__codelineno-33-21"></a>        <span class="p">},</span>
+</span><span id="__span-33-22"><a id="__codelineno-33-22" name="__codelineno-33-22" href="#__codelineno-33-22"></a>    <span class="p">]</span>
+</span><span id="__span-33-23"><a id="__codelineno-33-23" name="__codelineno-33-23" href="#__codelineno-33-23"></a><span class="p">}</span>
+</span><span id="__span-33-24"><a id="__codelineno-33-24" name="__codelineno-33-24" href="#__codelineno-33-24"></a>
+</span><span id="__span-33-25"><a id="__codelineno-33-25" name="__codelineno-33-25" href="#__codelineno-33-25"></a><span class="n">deserialized</span> <span class="o">=</span> <span class="n">val</span><span class="o">.</span><span class="n">request_schema</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">request_data</span><span class="p">)</span>
+</span><span id="__span-33-26"><a id="__codelineno-33-26" name="__codelineno-33-26" href="#__codelineno-33-26"></a><span class="n">operations</span><span class="p">:</span> <span class="n">PatchOperations</span> <span class="o">=</span> <span class="n">deserialized</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Operations&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The deserialized operations can be applied on any mapping:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="n">current_data</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>    <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;42&quot;</span><span class="p">,</span>
+</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>    <span class="s2">&quot;emails&quot;</span><span class="p">:</span> <span class="p">[</span>
+</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>        <span class="p">{</span>
+</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;work&quot;</span><span class="p">,</span>
+</span><span id="__span-34-6"><a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;work@mail.com&quot;</span>
+</span><span id="__span-34-7"><a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a>        <span class="p">},</span>
+</span><span id="__span-34-8"><a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>        <span class="p">{</span>
+</span><span id="__span-34-9"><a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a>            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;home&quot;</span><span class="p">,</span>
+</span><span id="__span-34-10"><a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a>            <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;private@mail.com&quot;</span><span class="p">,</span>
+</span><span id="__span-34-11"><a id="__codelineno-34-11" name="__codelineno-34-11" href="#__codelineno-34-11"></a>        <span class="p">}</span>
+</span><span id="__span-34-12"><a id="__codelineno-34-12" name="__codelineno-34-12" href="#__codelineno-34-12"></a>    <span class="p">]</span>
+</span><span id="__span-34-13"><a id="__codelineno-34-13" name="__codelineno-34-13" href="#__codelineno-34-13"></a><span class="p">}</span>
+</span><span id="__span-34-14"><a id="__codelineno-34-14" name="__codelineno-34-14" href="#__codelineno-34-14"></a>
+</span><span id="__span-34-15"><a id="__codelineno-34-15" name="__codelineno-34-15" href="#__codelineno-34-15"></a><span class="n">updated_data</span> <span class="o">=</span> <span class="n">operations</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">current_data</span><span class="p">,</span> <span class="n">user_schema</span><span class="p">)</span>
+</span></code></pre></div>
+<p>The result is:</p>
+<p><div class="language-text highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>{
+</span><span id="__span-35-2"><a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>    &quot;id&quot;: &quot;42&quot;,
+</span><span id="__span-35-3"><a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>    &quot;nickName&quot;: &quot;Pagerous&quot;,
+</span><span id="__span-35-4"><a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>    &quot;emails&quot;: [
+</span><span id="__span-35-5"><a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>        {
+</span><span id="__span-35-6"><a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>            &quot;type&quot;: &quot;work&quot;,
+</span><span id="__span-35-7"><a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>            &quot;value&quot;: &quot;work@mail.com&quot;
+</span><span id="__span-35-8"><a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>        },
+</span><span id="__span-35-9"><a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a>        {
+</span><span id="__span-35-10"><a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a>            &quot;type&quot;: &quot;home&quot;,
+</span><span id="__span-35-11"><a id="__codelineno-35-11" name="__codelineno-35-11" href="#__codelineno-35-11"></a>            &quot;value&quot;: &quot;home@mail.com&quot;,
+</span><span id="__span-35-12"><a id="__codelineno-35-12" name="__codelineno-35-12" href="#__codelineno-35-12"></a>        }
+</span><span id="__span-35-13"><a id="__codelineno-35-13" name="__codelineno-35-13" href="#__codelineno-35-13"></a>    ]
+</span><span id="__span-35-14"><a id="__codelineno-35-14" name="__codelineno-35-14" href="#__codelineno-35-14"></a>}
+</span></code></pre></div>
+All operations are applied at once. If you want to apply them one by one, it is possible too:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="n">updated_data</span> <span class="o">=</span> <span class="n">current_data</span>
+</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a><span class="k">for</span> <span class="n">operation</span> <span class="ow">in</span> <span class="n">operations</span><span class="p">:</span>
+</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>    <span class="n">updated_data</span> <span class="o">=</span> <span class="n">operation</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">updated_data</span><span class="p">,</span> <span class="n">user_schema</span><span class="p">,</span> <span class="n">check_mutability</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></code></pre></div>
 <h2 id="integrations">Integrations</h2>
 <h3 id="marshmallow">marshmallow</h3>
 <p><code>scimpler</code> can be integrated with <code>marshmallow</code> for request and response validation.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="kn">from</span> <span class="nn">scimpler</span> <span class="kn">import</span> <span class="n">validator</span>
-</span><span id="__span-33-2"><a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a><span class="kn">from</span> <span class="nn">scimpler.ext.marshmallow</span> <span class="kn">import</span> <span class="n">create_request_schema</span>
-</span><span id="__span-33-3"><a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a><span class="kn">from</span> <span class="nn">scimpler.schemas</span> <span class="kn">import</span> <span class="n">UserSchema</span>
-</span><span id="__span-33-4"><a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>
-</span><span id="__span-33-5"><a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a>
-</span><span id="__span-33-6"><a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a><span class="n">schema_cls</span> <span class="o">=</span> <span class="n">create_request_schema</span><span class="p">(</span>
-</span><span id="__span-33-7"><a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a>    <span class="n">validator</span><span class="o">.</span><span class="n">ResourceObjectPatch</span><span class="p">(</span><span class="n">resource_schema</span><span class="o">=</span><span class="n">UserSchema</span><span class="p">())</span>
-</span><span id="__span-33-8"><a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a><span class="p">)</span>
-</span><span id="__span-33-9"><a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a><span class="n">schema</span> <span class="o">=</span> <span class="n">schema_cls</span><span class="p">()</span>
-</span><span id="__span-33-10"><a id="__codelineno-33-10" name="__codelineno-33-10" href="#__codelineno-33-10"></a>
-</span><span id="__span-33-11"><a id="__codelineno-33-11" name="__codelineno-33-11" href="#__codelineno-33-11"></a><span class="n">schema</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
-</span><span id="__span-33-12"><a id="__codelineno-33-12" name="__codelineno-33-12" href="#__codelineno-33-12"></a><span class="n">schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="kn">from</span> <span class="nn">scimpler</span> <span class="kn">import</span> <span class="n">validator</span>
+</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a><span class="kn">from</span> <span class="nn">scimpler.ext.marshmallow</span> <span class="kn">import</span> <span class="n">create_request_schema</span>
+</span><span id="__span-37-3"><a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="kn">from</span> <span class="nn">scimpler.schemas</span> <span class="kn">import</span> <span class="n">UserSchema</span>
+</span><span id="__span-37-4"><a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a>
+</span><span id="__span-37-5"><a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a>
+</span><span id="__span-37-6"><a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a><span class="n">schema_cls</span> <span class="o">=</span> <span class="n">create_request_schema</span><span class="p">(</span>
+</span><span id="__span-37-7"><a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a>    <span class="n">validator</span><span class="o">.</span><span class="n">ResourceObjectPatch</span><span class="p">(</span><span class="n">resource_schema</span><span class="o">=</span><span class="n">UserSchema</span><span class="p">())</span>
+</span><span id="__span-37-8"><a id="__codelineno-37-8" name="__codelineno-37-8" href="#__codelineno-37-8"></a><span class="p">)</span>
+</span><span id="__span-37-9"><a id="__codelineno-37-9" name="__codelineno-37-9" href="#__codelineno-37-9"></a><span class="n">schema</span> <span class="o">=</span> <span class="n">schema_cls</span><span class="p">()</span>
+</span><span id="__span-37-10"><a id="__codelineno-37-10" name="__codelineno-37-10" href="#__codelineno-37-10"></a>
+</span><span id="__span-37-11"><a id="__codelineno-37-11" name="__codelineno-37-11" href="#__codelineno-37-11"></a><span class="n">schema</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+</span><span id="__span-37-12"><a id="__codelineno-37-12" name="__codelineno-37-12" href="#__codelineno-37-12"></a><span class="n">schema</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
 </span></code></pre></div>
 <p>Returned object is <code>marshmallow.Schema</code>, but internally the actual validation is done by
 original <code>scimpler</code> schemas.</p>
@@ -3136,19 +3307,19 @@ original <code>scimpler</code> schemas.</p>
 It is required to pass additional things needed for validation (status code, headers, 
 attribute value presence config, filter, sorter, etc.), because <code>validate</code>, <code>load</code>, and <code>dump</code> 
 do not allow to pass them directly.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="kn">from</span> <span class="nn">scimpler</span> <span class="kn">import</span> <span class="n">validator</span>
-</span><span id="__span-34-2"><a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a><span class="kn">from</span> <span class="nn">scimpler.ext.marshmallow</span> <span class="kn">import</span> <span class="n">create_response_schema</span><span class="p">,</span> <span class="n">ResponseContext</span>
-</span><span id="__span-34-3"><a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="kn">from</span> <span class="nn">scimpler.schemas</span> <span class="kn">import</span> <span class="n">ListResponseSchema</span><span class="p">,</span> <span class="n">UserSchema</span>
-</span><span id="__span-34-4"><a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>
-</span><span id="__span-34-5"><a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>
-</span><span id="__span-34-6"><a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a><span class="n">schema_cls</span> <span class="o">=</span> <span class="n">create_response_schema</span><span class="p">(</span>
-</span><span id="__span-34-7"><a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a>    <span class="n">validator</span><span class="o">.</span><span class="n">ListResponseSchema</span><span class="p">(</span><span class="n">resource_schema</span><span class="o">=</span><span class="n">UserSchema</span><span class="p">()),</span>
-</span><span id="__span-34-8"><a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>    <span class="n">context_provider</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">ResponseContext</span><span class="p">(</span>
-</span><span id="__span-34-9"><a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a>        <span class="n">status_code</span><span class="o">=</span><span class="n">get_status_code</span><span class="p">(),</span>
-</span><span id="__span-34-10"><a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a>        <span class="n">filter_</span><span class="o">=</span><span class="n">get_request_filter</span><span class="p">(),</span>
-</span><span id="__span-34-11"><a id="__codelineno-34-11" name="__codelineno-34-11" href="#__codelineno-34-11"></a>    <span class="p">)</span>
-</span><span id="__span-34-12"><a id="__codelineno-34-12" name="__codelineno-34-12" href="#__codelineno-34-12"></a><span class="p">)</span>
-</span><span id="__span-34-13"><a id="__codelineno-34-13" name="__codelineno-34-13" href="#__codelineno-34-13"></a><span class="n">schema</span> <span class="o">=</span> <span class="n">schema_cls</span><span class="p">()</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="kn">from</span> <span class="nn">scimpler</span> <span class="kn">import</span> <span class="n">validator</span>
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="kn">from</span> <span class="nn">scimpler.ext.marshmallow</span> <span class="kn">import</span> <span class="n">create_response_schema</span><span class="p">,</span> <span class="n">ResponseContext</span>
+</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a><span class="kn">from</span> <span class="nn">scimpler.schemas</span> <span class="kn">import</span> <span class="n">ListResponseSchema</span><span class="p">,</span> <span class="n">UserSchema</span>
+</span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a>
+</span><span id="__span-38-5"><a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a>
+</span><span id="__span-38-6"><a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a><span class="n">schema_cls</span> <span class="o">=</span> <span class="n">create_response_schema</span><span class="p">(</span>
+</span><span id="__span-38-7"><a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a>    <span class="n">validator</span><span class="o">.</span><span class="n">ListResponseSchema</span><span class="p">(</span><span class="n">resource_schema</span><span class="o">=</span><span class="n">UserSchema</span><span class="p">()),</span>
+</span><span id="__span-38-8"><a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a>    <span class="n">context_provider</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">ResponseContext</span><span class="p">(</span>
+</span><span id="__span-38-9"><a id="__codelineno-38-9" name="__codelineno-38-9" href="#__codelineno-38-9"></a>        <span class="n">status_code</span><span class="o">=</span><span class="n">get_status_code</span><span class="p">(),</span>
+</span><span id="__span-38-10"><a id="__codelineno-38-10" name="__codelineno-38-10" href="#__codelineno-38-10"></a>        <span class="n">filter_</span><span class="o">=</span><span class="n">get_request_filter</span><span class="p">(),</span>
+</span><span id="__span-38-11"><a id="__codelineno-38-11" name="__codelineno-38-11" href="#__codelineno-38-11"></a>    <span class="p">)</span>
+</span><span id="__span-38-12"><a id="__codelineno-38-12" name="__codelineno-38-12" href="#__codelineno-38-12"></a><span class="p">)</span>
+</span><span id="__span-38-13"><a id="__codelineno-38-13" name="__codelineno-38-13" href="#__codelineno-38-13"></a><span class="n">schema</span> <span class="o">=</span> <span class="n">schema_cls</span><span class="p">()</span>
 </span></code></pre></div>
 <p>All parameters required by the specific validator are listed in the corresponding <a href="../api_reference/scimpler_validator/resources_query/">API Reference</a>.</p>
 
