@@ -305,7 +305,7 @@ class BaseSchema(metaclass=SchemaMeta):
 
         issues = ValidationIssues()
         if attr.multi_valued and value:
-            for i, item in enumerate(value):
+            for _i, item in enumerate(value):
                 issues.merge(
                     self._validate_attr_value_presence(
                         attr=attr,
@@ -398,7 +398,7 @@ class BaseSchema(metaclass=SchemaMeta):
         )
 
     @staticmethod
-    def _get_inclusivity(
+    def _get_inclusivity(  # noqa: PLR0911
         attr: Attribute,
         attr_rep: BoundedAttrRep,
         presence_config: AttrValuePresenceConfig,
@@ -666,7 +666,7 @@ class ResourceSchema(BaseResourceSchema):
             "extension": extension,
             "required": required,
         }
-        for attr_rep, attr in extension.attrs:
+        for attr_rep, _attr in extension.attrs:
             if (
                 self.attrs.get(BoundedAttrRep(schema=self.schema, attr=attr_rep.attr)) is not None
                 or attr_rep.attr in self._common_attrs
@@ -677,6 +677,7 @@ class ResourceSchema(BaseResourceSchema):
                         f"attribute, which is also present in base {self.name!r} schema."
                     ),
                     category=ScimpleUserWarning,
+                    stacklevel=2,
                 )
         self._attrs.extend(
             schema=cast(SchemaUri, extension.schema),
@@ -702,7 +703,7 @@ class ResourceSchema(BaseResourceSchema):
     def _validate_schemas_field(self, data: ScimData) -> ValidationIssues:
         issues = super()._validate_schemas_field(data)
         provided_schemas = data.get("schemas")
-        for k, v in data.items():
+        for k, _v in data.items():
             possible_schema = SchemaUri(k)
             if possible_schema in self.schemas and possible_schema not in provided_schemas:
                 issues.add_error(

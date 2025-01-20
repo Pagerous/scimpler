@@ -471,7 +471,7 @@ class ValidationIssues:
         Merges provided validation `issues` under specified `location`, if specified, in the
         top-level otherwise.
         """
-        location = tuple(location or tuple())
+        location = tuple(location or ())
         for other_location, errors in issues._errors.items():
             new_location = location + other_location
             self._errors[new_location].extend(errors)
@@ -494,7 +494,7 @@ class ValidationIssues:
         validated against different conditions (`True`), or further validation should be terminated
         (`False`).
         """
-        location = tuple(location or tuple())
+        location = tuple(location or ())
         self._errors[location].append(issue)
         if not proceed:
             self._stop_proceeding[location].add(issue.code)
@@ -507,7 +507,7 @@ class ValidationIssues:
         """
         Adds a validation warning under specified `location`, if specified, in the top-level.
         """
-        location = tuple(location or tuple())
+        location = tuple(location or ())
         self._warnings[location].append(issue)
 
     def get(
@@ -520,7 +520,7 @@ class ValidationIssues:
         Retrieves validation issues for the specified `location`, or all of them if not specified.
         The returned issues can be filtered by `error_codes` and `warning_codes`.
         """
-        location = tuple(location or tuple())
+        location = tuple(location or ())
         copy = ValidationIssues()
         copy._errors = self._get_errors(error_codes, location)
         copy._warnings = self._get_warnings(warning_codes, location)
@@ -584,7 +584,7 @@ class ValidationIssues:
         Additionally, `error_codes` or `warning_codes` should be specified, otherwise nothing
         is popped.
         """
-        location = tuple(location or tuple())
+        location = tuple(location or ())
         popped = self.get(
             error_codes=error_codes or [],
             warning_codes=warning_codes or [],
@@ -626,7 +626,7 @@ class ValidationIssues:
         `proceed=True`, then `True` is returned.
         """
         if not locations:
-            locations = (tuple(),)
+            locations = ((),)
         for location in locations:
             location = tuple(location)
             for i in range(len(location) + 1):
@@ -640,7 +640,7 @@ class ValidationIssues:
         at least one of the `locations` have errors (regardless of type), `True` is returned.
         """
         if not locations:
-            locations = (tuple(),)
+            locations = ((),)
 
         for location in locations:
             for issue_location in self._errors:

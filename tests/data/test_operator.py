@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import pytest
-
 from scimpler.data.attrs import Attribute, Complex, DateTime, String
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.operator import (
@@ -25,7 +24,7 @@ from scimpler.data.scim_data import ScimData
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "attr_rep", "expected"),
-    (
+    [
         (1, 1, AttrRep(attr="int"), True),
         (1, 2, AttrRep(attr="int"), False),
         ("a", "a", AttrRep(attr="str_cs"), True),
@@ -94,7 +93,7 @@ from scimpler.data.scim_data import ScimData
             AttrRep(attr="scim_ref"),
             False,
         ),
-    ),
+    ],
 )
 def test_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = Equal(attr_rep, operator_value)
@@ -106,7 +105,7 @@ def test_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "attr_rep", "expected"),
-    (
+    [
         (1, 1, AttrRep(attr="int"), False),
         (1, 2, AttrRep(attr="int"), True),
         ("a", "a", AttrRep(attr="str_cs"), False),
@@ -175,7 +174,7 @@ def test_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
             AttrRep(attr="scim_ref"),
             True,
         ),
-    ),
+    ],
 )
 def test_not_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = NotEqual(attr_rep, operator_value)
@@ -187,7 +186,7 @@ def test_not_equal_operator(value, operator_value, attr_rep, expected, fake_sche
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "attr_rep", "expected"),
-    (
+    [
         (1, 1, AttrRep(attr="int"), False),
         (2, 1, AttrRep(attr="int"), True),
         ("a", "a", AttrRep(attr="str_cs"), False),
@@ -206,7 +205,7 @@ def test_not_equal_operator(value, operator_value, attr_rep, expected, fake_sche
         ),
         (3.14, 3.14, AttrRep(attr="decimal"), False),
         (3.141, 3.14, AttrRep(attr="decimal"), True),
-    ),
+    ],
 )
 def test_greater_than_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = GreaterThan(attr_rep, operator_value)
@@ -218,7 +217,7 @@ def test_greater_than_operator(value, operator_value, attr_rep, expected, fake_s
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "attr_rep", "expected"),
-    (
+    [
         (1, 2, AttrRep(attr="int"), False),
         (1, 1, AttrRep(attr="int"), True),
         (2, 1, AttrRep(attr="int"), True),
@@ -246,7 +245,7 @@ def test_greater_than_operator(value, operator_value, attr_rep, expected, fake_s
         (3.14, 3.141, AttrRep(attr="decimal"), False),
         (3.14, 3.14, AttrRep(attr="decimal"), True),
         (3.141, 3.14, AttrRep(attr="decimal"), True),
-    ),
+    ],
 )
 def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = GreaterThanOrEqual(attr_rep, operator_value)
@@ -258,7 +257,7 @@ def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expecte
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "attr_rep", "expected"),
-    (
+    [
         (1, 1, AttrRep(attr="int"), False),
         (1, 2, AttrRep(attr="int"), True),
         ("a", "a", AttrRep(attr="str_cs"), False),
@@ -277,7 +276,7 @@ def test_greater_than_or_equal_operator(value, operator_value, attr_rep, expecte
         ),
         (3.14, 3.14, AttrRep(attr="decimal"), False),
         (3.14, 3.141, AttrRep(attr="decimal"), True),
-    ),
+    ],
 )
 def test_lesser_than_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = LesserThan(attr_rep, operator_value)
@@ -289,7 +288,7 @@ def test_lesser_than_operator(value, operator_value, attr_rep, expected, fake_sc
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "attr_rep", "expected"),
-    (
+    [
         (1, 2, AttrRep(attr="int"), True),
         (1, 1, AttrRep(attr="int"), True),
         (2, 1, AttrRep(attr="int"), False),
@@ -317,7 +316,7 @@ def test_lesser_than_operator(value, operator_value, attr_rep, expected, fake_sc
         (3.14, 3.141, AttrRep(attr="decimal"), True),
         (3.14, 3.14, AttrRep(attr="decimal"), True),
         (3.141, 3.14, AttrRep(attr="decimal"), False),
-    ),
+    ],
 )
 def test_lesser_than_or_equal_operator(value, operator_value, attr_rep, expected, fake_schema):
     operator = LesserThanOrEqual(attr_rep, operator_value)
@@ -356,7 +355,7 @@ def test_binary_operator_does_not_match_if_not_supported_scim_type(fake_schema):
 
 @pytest.mark.parametrize(
     ("operator_cls", "expected"),
-    (
+    [
         (Contains, True),
         (EndsWith, True),
         (Equal, True),
@@ -366,7 +365,7 @@ def test_binary_operator_does_not_match_if_not_supported_scim_type(fake_schema):
         (LesserThanOrEqual, True),
         (NotEqual, False),
         (StartsWith, True),
-    ),
+    ],
 )
 def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expected, fake_schema):
     attr_rep = AttrRep(attr="str")
@@ -379,12 +378,12 @@ def test_case_insensitive_attributes_are_compared_correctly(operator_cls, expect
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "expected"),
-    (
+    [
         ("abc", "ab", True),
         ("abc", "bc", True),
         ("abc", "cd", False),
         ("ab", "abc", False),
-    ),
+    ],
 )
 def test_contains_operator(value, operator_value, expected, fake_schema):
     attr_rep = AttrRep(attr="str_cs")
@@ -397,13 +396,13 @@ def test_contains_operator(value, operator_value, expected, fake_schema):
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "expected"),
-    (
+    [
         ("abc", "ab", True),
         ("abc", "bc", False),
         ("abc", "cd", False),
         ("ab", "abc", False),
         ("ab", "", False),
-    ),
+    ],
 )
 def test_starts_with_operator(value, operator_value, expected, fake_schema):
     attr_rep = AttrRep(attr="str_cs")
@@ -416,13 +415,13 @@ def test_starts_with_operator(value, operator_value, expected, fake_schema):
 
 @pytest.mark.parametrize(
     ("value", "operator_value", "expected"),
-    (
+    [
         ("abc", "ab", False),
         ("abc", "bc", True),
         ("abc", "cd", False),
         ("ab", "abc", False),
         ("ab", "", False),
-    ),
+    ],
 )
 def test_ends_with_operator(value, operator_value, expected, fake_schema):
     attr_rep = AttrRep(attr="str_cs")
@@ -453,7 +452,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
 
 @pytest.mark.parametrize(
     ("value", "attr_rep", "expected"),
-    (
+    [
         ("", AttrRep(attr="str"), False),
         ("abc", AttrRep(attr="str"), True),
         (None, AttrRep(attr="bool"), False),
@@ -502,7 +501,7 @@ def test_multi_value_attribute_is_matched_if_one_of_case_insensitive_values_matc
             AttrRep(attr="c_mv"),
             True,
         ),
-    ),
+    ],
 )
 def test_present_operator(value, attr_rep, expected, fake_schema):
     operator = Present(attr_rep)
@@ -538,10 +537,10 @@ def test_complex_attribute_does_not_match_binary_operator_if_not_any_of_values_m
 
 @pytest.mark.parametrize(
     ("str_cs_value", "expected"),
-    (
+    [
         ("a", True),
         ("b", False),
-    ),
+    ],
 )
 def test_and_operator_matches(str_cs_value, expected, fake_schema):
     operator = And(
@@ -574,10 +573,10 @@ def test_and_operator_matches(str_cs_value, expected, fake_schema):
 
 @pytest.mark.parametrize(
     ("str_cs_value", "expected"),
-    (
+    [
         ("a", True),
         ("b", False),
-    ),
+    ],
 )
 def test_or_operator_matches(str_cs_value, expected, fake_schema):
     operator = Or(
@@ -697,7 +696,7 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(fa
 
 @pytest.mark.parametrize(
     ("value", "is_multivalued", "expected"),
-    (
+    [
         (
             ScimData({"str": "admin", "int": 19, "bool": False}),
             False,
@@ -726,7 +725,7 @@ def test_complex_attr_op_does_not_match_any_of_multi_valued_complex_sub_attrs(fa
             True,
             False,
         ),
-    ),
+    ],
 )
 def test_attribute_operator_matches_single_complex_sub_attr(
     value, is_multivalued, expected, fake_schema
@@ -843,7 +842,7 @@ def test_not_op_matches_if_no_data_for_pr_sub_op(fake_schema):
     assert match
 
 
-@pytest.mark.parametrize(("value", "expected"), ((1.0, True), (2.0, False)))
+@pytest.mark.parametrize(("value", "expected"), [(1.0, True), (2.0, False)])
 def test_binary_attributes_allows_to_compare_int_with_decimal(value, expected, fake_schema):
     attr_rep = AttrRep(attr="decimal")
     operator = Equal(attr_rep, 1)
@@ -853,7 +852,7 @@ def test_binary_attributes_allows_to_compare_int_with_decimal(value, expected, f
     assert bool(match) is expected
 
 
-@pytest.mark.parametrize(("value", "expected"), ((1, True), (2, False)))
+@pytest.mark.parametrize(("value", "expected"), [(1, True), (2, False)])
 def test_binary_attributes_allows_to_compare_decimal_with_int(value, expected, fake_schema):
     attr_rep = AttrRep(attr="int")
     operator = Equal(attr_rep, 1.0)

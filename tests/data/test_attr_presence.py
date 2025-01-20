@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data import BoundedAttrRep
 from scimpler.data.attr_value_presence import (
     AttrValuePresenceConfig,
@@ -102,7 +101,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
 
 @pytest.mark.parametrize(
     ("attr_rep", "presence_config", "expected"),
-    (
+    [
         (
             AttrRep(attr="userName"),
             AttrValuePresenceConfig(
@@ -232,7 +231,7 @@ def test_creating_presence_config_with_attr_reps_and_no_inclusiveness_specified_
             ),
             True,
         ),
-    ),
+    ],
 )
 def test_allowed(attr_rep, presence_config, expected):
     assert presence_config.allowed(attr_rep) == expected
@@ -240,7 +239,7 @@ def test_allowed(attr_rep, presence_config, expected):
 
 @pytest.mark.parametrize(
     ("data", "expected_attr_reps", "expected_include"),
-    (
+    [
         (
             {"attributes": ["userName", "name.formatted"]},
             [AttrRep("userName"), AttrRep("name", "formatted")],
@@ -264,7 +263,7 @@ def test_allowed(attr_rep, presence_config, expected):
             [AttrRep("userName"), AttrRep("name", "formatted")],
             True,
         ),
-    ),
+    ],
 )
 def test_attr_value_presence_config_can_be_created_from_data(
     data, expected_attr_reps, expected_include

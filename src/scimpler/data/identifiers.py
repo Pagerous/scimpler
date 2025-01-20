@@ -209,7 +209,7 @@ class BoundedAttrRep(AttrRep):
 
     @property
     def location(self) -> tuple[str, ...]:
-        return ((self._schema,) if self.extension else tuple()) + super().location
+        return ((self._schema,) if self.extension else ()) + super().location
 
 
 class AttrRepFactory:
@@ -266,7 +266,7 @@ class AttrRepFactory:
         try:
             return cls._deserialize(value)
         except Exception:
-            raise ValueError(f"{value!r} is not valid attribute representation")
+            raise ValueError(f"{value!r} is not valid attribute representation") from None
 
     @classmethod
     def _deserialize(cls, value: str) -> Union[AttrRep, BoundedAttrRep]:
@@ -282,7 +282,7 @@ class AttrRepFactory:
         if "." in attr:
             attr, sub_attr = attr.split(".")
         else:
-            attr, sub_attr = attr, None
+            sub_attr = None
         if schema:
             return BoundedAttrRep(
                 schema=schema,

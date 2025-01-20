@@ -139,10 +139,7 @@ class PatchOpSchema(BaseSchema):
                 proceed=True,
                 location=path_location,
             )
-        if (
-            parent_attr.mutability == AttributeMutability.READ_ONLY
-            or attr.mutability == AttributeMutability.READ_ONLY
-        ):
+        if AttributeMutability.READ_ONLY in (parent_attr.mutability, attr.mutability):
             issues.add_error(
                 issue=ValidationError.attribute_can_not_be_modified(),
                 proceed=True,
@@ -398,10 +395,7 @@ class PatchOpSchema(BaseSchema):
         if not isinstance(path, (str, PatchPath)):
             return self._resource_schema
 
-        if isinstance(path, str):
-            path_normalized = PatchPath.deserialize(path)
-        else:
-            path_normalized = path
+        path_normalized = PatchPath.deserialize(path) if isinstance(path, str) else path
 
         attr = self._resource_schema.attrs.get_by_path(path_normalized)
         if attr is None:

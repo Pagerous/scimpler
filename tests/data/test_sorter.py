@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data.attrs import ScimReference, String
 from scimpler.data.identifiers import AttrRep
 from scimpler.data.scim_data import ScimData

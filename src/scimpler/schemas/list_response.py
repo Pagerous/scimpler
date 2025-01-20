@@ -123,7 +123,7 @@ class ListResponseSchema(BaseSchema):
             return []
         schemas = self.get_schemas(resources)
         serialized_resources: list[dict[str, Any]] = []
-        for i, (resource, schema) in enumerate(zip(resources, schemas)):
+        for resource, schema in zip(resources, schemas):
             if schema is None:
                 serialized_resources.append({})
             else:

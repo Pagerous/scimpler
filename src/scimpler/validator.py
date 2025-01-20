@@ -582,7 +582,7 @@ def _validate_resources_sorted(
     resource_presence_config: AttrValuePresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    for resource, resource_schema in zip(resources, resource_schemas):
+    for _resource, resource_schema in zip(resources, resource_schemas):
         if not can_validate_sorting(sorter, resource_presence_config, resource_schema):
             return issues
 
@@ -675,7 +675,7 @@ def _validate_resources_filtered(
     resource_presence_config: AttrValuePresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    for resource, resource_schema in zip(resources, resource_schemas):
+    for resource_schema in resource_schemas:
         if not can_validate_filtering(filter_, resource_presence_config, resource_schema):
             return issues
 
@@ -722,13 +722,12 @@ def _validate_resources_get_response(
         location=("status",),
     )
     start_index_body = body.get(start_index_rep)
-    if start_index_body is not Invalid:
-        if start_index_body and start_index_body > start_index:
-            issues.add_error(
-                issue=ValidationError.bad_value_content(),
-                proceed=True,
-                location=start_index_location,
-            )
+    if start_index_body is not Invalid and start_index_body and start_index_body > start_index:
+        issues.add_error(
+            issue=ValidationError.bad_value_content(),
+            proceed=True,
+            location=start_index_location,
+        )
 
     resources = body.get(schema.attrs.resources)
     if resources is Invalid:
@@ -1328,10 +1327,7 @@ class BulkOperations(Validator):
         for i, (path, data_item, method) in enumerate(zip(paths, data, methods)):
             if not all([path, data_item, method]) or method == "DELETE":
                 continue
-            if method == "POST":
-                resource_type_endpoint = path
-            else:
-                resource_type_endpoint = f"/{path.split('/', 2)[1]}"
+            resource_type_endpoint = path if method == "POST" else f"/{path.split('/', 2)[1]}"
             validator = cast(Validator, self._validators[method].get(resource_type_endpoint))
             issues_ = validator.validate_request(body=data_item)
             data_item_location = body_location + (data_rep.attr, i, data_rep.sub_attr)

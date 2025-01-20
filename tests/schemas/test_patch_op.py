@@ -1,5 +1,4 @@
 import pytest
-
 from scimpler.data.attr_value_presence import AttrValuePresenceConfig
 from scimpler.data.attrs import AttributeMutability, String
 from scimpler.data.filter import Filter
@@ -13,7 +12,7 @@ from scimpler.schemas.patch_op import PatchOpSchema
 
 @pytest.mark.parametrize(
     ("value", "expected_issues"),
-    (
+    [
         (
             [
                 ScimData({"op": "add", "path": "userName", "value": "bjensen"}),
@@ -35,7 +34,7 @@ from scimpler.schemas.patch_op import PatchOpSchema
             ],
             {"1": {"value": {"_errors": [{"code": 5}]}}},
         ),
-    ),
+    ],
 )
 def test_validate_patch_operations(value, expected_issues, user_schema):
     issues = PatchOpSchema(user_schema).attrs.get("operations").validate(value)
@@ -43,7 +42,7 @@ def test_validate_patch_operations(value, expected_issues, user_schema):
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(
     op, user_client_schema
 ):
@@ -90,7 +89,7 @@ def test_patch_op__add_and_replace_operation_without_path_can_be_deserialized(
     assert actual_data["Operations"][0].value == expected_operation_value
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_data(op, user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
     input_data = {
@@ -134,7 +133,7 @@ def test_validate_add_and_replace_operation_without_path__fails_for_incorrect_da
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_readonly(
     op, user_schema
 ):
@@ -163,10 +162,10 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 @pytest.mark.parametrize(
     ("path", "input_value", "expected_value", "expected_value_issues"),
-    (
+    [
         (
             "userName",
             123,
@@ -215,7 +214,7 @@ def test_validate_add_and_replace_operation_without_path__fails_if_attribute_is_
             Invalid,
             {"_errors": [{"code": 2}]},
         ),
-    ),
+    ],
 )
 def test_validate_add_and_replace_operation__fails_for_incorrect_data(
     op, path, input_value, expected_value, expected_value_issues, user_schema
@@ -238,10 +237,10 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 @pytest.mark.parametrize(
     ("path", "expected_path", "value", "expected_value"),
-    (
+    [
         (
             "userName",
             PatchPath(
@@ -318,7 +317,7 @@ def test_validate_add_and_replace_operation__fails_for_incorrect_data(
             {"value": "work@example.com"},
             {"value": "work@example.com"},
         ),
-    ),
+    ],
 )
 def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
     op, path, expected_path, value, expected_value, user_schema
@@ -343,10 +342,10 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
     assert actual_data.get("Operations")[0].path == expected_path
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 @pytest.mark.parametrize(
     ("path", "value"),
-    (
+    [
         ("id", "123"),
         (
             "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
@@ -355,7 +354,7 @@ def test_deserialize_add_and_replace_operation__succeeds_on_correct_data(
         ("meta", {"resourceType": "Users"}),
         ("groups", [{"type": "direct", "value": "admins"}]),
         ('groups[type eq "direct"].value', "admins"),
-    ),
+    ],
 )
 def test_add_operation__fails_if_attribute_is_readonly(op, path, value, user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
@@ -378,13 +377,13 @@ def test_add_operation__fails_if_attribute_is_readonly(op, path, value, user_sch
 
 @pytest.mark.parametrize(
     "path",
-    (
+    [
         "name",
         "urn:ietf:params:scim:schemas:core:2.0:User:name.formatted",
         "emails",
         "emails[type eq 'work']",
         "emails[type eq 'work'].value",
-    ),
+    ],
 )
 def test_remove_operation__succeeds_if_correct_path(path, user_schema):
     schema = PatchOpSchema(resource_schema=user_schema)
@@ -431,7 +430,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
 
 @pytest.mark.parametrize(
     ("path", "expected_path_issue_codes", "schema"),
-    (
+    [
         ("id", [{"code": 29}, {"code": 30}], "user_schema"),
         ("userName", [{"code": 30}], "user_schema"),
         (
@@ -443,7 +442,7 @@ def test_remove_operation__path_can_point_at_item_of_simple_multivalued_attribut
         ("groups", [{"code": 29}], "user_schema"),
         ('groups[type eq "direct"].value', [{"code": 29}], "user_schema"),
         ("c2_mv[int eq 1].bool", [{"code": 30}], "fake_schema"),
-    ),
+    ],
     indirect=["schema"],
 )
 def test_remove_operation__fails_if_attribute_is_readonly_or_required(
@@ -615,7 +614,7 @@ def test_operation_value_is_validated_against_mutability_for_sub_attribute_in_ex
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_items(
     op, fake_schema
 ):
@@ -651,7 +650,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_complex_attr(
     op, fake_schema
 ):
@@ -691,7 +690,7 @@ def test_required_sub_attrs_are_checked_when_adding_or_replacing_multivalued_com
     assert issues.to_dict() == expected_issues
 
 
-@pytest.mark.parametrize("op", ("add", "replace"))
+@pytest.mark.parametrize("op", ["add", "replace"])
 def test_required_sub_attrs_are_checked_when_adding_or_replacing_complex_attr(op, fake_schema):
     schema = PatchOpSchema(fake_schema)
 

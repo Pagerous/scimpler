@@ -2,7 +2,6 @@ import base64
 from datetime import datetime
 
 import pytest
-
 from scimpler.data.attrs import (
     AttrFilter,
     AttributeMutability,
@@ -140,7 +139,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
         "expected_attr",
         "expected_sub_attr",
     ),
-    (
+    [
         ("userName", AttrRep, "", "userName", None),
         ("name.firstName", AttrRep, "", "name", "firstName"),
         (
@@ -159,7 +158,7 @@ def test_multivalued_complex_attribute_sub_attributes_are_validated_separately()
         ),
         ("weirdo-$", AttrRep, "", "weirdo-$", None),
         ("attr.weirdo-$", AttrRep, "", "attr", "weirdo-$"),
-    ),
+    ],
 )
 def test_attribute_identifier_is_deserialized(
     input_, attr_rep_type, expected_schema, expected_attr, expected_sub_attr
@@ -181,7 +180,7 @@ def test_attribute_identifier_is_deserialized(
 
 @pytest.mark.parametrize(
     "input_",
-    (
+    [
         "attr_1.sub_attr_1.sub_attr_2",
         "",
         "attr with spaces",
@@ -189,13 +188,13 @@ def test_attribute_identifier_is_deserialized(
         "(attr_with_parenthesis)",
         "urn:ietf:params:scim:schemas:core:2.0:User:name.firstName.blahblah",
         "non:existing:schema:blahblah",
-    ),
+    ],
 )
 def test_attribute_identifier_is_not_deserialized_when_bad_input(input_):
     issues = AttrRepFactory.validate(input_)
     assert issues.to_dict() == {"_errors": [{"code": 17}]}
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="not valid attribute representation"):
         AttrRepFactory.deserialize(input_)
 
 
@@ -247,7 +246,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
 
 @pytest.mark.parametrize(
     ("input_value", "attr", "expected_issues"),
-    (
+    [
         (
             1.0,
             Integer("int"),
@@ -426,7 +425,7 @@ def test_validation_returns_warning_in_not_one_of_canonical_values__multivalued(
                 ]
             },
         ),
-    ),
+    ],
 )
 def test_validate_bad_type(input_value, attr, expected_issues):
     issues = attr.validate(input_value)
@@ -436,7 +435,7 @@ def test_validate_bad_type(input_value, attr, expected_issues):
 
 @pytest.mark.parametrize(
     ("input_value", "attr"),
-    (
+    [
         (
             "123",
             String("str"),
@@ -470,15 +469,15 @@ def test_validate_bad_type(input_value, attr, expected_issues):
             ExternalReference("external"),
         ),
         (
-            base64.b64encode("blahblah".encode()).decode("utf-8"),
+            base64.b64encode(b"blahblah").decode("utf-8"),
             Binary("binary"),
         ),
         (
-            base64.b64encode("blahblah".encode()).decode("utf-8"),
+            base64.b64encode(b"blahblah").decode("utf-8"),
             Binary("binary", url_safe=True),
         ),
         (
-            base64.b64encode("blahblah".encode()).decode("utf-8")[:-1],
+            base64.b64encode(b"blahblah").decode("utf-8")[:-1],
             Binary("binary", omit_padding=True),
         ),
         (
@@ -489,7 +488,7 @@ def test_validate_bad_type(input_value, attr, expected_issues):
             ScimData({"sub_attr_1": 1, "sub_attr_2": "2"}),
             Complex("complex", sub_attributes=[]),
         ),
-    ),
+    ],
 )
 def test_validate_correct_type(input_value, attr):
     issues = attr.validate(input_value)
@@ -761,7 +760,7 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
 
 @pytest.mark.parametrize(
     ("input_", "expected"),
-    (
+    [
         (
             "id",
             (
@@ -800,7 +799,7 @@ def test_attribute_global_serializer_is_not_used_if_attr_serializer_changed_type
                 "displayName",
             ),
         ),
-    ),
+    ],
 )
 def test_attr_rep_can_be_retrieved_from_bounded_attr_reps(input_, expected, user_schema):
     assert getattr(user_schema.attrs, input_, None) == BoundedAttrRep(*expected)
@@ -808,7 +807,7 @@ def test_attr_rep_can_be_retrieved_from_bounded_attr_reps(input_, expected, user
 
 @pytest.mark.parametrize(
     "input_",
-    (
+    [
         "id",
         "urn:ietf:params:scim:schemas:core:2.0:User:id",
         "name",
@@ -823,7 +822,7 @@ def test_attr_rep_can_be_retrieved_from_bounded_attr_reps(input_, expected, user
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager",
         "manager.displayName",
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:manager.displayName",
-    ),
+    ],
 )
 def test_attr_can_be_retrieved_from_bounded_attr_reps(input_, user_schema):
     assert user_schema.attrs.get(input_) is not None
@@ -831,13 +830,13 @@ def test_attr_can_be_retrieved_from_bounded_attr_reps(input_, user_schema):
 
 @pytest.mark.parametrize(
     "input_",
-    (
+    [
         "non_existing",
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:id",
         "userName.nonExisting",
         "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:nonExisting",
         "urn:ietf:params:scim:schemas:core:2.0:User:manager",
-    ),
+    ],
 )
 def test_attr_is_not_retrieved_if_bad_input(input_, user_schema):
     assert user_schema.attrs.get(input_) is None
@@ -858,7 +857,7 @@ def test_bounded_attr_rep_is_hashable():
 
 
 def test_creating_attr_filter_with_attr_names_and_without_include_fails():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="'include' must be specified"):
         AttrFilter(attr_reps=["name.formatted"])
 
 

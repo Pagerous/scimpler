@@ -3,7 +3,6 @@ from datetime import datetime
 
 import marshmallow
 import pytest
-
 import scimpler.data
 import scimpler.ext.marshmallow
 from scimpler.data import Integer, PatchOperations, ResourceSchema, SchemaExtension

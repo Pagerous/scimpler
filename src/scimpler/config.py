@@ -93,5 +93,5 @@ def set_service_provider_config(config: ServiceProviderConfig) -> None:
     """
     Sets global service provider configuration.
     """
-    global service_provider_config
+    global service_provider_config  # noqa: PLW0603
     service_provider_config = config

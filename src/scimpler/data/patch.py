@@ -159,7 +159,7 @@ class PatchPath:
         try:
             return cls._deserialize(path_exp)
         except Exception:
-            raise ValueError("invalid path expression")
+            raise ValueError("invalid path expression") from None
 
     @classmethod
     def _deserialize(cls, path_exp: str) -> "PatchPath":
@@ -344,10 +344,7 @@ class PatchOperation(abc.ABC):
             Updated data.
         """
         data = ScimData(data)
-        if check_mutability:
-            old_data = cast(ScimData, deepcopy(ScimData(data)))
-        else:
-            old_data = ScimData()
+        old_data = cast(ScimData, deepcopy(ScimData(data))) if check_mutability else ScimData()
 
         self._apply(data, schema)
 
@@ -989,7 +986,8 @@ class PatchOperations:
     @classmethod
     def validate(cls, data: Iterable[Mapping]) -> ValidationIssues:
         """
-        Validates the provided data against the requirements for the patch operations, as specified in RFC-7644.
+        Validates the provided data against the requirements for the patch operations,
+        as specified in RFC-7644.
 
         Args:
             data: Patch operations data to validate.

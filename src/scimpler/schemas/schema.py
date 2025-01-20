@@ -43,7 +43,7 @@ def validate_attributes(value: list[ScimData]) -> ValidationIssues:
 
 def process_attributes(value: list[ScimData]) -> list[ScimData]:
     serialized = []
-    for i, item in enumerate(value):
+    for _i, item in enumerate(value):
         attr_type = item.get("type")
         sub_attributes = item.get("subAttributes")
         if sub_attributes not in [Missing, None]:

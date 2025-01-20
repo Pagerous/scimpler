@@ -2,7 +2,6 @@ from copy import deepcopy
 from typing import Generator
 
 import pytest
-
 from scimpler._registry import register_resource_schema, resources, schemas
 from scimpler.data import create_from_rep
 from scimpler.data.attr_value_presence import AttrValuePresenceConfig
