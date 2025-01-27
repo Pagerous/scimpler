@@ -1,1 +1,1 @@
-::: scimpler.query_string.ResourceObjectGet
+::: scimpler.query_string.ResourceGet

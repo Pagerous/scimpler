@@ -1,1 +1,1 @@
-::: scimpler.validator.ResourceObjectGet
+::: scimpler.validator.ResourceGet

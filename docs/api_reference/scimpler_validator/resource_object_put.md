@@ -1,1 +1,1 @@
-::: scimpler.validator.ResourceObjectPut
+::: scimpler.validator.ResourcePut

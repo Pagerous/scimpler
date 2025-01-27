@@ -101,21 +101,21 @@ class ResourcesPost(GenericQueryStringHandler):
     """
 
 
-class ResourceObjectGet(GenericQueryStringHandler):
+class ResourceGet(GenericQueryStringHandler):
     """
     Handles query-string parameters sent with **HTTP GET** operations performed against
     **resource object** endpoints.
     """
 
 
-class ResourceObjectPut(GenericQueryStringHandler):
+class ResourcePut(GenericQueryStringHandler):
     """
     Handles query-string parameters sent with **HTTP PUT** operations performed against
     **resource object** endpoints.
     """
 
 
-class ResourceObjectPatch(GenericQueryStringHandler):
+class ResourcePatch(GenericQueryStringHandler):
     """
     Handles query-string parameters sent with **HTTP PUT** operations performed against
     **resource object** endpoints.

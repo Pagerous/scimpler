@@ -17,8 +17,8 @@ from scimpler.ext.marshmallow import (
 )
 from scimpler.validator import (
     BulkOperations,
-    ResourceObjectGet,
-    ResourceObjectPatch,
+    ResourceGet,
+    ResourcePatch,
     ResourcesQuery,
     SearchRequestPost,
 )
@@ -229,7 +229,7 @@ def user_patch_deserialized(user_patch_serialized: dict):
 
 def test_user_response_can_be_dumped(user_deserialized, user_data_server, user_schema):
     initialize()
-    validator = ResourceObjectGet(resource_schema=user_schema)
+    validator = ResourceGet(resource_schema=user_schema)
     schema_cls = create_response_schema(validator)
 
     dumped = schema_cls().dump(user_deserialized)
@@ -239,7 +239,7 @@ def test_user_response_can_be_dumped(user_deserialized, user_data_server, user_s
 
 def test_user_response_can_be_loaded(user_deserialized, user_data_server, user_schema):
     initialize()
-    validator = ResourceObjectGet(resource_schema=user_schema)
+    validator = ResourceGet(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -254,7 +254,7 @@ def test_attr_names_are_case_insensitive_when_loading_data(
     user_deserialized, user_data_server, user_schema
 ):
     initialize()
-    validator = ResourceObjectGet(resource_schema=user_schema)
+    validator = ResourceGet(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -270,7 +270,7 @@ def test_attr_names_are_case_insensitive_when_loading_data(
 def test_user_response_loading_fails_if_validation_error(user_data_server, user_schema):
     initialize()
     user_data_server["id"] = 123
-    validator = ResourceObjectGet(resource_schema=user_schema)
+    validator = ResourceGet(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -283,7 +283,7 @@ def test_user_response_loading_fails_if_validation_error(user_data_server, user_
 def test_user_response_can_be_validated(user_data_server, user_schema):
     initialize()
     user_data_server["id"] = 123
-    validator = ResourceObjectGet(resource_schema=user_schema)
+    validator = ResourceGet(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),
@@ -310,7 +310,7 @@ def test_response_with_extension_that_have_uri_without_dots_can_be_loaded():
 
     nice = NiceResource()
     nice.extend(NiceExtension(), required=False)
-    validator = ResourceObjectGet(resource_schema=nice)
+    validator = ResourceGet(resource_schema=nice)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": 'W/"3694e05e9dff591"'}),
@@ -600,7 +600,7 @@ def test_resource_patch_request_can_be_dumped(
     user_patch_serialized, user_patch_deserialized, user_schema
 ):
     initialize()
-    validator = ResourceObjectPatch(resource_schema=user_schema)
+    validator = ResourcePatch(resource_schema=user_schema)
     schema_cls = create_request_schema(validator)
 
     dumped = schema_cls().dump(user_patch_deserialized)
@@ -612,7 +612,7 @@ def test_resource_patch_request_can_be_loaded(
     user_patch_serialized, user_patch_deserialized, user_schema
 ):
     initialize()
-    validator = ResourceObjectPatch(resource_schema=user_schema)
+    validator = ResourcePatch(resource_schema=user_schema)
     schema_cls = create_request_schema(validator)
 
     loaded = schema_cls().load(user_patch_serialized)
@@ -623,7 +623,7 @@ def test_resource_patch_request_can_be_loaded(
 
 def test_resource_patch_request_can_be_validated(user_patch_serialized, user_schema):
     initialize()
-    validator = ResourceObjectPatch(resource_schema=user_schema)
+    validator = ResourcePatch(resource_schema=user_schema)
     schema_cls = create_request_schema(validator)
     user_patch_serialized["Operations"][0]["value"]["displayName"] = "John Doe"
     user_patch_serialized["Operations"][1]["path"] = "bad^attr"
@@ -718,7 +718,7 @@ def test_search_request_can_be_loaded(
 
 
 def test_initializing_after_creating_schema_fails(user_schema):
-    validator = ResourceObjectGet(resource_schema=user_schema)
+    validator = ResourceGet(resource_schema=user_schema)
 
     create_response_schema(validator)
 
@@ -738,7 +738,7 @@ def test_custom_field_converter_can_be_specified_during_initialization(
     user_deserialized, user_data_server, user_schema
 ):
     initialize({scimpler.data.DateTime: marshmallow.fields.String})
-    validator = ResourceObjectGet(resource_schema=user_schema)
+    validator = ResourceGet(resource_schema=user_schema)
     schema_cls = create_response_schema(
         validator,
         lambda: ResponseContext(status_code=200, headers={"ETag": r'W/"3694e05e9dff591"'}),

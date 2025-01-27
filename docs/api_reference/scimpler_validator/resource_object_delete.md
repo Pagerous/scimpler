@@ -1,1 +1,1 @@
-::: scimpler.validator.ResourceObjectDelete
+::: scimpler.validator.ResourceDelete

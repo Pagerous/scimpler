@@ -17,10 +17,10 @@ from scimpler.schemas.schema import SchemaDefinitionSchema
 from scimpler.validator import (
     BulkOperations,
     Error,
-    ResourceObjectDelete,
-    ResourceObjectGet,
-    ResourceObjectPatch,
-    ResourceObjectPut,
+    ResourceDelete,
+    ResourceGet,
+    ResourcePatch,
+    ResourcePut,
     ResourcesPost,
     ResourcesQuery,
     SearchRequestPost,
@@ -549,7 +549,7 @@ def test_error_data_can_be_serialized(error_data):
 
 
 def test_correct_resource_object_get_response_passes_validation(user_data_server, user_schema):
-    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
+    validator = ResourceGet(CONFIG, resource_schema=user_schema)
     user_data_server.pop("name")
 
     issues = validator.validate_response(
@@ -572,7 +572,7 @@ def test_correct_resource_object_get_response_passes_validation(user_data_server
 def test_validation_failure_on_missing_etag_header_when_etag_supported(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
+    validator = ResourceGet(CONFIG, resource_schema=user_schema)
     expected_issues = {"headers": {"ETag": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
@@ -589,7 +589,7 @@ def test_validation_failure_on_missing_etag_header_when_etag_supported(
 def test_validation_failure_on_missing_meta_version_when_etag_supported(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
+    validator = ResourceGet(CONFIG, resource_schema=user_schema)
     user_data_server["meta"].pop("version")
     expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 5}]}}}}
 
@@ -612,7 +612,7 @@ def test_validation_failure_on_etag_and_meta_version_mismatch(
     config = deepcopy(CONFIG)
     config.etag.supported = etag_supported
 
-    validator = ResourceObjectGet(config, resource_schema=user_schema)
+    validator = ResourceGet(config, resource_schema=user_schema)
     expected_issues = {
         "body": {"meta": {"version": {"_errors": [{"code": 8}]}}},
         "headers": {"ETag": {"_errors": [{"code": 8}]}},
@@ -635,7 +635,7 @@ def test_response_is_validated_without_tag_and_version_if_etag_not_supported(
 ):
     config = deepcopy(CONFIG)
     config.etag.supported = False
-    validator = ResourceObjectGet(config, resource_schema=user_schema)
+    validator = ResourceGet(config, resource_schema=user_schema)
     user_data_server["meta"].pop("version")
 
     issues = validator.validate_response(
@@ -650,7 +650,7 @@ def test_response_is_validated_without_tag_and_version_if_etag_not_supported(
 
 
 def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server, user_schema):
-    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
+    validator = ResourceGet(CONFIG, resource_schema=user_schema)
     user_data_server["meta"]["version"] = 123
     expected_issues = {"body": {"meta": {"version": {"_errors": [{"code": 2}]}}}}
 
@@ -667,7 +667,7 @@ def test_etag_and_version_are_not_compared_if_bad_version_value(user_data_server
 
 
 def test_request_schema_in_resource_object_get_request_data_is_not_supported(user_schema):
-    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
+    validator = ResourceGet(CONFIG, resource_schema=user_schema)
 
     with pytest.raises(NotImplementedError):
         print(validator.request_schema)
@@ -675,7 +675,7 @@ def test_request_schema_in_resource_object_get_request_data_is_not_supported(use
 
 def test_data_for_resource_object_get_response_can_be_serialized(user_data_server, user_schema):
     user_data_server["password"] = "1234"
-    validator = ResourceObjectGet(CONFIG, resource_schema=user_schema)
+    validator = ResourceGet(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -683,7 +683,7 @@ def test_data_for_resource_object_get_response_can_be_serialized(user_data_serve
 
 
 def test_service_object_resource_get_request_is_not_validated():
-    validator = ResourceObjectGet(CONFIG, resource_schema=ResourceTypeSchema())
+    validator = ResourceGet(CONFIG, resource_schema=ResourceTypeSchema())
 
     issues = validator.validate_request(body={"some": "weird_stuff"})
 
@@ -763,7 +763,7 @@ def test_resources_post_response_validation_fails_if_missing_location_header(
 
 
 def test_correct_resource_object_put_request_passes_validation(user_data_client, user_schema):
-    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
+    validator = ResourcePut(CONFIG, resource_schema=user_schema)
     user_data_client["id"] = "anything"
 
     issues = validator.validate_request(
@@ -776,7 +776,7 @@ def test_correct_resource_object_put_request_passes_validation(user_data_client,
 def test_resource_object_put_request__fails_when_missing_required_field(
     user_data_client, user_schema
 ):
-    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
+    validator = ResourcePut(CONFIG, resource_schema=user_schema)
     # user_data_client misses 'id' and 'meta'
     expected_issues = {"body": {"id": {"_errors": [{"code": 5}]}}}
 
@@ -786,7 +786,7 @@ def test_resource_object_put_request__fails_when_missing_required_field(
 
 
 def test_correct_resource_object_put_response_passes_validation(user_data_server, user_schema):
-    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
+    validator = ResourcePut(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -801,7 +801,7 @@ def test_correct_resource_object_put_response_passes_validation(user_data_server
 
 
 def test_data_for_resource_object_put_request_can_be_deserialized(user_data_client, user_schema):
-    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
+    validator = ResourcePut(CONFIG, resource_schema=user_schema)
 
     data = validator.request_schema.deserialize(user_data_client)
 
@@ -810,7 +810,7 @@ def test_data_for_resource_object_put_request_can_be_deserialized(user_data_clie
 
 
 def test_data_for_resource_object_put_response_can_be_serialized(user_data_server, user_schema):
-    validator = ResourceObjectPut(CONFIG, resource_schema=user_schema)
+    validator = ResourcePut(CONFIG, resource_schema=user_schema)
 
     data = validator.response_schema.serialize(user_data_server)
 
@@ -1165,7 +1165,7 @@ def test_search_request_validation_fails_if_attributes_and_excluded_attributes_p
 
 
 def test_correct_remove_operations_pass_validation(fake_schema):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -1199,7 +1199,7 @@ def test_correct_remove_operations_pass_validation(fake_schema):
 
 @pytest.mark.parametrize("op", ["add", "replace"])
 def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=fake_schema)
     issues = validator.validate_request(
         body={
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -1241,7 +1241,7 @@ def test_correct_add_and_replace_operations_pass_validation(op, fake_schema):
 
 
 def test_attr_value_presence_in_value_is_not_validated_if_bad_operations(fake_schema):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"0": {"path": {"_errors": [{"code": 17}]}}}}}
 
     issues = validator.validate_request(
@@ -1261,7 +1261,7 @@ def test_attr_value_presence_in_value_is_not_validated_if_bad_operations(fake_sc
 
 
 def test_attr_value_presence_in_value_is_not_validated_if_bad_path(fake_schema):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=fake_schema)
     expected_issues = {"body": {"Operations": {"_errors": [{"code": 2}]}}}
 
     issues = validator.validate_request(
@@ -1275,7 +1275,7 @@ def test_attr_value_presence_in_value_is_not_validated_if_bad_path(fake_schema):
 
 
 def test_resource_object_patch_request_data_can_be_deserialized(fake_schema):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=fake_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=fake_schema)
     data = validator.request_schema.deserialize(
         {
             "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -1308,7 +1308,7 @@ def test_resource_object_patch_request_data_can_be_deserialized(fake_schema):
 def test_resource_object_patch_response_validation_fails_if_204_but_attributes_requested(
     user_schema,
 ):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=204,
@@ -1324,7 +1324,7 @@ def test_resource_object_patch_response_validation_fails_if_204_but_attributes_r
 def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attributes_requested(
     user_schema,
 ):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=204,
@@ -1338,7 +1338,7 @@ def test_resource_object_patch_response_validation_succeeds_if_204_and_no_attrib
 def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1353,7 +1353,7 @@ def test_resource_object_patch_response_validation_succeeds_if_200_and_user_data
 def test_resource_object_patch_response_validation_succeeds_if_200_and_selected_attributes(
     user_data_server, user_schema
 ):
-    validator = ResourceObjectPatch(CONFIG, resource_schema=user_schema)
+    validator = ResourcePatch(CONFIG, resource_schema=user_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1378,14 +1378,14 @@ def test_runtime_error_is_raised_if_patch_not_supported_and_resource_object_patc
     user_schema,
 ):
     with pytest.raises(RuntimeError):
-        ResourceObjectPatch(
+        ResourcePatch(
             config=ServiceProviderConfig.create(patch={"supported": False}),
             resource_schema=user_schema,
         )
 
 
 def test_resource_object_delete_response_validation_fails_if_status_different_than_204():
-    validator = ResourceObjectDelete(CONFIG)
+    validator = ResourceDelete(CONFIG)
 
     issues = validator.validate_response(status_code=200)
 
@@ -1393,7 +1393,7 @@ def test_resource_object_delete_response_validation_fails_if_status_different_th
 
 
 def test_resource_object_delete_response_validation_succeeds_if_status_204():
-    validator = ResourceObjectDelete(CONFIG)
+    validator = ResourceDelete(CONFIG)
 
     issues = validator.validate_response(status_code=204)
 
@@ -1401,7 +1401,7 @@ def test_resource_object_delete_response_validation_succeeds_if_status_204():
 
 
 def test_resource_object_delete_request_validation_does_nothing():
-    validator = ResourceObjectDelete(CONFIG)
+    validator = ResourceDelete(CONFIG)
 
     issues = validator.validate_request()
 
@@ -1409,7 +1409,7 @@ def test_resource_object_delete_request_validation_does_nothing():
 
 
 def test_not_implemented_error_is_raised_if_accessing_response_schema_for_delete():
-    validator = ResourceObjectDelete(CONFIG)
+    validator = ResourceDelete(CONFIG)
 
     with pytest.raises(NotImplementedError):
         print(validator.response_schema)
@@ -1831,7 +1831,7 @@ def test_bulk_operations_response_validation_fails_if_too_many_failed_operations
 
 
 def test_service_provider_configuration_is_validated():
-    validator = ResourceObjectGet(
+    validator = ResourceGet(
         CONFIG, resource_schema=service_provider_config.ServiceProviderConfigSchema()
     )
     input_ = {
@@ -1882,7 +1882,7 @@ def test_service_provider_configuration_is_validated():
 
 
 def test_group_output_is_validated_correctly(group_data_server, group_schema):
-    validator = ResourceObjectGet(CONFIG, resource_schema=group_schema)
+    validator = ResourceGet(CONFIG, resource_schema=group_schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1934,7 +1934,7 @@ def test_passing_presence_config_for_request_when_validating_list_response_fails
 
 def test_schema_response_can_be_validated(user_schema):
     schema = SchemaDefinitionSchema()
-    validator = ResourceObjectGet(CONFIG, resource_schema=schema)
+    validator = ResourceGet(CONFIG, resource_schema=schema)
 
     issues = validator.validate_response(
         status_code=200,
@@ -1948,7 +1948,7 @@ def test_schema_response_can_be_validated(user_schema):
 
 
 def test_resource_type_response_can_be_validated():
-    validator = ResourceObjectGet(CONFIG, resource_schema=ResourceTypeSchema())
+    validator = ResourceGet(CONFIG, resource_schema=ResourceTypeSchema())
     body = {
         "schemas": ["urn:ietf:params:scim:schemas:core:2.0:ResourceType"],
         "id": "User",

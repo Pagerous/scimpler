@@ -21,13 +21,13 @@ def assert_response(validator: Validator, status_code: int, **kwargs) -> None:
     detailed information.
 
     Examples:
-        >>> from scimpler.validator import ResourceObjectGet
+        >>> from scimpler.validator import ResourceGet
         >>> from scimpler.schemas import UserSchema
         >>>
         >>> response = ...
         >>>
         >>> assert_response(
-        >>>     validator=ResourceObjectGet(resource_schema=UserSchema()),
+        >>>     validator=ResourceGet(resource_schema=UserSchema()),
         >>>     status_code=200,
         >>>     headers=response.headers,
         >>>     body=response.json,
