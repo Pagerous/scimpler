@@ -18,7 +18,8 @@ Check below topics to learn more about `scimpler`.
 [Sorting](users_guide.md#sorting)<br>
 [Patching resources](users_guide.md#patching-resources)<br>
 [Request and response validation](users_guide.md#request-and-response-validation)<br>
-[Integrations](users_guide.md#integrations)
+[Integrations](users_guide.md#integrations)<br>
+[Testing](users_guide.md#testing)
 
 
 ## Schema definition
@@ -853,3 +854,8 @@ schema = schema_cls()
 ```
 
 All parameters required by the specific validator are listed in the corresponding [API Reference](api_reference/scimpler_validator/resources_query.md).
+
+## Testing
+
+`scimpler` allows to assert responses from Service Provider. 
+Current solution works with `pytest` framework only. See [API Reference](api_reference/scimpler_testing/assert_response.md).

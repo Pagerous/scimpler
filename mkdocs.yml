@@ -7,6 +7,7 @@ nav:
   - Introduction: index.md
   - User's Guide: users_guide.md
   - API Reference:
+      - scimpler.config: api_reference/scimpler_config.md
       - scimpler.data:
           - Add: api_reference/scimpler_data/add.md
           - AttrFilter: api_reference/scimpler_data/attr_filter.md
@@ -85,6 +86,8 @@ nav:
           - SearchRequestSchema: api_reference/scimpler_schemas/search_request_schema.md
           - ServiceProviderConfigSchema: api_reference/scimpler_schemas/service_provider_config_schema.md
           - UserSchema: api_reference/scimpler_schemas/user_schema.md
+      - scimpler.testing:
+          - assert_response: api_reference/scimpler_testing/assert_response.md
       - scimpler.validator:
           - BulkOperations: api_reference/scimpler_validator/bulk_operations.md
           - Error: api_reference/scimpler_validator/error.md
@@ -95,7 +98,7 @@ nav:
           - ResourcesPost: api_reference/scimpler_validator/resources_post.md
           - ResourcesQuery: api_reference/scimpler_validator/resources_query.md
           - SearchRequestPost: api_reference/scimpler_validator/search_request_post.md
-      - scimpler.config: api_reference/scimpler_config.md
+
 
   - Compliance: compliance.md
 theme: material
