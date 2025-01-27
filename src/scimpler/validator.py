@@ -135,7 +135,7 @@ def _validate_resource_location_consistency(
     presence_config: AttrValuePresenceConfig,
 ) -> ValidationIssues:
     issues = ValidationIssues()
-    location_header = headers.get("Location")
+    location_header = headers.get("location")
     meta_location_rep = schema.attrs.meta__location
     meta_location = body.get(meta_location_rep)
     if meta_location is Invalid or not location_header:
@@ -146,13 +146,13 @@ def _validate_resource_location_consistency(
 
     if meta_location != location_header:
         issues.add_error(
-            issue=ValidationError.must_be_equal_to("'Location' header"),
+            issue=ValidationError.must_be_equal_to("'location' header"),
             location=("body", "meta", "location"),
             proceed=True,
         )
         issues.add_error(
             issue=ValidationError.must_be_equal_to("'meta.location'"),
-            location=("headers", "Location"),
+            location=("headers", "location"),
             proceed=True,
         )
     return issues
@@ -191,12 +191,12 @@ def _validate_resource_output_body(
         ),
         location=body_location,
     )
-
-    if "Location" not in headers and location_header_required:
+    headers = {header.lower(): value for header, value in headers.items()}
+    if "location" not in headers and location_header_required:
         issues.add_error(
             issue=ValidationError.missing(),
             proceed=False,
-            location=("headers", "Location"),
+            location=("headers", "location"),
         )
     issues.merge(
         issues=_validate_status_code(expected_status_code, status_code),
@@ -210,25 +210,25 @@ def _validate_resource_output_body(
             presence_config=presence_config,
         ),
     )
-    etag = headers.get("ETag")
+    etag = headers.get("etag")
     version_rep = schema.attrs.meta__version
     version = body.get(version_rep)
     if all([etag, version]) and etag != version:
         issues.add_error(
-            issue=ValidationError.must_be_equal_to("'ETag' header"),
+            issue=ValidationError.must_be_equal_to("'etag' header"),
             proceed=True,
             location=body_location + version_rep.location,
         )
         issues.add_error(
             issue=ValidationError.must_be_equal_to("'meta.version'"),
             proceed=True,
-            location=("headers", "ETag"),
+            location=("headers", "etag"),
         )
     elif config.etag.supported:
         if etag is None:
             issues.add_error(
                 issue=ValidationError.missing(),
-                location=("headers", "ETag"),
+                location=("headers", "etag"),
                 proceed=False,
             )
 
@@ -1455,10 +1455,10 @@ class BulkOperations(Validator):
         issues_ = resource_validator.validate_response(
             body=response,
             status_code=status,
-            headers={"Location": location, "ETag": resource_version},
+            headers={"location": location, "etag": resource_version},
         )
         meta_location_mismatch = issues_.pop([8], location=("body", "meta", "location"))
-        header_location_mismatch = issues_.pop([8], location=("headers", "Location"))
+        header_location_mismatch = issues_.pop([8], location=("headers", "location"))
         issues.merge(issues_.get(location=["body"]), location=response_location)
         issues.merge(issues_.get(location=["status"]), location=status_location)
         if meta_location_mismatch.has_errors() and header_location_mismatch.has_errors():
