@@ -453,12 +453,12 @@ class ValidationIssues:
         self._stop_proceeding: dict[tuple, set[int]] = defaultdict(set)
 
     @property
-    def errors(self) -> Iterator[tuple[tuple[str, ...], list[ValidationError]]]:
+    def errors(self) -> Iterator[tuple[tuple[Union[str, int], ...], list[ValidationError]]]:
         """Validation errors by locations where they were added."""
         return iter(self._errors.items())
 
     @property
-    def warnings(self) -> Iterator[tuple[tuple[str, ...], list[ValidationWarning]]]:
+    def warnings(self) -> Iterator[tuple[tuple[Union[str, int], ...], list[ValidationWarning]]]:
         """Validation warnings by locations where they were added."""
         return iter(self._warnings.items())
 

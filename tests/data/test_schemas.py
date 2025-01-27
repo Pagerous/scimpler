@@ -14,7 +14,7 @@ from scimpler.data.schemas import (
     validate_resource_type_consistency,
 )
 from scimpler.data.scim_data import ScimData
-from scimpler.warning import ScimpleUserWarning
+from scimpler.warning import ScimplerUserWarning
 
 
 @pytest.fixture
@@ -671,7 +671,7 @@ def test_warning_is_raised_if_adding_extension_with_the_same_attr_name():
     resource_schema = MyResource()
     extension = MyExtension()
 
-    with pytest.warns(ScimpleUserWarning):
+    with pytest.warns(ScimplerUserWarning):
         resource_schema.extend(extension)
 
 
