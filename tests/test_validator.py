@@ -88,7 +88,7 @@ def test_resource_location_consistency_validation_fails_if_no_consistency(
             }
         },
         "headers": {
-            "Location": {
+            "location": {
                 "_errors": [
                     {
                         "code": 8,
@@ -573,7 +573,7 @@ def test_validation_failure_on_missing_etag_header_when_etag_supported(
     user_data_server, user_schema
 ):
     validator = ResourceGet(CONFIG, resource_schema=user_schema)
-    expected_issues = {"headers": {"ETag": {"_errors": [{"code": 5}]}}}
+    expected_issues = {"headers": {"etag": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
         status_code=200,
@@ -615,7 +615,7 @@ def test_validation_failure_on_etag_and_meta_version_mismatch(
     validator = ResourceGet(config, resource_schema=user_schema)
     expected_issues = {
         "body": {"meta": {"version": {"_errors": [{"code": 8}]}}},
-        "headers": {"ETag": {"_errors": [{"code": 8}]}},
+        "headers": {"etag": {"_errors": [{"code": 8}]}},
     }
 
     issues = validator.validate_response(
@@ -749,7 +749,7 @@ def test_resources_post_response_validation_fails_if_missing_location_header(
     user_data_server, user_schema
 ):
     validator = ResourcesPost(CONFIG, resource_schema=user_schema)
-    expected_issues = {"headers": {"Location": {"_errors": [{"code": 5}]}}}
+    expected_issues = {"headers": {"location": {"_errors": [{"code": 5}]}}}
 
     issues = validator.validate_response(
         body=user_data_server,
