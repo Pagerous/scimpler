@@ -241,7 +241,7 @@ def _validate_resource_output_body(
     return issues
 
 
-class ResourceObjectGet(Validator):
+class ResourceGet(Validator):
     """
     Validator for **HTTP GET** operations performed against **resource object** endpoints.
     """
@@ -261,7 +261,7 @@ class ResourceObjectGet(Validator):
         Examples:
             >>> from scimpler.schemas import UserSchema
             >>>
-            >>> validator = ResourceObjectGet(resource_schema=UserSchema())
+            >>> validator = ResourceGet(resource_schema=UserSchema())
         """
         super().__init__(config)
         self._schema = resource_schema
@@ -321,7 +321,7 @@ class ResourceObjectGet(Validator):
         )
 
 
-class ResourceObjectPut(Validator):
+class ResourcePut(Validator):
     """
     Validator for **HTTP PUT** operations performed against **resource object** endpoints.
     """
@@ -341,7 +341,7 @@ class ResourceObjectPut(Validator):
         Examples:
             >>> from scimpler.schemas import UserSchema
             >>>
-            >>> validator = ResourceObjectPut(resource_schema=UserSchema())
+            >>> validator = ResourcePut(resource_schema=UserSchema())
         """
         super().__init__(config)
         self._request_schema = resource_schema.clone(
@@ -1020,7 +1020,7 @@ class SearchRequestPost(ResourcesQuery):
         return issues
 
 
-class ResourceObjectPatch(Validator):
+class ResourcePatch(Validator):
     """
     Validator for **HTTP PATCH** operations performed against **resource object** endpoints.
     """
@@ -1044,7 +1044,7 @@ class ResourceObjectPatch(Validator):
         Examples:
             >>> from scimpler.schemas import UserSchema
             >>>
-            >>> validator = ResourceObjectPatch(resource_schema=UserSchema())
+            >>> validator = ResourcePatch(resource_schema=UserSchema())
         """
         super().__init__(config)
         if not self.config.patch.supported:
@@ -1145,7 +1145,7 @@ class ResourceObjectPatch(Validator):
         )
 
 
-class ResourceObjectDelete(Validator):
+class ResourceDelete(Validator):
     """
     Validator for **HTTP DELETE** operations performed against **resource object** endpoints.
     """
@@ -1236,7 +1236,7 @@ class BulkOperations(Validator):
             "DELETE": {},
         }
         for resource_schema in resource_schemas:
-            get = ResourceObjectGet(self.config, resource_schema=resource_schema)
+            get = ResourceGet(self.config, resource_schema=resource_schema)
             self._validators["GET"][resource_schema.endpoint] = get
             response_schemas["GET"][resource_schema.endpoint] = get.response_schema
             request_schemas["GET"][resource_schema.endpoint] = None
@@ -1246,17 +1246,17 @@ class BulkOperations(Validator):
             response_schemas["POST"][resource_schema.endpoint] = post.response_schema
             request_schemas["POST"][resource_schema.endpoint] = post.request_schema
 
-            put = ResourceObjectPut(self.config, resource_schema=resource_schema)
+            put = ResourcePut(self.config, resource_schema=resource_schema)
             self._validators["PUT"][resource_schema.endpoint] = put
             response_schemas["PUT"][resource_schema.endpoint] = put.response_schema
             request_schemas["PUT"][resource_schema.endpoint] = put.request_schema
 
-            patch = ResourceObjectPatch(self.config, resource_schema=resource_schema)
+            patch = ResourcePatch(self.config, resource_schema=resource_schema)
             self._validators["PATCH"][resource_schema.endpoint] = patch
             response_schemas["PATCH"][resource_schema.endpoint] = patch.response_schema
             request_schemas["PATCH"][resource_schema.endpoint] = patch.request_schema
 
-            delete = ResourceObjectDelete(self.config)
+            delete = ResourceDelete(self.config)
             self._validators["DELETE"][resource_schema.endpoint] = delete
             response_schemas["DELETE"][resource_schema.endpoint] = None
             request_schemas["DELETE"][resource_schema.endpoint] = None

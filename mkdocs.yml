@@ -66,9 +66,9 @@ nav:
       - scimpler.ext:
           - marshmallow: api_reference/scimpler_ext/marshmallow.md
       - scimpler.query_string:
-          - ResourceObjectGet: api_reference/scimpler_query_string/resource_object_get.md
-          - ResourceObjectPatch: api_reference/scimpler_query_string/resource_object_patch.md
-          - ResourceObjectPut: api_reference/scimpler_query_string/resource_object_put.md
+          - ResourceGet: api_reference/scimpler_query_string/resource_object_get.md
+          - ResourcePatch: api_reference/scimpler_query_string/resource_object_patch.md
+          - ResourcePut: api_reference/scimpler_query_string/resource_object_put.md
           - ResourceTypesGet: api_reference/scimpler_query_string/resource_types_get.md
           - ResourcesGet: api_reference/scimpler_query_string/resources_get.md
           - ResourcesPost: api_reference/scimpler_query_string/resources_post.md
@@ -91,10 +91,10 @@ nav:
       - scimpler.validator:
           - BulkOperations: api_reference/scimpler_validator/bulk_operations.md
           - Error: api_reference/scimpler_validator/error.md
-          - ResourceObjectDelete: api_reference/scimpler_validator/resource_object_delete.md
-          - ResourceObjectGet: api_reference/scimpler_validator/resource_object_get.md
-          - ResourceObjectPatch: api_reference/scimpler_validator/resource_object_patch.md
-          - ResourceObjectPut: api_reference/scimpler_validator/resource_object_put.md
+          - ResourceDelete: api_reference/scimpler_validator/resource_object_delete.md
+          - ResourceGet: api_reference/scimpler_validator/resource_object_get.md
+          - ResourcePatch: api_reference/scimpler_validator/resource_object_patch.md
+          - ResourcePut: api_reference/scimpler_validator/resource_object_put.md
           - ResourcesPost: api_reference/scimpler_validator/resources_post.md
           - ResourcesQuery: api_reference/scimpler_validator/resources_query.md
           - SearchRequestPost: api_reference/scimpler_validator/search_request_post.md

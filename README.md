@@ -58,8 +58,8 @@ config.set_service_provider_config(
 from scimpler import query_string, validator
 from scimpler.schemas import UserSchema
 
-query_string_handler = query_string.ResourceObjectPatch()
-val = validator.ResourceObjectPatch(resource_schema=UserSchema())
+query_string_handler = query_string.ResourcePatch()
+val = validator.ResourcePatch(resource_schema=UserSchema())
 
 request_query_string = {
     "attributes": "name,bad^attributeName"
@@ -211,7 +211,7 @@ response_data = {
         "location": "https://example.com/v2/Users/1",
     }
 }
-val = validator.ResourceObjectGet(resource_schema=UserSchema())
+val = validator.ResourceGet(resource_schema=UserSchema())
 
 response_issues = val.validate_response(
     status_code=201,

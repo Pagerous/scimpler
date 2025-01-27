@@ -644,8 +644,8 @@ Exemplary request validation:
 from scimpler import query_string, validator
 from scimpler.schemas import UserSchema
 
-query_string_handler = query_string.ResourceObjectPatch()
-val = validator.ResourceObjectPatch(resource_schema=UserSchema())
+query_string_handler = query_string.ResourcePatch()
+val = validator.ResourcePatch(resource_schema=UserSchema())
 
 request_query_string = {
     "attributes": "name,bad^attributeName"
@@ -712,7 +712,7 @@ response_data = {
         "location": "https://example.com/v2/Users/1",
     }
 }
-val = validator.ResourceObjectGet(resource_schema=UserSchema())
+val = validator.ResourceGet(resource_schema=UserSchema())
 
 response_issues = val.validate_response(
     status_code=201,
@@ -730,7 +730,7 @@ The error handling and selection of correct error response must be done by the i
 See [API Reference](api_reference/scimpler_validator/bulk_operations.md) for more information.
 
 ## Patching resources
-In SCIM, the resources are patched via PATCH endpoints. `scimpler` provides `ResourceObjectPatch` (see above) that
+In SCIM, the resources are patched via PATCH endpoints. `scimpler` provides `ResourcePatch` (see above) that
 can handle the request data deserialization.
 
 ```python
@@ -738,9 +738,9 @@ from scimpler import query_string, validator
 from scimpler.data import PatchOperations
 from scimpler.schemas import UserSchema
 
-query_string_handler = query_string.ResourceObjectPatch()
+query_string_handler = query_string.ResourcePatch()
 user_schema = UserSchema()
-val = validator.ResourceObjectPatch(resource_schema=user_schema)
+val = validator.ResourcePatch(resource_schema=user_schema)
 
 request_data = {
     "schemas": ["urn:ietf:params:scim:api:messages:2.0:PatchOp"],
@@ -820,7 +820,7 @@ from scimpler.schemas import UserSchema
 
 
 schema_cls = create_request_schema(
-    validator.ResourceObjectPatch(resource_schema=UserSchema())
+    validator.ResourcePatch(resource_schema=UserSchema())
 )
 schema = schema_cls()
 

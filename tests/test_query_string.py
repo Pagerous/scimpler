@@ -2,9 +2,9 @@ import pytest
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep
 from scimpler.query_string import (
-    ResourceObjectGet,
-    ResourceObjectPatch,
-    ResourceObjectPut,
+    ResourceGet,
+    ResourcePatch,
+    ResourcePut,
     ResourcesGet,
     ResourcesPost,
     ResourceTypesGet,
@@ -17,10 +17,10 @@ from tests.conftest import CONFIG
 @pytest.mark.parametrize(
     "deserializer",
     [
-        ResourceObjectGet(),
+        ResourceGet(),
         ResourcesPost(),
-        ResourceObjectPut(),
-        ResourceObjectPatch(),
+        ResourcePut(),
+        ResourcePatch(),
     ],
 )
 def test_presence_config_is_deserialized_from_query_params(deserializer):
