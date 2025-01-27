@@ -36,7 +36,7 @@ from scimpler.data.attrs import (
 from scimpler.data.identifiers import BoundedAttrRep, SchemaUri
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 from scimpler.error import ValidationError, ValidationIssues
-from scimpler.warning import ScimpleUserWarning
+from scimpler.warning import ScimplerUserWarning
 
 
 def _bulk_id_validator(value) -> ValidationIssues:
@@ -485,7 +485,7 @@ class BaseSchema(metaclass=SchemaMeta):
     ) -> bool:
         return True
 
-    def include_schema_data(self, data: MutableMapping) -> None:
+    def include_schema_data(self, data: MutableMapping, **kwargs) -> None:
         """
         Includes the `schemas` attribute value in the provided `data`.
         """
@@ -554,15 +554,25 @@ class BaseResourceSchema(BaseSchema):
         super().__init__(**kwargs)
         self.endpoint = self.endpoint or f"/{self.name}"
 
-    def include_schema_data(self, data: MutableMapping) -> None:
+    def include_schema_data(self, data: MutableMapping, **kwargs) -> None:
         """
         Includes `schemas` and `meta.resourceType` attribute values in the provided `data`.
+        It also includes any of the provided attributes in kwargs:
+            - location
+            - created
+            - lastModified
+            - version
         """
-        super().include_schema_data(data)
-        if "meta" in data:
-            data["meta"]["resourceType"] = self.name
-        else:
-            data["meta"] = {"resourceType": self.name}
+        super().include_schema_data(data, **kwargs)
+        if "meta" not in data:
+            data["meta"] = {}
+
+        meta_data = {"resourceType": self.name}
+        for meta_sub_attr in ["location", "created", "lastModified", "version"]:
+            if meta_sub_attr in kwargs:
+                meta_data[meta_sub_attr] = kwargs[meta_sub_attr]
+
+        data["meta"] = meta_data
 
 
 class ResourceSchema(BaseResourceSchema):
@@ -676,7 +686,7 @@ class ResourceSchema(BaseResourceSchema):
                         f"Resource extension {extension.name!r} defines {attr_rep.attr!r} "
                         f"attribute, which is also present in base {self.name!r} schema."
                     ),
-                    category=ScimpleUserWarning,
+                    category=ScimplerUserWarning,
                     stacklevel=2,
                 )
         self._attrs.extend(
@@ -724,13 +734,13 @@ class ResourceSchema(BaseResourceSchema):
             return False
         return True
 
-    def include_schema_data(self, data: MutableMapping) -> None:
+    def include_schema_data(self, data: MutableMapping, **kwargs) -> None:
         """
         Includes `schemas` and `meta.resourceType` attribute values in the provided `data`.
         The exact content of `schemas` depends on the rest of the data. If the data contains
         attributes from the extensions, the extension URIs appear in the attached `schemas`.
         """
-        super().include_schema_data(data)
+        super().include_schema_data(data, **kwargs)
         scim_data = ScimData(data)
         for extension, extension_attrs in self.attrs.extensions.items():
             for attr_rep, _ in extension_attrs:
