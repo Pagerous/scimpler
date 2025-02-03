@@ -1,5 +1,5 @@
 import abc
-from typing import Any, Mapping, Optional, Sequence, Union, cast
+from typing import Any, Generic, Mapping, Optional, Sequence, TypeVar, Union, cast
 
 import scimpler.config
 from scimpler.data.attr_value_presence import AttrValuePresenceConfig
@@ -241,7 +241,14 @@ def _validate_resource_output_body(
     return issues
 
 
-class ResourceGet(Validator):
+_TResourceSchema_co = TypeVar(
+    "_TResourceSchema_co",
+    bound=BaseResourceSchema,
+    covariant=True,
+)
+
+
+class ResourceGet(Validator, Generic[_TResourceSchema_co]):
     """
     Validator for **HTTP GET** operations performed against **resource object** endpoints.
     """
@@ -250,7 +257,7 @@ class ResourceGet(Validator):
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
-        resource_schema: BaseResourceSchema,
+        resource_schema: _TResourceSchema_co,
     ):
         """
         Args:
@@ -268,7 +275,7 @@ class ResourceGet(Validator):
         self._response_schema = resource_schema.clone(_resource_output_filter)
 
     @property
-    def response_schema(self) -> BaseResourceSchema:
+    def response_schema(self) -> _TResourceSchema_co:
         """
         Schema designed for response (de)serialization. Contains attributes whose `returnability`
         differs from `never`, and whose `mutability` differs from `writeOnly`.
@@ -321,7 +328,7 @@ class ResourceGet(Validator):
         )
 
 
-class ResourcePut(Validator):
+class ResourcePut(Validator, Generic[_TResourceSchema_co]):
     """
     Validator for **HTTP PUT** operations performed against **resource object** endpoints.
     """
@@ -330,7 +337,7 @@ class ResourcePut(Validator):
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
-        resource_schema: ResourceSchema,
+        resource_schema: _TResourceSchema_co,
     ):
         """
         Args:
@@ -355,7 +362,7 @@ class ResourcePut(Validator):
         self._schema = resource_schema
 
     @property
-    def request_schema(self) -> ResourceSchema:
+    def request_schema(self) -> _TResourceSchema_co:
         """
         Schema designed for request (de)serialization. Contains attributes whose `mutability`
         differs from `readOnly` or are required.
@@ -363,7 +370,7 @@ class ResourcePut(Validator):
         return self._request_schema
 
     @property
-    def response_schema(self) -> ResourceSchema:
+    def response_schema(self) -> _TResourceSchema_co:
         """
         Schema designed for response (de)serialization. Contains attributes whose `returnability`
         differs from `never`, and whose `mutability` differs from `writeOnly`.
@@ -441,7 +448,7 @@ class ResourcePut(Validator):
         )
 
 
-class ResourcesPost(Validator):
+class ResourcesPost(Validator, Generic[_TResourceSchema_co]):
     """
     Validator for **HTTP POST** operations performed against **resource type** endpoints.
     """
@@ -450,7 +457,7 @@ class ResourcesPost(Validator):
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
-        resource_schema: ResourceSchema,
+        resource_schema: _TResourceSchema_co,
     ):
         """
         Args:
@@ -476,7 +483,7 @@ class ResourcesPost(Validator):
         self._response_schema = resource_schema.clone(_resource_output_filter)
 
     @property
-    def request_schema(self) -> ResourceSchema:
+    def request_schema(self) -> _TResourceSchema_co:
         """
         Schema designed for request (de)serialization. Contains attributes whose `mutability`
         differs from `readOnly`, and which are not issued by the service provider.
@@ -484,7 +491,7 @@ class ResourcesPost(Validator):
         return self._request_schema
 
     @property
-    def response_schema(self) -> ResourceSchema:
+    def response_schema(self) -> _TResourceSchema_co:
         """
         Schema designed for response (de)serialization. Contains attributes whose `returnability`
         differs from `never`, and whose `mutability` differs from `writeOnly`.
@@ -1020,7 +1027,7 @@ class SearchRequestPost(ResourcesQuery):
         return issues
 
 
-class ResourcePatch(Validator):
+class ResourcePatch(Validator, Generic[_TResourceSchema_co]):
     """
     Validator for **HTTP PATCH** operations performed against **resource object** endpoints.
     """
@@ -1029,7 +1036,7 @@ class ResourcePatch(Validator):
         self,
         config: Optional[scimpler.config.ServiceProviderConfig] = None,
         *,
-        resource_schema: ResourceSchema,
+        resource_schema: _TResourceSchema_co,
     ):
         """
         Args:
@@ -1063,7 +1070,7 @@ class ResourcePatch(Validator):
         return self._request_schema
 
     @property
-    def response_schema(self) -> ResourceSchema:
+    def response_schema(self) -> _TResourceSchema_co:
         """
         Schema designed for response (de)serialization. Contains attributes whose `returnability`
         differs from `never`, and whose `mutability` differs from `writeOnly`.
