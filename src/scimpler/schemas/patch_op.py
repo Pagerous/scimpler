@@ -10,7 +10,7 @@ from scimpler.data.patch import (
     Remove,
     UpdateOperation,
 )
-from scimpler.data.schemas import BaseSchema, ResourceSchema
+from scimpler.data.schemas import BaseResourceSchema, BaseSchema
 from scimpler.data.scim_data import Invalid, Missing, MissingType, ScimData
 from scimpler.error import ValidationError, ValidationIssues
 
@@ -64,7 +64,7 @@ class PatchOpSchema(BaseSchema):
         )
     ]
 
-    def __init__(self, resource_schema: ResourceSchema):
+    def __init__(self, resource_schema: BaseResourceSchema):
         """
         Args:
             resource_schema: Resource schema supported by the patch operation.
