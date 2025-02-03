@@ -637,7 +637,9 @@ def _include_processing_in_schema(
         )
 
     if not isinstance(scimpler_schema, Attribute):
-        processors_["include_schema_data"] = scimpler_schema.include_schema_data
+        processors_["attach_schemas"] = scimpler_schema.attach_schemas
+        if isinstance(scimpler_schema, ResourceSchema):
+            processors_["attach_meta"] = scimpler_schema.attach_meta
 
     processors_["get_attribute"] = lambda _, obj, key, default: obj.get(key, default)
     class_ = type(

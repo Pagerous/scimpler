@@ -23,7 +23,7 @@ class AttrValuePresenceConfig:
     attribute properties, and specified inclusion / exclusion.
 
     Args:
-        direction: The direction of the data flow, can be either "REQUEST" or "RESPONSE"
+        direction: The direction of the data flow, can be either "REQUEST" or "RESPONSE".
         attr_reps: Specifies which attributes should be included or excluded from the data. The
             `include` parameter must be specified together.
         include: If set to True, it means the attributes should be included. Excluded otherwise.
@@ -34,7 +34,7 @@ class AttrValuePresenceConfig:
 
     def __init__(
         self,
-        direction: Union[str, DataDirection],
+        direction: Union[str, DataDirection] = "RESPONSE",
         attr_reps: Optional[Collection[Union[str, AttrRep, BoundedAttrRep]]] = None,
         include: Optional[bool] = None,
         ignore_issuer: Optional[Collection[Union[str, AttrRep, BoundedAttrRep]]] = None,

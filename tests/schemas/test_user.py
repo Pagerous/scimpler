@@ -151,7 +151,8 @@ def test_resource_schema_constant_attrs_can_be_attached_to_provided_data_with_ex
         **data,
     }
 
-    user_schema.include_schema_data(data)
+    user_schema.attach_schemas(data)
+    user_schema.attach_meta(data)
 
     assert data == expected
 
@@ -169,6 +170,7 @@ def test_resource_schema_constant_attrs_can_be_attached_to_provided_data_without
         },
     }
 
-    user_schema.include_schema_data(data)
+    user_schema.attach_schemas(data)
+    user_schema.attach_meta(data)
 
     assert data == expected
