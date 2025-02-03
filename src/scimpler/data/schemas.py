@@ -485,9 +485,9 @@ class BaseSchema(metaclass=SchemaMeta):
     ) -> bool:
         return True
 
-    def include_schema_data(self, data: MutableMapping, **kwargs) -> None:
+    def attach_schemas(self, data: MutableMapping) -> None:
         """
-        Includes the `schemas` attribute value in the provided `data`.
+        Attaches the `schemas` attribute value in the provided `data`.
         """
         data["schemas"] = [self.schema]
 
@@ -555,24 +555,45 @@ class BaseResourceSchema(BaseSchema):
         self.endpoint = self.endpoint or f"/{self.name}"
 
     def include_schema_data(self, data: MutableMapping, **kwargs) -> None:
+    def get_location(self, resource_id: str) -> str:
+        return f"{self.endpoint}/{resource_id}"
+
+    def attach_meta(
+        self,
+        data: MutableMapping,
+        resource_type: bool = True,
+        resource_id: Optional[str] = None,
+        sub_attrs: Optional[dict[str, Any]] = None,
+    ) -> None:
         """
-        Includes `schemas` and `meta.resourceType` attribute values in the provided `data`.
-        It also includes any of the provided attributes in kwargs:
-            - location
+        Includes `meta` attributes in the `data`.
+
+        The `meta.resourceType` attribute is added conditionally, depending on the
+        `resource_type` parameter. Its value is name of schema.
+
+        The `meta.location` attribute is added if `resource_id` is provided. Its
+        value is schema's `endpoint` attribute value + resource_id.
+
+        Rest of `meta` sub-attributes can be added manually:
             - created
             - lastModified
             - version
         """
-        super().include_schema_data(data, **kwargs)
-        if "meta" not in data:
-            data["meta"] = {}
+        meta_data = {}
+        if resource_type:
+            meta_data["resourceType"] = self.name
 
-        meta_data = {"resourceType": self.name}
-        for meta_sub_attr in ["location", "created", "lastModified", "version"]:
-            if meta_sub_attr in kwargs:
-                meta_data[meta_sub_attr] = kwargs[meta_sub_attr]
+        if resource_id:
+            meta_data["location"] = self.get_location(resource_id)
 
-        data["meta"] = meta_data
+        available_sub_attrs = {"created", "lastModified", "version"}
+
+        for sub_attr, value in (sub_attrs or {}).items():
+            if sub_attr in available_sub_attrs:
+                meta_data[sub_attr] = value
+
+        if meta_data:
+            data["meta"] = meta_data
 
 
 class ResourceSchema(BaseResourceSchema):
@@ -734,13 +755,14 @@ class ResourceSchema(BaseResourceSchema):
             return False
         return True
 
-    def include_schema_data(self, data: MutableMapping, **kwargs) -> None:
+    def attach_schemas(self, data: MutableMapping) -> None:
         """
-        Includes `schemas` and `meta.resourceType` attribute values in the provided `data`.
+        Includes `schemas` attribute values in the provided `data`.
+
         The exact content of `schemas` depends on the rest of the data. If the data contains
         attributes from the extensions, the extension URIs appear in the attached `schemas`.
         """
-        super().include_schema_data(data, **kwargs)
+        super().attach_schemas(data)
         scim_data = ScimData(data)
         for extension, extension_attrs in self.attrs.extensions.items():
             for attr_rep, _ in extension_attrs:
