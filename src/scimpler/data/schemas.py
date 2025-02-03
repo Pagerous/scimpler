@@ -380,8 +380,9 @@ class BaseSchema(metaclass=SchemaMeta):
                 )
         return issues
 
-    @staticmethod
+    @classmethod
     def _validate_attr_value_presence(
+        cls,
         attr: Attribute,
         attr_rep: BoundedAttrRep,
         value: Any,
@@ -393,12 +394,13 @@ class BaseSchema(metaclass=SchemaMeta):
             value=value,
             direction=presence_config.direction,
             ignore_issuer=attr_rep in presence_config.ignore_issuer,
-            inclusivity=BaseSchema._get_inclusivity(attr, attr_rep, presence_config),
+            inclusivity=cls._get_inclusivity(attr, attr_rep, presence_config),
             required_by_schema=required_by_schema,
         )
 
-    @staticmethod
+    @classmethod
     def _get_inclusivity(  # noqa: PLR0911
+        cls,
         attr: Attribute,
         attr_rep: BoundedAttrRep,
         presence_config: AttrValuePresenceConfig,
@@ -416,10 +418,10 @@ class BaseSchema(metaclass=SchemaMeta):
             return DataInclusivity.EXCLUDE
 
         if isinstance(attr, Complex):
-            return BaseSchema._get_inclusivity_complex(attr_rep, presence_config)
+            return cls._get_inclusivity_complex(attr_rep, presence_config)
 
         if not attr_rep.is_sub_attr:
-            return None
+            return cls._get_inclusivity_simple(attr_rep, presence_config)
 
         parent_attr_rep = BoundedAttrRep(schema=attr_rep.schema, attr=attr_rep.attr)
         if parent_attr_rep in presence_config.attr_reps:
@@ -427,10 +429,26 @@ class BaseSchema(metaclass=SchemaMeta):
             # and potential errors should be delegated to it
             return None
 
-        return BaseSchema._get_inclusivity_based_on_siblings(attr_rep, presence_config)
+        return cls._get_inclusivity_based_on_siblings(attr_rep, presence_config)
 
-    @staticmethod
+    @classmethod
+    def _get_inclusivity_simple(
+        cls,
+        attr_rep: BoundedAttrRep,
+        presence_config: AttrValuePresenceConfig,
+    ):
+        if presence_config.include:
+            if attr_rep in presence_config.attr_reps:
+                return DataInclusivity.INCLUDE
+            return DataInclusivity.EXCLUDE
+
+        if attr_rep in presence_config.attr_reps:
+            return DataInclusivity.EXCLUDE
+        return DataInclusivity.INCLUDE
+
+    @classmethod
     def _get_inclusivity_complex(
+        cls,
         attr_rep: BoundedAttrRep,
         presence_config: AttrValuePresenceConfig,
     ) -> Optional[DataInclusivity]:
@@ -450,8 +468,9 @@ class BaseSchema(metaclass=SchemaMeta):
             return DataInclusivity.EXCLUDE
         return DataInclusivity.INCLUDE
 
-    @staticmethod
+    @classmethod
     def _get_inclusivity_based_on_siblings(
+        cls,
         attr_rep: BoundedAttrRep,
         presence_config: AttrValuePresenceConfig,
     ) -> Optional[DataInclusivity]:
@@ -554,7 +573,6 @@ class BaseResourceSchema(BaseSchema):
         super().__init__(**kwargs)
         self.endpoint = self.endpoint or f"/{self.name}"
 
-    def include_schema_data(self, data: MutableMapping, **kwargs) -> None:
     def get_location(self, resource_id: str) -> str:
         return f"{self.endpoint}/{resource_id}"
 
