@@ -122,7 +122,7 @@ class BaseSchema(metaclass=SchemaMeta):
         deserialized = ScimData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
-            if value is not Missing:
+            if value or value in [0, False]:
                 deserialized.set(attr_rep, attr.deserialize(value))
         return self._deserialize(deserialized)
 
@@ -135,7 +135,7 @@ class BaseSchema(metaclass=SchemaMeta):
         serialized = ScimData()
         for attr_rep, attr in self.attrs:
             value = data.get(attr_rep)
-            if value is not Missing:
+            if value or value in [0, False]:
                 serialized.set(attr_rep, attr.serialize(value))
         return self._serialize(serialized)
 
