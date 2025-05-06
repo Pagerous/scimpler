@@ -88,3 +88,21 @@ def test_attr_rep_can_be_compared(attr_1, attr_2, expected):
 def test_accessing_sub_attr_if_attr_rep_is_not_sub_attr_fails():
     with pytest.raises(AttributeError, match=r"AttrRep\(attr\) has no sub-attribute"):
         AttrRep(attr="attr").sub_attr  # noqa
+
+
+def test_attr_rep_can_be_created_from_sub_attr_rep():
+    attr_rep = AttrRep(attr="attr", sub_attr="sub_attr")
+
+    assert attr_rep.create_attr_rep() == AttrRep(attr="attr")
+
+
+def test_bounded_attr_rep_can_be_created_from_bounded_sub_attr_rep():
+    attr_rep = BoundedAttrRep(
+        schema="urn:ietf:params:scim:schemas:core:2.0:User",
+        attr="name",
+        sub_attr="formatted",
+    )
+
+    assert attr_rep.create_attr_rep() == BoundedAttrRep(
+        schema="urn:ietf:params:scim:schemas:core:2.0:User", attr="name"
+    )
