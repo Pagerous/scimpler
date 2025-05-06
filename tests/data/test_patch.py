@@ -1464,6 +1464,33 @@ def test_remove_op_removes_val_for_mv_sub_attr_of_filtered_mv_complex_attr__sub_
     }
 
 
+def test_remove_op_removes_mv_complex_attr_items_with_required_attrs(
+    fake_schema,
+):
+    operations = PatchOperations(
+        [
+            Remove(
+                PatchPath.deserialize("c3_mv[int gt 10]"),
+            )
+        ]
+    )
+    data = {
+        "c3_mv": [
+            {"bool": True, "int": 10, "str": ["a"]},
+            {"bool": True, "int": 11, "str": ["a"]},
+            {"bool": True, "int": 12, "str": ["a", "b"]},
+        ]
+    }
+
+    actual = operations.apply(data, fake_schema)
+
+    assert actual == {
+        "c3_mv": [
+            {"bool": True, "int": 10, "str": ["a"]},
+        ]
+    }
+
+
 def test_add_op_fails_if_adding_read_only_attribute(user_schema):
     operations = PatchOperations([Add(PatchPath.deserialize("id"), "456")])
 

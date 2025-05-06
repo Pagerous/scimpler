@@ -1175,27 +1175,48 @@ def _check_sub_attrs_mutability_violation(
         new_value = [new_value]
         old_value = [old_value]
 
-    n_items = max(len(new_value), len(old_value))
     new_value = [ScimData(element) for element in new_value]
     for sub_attr_name, sub_attr in attr.attrs:
-        for i in range(n_items):
-            try:
-                old_element = old_value[i]
-            except IndexError:
-                old_element = None
+        _check_sub_attr_mutability_violation(
+            attr=attr,
+            attr_rep=attr_rep,
+            attr_old_value=old_value,
+            attr_new_value=new_value,
+            sub_attr=sub_attr,
+            sub_attr_name=sub_attr_name,
+        )
 
-            try:
-                new_element = new_value[i]
-            except IndexError:
-                new_element = None
 
-            old_element = old_element or ScimData()
-            new_element = new_element or ScimData()
-            sub_attr_old_value = old_element.get(sub_attr_name)
-            sub_attr_new_value = new_element.get(sub_attr_name)
-            _check_attr_mutability_violation(
-                attr=sub_attr,
-                attr_rep=attr_rep.create_sub_attr_rep(sub_attr_name),
-                old_value=sub_attr_old_value,
-                new_value=sub_attr_new_value,
-            )
+def _check_sub_attr_mutability_violation(
+    attr: Attribute,
+    attr_rep: AttrRep,
+    attr_old_value: list,
+    attr_new_value: list,
+    sub_attr: Attribute,
+    sub_attr_name: AttrName,
+):
+    n_items = max(len(attr_new_value), len(attr_old_value))
+    for i in range(n_items):
+        try:
+            old_element = attr_old_value[i]
+        except IndexError:
+            old_element = None
+
+        try:
+            new_element = attr_new_value[i]
+        except IndexError:
+            new_element = None
+
+        if (old_element is None or new_element is None) and attr.multi_valued:
+            continue
+
+        old_element = old_element or ScimData()
+        new_element = new_element or ScimData()
+        sub_attr_old_value = old_element.get(sub_attr_name)
+        sub_attr_new_value = new_element.get(sub_attr_name)
+        _check_attr_mutability_violation(
+            attr=sub_attr,
+            attr_rep=attr_rep.create_sub_attr_rep(sub_attr_name),
+            old_value=sub_attr_old_value,
+            new_value=sub_attr_new_value,
+        )
