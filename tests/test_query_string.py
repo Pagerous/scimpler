@@ -29,7 +29,7 @@ def test_presence_config_is_deserialized_from_query_params(deserializer):
     assert deserialized.get("attributes") == [AttrRep(attr="name", sub_attr="familyName")]
 
 
-def test_resources_get_query_params_is_deserialized():
+def test_resources_query_params_is_deserialized():
     data = ResourcesQuery(CONFIG).deserialize(
         {
             "attributes": ["userName", "name"],
@@ -45,6 +45,18 @@ def test_resources_get_query_params_is_deserialized():
     assert data.get("filter") == Filter.deserialize("userName eq 'bjensen'")
     assert data.get("sortBy") == AttrRep(attr="name", sub_attr="familyName")
     assert data.get("sortOrder") == "descending"
+    assert data.get("startIndex") == 2
+    assert data.get("count") == 10
+
+
+def test_count_and_start_index_string_values_are_deserialized():
+    data = ResourcesQuery(CONFIG).deserialize(
+        {
+            "startIndex": "2",
+            "count": "10",
+        }
+    )
+
     assert data.get("startIndex") == 2
     assert data.get("count") == 10
 
