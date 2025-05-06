@@ -23,12 +23,12 @@ class AttrValuePresenceConfig:
     attribute properties, and specified inclusion / exclusion.
 
     Args:
-        direction: The direction of the data flow, can be either "REQUEST" or "RESPONSE".
+        direction: The direction of the data flow, it can be either "REQUEST" or "RESPONSE".
         attr_reps: Specifies which attributes should be included or excluded from the data. The
-            `include` parameter must be specified together.
+            `include` param must be specified together.
         include: If set to True, it means the attributes should be included. Excluded otherwise.
             Has no effect if `attr_reps` is not provided.
-        ignore_issuer: Specifies for which attributes the attribute issuer  should be ignored
+        ignore_issuer: Specifies for which attributes the attribute issuer should be ignored
             when making presence checks
     """
 
@@ -98,8 +98,9 @@ class AttrValuePresenceConfig:
     def allowed(self, attr_rep: AttrRep) -> bool:
         """
         Returns boolean indicating whether the `attr_rep` is allowed to exist whenever the
-        presence configuration is applied, according to its `attr_reps` and `include` configuration.
-        It considers the value existence only, without any of its possible characteristics.
+        presence configuration is applied, according to its `attr_reps`, and `include`
+        configuration. It considers the existence of value only, without any of its
+        possible characteristics.
 
         Examples:
             >>> from scimpler.data import AttrRep
@@ -220,7 +221,7 @@ def _validate_if_can_be_omitted(
     issues = ValidationIssues()
     if (
         attr.required
-        # issued by the server, so skipping for data from client
+        # issued by the server, so skipping for data from a client
         and not (
             direction == DataDirection.REQUEST
             and attr.issuer == AttributeIssuer.SERVICE_PROVIDER

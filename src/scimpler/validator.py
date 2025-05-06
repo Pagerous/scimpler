@@ -85,8 +85,8 @@ class Error(Validator):
 
         Except for error body validation done by the inner schema, the validator checks if:
 
-        - `status` in body matches the provided `status_code`,
-        - value of `status_code` is in range: 300 <= status_code < 600.
+        - `status` in the body matches the provided `status_code`,
+        - value of `status_code` is in the range: 300 <= status_code < 600.
 
         Args:
             status_code: Returned HTTP status code.
@@ -298,7 +298,7 @@ class ResourceGet(Validator, Generic[_TResourceSchema_co]):
 
         Except for body validation done by the inner schema, the validator checks if:
 
-        - returned `status_code` equals 200,
+        - Returned `status_code` equals 200,
         - `Location` header matches `meta.location` from body, if header is provided,
         - `ETag` header is provided if `etag` is enabled in the service provider configuration,
         - `meta.version` is provided if `etag` is enabled in the service provider configuration,
@@ -382,7 +382,7 @@ class ResourcePut(Validator, Generic[_TResourceSchema_co]):
         Validates the **HTTP PUT** requests sent to **resource object** endpoints.
 
         Performs request body validation using inner resource schema, including attribute presence
-        validation that checks if all required attributes are provided (regardless the issuer).
+        validation that checks if all required attributes are provided (regardless of the issuer).
 
         Args:
             body: The request body.
@@ -418,7 +418,7 @@ class ResourcePut(Validator, Generic[_TResourceSchema_co]):
 
         Except for body validation done by inner schema, the validator checks if:
 
-        - returned `status_code` equals 200,
+        - Returned `status_code` equals 200,
         - `Location` header matches `meta.location` from body, if header is provided,
         - `ETag` header is provided if `etag` is enabled in the service provider configuration,
         - `meta.version` is provided if `etag` is enabled in the service provider configuration,
@@ -505,8 +505,8 @@ class ResourcesPost(Validator, Generic[_TResourceSchema_co]):
         Performs request body validation using inner resource schema, including attribute presence
         validation that checks if:
 
-        - attributes issued by the service provider are not provided,
-        - required attribute are provided.
+        - Attributes issued by the service provider are not provided,
+        - Required attribute is provided.
 
         Args:
             body: The request body.
@@ -535,7 +535,7 @@ class ResourcesPost(Validator, Generic[_TResourceSchema_co]):
 
         Except for body validation (if provided) done by the inner schema, the validator checks if:
 
-        - returned `status_code` equals 200,
+        - Returned `status_code` equals 200,
         - `Location` header is provided,
         - `Location` header matches `meta.location` from body,
         - `ETag` header is provided if `etag` is enabled in the service provider configuration,
@@ -817,7 +817,7 @@ def can_validate_filtering(
 
         attr = schema.attrs.get(attr_rep)
         if attr is None:
-            continue  # intentional, such resources should be filtered out (except for 'not pr')
+            continue  # intentionally, such resources should be filtered out (except for 'not pr')
 
         if not (isinstance(attr, Complex) and attr.multi_valued):
             continue
@@ -840,7 +840,7 @@ def can_validate_sorting(
 
     attr = schema.attrs.get(sorter.attr_rep)
     if attr is None:
-        return True  # intentional, such resources should be ordered last
+        return True  # intentionally, such resources should be ordered last
 
     if not (isinstance(attr, Complex) and attr.multi_valued):
         return allowed
@@ -861,7 +861,7 @@ def can_validate_sorting(
 class ResourcesQuery(Validator):
     """
     Validator for **HTTP GET** operations performed against **resource type** endpoints. It is
-    able to handle different schemas in the same time, so can be used in **resource root** endpoint.
+    able to handle different schemas at the same time, so can be used in **resource root** endpoint.
     """
 
     def __init__(
@@ -881,7 +881,7 @@ class ResourcesQuery(Validator):
             >>>
             >>> # for resource root endpoint
             >>> root_validator = ResourcesQuery(resource_schema=[UserSchema(), GroupSchema()])
-            >>> # for specific resource type endpoint
+            >>> # for a specific resource type endpoint
             >>> validator = ResourcesQuery(resource_schema=UserSchema())
         """
         super().__init__(config)
@@ -917,18 +917,18 @@ class ResourcesQuery(Validator):
 
         Except for body validation done by the inner `ListResponseSchema`, the validator checks if:
 
-        - returned `status_code` equals 200,
+        - Returned `status_code` equals 200,
         - `startIndex` in the body is lesser or equal to the provided `start_index`,
         - `totalResults` greater or equal to number of `Resources`,
         - `totalResults` differs from number of `Resources` when `count` is not specified,
-        - number of `Resources` is lesser or equal to the `count`, if specified,
+        - Number of `Resources` is lesser or equal to the `count`, if specified,
         - `startIndex` is specified in the body for pagination,
         - `itemsPerPage` is specified in the body for pagination,
         - `Resources` are filtered, according to the provided `filter`,
         - `Resources` are sorted, according to the provided `sorter`,
-        - every resource contains `meta.version`, if `etag` is supported.
+        - Every resource contains `meta.version`, if `etag` is supported.
 
-        Filtering and sorting is not validated if attributes required to check filtering and
+        Filtering and sorting are not validated if attributes required to check filtering and
         sorting are meant to be excluded due to `AttrValuePresenceConfig`.
 
         Args:
@@ -963,8 +963,8 @@ class ResourcesQuery(Validator):
 
 class SearchRequestPost(ResourcesQuery):
     """
-    Validator for **HTTP POST** query operations. It is  able to handle different schemas
-    in the same time, so can be used in **resource root** endpoint.
+    Validator for **HTTP POST** query operations. It is able to handle different schemas
+     at the same time, so can be used in **resource root** endpoint.
     """
 
     def __init__(
@@ -984,7 +984,7 @@ class SearchRequestPost(ResourcesQuery):
             >>>
             >>> # for resource root endpoint
             >>> root_validator = SearchRequestPost(resource_schema=[UserSchema(), GroupSchema()])
-            >>> # for specific resource type endpoint
+            >>> # for a specific resource type endpoint
             >>> validator = SearchRequestPost(resource_schema=UserSchema())
         """
         super().__init__(config, resource_schema=resource_schema)
@@ -1010,7 +1010,7 @@ class SearchRequestPost(ResourcesQuery):
         """
         Validates the **HTTP POST** query requests.
 
-        Performs request body validation using inner `SearchRequestSchema`.
+        Performs request body validation using the inner `SearchRequestSchema`.
 
         Args:
             body: The request body.
@@ -1112,7 +1112,7 @@ class ResourcePatch(Validator, Generic[_TResourceSchema_co]):
 
         Except for body validation done by the inner schema, the validator checks if:
 
-        - returned `status_code` equals 204 if body is not returned, or 200, if body is returned
+        - Returned `status_code` equals 204 if body is not returned, or 200, if body is returned
             or `AttrValuePresenceConfig` is specified,
         - `Location` header matches `meta.location` from body, if header is provided,
         - `ETag` header is provided if `etag` is enabled in the service provider configuration,
@@ -1195,7 +1195,7 @@ class ResourceDelete(Validator):
 
 class BulkOperations(Validator):
     """
-    Validator for **HTTP POST** operations performed against bulk endpoint.
+    Validator for **HTTP POST** operations performed against a bulk endpoint.
     """
 
     def __init__(
@@ -1294,12 +1294,12 @@ class BulkOperations(Validator):
 
     def validate_request(self, body: Optional[Mapping[str, Any]] = None) -> ValidationIssues:
         """
-        Validates the **HTTP POST** requests performed against bulk endpoint.
+        Validates the **HTTP POST** requests performed against a bulk endpoint.
 
         Except for body validation done by the inner `BulkRequestSchema`, the validator checks if:
 
-        - number of `Operations` does not exceed configured maximum number of operations,
-        - correct data for operations is provided,
+        - Number of `Operations` does not exceed the configured maximum number of operations,
+        - Correct data for operations is provided,
 
         Args:
             body: Request body.
@@ -1355,12 +1355,12 @@ class BulkOperations(Validator):
 
         Except for body validation done by the inner `BulkResponseSchema`, the validator checks if:
 
-        - returned `status_code` equals 200,
-        - correct error responses are returned for statuses greater or equal to 300,
-        - correct responses are returned for successful completions,
-        - if `meta.location` matches `Operations.location` for every operation,
-        - if `meta.version` matches `Operations.version` for every operation,
-        - if number of unsuccessful completions did not exceed `fail_on_errors` parameter.
+        - Returned `status_code` equals 200,
+        - Correct error responses are returned for statuses greater or equal to 300,
+        - Correct responses are returned for successful completions,
+        - If `meta.location` matches `Operations.location` for every operation,
+        - If `meta.version` matches `Operations.version` for every operation,
+        - If number of unsuccessful completions did not exceed `fail_on_errors` parameter.
 
         Args:
             status_code: Returned HTTP status code.

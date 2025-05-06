@@ -28,7 +28,7 @@ class ErrorSchema(BaseSchema):
     Provides data validation and checks if:
 
     - `status` represents numerical value in range 300-599,
-    - `scimType` is one of pre-defined scim error types.
+    - `scimType` is one of the pre-defined scim error types.
     """
 
     schema = "urn:ietf:params:scim:api:messages:2.0:Error"

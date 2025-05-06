@@ -12,12 +12,12 @@ from scimpler.warning import ScimplerCompatibilityWarning
 def assert_response(validator: Validator, status_code: int, **kwargs) -> None:
     """
     Asserts the response for the given validator.
-    All **kwargs are passed to `Validator.validate_response` method.
+    All **kwargs are passed to the `Validator.validate_response` method.
 
-    If the response validation cause warnings, `ScimplerCompatibilityWarning`
+    If the response validation causes warnings, `ScimplerCompatibilityWarning`
     is raised with detailed information.
 
-    If the response validation cause errors, the test fails with
+    If the response validation causes errors, the test fails with
     detailed information.
 
     Examples:

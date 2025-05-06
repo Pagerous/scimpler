@@ -27,7 +27,7 @@ class ListResponseSchema(BaseSchema):
 
     Provides data validation and checks if:
 
-    - `itemsPerPage` is consistent with number of `Resources`,
+    - `itemsPerPage` is consistent with a number of `Resources`,
     - `Resources` contains known resources,
     - `Resources` contains valid resources that correspond to the known schemas.
     """

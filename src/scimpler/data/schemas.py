@@ -169,23 +169,22 @@ class BaseSchema(metaclass=SchemaMeta):
         """
         Validates the provided data according to the schema attributes configuration.
 
-        In addition, it validates `schemas` attribute:
+        In addition, it validates the ` schemas ` attribute:
 
-        - if there are no duplicates,
+        - If there are no duplicates,
         - if base schema is included,
         - if all provided schemas are known.
 
         Optionally, one can pass `AttrValuePresenceConfig`, so attribute requiredness,
-        returnability, and issuer is checked, depending on the data flow direction.
+        returnability, and issuer are checked, depending on the data flow direction.
 
-        Extended built-in validation logic is supplied with `_validate` method, implemented
+        Extended built-in validation logic is supplied with the `_validate` method, implemented
         in subclasses.
 
         Args:
             data: The data to be validated.
-            presence_config: Presence config that enables additional validation of correctness
-                of values presence.
-            **kwargs: Additional parameters passed to `_validate` method.
+            presence_config: Presence config that enables additional validation of value presence.
+            **kwargs: Additional parameters passed to the ` _ validate ` method.
 
         Returns:
             Validation issues.
@@ -406,7 +405,7 @@ class BaseSchema(metaclass=SchemaMeta):
         presence_config: AttrValuePresenceConfig,
     ) -> Optional[DataInclusivity]:
         if presence_config.include is None:
-            # for example "userName" attribute, but not "manager.value"
+            # for example, "userName" attribute, but not "manager.value"
             # from enterprise user extension
             if attr.required and not attr_rep.is_sub_attr:
                 return DataInclusivity.INCLUDE
@@ -587,12 +586,12 @@ class BaseResourceSchema(BaseSchema):
         Includes `meta` attributes in the `data`.
 
         The `meta.resourceType` attribute is added conditionally, depending on the
-        `resource_type` parameter. Its value is name of schema.
+        `resource_type` parameter. Its value is the name of the schema.
 
         The `meta.location` attribute is added if `resource_id` is provided. Its
-        value is schema's `endpoint` attribute value + resource_id.
+        value is the schema's `endpoint` attribute value + resource_id.
 
-        Rest of `meta` sub-attributes can be added manually:
+        The rest of `meta` sub-attributes can be added manually:
             - created
             - lastModified
             - version
@@ -637,9 +636,9 @@ class ResourceSchema(BaseResourceSchema):
     The built-in validation is extended. Apart from constraints checked by the parent classes,
     `ResourceSchema`:
 
-    - validates the consistency od `meta.resourceType` with the configured
-      `ResourceSchema.name`,
-    - validates if `schemas` contains schema URIs for all attributes in data.
+    - Validates the consistency of `meta.resourceType` with the configured
+      `ResourceSchema.name`
+    - Validates if `schemas` contains schema URIs for all attributes in data
     """
 
     plural_name: str
@@ -704,7 +703,7 @@ class ResourceSchema(BaseResourceSchema):
         Args:
             extension: Schema extension which extends the base schema.
             required: Flag indicating whether the extension is required. If the extension
-                is required, all required fields from the extension become required in base
+                is required, all required fields from the extension become required in the base
                 schema during presence checks. If the extension is not required and some of
                 its attributes are required, they are not considered required in the base schema.
         """
@@ -737,7 +736,7 @@ class ResourceSchema(BaseResourceSchema):
     def _validate(self, data: ScimData, **kwargs) -> ValidationIssues:
         issues = ValidationIssues()
         resource_type_rep = getattr(self.attrs, "meta__resourcetype", None)
-        # it means that schema doesn't contain 'meta.resourceType'
+        # it means that the schema doesn't contain 'meta.resourceType'
         if resource_type_rep is None:
             return issues
         resource_type = data.get(resource_type_rep)

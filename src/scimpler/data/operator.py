@@ -98,7 +98,7 @@ class And(LogicalOperator):
 @final
 class Or(LogicalOperator):
     """
-    Represents `or` SCIM operator. Matches if any of sub-operators match.
+    Represents `or` SCIM operator. Matches if any of the sub-operators match.
     """
 
     op: str = "or"
@@ -148,7 +148,7 @@ class AttributeOperatorMeta(abc.ABCMeta):
 class AttributeOperator(Operator, ABC, metaclass=AttributeOperatorMeta):
     """
     Base class for all operators that involve attributes directly.
-    Every subclass which is not an abstract must specify `op`,
+    Every subclass that is not an abstract must specify `op`,
     `supported_scim_types`, and `supported_types` class attributes.
     """
 
@@ -177,7 +177,7 @@ class AttributeOperator(Operator, ABC, metaclass=AttributeOperatorMeta):
 
 class UnaryAttributeOperator(AttributeOperator, abc.ABC):
     """
-    Base class for all unary operators. Every subclass which is not an abstract must specify `op`,
+    Base class for all unary operators. Every subclass that is not an abstract must specify `op`,
     `supported_scim_types`, and `supported_types` class attributes.
     """
 
@@ -195,7 +195,7 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
     ) -> bool:
         """
         Tests a given `value` against the operator and returns `True`
-        if it matches, `False` otherwise. If the `value` belongs to multi-valued
+        if it matches, `False` otherwise. If the `value` belongs to a multivalued
         attribute, the whole `value` matches if one of its items matches.
 
         Args:
@@ -279,7 +279,7 @@ class Present(UnaryAttributeOperator):
 
 class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     """
-    Base class for all binary operators. Every subclass which is not an abstract must specify `op`,
+    Base class for all binary operators. Every subclass that is not an abstract must specify `op`,
     `supported_scim_types`, and `supported_types` class attributes.
     """
 
@@ -371,7 +371,7 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
     ) -> bool:
         """
         Tests a given `value` against the operator and returns `True`
-        if it matches, `False` otherwise. If the `value` belongs to multi-valued
+        if it matches, `False` otherwise. If the `value` belongs to a multivalued
         attribute, the whole `value` matches if one of its items matches.
 
         Args:
@@ -613,8 +613,8 @@ TLogicalOrAttributeOperator = TypeVar(
 @final
 class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
     """
-    Represents complex attribute grouping operator. Can be used for single-valued and
-    multi-valued complex attributes.
+    Represents a complex attribute grouping operator. Can be used for single-valued and
+    multivalued complex attributes.
 
     Args:
         attr_rep: A representation of a complex attribute which value should be matched.
@@ -671,7 +671,7 @@ class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
     ) -> bool:
         """
         Tests a given `value` against the operator and returns `True`
-        if it matches, `False` otherwise. If the `value` belongs to multi-valued
+        if it matches, `False` otherwise. If the `value` belongs to a multivalued
         attribute, the whole `value` matches if one of its items matches.
 
         Args:

@@ -119,11 +119,11 @@ class UserSchema(ResourceSchema):
 
     Provides data validation and checks if:
 
-    - the `preferredLanguage` syntax is correct,
-    - the `locale` syntax is correct,
-    - the `emails.value` syntax is correct,
-    - the `phoneNumbers.value` syntax is correct,
-    - the `country` syntax is correct.
+    - The `preferredLanguage` syntax is correct,
+    - The `locale` syntax is correct,
+    - The `emails.value` syntax is correct,
+    - The `phoneNumbers.value` syntax is correct,
+    - The `country` syntax is correct.
 
     During (de)serialization, `ims.value` is processed in a way that blank characters are removed.
     """
