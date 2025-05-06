@@ -19,7 +19,7 @@ class AttrName(str):
     Attribute names are case-insensitive.
 
     Raises:
-        ValueError: If the provided value is not valid attribute name.
+        ValueError: If the provided value is not a valid attribute name.
     """
 
     def __repr__(self):
@@ -109,6 +109,13 @@ class AttrRep:
         """
         return AttrRep(attr=self._attr, sub_attr=sub_attr)
 
+    def create_attr_rep(self) -> "AttrRep":
+        """
+        Creates a representation of a parent attribute, based on
+        the presentation of the sub-attribute.
+        """
+        return AttrRep(attr=self._attr)
+
     @property
     def attr(self) -> AttrName:
         """
@@ -122,7 +129,7 @@ class AttrRep:
         The sub-attribute name.
         Raises:
             AttributeError: If `AttrRep` has no sub-attribute name assigned, meaning it represents
-                top-level attribute.
+                a top-level attribute.
         """
         if self._sub_attr is None:
             raise AttributeError(f"{self!r} has no sub-attribute")
@@ -131,7 +138,7 @@ class AttrRep:
     @property
     def is_sub_attr(self) -> bool:
         """
-        Flag indicating whether `AttrRep` represents sub-attribute.
+        Flag indicating whether `AttrRep` represents a sub-attribute.
         """
         return self._sub_attr is not None
 
@@ -191,6 +198,13 @@ class BoundedAttrRep(AttrRep):
         the representation of the parent attribute.
         """
         return BoundedAttrRep(schema=self._schema, attr=self._attr, sub_attr=sub_attr)
+
+    def create_attr_rep(self) -> "BoundedAttrRep":
+        """
+        Creates a representation of a parent attribute, based on
+        the presentation of the sub-attribute.
+        """
+        return BoundedAttrRep(schema=self._schema, attr=self._attr)
 
     @property
     def schema(self) -> SchemaUri:
