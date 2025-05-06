@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 from scimpler.data.filter import Filter
 from scimpler.data.identifiers import AttrRep, AttrRepFactory, BoundedAttrRep
-from scimpler.data.operator import BinaryAttributeOperator, UnaryAttributeOperator
+from scimpler.data.operator import BinaryAttributeOperator, Present, UnaryAttributeOperator
 
 
 @pytest.mark.parametrize(
@@ -2560,3 +2560,22 @@ def test_filter_with_logical_operator_can_be_applied(user_schema):
         {"userName": "Arek", "emails": [{"value": "a@bad.com"}, {"value": "a@example.com"}]},
         user_schema,
     )
+
+
+def test_filter_can_be_bound_to_schema(user_schema):
+    filter_ = Filter(Present(attr_rep=AttrRep(attr="name")))
+
+    filter_ = filter_.bind(user_schema)
+
+    assert isinstance(filter_.operator, Present)
+    assert filter_.operator.attr_rep == user_schema.attrs.name
+
+
+def test_binding_filter_to_schema_fails_if_operator_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    filter_ = Filter(Present(attr_rep=AttrRep(attr="name")))
+    filter_ = filter_.bind(user_schema)
+
+    with pytest.raises(ValueError, match="can not bind filter to schema"):
+        filter_.bind(fake_schema)
