@@ -4,12 +4,12 @@ import operator
 from abc import ABC
 from typing import Any, Generator, Generic, Mapping, Optional, TypeVar, Union, final
 
-from typing_extensions import override
+from typing_extensions import Self, override
 
 from scimpler._registry import register_binary_operator, register_unary_operator
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
-from scimpler.data.identifiers import AttrRep
-from scimpler.data.schemas import ResourceSchema
+from scimpler.data.identifiers import AttrRep, BoundedAttrRep
+from scimpler.data.schemas import BaseSchema, ResourceSchema
 from scimpler.data.scim_data import Invalid, Missing, ScimData
 
 TSchemaOrComplex = TypeVar("TSchemaOrComplex", bound=Union[ResourceSchema, Complex])
@@ -38,6 +38,9 @@ class Operator(abc.ABC, Generic[TSchemaOrComplex]):
             Flag indicating whether the value matches the operator.
         """
 
+    @abc.abstractmethod
+    def bind(self, schema: BaseSchema) -> Self: ...
+
 
 class LogicalOperator(Operator, abc.ABC):
     """
@@ -57,6 +60,13 @@ class LogicalOperator(Operator, abc.ABC):
     def sub_operators(self) -> list[Operator]:
         """Sub-operators contained inside the operator."""
         return self._sub_operators
+
+    def bind(self, schema: BaseSchema) -> Self:
+        """
+        Returns a copy of the operator with its sub-operators bound
+        to the provided schema.
+        """
+        return self.__class__(*(op.bind(schema) for op in self._sub_operators))
 
     def _collect_matches(
         self,
@@ -219,6 +229,26 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
 
         return match
 
+    def bind(self, schema: BaseSchema) -> Self:
+        """
+        Returns a copy of the operator with its attribute representation
+        bound to the provided schema. If the operator is already bound to the schema,
+        and it is different from the provided schema, `ValueError` is raised.
+        """
+        if isinstance(self._attr_rep, BoundedAttrRep) and self._attr_rep.schema != schema.schema:
+            raise ValueError(
+                f"can not bind operator to schema {schema!r} "
+                f"because it is bound to schema {self._attr_rep.schema!r}"
+            )
+
+        return self.__class__(
+            attr_rep=BoundedAttrRep(
+                schema=schema.schema,
+                attr=self._attr_rep.attr,
+                sub_attr=self._attr_rep.sub_attr if self._attr_rep.is_sub_attr else None,
+            )
+        )
+
 
 @final
 class Present(UnaryAttributeOperator):
@@ -373,6 +403,26 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
                 pass
 
         return False
+
+    def bind(self, schema: BaseSchema) -> Self:
+        """
+        Returns a copy of the operator with its attribute representation
+        bound to the provided schema. If the operator is already bound to the schema,
+        and it is different from the provided schema, `ValueError` is raised.
+        """
+        if isinstance(self._attr_rep, BoundedAttrRep) and self._attr_rep.schema != schema.schema:
+            raise ValueError(
+                f"can not bind operator to schema {schema!r} "
+                f"because it is bound to schema {self._attr_rep.schema!r}"
+            )
+        return self.__class__(
+            attr_rep=BoundedAttrRep(
+                schema=schema.schema,
+                attr=self._attr_rep.attr,
+                sub_attr=self._attr_rep.sub_attr if self._attr_rep.is_sub_attr else None,
+            ),
+            value=self._value,
+        )
 
 
 @final
@@ -592,6 +642,27 @@ class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
         The sub-operator used to test complex attribute's sub-attribute values.
         """
         return self._sub_operator
+
+    def bind(self, schema: BaseSchema) -> Self:
+        """
+        Returns a copy of the operator with its attribute representation
+        bound to the provided schema. If the operator is already bound to the schema,
+        and it is different from the provided schema, `ValueError` is raised.
+        """
+        if isinstance(self._attr_rep, BoundedAttrRep) and self._attr_rep.schema != schema.schema:
+            raise ValueError(
+                f"can not bind operator to schema {schema!r} "
+                f"because it is bound to schema {self._attr_rep.schema!r}"
+            )
+
+        return ComplexAttributeOperator(
+            attr_rep=BoundedAttrRep(
+                schema=schema.schema,
+                attr=self._attr_rep.attr,
+                sub_attr=self._attr_rep.sub_attr if self._attr_rep.is_sub_attr else None,
+            ),
+            sub_operator=self._sub_operator,
+        )
 
     def match(
         self,
