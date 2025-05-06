@@ -1,11 +1,12 @@
 import functools
+import typing
 from collections.abc import MutableMapping
 from typing import Any, Iterable, Optional, Sequence, Union
 
-from scimpler.data import AttrRepFactory
+from scimpler.data import AttrRepFactory, BoundedAttrRep
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.schemas import BaseResourceSchema
-from scimpler.data.scim_data import AttrRep, Missing, ScimData
+from scimpler.data.scim_data import AttrRep, Invalid, Missing, ScimData
 
 
 class AlwaysLastKey:
@@ -152,7 +153,7 @@ class Sorter:
         return sorted(data, key=key, reverse=not self._asc)
 
     def _get_key(self, value: Any, attr: Optional[Attribute]):
-        if not value or attr is None:
+        if value in [None, Missing, "", Invalid] or attr is None:
             return self._default_value
 
         if not isinstance(value, str):
@@ -175,19 +176,47 @@ class Sorter:
         if attr is None:
             return self._get_key(None, None)
 
+        if self._attr_rep.is_sub_attr:
+            return self._get_sub_attr_key(item, schema, attr)
+        return self._get_attr_key(item, attr)
+
+    def _get_sub_attr_key(self, item: ScimData, schema: BaseResourceSchema, attr: Attribute):
+        top_level_attr_rep = self._attr_rep.create_attr_rep()
+        top_level_attr = typing.cast(Complex, schema.attrs.get(top_level_attr_rep))
+        top_level_attr_value = item.get(top_level_attr_rep)
+        if not top_level_attr_value:
+            return self._get_key(None, attr)
+
         value = None
-        item_value = item.get(self._attr_rep)
-        if item_value is not Missing and attr.multi_valued:
-            if isinstance(attr, Complex):
-                attr = attr.attrs.get("value")
-                for i, v in enumerate(item_value):
-                    if i == 0:
-                        value = v.get("value")
-                    elif v.get("primary") is True:
-                        value = v.get("value")
-                        break
-            else:
-                value = item_value[0]
+        if top_level_attr.multi_valued:
+            for i, v in enumerate(top_level_attr_value):
+                if i == 0:
+                    value = v.get(self._attr_rep.sub_attr)
+                elif v.get("primary") is True:
+                    value = v.get(self._attr_rep.sub_attr)
+                    break
         else:
-            value = item_value
+            value = top_level_attr_value.get(self._attr_rep.sub_attr)
+
+        if value and attr.multi_valued:
+            value = value[0]
+
+        return self._get_key(value, attr)
+
+    def _get_attr_key(self, item: ScimData, attr: Attribute):
+        attr_value = item.get(self._attr_rep)
+        if attr_value in [None, Missing, "", Invalid, {}, []]:
+            return self._get_key(None, attr)
+
+        value = None
+        if isinstance(attr, Complex) and attr.multi_valued:
+            for i, v in enumerate(attr_value):
+                if i == 0:
+                    value = v.get("value")
+                elif v.get("primary") is True:
+                    value = v.get("value")
+                    break
+            return self._get_key(value, attr.attrs.get("value"))
+
+        value = attr_value[0] if attr.multi_valued else attr_value
         return self._get_key(value, attr)

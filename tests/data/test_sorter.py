@@ -72,6 +72,19 @@ def test_values_are_sorted_according_to_first_value_for_multivalued_non_complex_
     assert actual == expected
 
 
+def test_values_are_sorted_according_to_first_value_for_multivalued_sub_attr(fake_schema):
+    sorter = Sorter(AttrRep(attr="c3_mv", sub_attr="str"), asc=True)
+    c_1 = ScimData({"c3_mv": [{"str": ["7", "1", "9"]}]})
+    c_2 = ScimData({"c3_mv": [{"str": ["1", "8", "2"]}]})
+    c_3 = ScimData({"c3_mv": [{"str": ["4", "3", "8"]}]})
+    values = [c_1, c_2, c_3]
+    expected = [c_2, c_3, c_1]
+
+    actual = sorter(values, schema=fake_schema)
+
+    assert actual == expected
+
+
 def test_items_are_sorted_according_to_sub_attr_value(user_schema):
     sorter = Sorter(AttrRep(attr="name", sub_attr="givenName"), asc=True)
     c_1 = ScimData(
@@ -144,7 +157,7 @@ def test_items_are_sorted_according_to_primary_value_for_complex_multivalued_att
     assert actual == expected
 
 
-def test_items_can_be_sorted_by_complex_sub_attr_if_attr_multivalued(user_schema):
+def test_items_can_be_sorted_by_complex_value_sub_attr_if_attr_multivalued(user_schema):
     sorter = Sorter(AttrRep(attr="emails", sub_attr="value"), asc=True)
     c_1 = ScimData(
         {
@@ -169,6 +182,43 @@ def test_items_can_be_sorted_by_complex_sub_attr_if_attr_multivalued(user_schema
     c_4 = ScimData({"id": "4", "emails": []})
     values = [c_1, c_4, c_2, c_3]
     expected = [c_3, c_2, c_1, c_4]
+
+    actual = sorter(values, schema=user_schema)
+
+    assert actual == expected
+
+
+def test_items_can_be_sorted_by_complex_type_sub_attr_if_attr_multivalued(user_schema):
+    sorter = Sorter(AttrRep(attr="emails", sub_attr="type"), asc=True)
+    c_1 = ScimData(
+        {
+            "id": "1",
+            "emails": [
+                {"value": "z@example.com", "type": "work", "primary": True},
+                {"value": "b@example.com", "type": "home", "primary": False},
+            ],
+        }
+    )
+    c_2 = ScimData(
+        {
+            "id": "2",
+            "emails": [
+                {"value": "c@example.com", "type": "home", "primary": True},
+            ],
+        }
+    )
+    c_3 = ScimData(
+        {
+            "id": "3",
+            "emails": [
+                {"value": "a@example.com", "type": "work", "primary": False},
+                {"value": "z@example.com", "type": "home", "primary": True},
+            ],
+        }
+    )
+    c_4 = ScimData({"id": "4", "emails": []})
+    values = [c_1, c_4, c_2, c_3]
+    expected = [c_2, c_3, c_1, c_4]
 
     actual = sorter(values, schema=user_schema)
 
