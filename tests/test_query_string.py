@@ -5,8 +5,8 @@ from scimpler.query_string import (
     ResourceGet,
     ResourcePatch,
     ResourcePut,
-    ResourcesGet,
     ResourcesPost,
+    ResourcesQuery,
     ResourceTypesGet,
     SchemasGet,
 )
@@ -30,7 +30,7 @@ def test_presence_config_is_deserialized_from_query_params(deserializer):
 
 
 def test_resources_get_query_params_is_deserialized():
-    data = ResourcesGet(CONFIG).deserialize(
+    data = ResourcesQuery(CONFIG).deserialize(
         {
             "attributes": ["userName", "name"],
             "filter": 'userName eq "bjensen"',
@@ -50,13 +50,13 @@ def test_resources_get_query_params_is_deserialized():
 
 
 def test_resources_get_attributes_query_param_is_deserialized_from_string():
-    data = ResourcesGet(CONFIG).deserialize({"attributes": "userName,name"})
+    data = ResourcesQuery(CONFIG).deserialize({"attributes": "userName,name"})
 
     assert data.get("attributes") == [AttrRep(attr="userName"), AttrRep(attr="name")]
 
 
 def test_resources_get_excluded_attributes_query_param_is_deserialized_from_string():
-    data = ResourcesGet(CONFIG).deserialize({"excludedAttributes": "userName,name"})
+    data = ResourcesQuery(CONFIG).deserialize({"excludedAttributes": "userName,name"})
 
     assert data.get("excludedAttributes") == [AttrRep(attr="userName"), AttrRep(attr="name")]
 
@@ -72,7 +72,7 @@ def test_resources_get_query_params_is_serialized():
         "count": 10,
     }
 
-    data = ResourcesGet(CONFIG).serialize(data)
+    data = ResourcesQuery(CONFIG).serialize(data)
 
     assert data.get("attributes") == "userName,name"
     assert data.get("excludedAttributes") == "nickName"
@@ -92,7 +92,7 @@ def test_resources_get_query_params_is_serialized_without_attributes_and_exclude
         "count": 10,
     }
 
-    data = ResourcesGet(CONFIG).serialize(data)
+    data = ResourcesQuery(CONFIG).serialize(data)
 
     assert data.get("filter") == "userName eq 'bjensen'"
     assert data.get("sortBy") == "name.familyName"
@@ -108,7 +108,7 @@ def test_resources_get_query_params_is_validated():
         "sortBy": {"_errors": [{"code": 17}]},
     }
 
-    issues = ResourcesGet(CONFIG).validate(
+    issues = ResourcesQuery(CONFIG).validate(
         {
             "attributes": ["userName", "bad^attr"],
             "filter": 'userName hehe "bjensen"',
