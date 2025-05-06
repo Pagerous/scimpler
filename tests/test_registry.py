@@ -9,6 +9,7 @@ from scimpler.data.operator import (
     UnaryAttributeOperator,
 )
 from scimpler.data.schemas import BaseSchema, ResourceSchema
+from typing_extensions import Self
 
 
 def test_runtime_error_is_raised_if_registering_same_resource_name_but_different_endpoint(
@@ -72,3 +73,6 @@ def test_subclassing_attribute_operator_with_custom_class_fails():
                 schema_or_complex: TSchemaOrComplex,
             ) -> bool:
                 return False
+
+            def bind(self, schema: BaseSchema) -> Self:
+                return self

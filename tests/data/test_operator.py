@@ -1035,3 +1035,81 @@ def test_complex_operator_does_not_match_if_provided_mapping_for_multi_valued_at
     )
 
     assert op.match(ScimData({attr_rep: {"value": "test@example.com"}}), user_schema) is False
+
+
+def test_unary_attr_operator_can_be_bound_to_schema(user_schema):
+    op = Present(attr_rep=AttrRep(attr="name"))
+
+    op = op.bind(user_schema)
+
+    assert op.attr_rep == user_schema.attrs.name
+
+
+def test_binding_unary_attr_operator_to_schema_fails_if_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = Present(attr_rep=AttrRep(attr="name"))
+    op = op.bind(user_schema)
+
+    with pytest.raises(ValueError, match="can not bind operator to schema"):
+        op.bind(fake_schema)
+
+
+def test_binary_attr_operator_can_be_bound_to_schema(user_schema):
+    op = Equal(attr_rep=AttrRep(attr="userName"), value="johndoe")
+
+    op = op.bind(user_schema)
+
+    assert op.attr_rep == user_schema.attrs.userName
+
+
+def test_binding_binary_attr_operator_to_schema_fails_if_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = Equal(attr_rep=AttrRep(attr="name"), value="johndoe")
+    op = op.bind(user_schema)
+
+    with pytest.raises(ValueError, match="can not bind operator to schema"):
+        op.bind(fake_schema)
+
+
+def test_complex_attr_operator_can_be_bound_to_schema(user_schema):
+    op = ComplexAttributeOperator(
+        attr_rep=AttrRep(attr="emails"), sub_operator=Present(attr_rep=AttrRep(attr="value"))
+    )
+
+    op = op.bind(user_schema)
+
+    assert op.attr_rep == user_schema.attrs.emails
+
+
+def test_binding_complex_attr_operator_to_schema_fails_if_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = ComplexAttributeOperator(
+        attr_rep=AttrRep(attr="emails"), sub_operator=Present(attr_rep=AttrRep(attr="value"))
+    )
+    op = op.bind(user_schema)
+
+    with pytest.raises(ValueError, match="can not bind operator to schema"):
+        op.bind(fake_schema)
+
+
+def test_logical_operator_can_be_bound_to_schema(user_schema):
+    op = Not(Present(attr_rep=AttrRep(attr="name")))
+
+    op = op.bind(user_schema)
+
+    sub_operator = op.sub_operators[0]
+    assert isinstance(sub_operator, Present)
+    assert sub_operator.attr_rep == user_schema.attrs.name
+
+
+def test_binding_logical_operator_to_schema_fails_if_sub_operator_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = Not(Present(attr_rep=AttrRep(attr="name")))
+    op = op.bind(user_schema)
+
+    with pytest.raises(ValueError, match="can not bind operator to schema"):
+        op.bind(fake_schema)
