@@ -582,7 +582,7 @@ def test_bulk_response_can_be_validated(bulk_response_serialized: dict, user_sch
                     "response": {
                         "status": ["must be equal to response status code"],
                     },
-                    "status": ["must be equal to 'status' attribute", "bad value content"],
+                    "status": ["must be equal to 'status' attribute", "bad content"],
                 },
                 "3": {
                     "response": {"members": {"1": {"type": ["must be one of: ['user', 'group']"]}}}

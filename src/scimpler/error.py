@@ -120,7 +120,7 @@ class ValidationError:
         1: "bad value syntax",
         2: "bad type, expecting '{expected}'",
         3: "bad encoding, expecting '{expected}'",
-        4: "bad value content",
+        4: "bad content",
         5: "missing",
         6: "must not be provided",
         7: "must not be returned",
