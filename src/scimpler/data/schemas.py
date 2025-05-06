@@ -611,7 +611,8 @@ class BaseResourceSchema(BaseSchema):
                 meta_data[sub_attr] = value
 
         if meta_data:
-            data["meta"] = meta_data
+            data.setdefault("meta", {})
+            data["meta"].update(meta_data)
 
 
 class ResourceSchema(BaseResourceSchema):
