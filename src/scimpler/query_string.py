@@ -122,7 +122,7 @@ class ResourcePatch(GenericQueryStringHandler):
     """
 
 
-class ResourcesGet(QueryStringHandler):
+class ResourcesQuery(QueryStringHandler):
     """
     Handles query-string parameters sent with **HTTP GET** operations performed against
     **resource type** endpoints.

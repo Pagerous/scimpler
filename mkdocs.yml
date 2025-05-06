@@ -70,7 +70,7 @@ nav:
           - ResourcePatch: api_reference/scimpler_query_string/resource_object_patch.md
           - ResourcePut: api_reference/scimpler_query_string/resource_object_put.md
           - ResourceTypesGet: api_reference/scimpler_query_string/resource_types_get.md
-          - ResourcesGet: api_reference/scimpler_query_string/resources_get.md
+          - ResourcesQuery: api_reference/scimpler_query_string/resources_get.md
           - ResourcesPost: api_reference/scimpler_query_string/resources_post.md
           - SchemasGet: api_reference/scimpler_query_string/schemas_get.md
       - scimpler.schemas:
