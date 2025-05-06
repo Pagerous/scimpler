@@ -728,17 +728,18 @@ def _validate_resources_get_response(
         issues=_validate_status_code(200, status_code),
         location=("status",),
     )
+
+    resources = body.get(schema.attrs.resources)
+    if resources is Invalid:
+        return issues
+
     start_index_body = body.get(start_index_rep)
-    if start_index_body is not Invalid and start_index_body and start_index_body > start_index:
+    if start_index_body is not Invalid and start_index_body and start_index_body != start_index:
         issues.add_error(
             issue=ValidationError.bad_value_content(),
             proceed=True,
             location=start_index_location,
         )
-
-    resources = body.get(schema.attrs.resources)
-    if resources is Invalid:
-        return issues
 
     total_results = body.get(schema.attrs.totalresults)
     items_per_page = body.get(schema.attrs.itemsperpage)
