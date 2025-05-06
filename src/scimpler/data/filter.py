@@ -552,6 +552,16 @@ class Filter(Generic[TOperator]):
             )
         return issues
 
+    def bind(self, schema: BaseSchema) -> "Filter":
+        """
+        Returns a copy of the filter with its operator bound
+        to the provided schema.
+        """
+        try:
+            return Filter(self._operator.bind(schema))
+        except ValueError as e:
+            raise ValueError(f"can not bind filter to schema {schema}") from e
+
     def serialize(self) -> str:
         """
         Serializes `Filter` to string filter expression.
