@@ -101,11 +101,11 @@ def test_issues_can_be_converted_to_dict(issues):
         "a": {
             "b": {
                 "_errors": [
-                    {"code": 4, "message": "bad value content", "context": {}},
+                    {"code": 4, "message": "bad content", "context": {}},
                     {"code": 1, "message": "bad value syntax", "context": {}},
                 ],
                 "c": {
-                    "_errors": [{"code": 4, "message": "bad value content", "context": {}}],
+                    "_errors": [{"code": 4, "message": "bad content", "context": {}}],
                 },
                 "d": {
                     "_errors": [{"code": 1, "message": "bad value syntax", "context": {}}],
