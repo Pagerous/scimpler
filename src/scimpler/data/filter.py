@@ -79,7 +79,7 @@ class Filter(Generic[TOperator]):
         """
         List of bounded and unbounded attribute representations
         included in the filter. Useful to determine if there is
-        enough data to use filter, since no data means no match
+        enough data to use filter, since lack of data means no match
         (except for `not pr` operator).
         """
         return self._get_attr_reps(self._operator)
@@ -602,7 +602,7 @@ class Filter(Generic[TOperator]):
             filter_exp: filter expression to be deserialized.
 
         Raises:
-            ValueError: If provided filter expression is invalid.
+            ValueError: If the provided filter expression is invalid.
 
         Returns:
             Deserialized filter.

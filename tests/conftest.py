@@ -311,8 +311,8 @@ def list_user_data(user_data_server):
 
 
 @pytest.fixture
-def list_data(list_user_data):
-    data = list_user_data.copy()
+def list_data(list_user_data) -> dict:
+    data: dict = list_user_data.copy()
     data["Resources"].append(
         {
             "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],

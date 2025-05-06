@@ -38,8 +38,8 @@ class PatchOpSchema(BaseSchema):
     - All required data is supplied for complex attribute in `add` and `remove` operation,
     - `Operations.data` is correct, according to the schema and its attributes.
 
-    Other checks for immutability, like if `immutable` attributes is not changed, are not performed
-    (it requires to know previous state).
+    Other checks for immutability, like if `immutable` attributes are not changed, are not performed
+    (it requires knowing the previous state).
     """
 
     schema = "urn:ietf:params:scim:api:messages:2.0:PatchOp"
@@ -350,17 +350,18 @@ class PatchOpSchema(BaseSchema):
     ) -> Union[BaseSchema, Attribute]:
         """
         Returns the supported schema or one of its attributes, depending on the provided `path`
-        and `value`. If `path` is `None` or `Missing`, whole supported schema is returned.
+        and `value`. If `path` is `None` or `Missing`, the whole supported schema is returned.
 
-        If `path` is string value, it is deserialized and processed like `PatchPath`. For
+        If `path` is a string value, it is deserialized and processed like `PatchPath`. For
         valid `PatchPath`, the attribute targeted by it is returned. The only exception is when
-        the `path` has value selection filter with no sub-attribute specified, and provided value
-        is not a list of values (like for multi-valued attribute), but single entry. Then the
-        returned attribute is the copy of original attribute with `multi_valued` property set
-        to `False`.
+        the `path` has a value selection filter with no sub-attribute specified, and the provided
+        value is not a list of values (like for multivalued attribute), but a single entry.
+        Then the returned attribute is the copy of the original attribute with the `multi_valued`
+        property set to `False`.
 
         Raises:
-            ValueError: When `path` targets attribute that does not exist in the supported schema.
+            ValueError: When `path` targets an attribute that does not exist in the supported
+                schema.
 
         Examples:
             >>> from scimpler.schemas import UserSchema

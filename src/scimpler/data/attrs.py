@@ -51,13 +51,13 @@ class AttrFilter:
 
     Args:
         attr_reps: Attribute representations that should be included or excluded from the provided
-            collection. Must be specified together with `include` parameter.
+            collection. Must be specified together with the `include` parameter.
             If the attribute is in the `attr_names`, and `included` is set to `True`, it must pass
             the provided `filter_` anyway, to be included in a final result.
             Both attributes and sub-attributes are supported.
         include: If set to `True`, the `attr_names` determine attribute names to be included and
             eventually filtered by the filter supplied as `filter_` parameter. If set to `False`,
-            the attributes will be excluded, regardless the `filter_`.
+            the attributes will be excluded, regardless of the `filter_`.
         filter_: Callable that takes an `Attribute` instance on input and returns the flag
             indicating whether the attribute passed the filter.
 
@@ -201,16 +201,16 @@ class Attribute(abc.ABC):
     ):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             description: Description of the attribute.
-            issuer: The attribute's issuer. It can be specified if attribute is issued by a
-                service provider or provisioning client. For example, resource's `id` attribute must
-                 be always issued by the provider, and must not be sent in POST request
+            issuer: The attribute's issuer. It can be specified if the attribute is issued by the
+                service provider or provisioning client. For example, a resource's `id` attribute
+                must be issued by the provider always and must not be sent in POST request
             required: Specifies if attribute is required.
-            multi_valued: Specifies if attribute is multivalued.
+            multi_valued: Specifies if the attribute is multivalued.
             canonical_values: Specifies canonical values for the attribute.
-            restrict_canonical_values: Flag that indicates whether validation error should be
-                returned if provided value is not one of canonical values. If set to `False`,
+            restrict_canonical_values: Flag that indicates whether the validation error should be
+                returned if the provided value is not one of canonical values. If set to `False`,
                 the validation warning is returned instead. Has no effect if there are no canonical
                 values.
             mutability: Specifies attribute's mutability.
@@ -237,7 +237,7 @@ class Attribute(abc.ABC):
     def set_serializer(cls, serializer: Callable[[Any], Any]):
         """
         Sets global serializer for all attributes of the specific type.
-        Can be overridden by a routine passed as `serializer` parameter in initializer.
+        Can be overridden by a routine passed as the `serializer` parameter in initializer.
 
         Has no effect if an instance of `Attribute` has serializer or deserializer defined.
         """
@@ -247,7 +247,7 @@ class Attribute(abc.ABC):
     def set_deserializer(cls, deserializer: Callable[[Any], Any]):
         """
         Sets global deserializer for all attributes of the specific type.
-        Can be overridden by a routine passed as `deserializer` parameter in initializer.
+        Can be overridden by a routine passed as the `deserializer` parameter in initializer.
 
         Has no effect if an instance of `Attribute` has serializer or deserializer defined.
         """
@@ -270,12 +270,12 @@ class Attribute(abc.ABC):
 
     @property
     def required(self) -> bool:
-        """Specifies if attribute is required."""
+        """Specifies if the attribute is required."""
         return self._required
 
     @property
     def multi_valued(self) -> bool:
-        """Specifies if attribute is multivalued."""
+        """Specifies if the attribute is multivalued."""
         return self._multi_valued
 
     @property
@@ -296,7 +296,7 @@ class Attribute(abc.ABC):
     @property
     def has_custom_processing(self) -> bool:
         """
-        Indicates whether the attribute has custom deserializer or serializer specified
+        Indicates whether the attribute has a custom deserializer or serializer specified
         (global deserializer and serializer that are set on class level are not considered).
         """
         return bool(self._deserializer or self._serializer)
@@ -304,7 +304,7 @@ class Attribute(abc.ABC):
     @property
     def custom_validators(self) -> list[_AttributeValidator]:
         """
-        List of custom validators of the attribute, ran if built-in validation succeeds.
+        List of validators, ran if built-in validation succeeds.
         """
         return self._validators
 
@@ -368,7 +368,7 @@ class Attribute(abc.ABC):
 
     def validate(self, value: Any) -> ValidationIssues:
         """
-        Validates the provided value according to attribute's specification.
+        Validates the provided value according to the attribute's specification.
         It validates the type and canonicality (if specified). If no validation issues,
         custom validators (passed as `validators` constructor parameter) are run.
 
@@ -415,7 +415,7 @@ class Attribute(abc.ABC):
 
     def serialize(self, value: Any) -> Any:
         """
-        Serializes the provided value according to attribute's specification and returns it.
+        Serializes the provided value according to the attribute's specification and returns it.
         """
         if self._serializer is not None:
             return self._serializer(value)
@@ -431,7 +431,7 @@ class Attribute(abc.ABC):
 
     def deserialize(self, value: Any) -> Any:
         """
-        Deserializes the provided value according to attribute's specification and returns it.
+        Deserializes the provided value according to the attribute's specification and returns it.
         """
         if self._deserializer is not None:
             return self._deserializer(value)
@@ -453,7 +453,7 @@ class Attribute(abc.ABC):
         Returns:
             Representation of the attribute.
         """
-        output = {
+        output: dict = {
             "name": self._name,
             "type": str(self.scim_type),
             "multiValued": self._multi_valued,
@@ -557,10 +557,11 @@ class AttributeWithCaseExact(Attribute, abc.ABC):
 @final
 class Unknown(Attribute):
     """
-    Attribute of unknown type that is used for attributes with varying content.
-    For example, `urn:ietf:params:scim:api:messages:2.0:PatchOp:Operations.value` is such attribute.
+    Attribute of an unknown type that is used for attributes with varying content.
+    For example, `urn:ietf:params:scim:api:messages:2.0:PatchOp:Operations.value`
+    is such an attribute.
 
-    `Unknown` attribute can not be used when filtering or sorting data, so it should not be
+    `Unknown` attribute cannot be used when filtering or sorting data, so it should not be
     used when representing resource schema.
     """
 
@@ -596,7 +597,7 @@ class Decimal(AttributeWithUniqueness):
     def __init__(self, name: str, **kwargs: Any):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             **kwargs: The same keyword arguments base classes receive.
         """
         super().__init__(name=name, **kwargs)
@@ -614,7 +615,7 @@ class Integer(AttributeWithUniqueness):
     def __init__(self, name: str, **kwargs: Any):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             **kwargs: The same keyword arguments base classes receive.
 
         """
@@ -639,8 +640,8 @@ class String(AttributeWithCaseExact, AttributeWithUniqueness):
     ):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
-            precis: PRECIS profile that should be applied for the string attribute, when
+            name: Name of the attribute. Must be a valid attribute name.
+            precis: PRECIS profile that should be applied for the string attribute when
                 comparing values. By default, **OpaqueString** profile is used
             **kwargs: The same keyword arguments base classes receive.
         """
@@ -675,7 +676,7 @@ class Binary(AttributeWithCaseExact):
     ):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             url_safe: Flag that makes the attribute assuming values to be url-safe
             omit_padding: If set on `True` validated values can have the base64-encoding
                 padding omitted.
@@ -738,7 +739,7 @@ class DateTime(Attribute):
     def __init__(self, name: str, **kwargs: Any):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             **kwargs: The same keyword arguments base classes receive.
         """
         super().__init__(name=name, **kwargs)
@@ -811,13 +812,13 @@ class Reference(AttributeWithCaseExact, abc.ABC):
 class ExternalReference(Reference):
     """
     Represents external **reference**.
-    Can be used to represent references to the external resources (e.g. photos).
+    Can be used to represent references to the external resources (e.g., photos).
     """
 
     def __init__(self, name: str, **kwargs: Any):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             **kwargs: The same keyword arguments base classes receive, except for `reference_types`,
                 which is set to `"external"`.
         """
@@ -845,7 +846,7 @@ class UriReference(Reference):
     def __init__(self, name: str, **kwargs: Any):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             **kwargs: The same keyword arguments base classes receive, except for `reference_types`,
                 which is set to `"uri"`.
         """
@@ -861,7 +862,7 @@ class ScimReference(Reference):
     def __init__(self, name: str, *, reference_types: Iterable[str], **kwargs: Any):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             reference_types: Specifies types of SCIM references accepted by the attribute.
             **kwargs: The same keyword arguments base classes receive.
         """
@@ -901,12 +902,12 @@ class Complex(Attribute):
     ):
         """
         Args:
-            name: Name of the attribute. Must be valid attribute name.
+            name: Name of the attribute. Must be a valid attribute name.
             sub_attributes: Complex sub-attributes. All attributes but `Complex`
                 can be sub-attributes. If not specified, and the attribute is multivalued,
                 the default sub-attributes are used, as specified in
                 [RFC-7643, section 2.4](https://www.rfc-editor.org/rfc/rfc7643#section-2.4).
-            **kwargs: The same keyword arguments the base class receive.
+            **kwargs: The same keyword arguments the base class receives.
         """
         for attr in sub_attributes or []:
             if isinstance(attr, Complex):
@@ -955,7 +956,7 @@ class Complex(Attribute):
     ) -> Union[ScimData, list[ScimData]]:
         """
         Filters the data according to the provided attribute filter. All non-matching keys in
-        the item are dropped from the result. Both single-valued and multivalued complex attribute
+        the item are dropped from the result. Both single-valued and multivalued complex attributes
         can be filtered.
 
         Args:
@@ -1078,7 +1079,7 @@ def _validate_type_value_pairs(value: Collection[ScimData]) -> ValidationIssues:
 
 class Attrs:
     """
-    Represents iterable collection of unbounded attributes.
+    Represents an iterable collection of unbounded attributes.
 
     Examples:
         >>> attrs = Attrs([String("myString"), Integer("myInteger")])
@@ -1102,9 +1103,9 @@ class Attrs:
         applies here.
 
         Args:
-            attr_name: Name of the attribute to be returned. Provided value must be valid
+            attr_name: Name of the attribute to be returned. The provided value must be a valid
                 attribute name. Providing `AttrName` or `AttrRep`
-                instance ensures syntactically correct attribute name
+                instance ensures a syntactically correct attribute name
 
         Returns:
             Attribute, if found, None otherwise.
@@ -1119,7 +1120,7 @@ class Attrs:
     def clone(self, attr_filter: AttrFilter) -> "Attrs":
         """
         Clones `Attrs` according to a provided attribute filter. All attributes, including
-        sub-attributes of complex attributes, are subject of filtration.
+        sub-attributes of complex attributes, are subject to filtration.
 
         Args:
             attr_filter: Attribute filter, used to determine which attributes and sub-attributes
@@ -1133,7 +1134,7 @@ class Attrs:
 
 class BoundedAttrs:
     """
-    Represents iterable collection of attributes bounded to a specific schema.
+    Represents an iterable collection of attributes bounded to a specific schema.
 
     Args:
         schema: A SCIM schema attributes belong to.
@@ -1199,7 +1200,7 @@ class BoundedAttrs:
         """
         Returns bounded attribute representation, given only an attribute name.
         Searches through attributes defined in the schema, then in the extensions.
-        First matching result is returned, so if a schema extension defines an attribute
+        The first matching result is returned, so if a schema extension defines an attribute
         with the same name as base schema, it is not accessible.
 
         Args:
@@ -1223,8 +1224,8 @@ class BoundedAttrs:
 
 
         Raises:
-            AttributeError: If bounded attribute is not found
-            ValueError: If provided attribute name is not valid
+            AttributeError: If the bounded attribute is not found,
+            ValueError: If the provided attribute name is not valid
 
         Returns:
             Bounded attribute representation for the given (sub-)attribute name
@@ -1300,14 +1301,14 @@ class BoundedAttrs:
     ) -> "BoundedAttrs":
         """
         Clones `BoundedAttrs` according to a provided attribute filter. All attributes, including
-        sub-attributes of complex attributes, are subject of filtration. Extensions are filtered
+        sub-attributes of complex attributes, are subject to filtration. Extensions are filtered
         as well.
 
         Args:
             attr_filter: Attribute filter, used to determine which attributes and sub-attributes
                 should be included in the clone.
             ignore_filter: Names of the common or core attributes that should be included
-                in the clone, regardless the filter.
+                in the clone, regardless of the filter.
 
         Returns:
             Cloned `BoundedAttrs` with inner attributes, optionally filtered by `attr_filter`.
@@ -1346,15 +1347,15 @@ class BoundedAttrs:
     def get(self, attr_rep: Union[str, AttrRep]) -> Optional[Attribute]:
         """
         Returns an attribute, given its name or (bounded) representation.
-        If string is provided, it must be valid attribute name. If `AttrRep` is provided (unbounded
-        attribute representation), then the core schema and extensions are checked,
-        and first matching result is returned.
+        If string is provided, it must be a valid attribute name. If `AttrRep` is provided
+        (unbounded attribute representation), then the core schema and extensions are checked,
+        and the first matching result is returned.
 
         Args:
             attr_rep: Representation of the attribute to be returned
 
         Raises:
-            ValueError: If provided attribute name is not valid
+            ValueError: If the provided attribute name is not valid
 
         Returns: Attribute, if found, None otherwise.
         """
@@ -1396,8 +1397,9 @@ class BoundedAttrs:
     def get_by_path(self, path: "PatchPath") -> Optional[Attribute]:
         """
         Returns an attribute, given a patch path. The syntax of the path must correspond with the
-        actual attribute. For example, patch path deserialized from `name[formatted eq 'John Doe']`
-        would yield no results, because _name_ is not multivalued attribute (assuming User schema).
+        actual attribute. For example, a patch path deserialized from
+        `name[formatted eq 'John Doe']` would yield no results, because _name_ is not
+        a multivalued attribute (assuming User schema).
 
         Args:
             path: path deserialized from the value, which is usually sent in resource PATCH requests

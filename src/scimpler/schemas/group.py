@@ -14,7 +14,7 @@ class GroupSchema(ResourceSchema):
 
     Provides data validation and additional check if `members.type` is either `"User"` or `"Group"`.
 
-    Default endpoint is `/Groups`.
+    The default endpoint is `/Groups`.
     """
 
     schema = "urn:ietf:params:scim:schemas:core:2.0:Group"

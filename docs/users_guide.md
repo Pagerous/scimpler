@@ -390,7 +390,7 @@ As well as specific sub-attribute.
 "Barbara"
 ```
 
-If you read sub-attribute of multi-valued complex attribute, you get all values for that sub-attribute.
+If you read sub-attribute of multivalued complex attribute, you get all values for that sub-attribute.
 ```python
 >>> scim_data["emails.value"]
 ["bjensen@example.com", "babs@jensen.org"]

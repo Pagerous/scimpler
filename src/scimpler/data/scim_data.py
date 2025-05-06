@@ -65,8 +65,8 @@ class ScimData(MutableMapping):
     Enables convenient interaction, where keys are just attribute representations, and abstracts
     all inner complexities.
 
-    According to SCIM requirements, complex attributes can not contain nested complex attributes
-    (it is general rule, but there are exceptions). It would mean the 2-level nesting should be
+    According to SCIM requirements, complex attributes cannot contain nested complex attributes
+    (it is a general rule, but there are exceptions). It would mean the 2-level nesting should be
     enough (or 3, for data from extensions), but `ScimData` has no such limitation. Every nesting
     level has no awareness of its parent key.
     """
@@ -76,8 +76,8 @@ class ScimData(MutableMapping):
     ):
         """
         Args:
-            d: Optional data to initialize `ScimData` with. Can be any mapping that has keys of
-                type of `str`, `AttrRep`, or `BoundedAttrRep`. Every key with other type is
+            d: Optional data to initialize `ScimData` with. Can be any mapping that
+                has `str`, `AttrRep`, or `BoundedAttrRep` keys. Every key with another type is
                 ignored.
 
         Examples:
@@ -147,19 +147,19 @@ class ScimData(MutableMapping):
         - if `str` is provided, the key is parsed to one of supported key types and used as follows,
         - if `SchemaUri` representing schema extension is provided, the `value` is set directly
             under the key,
-        - if `SchemaUri` representing base schema is provided, a `ValueError` exception is raised,
+        - providing `SchemaUri` representing base schema raises `ValueError`,
         - if `AttrRep` is provided, the `value` is set directly under the key, if `key` represents
             top-level attribute, or it is nested under `AttrRep.sub_attr`, if it represents
             a sub-attribute,
         - if `BoundedAttrRep` is provided, the `value` is set in the same way as for `AttrRep`
             for attributes that belong to base schemas. For attributes from extensions,
-            the value is additionally nested in schema URI key namespace.
+            the value is additionally nested in the schema URI key namespace.
 
 
         Raises:
             ValueError: If `key` is `SchemaUri` reprensenting base schema.
-            KeyError: If trying to set sub-attribute value to existing parent that is
-                not single-valued complex attribute value.
+            KeyError: If trying to set a sub-attribute value to an existing parent, that is
+                not a single-valued complex attribute value.
 
         Args:
             key: The key for which the `value` should be set.
@@ -275,17 +275,17 @@ class ScimData(MutableMapping):
         - if `str` is provided, the key is parsed to one of supported key types and used as follows,
         - if `SchemaUri` representing schema extension is provided, the whole subsection that
             belongs to it is returned,
-        - if `SchemaUri` representing base schema is provided, a `ValueError` exception is raised,
+        - providing `SchemaUri` representing base schema raises `ValueError`,
         - if `AttrRep` is provided, the retrieved value belongs to top-level attribute, or nested
             one, kept under `AttrRep.sub_attr`, if `key` represents a sub-attribute,
         - if `BoundedAttrRep` is provided, the value is retrieved in the same way as for `AttrRep`
             for attributes that belong to base schemas. For attributes from extensions,
-            the value is retrieved from schema URI key namespace.
+            the value is retrieved from the schema URI key namespace.
 
         Raises:
             ValueError: If `key` is `SchemaUri` reprensenting base schema.
-            KeyError: If trying to set sub-attribute value to existing parent that is
-                not single-valued complex attribute value.
+            KeyError: If trying to set a sub-attribute value to an existing parent, that is
+                not a single-valued complex attribute value.
 
         Args:
             key: The key for which the value should be retrieved.

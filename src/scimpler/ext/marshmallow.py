@@ -94,7 +94,7 @@ def initialize(
     `scimpler.data.Complex` is always converted to `marshmallow.fields.Nested`.
 
     Raises:
-        RuntimeError: When attempt to initialize the extension second time.
+        RuntimeError: When attempting to initialize the extension a second time.
     """
     global _initialized  # noqa: PLW0603
     if _auto_initialized:
@@ -699,8 +699,8 @@ def create_response_schema(
     Creates `marshmallow` schema for the response from the provided `validator`.
 
     The fields of the resulting schema have no SCIM-specific properties and attributes. Instead,
-    the scimpler schema is hidden inside, so all validations and most of (de)serialization is
-    the done exactly same.
+    the scimpler schema is hidden inside, so all validations and most of (de)serialization are
+     done exactly the same.
 
     Args:
        validator: The validator to create the schema from.
@@ -741,8 +741,8 @@ def create_request_schema(validator: Validator) -> type[marshmallow.Schema]:
     Creates `marshmallow` schema for the request from the provided `validator`.
 
     The fields of the resulting schema have no SCIM-specific properties and attributes. Instead,
-    the scimpler schema is hidden inside, so all validations and most of (de)serialization is
-    the done exactly same.
+    the scimpler schema is hidden inside, so all validations and most of (de)serialization are
+     done exactly the same.
 
     Args:
        validator: The validator to create the schema from.

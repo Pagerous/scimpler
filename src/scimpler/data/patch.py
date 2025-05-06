@@ -34,7 +34,7 @@ class PatchPath:
             attr_rep: The representation of the attribute being targeted. Must not be
                 a sub-attribute representation.
             sub_attr_name: The optional sub-attribute being targeted.
-            filter_: Value selection filter, used for multi-valued attributes. The only supported
+            filter_: Value selection filter, used for multivalued attributes. The only supported
                 operator is `ComplexAttributeOperator`. The attribute representation specified
                 in the filter itself must be the same as provided `attr_rep`.
 
@@ -211,7 +211,7 @@ class PatchPath:
 
     def serialize(self) -> str:
         """
-        Serializes `PatchPath` to string expression.
+        Serializes `PatchPath` to a string expression.
         """
         if self._filter:
             serialized = self._filter.serialize()
@@ -239,18 +239,18 @@ class PatchPath:
 
     def __call__(self, value: Any, schema: BaseSchema) -> bool:
         """
-        Returns the flag indicating whether the provided value matches value selection filter.
+        Returns the flag indicating whether the provided value matches the value selection filter.
 
         Args:
-            value: The value to test against value selection filter.
+            value: The value to test against the value selection filter.
             schema: Schema that describes the provided value.
 
         Raises:
             ValueError: When provided `schema` does not define the attribute targeted by the path.
-            AttributeError: When the path does not have value selection filter.
+            AttributeError: When the path does not have the value selection filter.
 
         Returns:
-            Flag indicating whether the provided value matches value selection filter.
+            Flag indicating whether the provided value matches the value selection filter.
 
         Examples:
             >>> from scimpler.schemas import UserSchema
@@ -610,7 +610,7 @@ class UpdateOperation(PatchOperation, abc.ABC):
                 matches_path=None,
             )
         else:
-            # all other cases, like User:name.formatted
+            # all the other cases, like User:name.formatted
             cls._apply_on_singular_attr(
                 value=value,
                 data=attr_value,
@@ -709,7 +709,7 @@ class UpdateOperation(PatchOperation, abc.ABC):
                     matches_path=None,
                 )
             else:
-                # all other cases, like User:emails.type
+                # all the other cases, like User:emails.type
                 cls._apply_on_singular_attr(
                     value=value,
                     data=element,
@@ -925,7 +925,7 @@ class Remove(PatchOperation):
                     matches_path=None,
                 )
             else:
-                # all other cases, like User:emails[type eq "work"].value
+                # all the other cases, like User:emails[type eq "work"].value
                 cls._apply_on_singular_attr(
                     data=element,
                     attr_rep=AttrRep(sub_attr.name),
@@ -955,7 +955,7 @@ class Remove(PatchOperation):
                     matches_path=None,
                 )
             else:
-                # all other cases, like User:emails.type
+                # all the other cases, like User:emails.type
                 cls._apply_on_singular_attr(
                     data=element,
                     attr_rep=AttrRep(sub_attr.name),
@@ -1007,13 +1007,13 @@ class PatchOperations:
     def deserialize(cls, data: Iterable[Mapping]) -> Self:
         """
         Deserializes the provided data into `PatchOperations`. The exact types of
-        inner operations depend on values of 'op'.
+        inner operations depend on the values of 'op'.
         """
         return cls([cls._deserialize_single(operation) for operation in data])
 
     def serialize(self) -> list[ScimData]:
         """
-        Serializes `PatchOperations` into list of operations as mappings.
+        Serializes `PatchOperations` into a list of operations as mappings.
         """
         return [self._serialize_single(operation) for operation in self._operations]
 

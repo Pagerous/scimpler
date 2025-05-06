@@ -107,18 +107,18 @@ class Sorter:
         schemas (e.g. `UserSchema` and `GroupSchema`).
 
         Sorting is performed in line with value types semantics. For "string" attributes,
-        case-sensitivity and PRECIS profile is respected.
+        case-sensitivity and PRECIS profile are respected.
 
-        If the data item misses the attribute the data is sorted by, it is ordered last
+        If the data item misses the attribute, the data is sorted by, it is ordered last
         (if ascending sorting).
 
-        A multi-valued complex attribute is sorted by the value of "primary" item, if it defines
+        A multivalued complex attribute is sorted by the value of "primary" item if it defines
         `value` and `primary` attribtues. If `primary` is not defined, or it is not contained in
         the data, the first `value` is used for sorting.
 
         Args:
             data: The data to sort.
-            schema: Schema or schemas that describe the data. If single schema is passed, it is
+            schema: Schema or schemas that describe the data. If a single schema is passed, it is
                 assumed all data described by the same schema. If passed multiple schemas,
                 for every data item must be provided corresponding schema.
 

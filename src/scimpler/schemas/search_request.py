@@ -46,14 +46,14 @@ class SearchRequestSchema(BaseSchema):
     During deserialization:
 
     - `attributes` or `excludedAttributes` are deserialized to `AttrRep` instances,
-    - `startIndex` is set to 1 if value is lower than 1,
-    - `count` is set to 0 if value is lower than 0.
+    - `startIndex` is set to 1 if the value is lower than 1,
+    - `count` is set to 0 if the value is lower than 0.
 
     During serialization:
 
     - `attributes` or `excludedAttributes` are serialized from `AttrRep` to string values,
-    - `startIndex` is set to 1 if value is lower than 1,
-    - `count` is set to 0 if value is lower than 0.
+    - `startIndex` is set to 1 if the value is lower than 1,
+    - `count` is set to 0 if the value is lower than 0.
     """
 
     schema = "urn:ietf:params:scim:api:messages:2.0:SearchRequest"

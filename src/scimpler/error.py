@@ -172,7 +172,7 @@ class ValidationError:
             code: The error code. Can be one of built-in error_codes (see `message_by_code`
                 attribute) or custom. If custom, it must be greater than 1000.
             scim_error: SCIM error corresponding to the validation error.
-            message: Error message. Can replace built-in message or be specified for custom
+            message: Error message. Can replace a built-in message or be specified for custom
                 validation error.
             **context: Parameters passed to pre-formatted messages.
         """
@@ -390,7 +390,7 @@ class ValidationWarning:
     message_by_code = {
         1: "value should be one of: {expected_values}",
         2: (
-            "multi-valued complex attribute should contain a given type-value pair "
+            "multivalued complex attribute should contain a given type-value pair "
             "no more than once"
         ),
         3: "unexpected content, {reason}",
@@ -402,7 +402,7 @@ class ValidationWarning:
         Args:
             code: The warning code. Can be one of built-in error_codes (see `message_by_code`
                 attribute) or custom. If custom, it must be greater than 1000.
-            message: Warning message. Can replace built-in message or be specified for custom
+            message: Warning message. Can replace a built-in message or be specified for custom
                 validation warning.
             **context: Parameters passed to pre-formatted messages.
         """
@@ -468,7 +468,7 @@ class ValidationIssues:
         location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
         """
-        Merges provided validation `issues` under specified `location`, if specified, in the
+        Merges provided validation `issues` under a specified ` location `, if specified, in the
         top-level otherwise.
         """
         location = tuple(location or ())
@@ -489,7 +489,7 @@ class ValidationIssues:
         location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
         """
-        Adds a validation error under specified `location`, if specified, in the top-level. The
+        Adds a validation error under a specified `location`, if specified, in the top-level. The
         `proceed` flag is an indicator whether the specified `location` could continue to be
         validated against different conditions (`True`), or further validation should be terminated
         (`False`).
@@ -505,7 +505,7 @@ class ValidationIssues:
         location: Optional[Sequence[Union[str, int]]] = None,
     ) -> None:
         """
-        Adds a validation warning under specified `location`, if specified, in the top-level.
+        Adds a validation warning under a specified `location`, if specified, in the top-level.
         """
         location = tuple(location or ())
         self._warnings[location].append(issue)
@@ -581,7 +581,7 @@ class ValidationIssues:
     ) -> "ValidationIssues":
         """
         Pops validation issues from the specified `location`, or all of them if not specified.
-        Additionally, `error_codes` or `warning_codes` should be specified, otherwise nothing
+        Additionally, `error_codes` or `warning_codes` should be specified; otherwise nothing
         is popped.
         """
         location = tuple(location or ())
@@ -637,7 +637,7 @@ class ValidationIssues:
     def has_errors(self, *locations: Sequence[Union[str, int]]) -> bool:
         """
         Returns flag indicating whether any errors have been added under specified `locations`. If
-        at least one of the `locations` have errors (regardless of type), `True` is returned.
+        at least one of the `locations` has errors (regardless of type), `True` is returned.
         """
         if not locations:
             locations = ((),)

@@ -105,8 +105,8 @@ class BulkRequestSchema(BaseSchema):
     - `path` specifies one of supported resources,
     - `data` is provided for `POST`, `PUT`, and `PATCH` methods.
 
-    During (de)serialization, if method type is `GET` or `DELETE`, the `data` if provided,
-    is dropped. For all other methods, the `data` is (de)serialized together with rest of the
+    During (de)serialization, if a method type is `GET` or `DELETE`, the `data` if provided,
+    is dropped. For all other methods, the `data` is (de)serialized together with the rest of the
     fields.
     """
 
@@ -217,8 +217,8 @@ class BulkRequestSchema(BaseSchema):
     def get_schema(self, operation: Mapping) -> Optional[BaseSchema]:
         """
         Returns one of the sub-schemas, depending on the provided `operation` data. Returns
-        `None` if an operation's method is not supported, or path indicates unsupported resource
-        type.
+        `None` if an operation's method is not supported, or the path indicates an unsupported
+        resource type.
         """
         method = operation.get("method", "").upper()
         if method not in self._sub_schemas:
@@ -309,7 +309,7 @@ class BulkResponseSchema(BaseSchema):
     - `bulkId` is provided for `POST` method,
     - `status` is provided,
     - `location` is provided for successful operations,
-    - `location` specifies one of supported resources,
+    - `location` specifies one of the supported resources,
     - `response` is provided for unsuccessful operations.
     """
 
@@ -422,7 +422,7 @@ class BulkResponseSchema(BaseSchema):
         """
         Returns one of the sub-schemas, depending on the provided `operation` data. Returns
         `None` if `status` is not present in the `operation`, or if an operation's method
-        is not supported, or location indicates unsupported resource type.
+        is not supported, or location indicates an unsupported resource type.
         """
         operation = ScimData(operation)
         status = operation.get("status")

@@ -20,7 +20,7 @@
 |               **12**                | The `schemas` attribute is missing base schema.                                                       |
 |               **13**                | The `schemas` attribute is missing one of the extensions which attributes are present in the data.    |
 |               **14**                | The `schemas` attribute contains unknown schema URI.                                                  |
-|               **15**                | The `primary` sub-attribute set to `True` appears more than once in multi-valued complex attribute.   |
+|               **15**                | The `primary` sub-attribute set to `True` appears more than once in multivalued complex attribute.   |
 |               **16**                | The value of scim reference attribute is unknown.                                                     |
 |               **17**                | The provided attribute name is invalid.                                                               |
 |               **18**                | Bad value of error `status`.                                                                          |
