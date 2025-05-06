@@ -357,7 +357,7 @@ class ScimData(MutableMapping):
         extension = self._lower_case_to_original.get(key.schema.lower())
         if extension is None:
             return default
-        return self._data[extension].get(_AttrKey(attr=key.attr, sub_attr=key.sub_attr))
+        return self._data[extension].get(_AttrKey(attr=key.attr, sub_attr=key.sub_attr), default)
 
     def _get_base_attr(self, key: _AttrKey, default: Any) -> Any:
         attr = self._lower_case_to_original.get(key.attr.lower())
@@ -367,7 +367,7 @@ class ScimData(MutableMapping):
         if key.sub_attr:
             attr_value = self._data[attr]
             if isinstance(attr_value, ScimData):
-                return attr_value.get(_AttrKey(attr=key.sub_attr, sub_attr=None))
+                return attr_value.get(_AttrKey(attr=key.sub_attr, sub_attr=None), default)
             if isinstance(attr_value, list):
                 return [
                     item.get(_AttrKey(attr=key.sub_attr, sub_attr=None))
