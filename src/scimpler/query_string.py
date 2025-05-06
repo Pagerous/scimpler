@@ -1,4 +1,5 @@
 import abc
+import contextlib
 from typing import Any, MutableMapping, Optional
 
 import scimpler.config
@@ -64,6 +65,16 @@ class QueryStringHandler(abc.ABC):
         if isinstance(excluded_attributes, str):
             excluded_attributes = [item.strip() for item in excluded_attributes.split(",")]
             query_params["excludedAttributes"] = excluded_attributes
+
+        count = query_params.get("count")
+        if isinstance(count, str):
+            with contextlib.suppress(ValueError):
+                query_params["count"] = int(count)
+
+        start_index = query_params.get("startIndex")
+        if isinstance(start_index, str):
+            with contextlib.suppress(ValueError):
+                query_params["startIndex"] = int(start_index)
 
     def serialize(self, query_params: Optional[MutableMapping[str, Any]] = None) -> ScimData:
         """
