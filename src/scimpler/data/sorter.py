@@ -3,7 +3,7 @@ import typing
 from collections.abc import MutableMapping
 from typing import Any, Iterable, Optional, Sequence, Union
 
-from scimpler.data import AttrRepFactory, BoundedAttrRep
+from scimpler.data import AttrRepFactory
 from scimpler.data.attrs import Attribute, AttributeWithCaseExact, Complex, String
 from scimpler.data.schemas import BaseResourceSchema
 from scimpler.data.scim_data import AttrRep, Invalid, Missing, ScimData
@@ -79,26 +79,6 @@ class Sorter:
         If `True`, ascending sorting is enabled. Descending otherwise.
         """
         return self._asc
-
-    def bind(self, schema: BaseResourceSchema, skip_bound: bool = False) -> "Sorter":
-        try:
-            attr_rep = schema.attrs.bind(self._attr_rep)
-        except AttributeError as e:
-            if skip_bound:
-                return self
-            raise ValueError(
-                f"can not bind sorter to schema {schema.schema} because its attribute "
-                f"representation is bound to a unrelated schema"
-            ) from e
-
-        return Sorter(
-            attr_rep=BoundedAttrRep(
-                schema=attr_rep.schema,
-                attr=attr_rep.attr,
-                sub_attr=attr_rep.sub_attr if attr_rep.is_sub_attr else None,
-            ),
-            asc=self._asc,
-        )
 
     def __call__(
         self,

@@ -326,19 +326,3 @@ def test_data_item_is_ordered_last_if_ascending_if_attr_does_not_exist(fake_sche
     actual = sorter(data, [fake_schema, user_schema])
 
     assert actual == expected
-
-
-def test_sorter_can_be_bound_to_schema(user_schema):
-    sorter = Sorter(attr_rep=AttrRep(attr="name"))
-
-    sorter.bind(user_schema)
-
-    assert sorter.attr_rep == user_schema.attrs.name
-
-
-def test_binding_sorter_to_schema_fails_if_bound_to_different_schema(user_schema, fake_schema):
-    sorter = Sorter(attr_rep=AttrRep(attr="name"))
-    sorter = sorter.bind(user_schema)
-
-    with pytest.raises(ValueError, match="can not bind sorter to schema"):
-        sorter.bind(fake_schema)
