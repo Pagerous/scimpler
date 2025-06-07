@@ -421,7 +421,7 @@ class UpdateOperation(PatchOperation, abc.ABC):
         self._apply_on_attr(
             path=self._path,
             value=self._value,
-            attr_rep=self._path.attr_rep,
+            attr_rep=schema.attrs.bind(self._path.attr_rep),
             attr=attr,
             sub_attr=sub_attr,
             data=data,
@@ -780,7 +780,7 @@ class Remove(PatchOperation):
         attr, sub_attr = self._get_attrs(schema)
         self._apply_on_attr(
             path=self.path,
-            attr_rep=self.path.attr_rep,
+            attr_rep=schema.attrs.bind(self.path.attr_rep),
             attr=attr,
             sub_attr=sub_attr,
             data=data,

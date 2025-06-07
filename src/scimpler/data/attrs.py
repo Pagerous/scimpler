@@ -1267,6 +1267,11 @@ class BoundedAttrs:
         return iter(self._attrs.items())
 
     @property
+    def schemas(self) -> list[SchemaUri]:
+        """Schema URIs associated with the attributes. Includes schema extension URIs."""
+        return [self._schema, *self._extensions]
+
+    @property
     def core_attrs(self) -> Iterator[tuple[BoundedAttrRep, Attribute]]:
         """
         Iterator that goes through the core attributes of the schema.
@@ -1343,6 +1348,32 @@ class BoundedAttrs:
                 attrs=attrs.clone(attr_filter),
             )
         return cloned
+
+    def bind(self, attr_rep: Union[str, AttrRep]) -> "BoundedAttrRep":
+        """
+        Binds provided attribute representation to one of the associated schemas.
+
+        String values are deserialized to `AttrRep` instance and then bound.
+
+        Raises:
+            AttributeError: If provided `attr_rep` is bound to the schema not
+                associated with given `BoundedAttrs`.
+            AttributeError: If provided `attr_rep` is not recognized in any of
+                the associated schemas.
+        """
+        if isinstance(attr_rep, str):
+            attr_rep = AttrRepFactory.deserialize(attr_rep)
+
+        if isinstance(attr_rep, BoundedAttrRep):
+            if attr_rep.schema not in self.schemas:
+                raise AttributeError(
+                    f"'{attr_rep}' is bound to schema not associated with {self._schema!r}"
+                )
+            return attr_rep
+
+        return self.__getattr__(
+            f"{attr_rep.attr}__{attr_rep.sub_attr}" if attr_rep.is_sub_attr else attr_rep.attr
+        )
 
     def get(self, attr_rep: Union[str, AttrRep]) -> Optional[Attribute]:
         """
