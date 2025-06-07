@@ -80,18 +80,22 @@ class Sorter:
         """
         return self._asc
 
-    def bind(self, schema: BaseResourceSchema) -> "Sorter":
-        if isinstance(self._attr_rep, BoundedAttrRep) and self._attr_rep.schema != schema.schema:
+    def bind(self, schema: BaseResourceSchema, skip_bound: bool = False) -> "Sorter":
+        try:
+            attr_rep = schema.attrs.bind(self._attr_rep)
+        except AttributeError as e:
+            if skip_bound:
+                return self
             raise ValueError(
                 f"can not bind sorter to schema {schema.schema} because its attribute "
-                f"representation is bound to {self._attr_rep.schema}"
-            )
+                f"representation is bound to a unrelated schema"
+            ) from e
 
         return Sorter(
             attr_rep=BoundedAttrRep(
-                schema=schema.schema,
-                attr=self._attr_rep.attr,
-                sub_attr=self._attr_rep.sub_attr if self._attr_rep.is_sub_attr else None,
+                schema=attr_rep.schema,
+                attr=attr_rep.attr,
+                sub_attr=attr_rep.sub_attr if attr_rep.is_sub_attr else None,
             ),
             asc=self._asc,
         )

@@ -39,7 +39,7 @@ class Operator(abc.ABC, Generic[TSchemaOrComplex]):
         """
 
     @abc.abstractmethod
-    def bind(self, schema: BaseSchema) -> Self: ...
+    def bind(self, schema: BaseSchema, skip_bound: bool = False) -> Self: ...
 
 
 class LogicalOperator(Operator, abc.ABC):
@@ -61,12 +61,12 @@ class LogicalOperator(Operator, abc.ABC):
         """Sub-operators contained inside the operator."""
         return self._sub_operators
 
-    def bind(self, schema: BaseSchema) -> Self:
+    def bind(self, schema: BaseSchema, skip_bound: bool = False) -> Self:
         """
         Returns a copy of the operator with its sub-operators bound
         to the provided schema.
         """
-        return self.__class__(*(op.bind(schema) for op in self._sub_operators))
+        return self.__class__(*(op.bind(schema, skip_bound) for op in self._sub_operators))
 
     def _collect_matches(
         self,
@@ -229,23 +229,27 @@ class UnaryAttributeOperator(AttributeOperator, abc.ABC):
 
         return match
 
-    def bind(self, schema: BaseSchema) -> Self:
+    def bind(self, schema: BaseSchema, skip_bound: bool = False) -> Self:
         """
         Returns a copy of the operator with its attribute representation
         bound to the provided schema. If the operator is already bound to the schema,
         and it is different from the provided schema, `ValueError` is raised.
         """
-        if isinstance(self._attr_rep, BoundedAttrRep) and self._attr_rep.schema != schema.schema:
+        try:
+            attr_rep = schema.attrs.bind(self._attr_rep)
+        except AttributeError as e:
+            if skip_bound:
+                return self
             raise ValueError(
-                f"can not bind operator to schema {schema!r} "
-                f"because it is bound to schema {self._attr_rep.schema!r}"
-            )
+                f"can not bind operator to schema {schema.schema} because it is "
+                f"bound to a unrelated schema"
+            ) from e
 
         return self.__class__(
             attr_rep=BoundedAttrRep(
-                schema=schema.schema,
-                attr=self._attr_rep.attr,
-                sub_attr=self._attr_rep.sub_attr if self._attr_rep.is_sub_attr else None,
+                schema=attr_rep.schema,
+                attr=attr_rep.attr,
+                sub_attr=attr_rep.sub_attr if attr_rep.is_sub_attr else None,
             )
         )
 
@@ -404,22 +408,26 @@ class BinaryAttributeOperator(AttributeOperator, abc.ABC):
 
         return False
 
-    def bind(self, schema: BaseSchema) -> Self:
+    def bind(self, schema: BaseSchema, skip_bound: bool = False) -> Self:
         """
         Returns a copy of the operator with its attribute representation
         bound to the provided schema. If the operator is already bound to the schema,
         and it is different from the provided schema, `ValueError` is raised.
         """
-        if isinstance(self._attr_rep, BoundedAttrRep) and self._attr_rep.schema != schema.schema:
+        try:
+            attr_rep = schema.attrs.bind(self._attr_rep)
+        except AttributeError as e:
+            if skip_bound:
+                return self
             raise ValueError(
-                f"can not bind operator to schema {schema!r} "
-                f"because it is bound to schema {self._attr_rep.schema!r}"
-            )
+                f"can not bind operator to schema {schema.schema} because it is "
+                f"bound to a unrelated schema"
+            ) from e
         return self.__class__(
             attr_rep=BoundedAttrRep(
-                schema=schema.schema,
-                attr=self._attr_rep.attr,
-                sub_attr=self._attr_rep.sub_attr if self._attr_rep.is_sub_attr else None,
+                schema=attr_rep.schema,
+                attr=attr_rep.attr,
+                sub_attr=attr_rep.sub_attr if attr_rep.is_sub_attr else None,
             ),
             value=self._value,
         )
@@ -643,23 +651,27 @@ class ComplexAttributeOperator(Operator, Generic[TLogicalOrAttributeOperator]):
         """
         return self._sub_operator
 
-    def bind(self, schema: BaseSchema) -> Self:
+    def bind(self, schema: BaseSchema, skip_bound: bool = False) -> Self:
         """
         Returns a copy of the operator with its attribute representation
         bound to the provided schema. If the operator is already bound to the schema,
         and it is different from the provided schema, `ValueError` is raised.
         """
-        if isinstance(self._attr_rep, BoundedAttrRep) and self._attr_rep.schema != schema.schema:
+        try:
+            attr_rep = schema.attrs.bind(self._attr_rep)
+        except AttributeError as e:
+            if skip_bound:
+                return self
             raise ValueError(
-                f"can not bind operator to schema {schema!r} "
-                f"because it is bound to schema {self._attr_rep.schema!r}"
-            )
+                f"can not bind operator to schema {schema.schema} because it is "
+                f"bound to a unrelated schema"
+            ) from e
 
         return ComplexAttributeOperator(
             attr_rep=BoundedAttrRep(
-                schema=schema.schema,
-                attr=self._attr_rep.attr,
-                sub_attr=self._attr_rep.sub_attr if self._attr_rep.is_sub_attr else None,
+                schema=attr_rep.schema,
+                attr=attr_rep.attr,
+                sub_attr=attr_rep.sub_attr if attr_rep.is_sub_attr else None,
             ),
             sub_operator=self._sub_operator,
         )

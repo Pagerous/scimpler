@@ -2563,12 +2563,12 @@ def test_filter_with_logical_operator_can_be_applied(user_schema):
 
 
 def test_filter_can_be_bound_to_schema(user_schema):
-    filter_ = Filter(Present(attr_rep=AttrRep(attr="name")))
+    filter_before = Filter(Present(attr_rep=AttrRep(attr="name")))
+    filter_after = filter_before.bind(user_schema)
 
-    filter_ = filter_.bind(user_schema)
-
-    assert isinstance(filter_.operator, Present)
-    assert filter_.operator.attr_rep == user_schema.attrs.name
+    assert isinstance(filter_after.operator, Present)
+    assert filter_after.operator.attr_rep == user_schema.attrs.name
+    assert filter_after.operator is not filter_before.operator
 
 
 def test_binding_filter_to_schema_fails_if_operator_bound_to_different_schema(
@@ -2578,4 +2578,15 @@ def test_binding_filter_to_schema_fails_if_operator_bound_to_different_schema(
     filter_ = filter_.bind(user_schema)
 
     with pytest.raises(ValueError, match="can not bind filter to schema"):
-        filter_.bind(fake_schema)
+        filter_.bind(fake_schema, skip_bound=False)
+
+
+def test_binding_filter_to_schema_can_skip_if_operator_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    filter_ = Filter(Present(attr_rep=AttrRep(attr="name")))
+    filter_before = filter_.bind(user_schema)
+
+    filter_after = filter_before.bind(fake_schema, skip_bound=True)
+
+    assert filter_after.operator is filter_before.operator

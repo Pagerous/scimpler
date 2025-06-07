@@ -1052,7 +1052,18 @@ def test_binding_unary_attr_operator_to_schema_fails_if_bound_to_different_schem
     op = op.bind(user_schema)
 
     with pytest.raises(ValueError, match="can not bind operator to schema"):
-        op.bind(fake_schema)
+        op.bind(fake_schema, skip_bound=False)
+
+
+def test_binding_unary_attr_operator_to_schema_can_be_skipped_if_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = Present(attr_rep=AttrRep(attr="name"))
+    op_before = op.bind(user_schema)
+
+    op_after = op_before.bind(fake_schema, skip_bound=True)
+
+    assert op_after is op_before
 
 
 def test_binary_attr_operator_can_be_bound_to_schema(user_schema):
@@ -1071,6 +1082,17 @@ def test_binding_binary_attr_operator_to_schema_fails_if_bound_to_different_sche
 
     with pytest.raises(ValueError, match="can not bind operator to schema"):
         op.bind(fake_schema)
+
+
+def test_binding_binary_attr_operator_to_schema_can_be_skipped_if_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = Equal(attr_rep=AttrRep(attr="name"), value="johndoe")
+    op_before = op.bind(user_schema)
+
+    op_after = op_before.bind(fake_schema, skip_bound=True)
+
+    assert op_after is op_before
 
 
 def test_complex_attr_operator_can_be_bound_to_schema(user_schema):
@@ -1095,6 +1117,19 @@ def test_binding_complex_attr_operator_to_schema_fails_if_bound_to_different_sch
         op.bind(fake_schema)
 
 
+def test_binding_complex_attr_operator_to_schema_can_be_skipped_if_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = ComplexAttributeOperator(
+        attr_rep=AttrRep(attr="emails"), sub_operator=Present(attr_rep=AttrRep(attr="value"))
+    )
+    op_before = op.bind(user_schema)
+
+    op_after = op_before.bind(fake_schema, skip_bound=True)
+
+    assert op_after is op_before
+
+
 def test_logical_operator_can_be_bound_to_schema(user_schema):
     op = Not(Present(attr_rep=AttrRep(attr="name")))
 
@@ -1113,3 +1148,14 @@ def test_binding_logical_operator_to_schema_fails_if_sub_operator_bound_to_diffe
 
     with pytest.raises(ValueError, match="can not bind operator to schema"):
         op.bind(fake_schema)
+
+
+def test_binding_logical_operator_to_schema_can_be_skipped_if_sub_operator_bound_to_different_schema(
+    user_schema, fake_schema
+):
+    op = Not(Present(attr_rep=AttrRep(attr="name")))
+    op_before = op.bind(user_schema)
+
+    op_after = op_before.bind(fake_schema, skip_bound=True)
+
+    assert op_after.sub_operators[0] is op_before.sub_operators[0]
