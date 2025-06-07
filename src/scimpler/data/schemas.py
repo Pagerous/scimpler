@@ -104,7 +104,7 @@ class BaseSchema(metaclass=SchemaMeta):
         """
         All schema URIs by which the schema is identified.
         """
-        return [cast(SchemaUri, self.schema)]
+        return self.attrs.schemas
 
     def _get_attrs(self) -> list[Attribute]:
         attrs = []
@@ -675,15 +675,6 @@ class ResourceSchema(BaseResourceSchema):
         self._common_attrs = ["id", "externalId", "meta"]
         super().__init__(attr_filter=attr_filter, common_attrs=self._common_attrs)
         self._schema_extensions: dict[str, dict] = {}
-
-    @property
-    def schemas(self) -> list[SchemaUri]:
-        """
-        Schema URIs by which the schema is identified. Includes schema extension URIs.
-        """
-        return [cast(SchemaUri, self.schema)] + [
-            extension["extension"].schema for extension in self._schema_extensions.values()
-        ]
 
     @property
     def extensions(self) -> dict[SchemaUri, bool]:

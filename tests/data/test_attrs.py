@@ -902,3 +902,43 @@ def test_bounded_attrs_can_be_cloned(user_schema):
     assert list(name.attrs)[0][1].name == "formatted"
     assert len(list(name.attrs)) == 1
     assert len(clone) == 2  # no 'nonExisting'
+
+
+def test_str_attr_rep_can_be_bound_to_bounded_attrs(user_schema):
+    attr_rep = user_schema.attrs.bind("manager.displayName")
+
+    assert attr_rep == BoundedAttrRep(
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", "manager", "displayName"
+    )
+
+
+def test_attr_rep_can_be_bound_to_bounded_attrs(user_schema):
+    attr_rep = user_schema.attrs.bind(AttrRep("manager", "displayName"))
+
+    assert attr_rep == BoundedAttrRep(
+        "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User", "manager", "displayName"
+    )
+
+
+def test_binding_attr_rep_to_bounded_attr_fails_if_unknown_attr(user_schema):
+    with pytest.raises(
+        AttributeError,
+        match=(
+            "attribute 'nonExisting.attr' does not exist within "
+            "'urn:ietf:params:scim:schemas:core:2.0:User' and its extensions"
+        ),
+    ):
+        user_schema.attrs.bind("nonExisting.attr")
+
+
+def test_binding_bounded_attr_rep_to_bounded_attr_fails_if_unassociated_schema(
+    user_schema, fake_schema
+):
+    with pytest.raises(
+        AttributeError,
+        match=(
+            "'schema:for:tests:int' is bound to schema not associated with "
+            "'urn:ietf:params:scim:schemas:core:2.0:User'"
+        ),
+    ):
+        user_schema.attrs.bind(fake_schema.attrs.int)
