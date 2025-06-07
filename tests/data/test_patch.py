@@ -521,7 +521,11 @@ def test_add_op_fails_if_no_filter_matches_for_mv_complex_attr(user_schema):
     }
 
     with pytest.raises(
-        NoTargetException, match="no 'emails' elements matched supplied value selection filter"
+        NoTargetException,
+        match=(
+            "no 'urn:ietf:params:scim:schemas:core:2.0:User:emails' "
+            "elements matched supplied value selection filter"
+        ),
     ):
         operations.apply(data, user_schema)
 
@@ -600,7 +604,8 @@ def test_add_op_fails_if_no_filter_matches_for_mv_simple_attr(
     data = {"str_mv": ["def", "ghi"]}
 
     with pytest.raises(
-        NoTargetException, match="no 'str_mv' elements matched supplied value selection filter"
+        NoTargetException,
+        match="no 'schema:for:tests:str_mv' elements matched supplied value selection filter",
     ):
         operations.apply(data, fake_schema)
 
@@ -829,7 +834,11 @@ def test_add_op_fails_if_no_filter_matches_for_mv_complex_attr__sub_attr_in_path
     }
 
     with pytest.raises(
-        NoTargetException, match="no 'emails' elements matched supplied value selection filter"
+        NoTargetException,
+        match=(
+            "no 'urn:ietf:params:scim:schemas:core:2.0:User:emails' "
+            "elements matched supplied value selection filter"
+        ),
     ):
         operations.apply(data, user_schema)
 
@@ -1159,7 +1168,11 @@ def test_replace_op_fails_if_no_filter_matches_for_mv_complex_attr(user_schema):
     }
 
     with pytest.raises(
-        NoTargetException, match="no 'emails' elements matched supplied value selection filter"
+        NoTargetException,
+        match=(
+            "no 'urn:ietf:params:scim:schemas:core:2.0:User:emails' "
+            "elements matched supplied value selection filter"
+        ),
     ):
         operations.apply(data, user_schema)
 
@@ -1176,7 +1189,8 @@ def test_replace_op_fails_if_no_filter_matches_for_mv_simple_attr(fake_schema):
     data = {"str_mv": ["def", "ghi"]}
 
     with pytest.raises(
-        NoTargetException, match="no 'str_mv' elements matched supplied value selection filter"
+        NoTargetException,
+        match="no 'schema:for:tests:str_mv' elements matched supplied value selection filter",
     ):
         operations.apply(data, fake_schema)
 
@@ -1198,7 +1212,11 @@ def test_replace_op_fails_if_no_filter_matches_for_mv_complex_attr__sub_attr_in_
     }
 
     with pytest.raises(
-        NoTargetException, match="no 'emails' elements matched supplied value selection filter"
+        NoTargetException,
+        match=(
+            "no 'urn:ietf:params:scim:schemas:core:2.0:User:emails' "
+            "elements matched supplied value selection filter"
+        ),
     ):
         operations.apply(data, user_schema)
 

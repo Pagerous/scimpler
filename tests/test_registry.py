@@ -74,5 +74,5 @@ def test_subclassing_attribute_operator_with_custom_class_fails():
             ) -> bool:
                 return False
 
-            def bind(self, schema: BaseSchema) -> Self:
+            def bind(self, schema: BaseSchema, skip_bound: bool = False) -> Self:
                 return self

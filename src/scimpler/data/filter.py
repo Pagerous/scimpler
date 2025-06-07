@@ -552,13 +552,13 @@ class Filter(Generic[TOperator]):
             )
         return issues
 
-    def bind(self, schema: BaseSchema) -> "Filter":
+    def bind(self, schema: BaseSchema, skip_bound: bool = False) -> "Filter":
         """
         Returns a copy of the filter with its operator bound
         to the provided schema.
         """
         try:
-            return Filter(self._operator.bind(schema))
+            return Filter(self._operator.bind(schema, skip_bound))
         except ValueError as e:
             raise ValueError(f"can not bind filter to schema {schema}") from e
 
